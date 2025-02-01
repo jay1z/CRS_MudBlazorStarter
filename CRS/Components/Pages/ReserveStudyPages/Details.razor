@@ -1,0 +1,64 @@
+﻿@page "/reservestudies/details"
+@using Microsoft.EntityFrameworkCore
+@using CRS.Models
+@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>ReserveStudy</h2>
+    <hr />
+    @if (reservestudy is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">ApplicationUserId</dt>
+            <dd class="col-sm-10">@reservestudy.ApplicationUserId</dd>
+            <dt class="col-sm-2">SpecialistUserId</dt>
+            <dd class="col-sm-10">@reservestudy.SpecialistUserId</dd>
+            <dt class="col-sm-2">PointOfContactType</dt>
+            <dd class="col-sm-10">@reservestudy.PointOfContactType</dd>
+            <dt class="col-sm-2">IsActive</dt>
+            <dd class="col-sm-10">@reservestudy.IsActive</dd>
+            <dt class="col-sm-2">IsApproved</dt>
+            <dd class="col-sm-10">@reservestudy.IsApproved</dd>
+            <dt class="col-sm-2">IsComplete</dt>
+            <dd class="col-sm-10">@reservestudy.IsComplete</dd>
+            <dt class="col-sm-2">DateApproved</dt>
+            <dd class="col-sm-10">@reservestudy.DateApproved</dd>
+            <dt class="col-sm-2">DateCreated</dt>
+            <dd class="col-sm-10">@reservestudy.DateCreated</dd>
+            <dt class="col-sm-2">DateModified</dt>
+            <dd class="col-sm-10">@reservestudy.DateModified</dd>
+            <dt class="col-sm-2">DateDeleted</dt>
+            <dd class="col-sm-10">@reservestudy.DateDeleted</dd>
+        </dl>
+        <div>
+            <a href="@($"/reservestudies/edit?id={reservestudy.Id}")">Edit</a> |
+            <a href="@($"/reservestudies")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private ReserveStudy? reservestudy;
+
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        reservestudy = await context.ReserveStudy.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (reservestudy is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

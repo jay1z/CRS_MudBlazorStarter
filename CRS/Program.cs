@@ -1,6 +1,8 @@
-using CRS.Components;
+﻿using CRS.Components;
 using CRS.Components.Account;
 using CRS.Data;
+using CRS.Helpers;
+using CRS.Services;
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -20,6 +22,8 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<IPasswordHelper, PasswordHelper>();
+builder.Services.AddScoped<HashingService>();
 
 builder.Services.AddAuthentication(options => {
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
@@ -27,7 +31,11 @@ builder.Services.AddAuthentication(options => {
 }).AddIdentityCookies();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+//builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<ApplicationDbContext>(options => { options.UseMySQL(connectionString); });
+
+builder.Services.AddQuickGridEntityFrameworkAdapter();
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -42,11 +50,13 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()) {
     app.UseMigrationsEndPoint();
+    app.UseDeveloperExceptionPage();
 }
 else {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+    app.UseMigrationsEndPoint();
 }
 
 app.UseHttpsRedirection();

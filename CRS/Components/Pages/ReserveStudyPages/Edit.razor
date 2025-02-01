@@ -1,0 +1,140 @@
+﻿@page "/reservestudies/edit"
+@using Microsoft.EntityFrameworkCore
+@using CRS.Models
+@using static CRS.Models.ReserveStudy
+@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>ReserveStudy</h2>
+<hr />
+@if (ReserveStudy is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="ReserveStudy" OnValidSubmit="UpdateReserveStudy" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert"/>
+                <input type="hidden" name="ReserveStudy.Id" value="@ReserveStudy.Id" />
+                <div class="mb-3">
+                    <label for="applicationuserid" class="form-label">ApplicationUserId:</label>
+                    <InputText id="applicationuserid" @bind-Value="ReserveStudy.ApplicationUserId" class="form-control" />
+                    <ValidationMessage For="() => ReserveStudy.ApplicationUserId" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="specialistuserid" class="form-label">SpecialistUserId:</label>
+                    <InputText id="specialistuserid" @bind-Value="ReserveStudy.SpecialistUserId" class="form-control" />
+                    <ValidationMessage For="() => ReserveStudy.SpecialistUserId" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="pointofcontacttype" class="form-label">PointOfContactType:</label>
+                    <InputSelect id="pointofcontacttype" @bind-Value="ReserveStudy.PointOfContactType" class="form-control">
+                        @foreach (var type in Enum.GetValues<PointOfContactTypeEnum>())
+                        {
+                            <option value="@type">@type</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => ReserveStudy.PointOfContactType" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="isactive" class="form-label">IsActive:</label>
+                    <InputCheckbox id="isactive" @bind-Value="ReserveStudy.IsActive" class="form-check-input" />
+                    <ValidationMessage For="() => ReserveStudy.IsActive" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="isapproved" class="form-label">IsApproved:</label>
+                    <InputCheckbox id="isapproved" @bind-Value="ReserveStudy.IsApproved" class="form-check-input" />
+                    <ValidationMessage For="() => ReserveStudy.IsApproved" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="iscomplete" class="form-label">IsComplete:</label>
+                    <InputCheckbox id="iscomplete" @bind-Value="ReserveStudy.IsComplete" class="form-check-input" />
+                    <ValidationMessage For="() => ReserveStudy.IsComplete" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="dateapproved" class="form-label">DateApproved:</label>
+                    <InputDate id="dateapproved" @bind-Value="ReserveStudy.DateApproved" class="form-control" />
+                    <ValidationMessage For="() => ReserveStudy.DateApproved" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="datecreated" class="form-label">DateCreated:</label>
+                    <InputDate id="datecreated" @bind-Value="ReserveStudy.DateCreated" class="form-control" />
+                    <ValidationMessage For="() => ReserveStudy.DateCreated" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="datemodified" class="form-label">DateModified:</label>
+                    <InputDate id="datemodified" @bind-Value="ReserveStudy.DateModified" class="form-control" />
+                    <ValidationMessage For="() => ReserveStudy.DateModified" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="datedeleted" class="form-label">DateDeleted:</label>
+                    <InputDate id="datedeleted" @bind-Value="ReserveStudy.DateDeleted" class="form-control" />
+                    <ValidationMessage For="() => ReserveStudy.DateDeleted" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/reservestudies">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private ReserveStudy? ReserveStudy { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        ReserveStudy ??= await context.ReserveStudy.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (ReserveStudy is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdateReserveStudy()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(ReserveStudy!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!ReserveStudyExists(ReserveStudy!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/reservestudies");
+    }
+
+    private bool ReserveStudyExists(int id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.ReserveStudy.Any(e => e.Id == id);
+    }
+}

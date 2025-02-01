@@ -1,0 +1,45 @@
+﻿@page "/reservestudies"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using CRS.Models
+@using CRS.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="reservestudies/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.ReserveStudy">
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.ApplicationUserId" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.SpecialistUserId" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.PointOfContactType" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.IsActive" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.IsApproved" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.IsComplete" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.DateApproved" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.DateCreated" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.DateModified" />
+    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.DateDeleted" />
+
+    <Microsoft.AspNetCore.Components.QuickGrid.TemplateColumn Context="reservestudy">
+        <a href="@($"reservestudies/edit?id={reservestudy.Id}")">Edit</a> |
+        <a href="@($"reservestudies/details?id={reservestudy.Id}")">Details</a> |
+        <a href="@($"reservestudies/delete?id={reservestudy.Id}")">Delete</a>
+    </Microsoft.AspNetCore.Components.QuickGrid.TemplateColumn>
+</QuickGrid>
+
+@code {
+    private ApplicationDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

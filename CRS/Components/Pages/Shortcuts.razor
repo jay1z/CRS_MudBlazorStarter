@@ -1,0 +1,28 @@
+﻿@page "/shortcuts"
+
+<PageTitle>Shortcuts</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Shortcuts</MudText>
+
+<MudCard Outlined="true">
+    <MudCardContent>
+        <MudPaper Width="300px" Elevation="25">
+            <MudList T="string">
+                <MudListItem><MudLink Href="dashboard">Dashboard</MudLink></MudListItem>
+                <MudDivider />
+                <MudListItem><MudLink Href="requests/create">Create Request</MudLink></MudListItem>
+                <MudDivider />
+                <MudListItem><MudLink Href="requests/all">All Requests</MudLink></MudListItem>
+                <MudDivider />
+                <MudListItem><MudLink Href="settings">Settings</MudLink></MudListItem>
+            </MudList>
+        </MudPaper>
+    </MudCardContent>
+    <MudCardActions>
+        <MudButton Variant="Variant.Text" Color="Color.Primary">Learn More</MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+
+}

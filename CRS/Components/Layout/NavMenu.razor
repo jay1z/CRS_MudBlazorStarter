@@ -3,12 +3,34 @@
 @inject NavigationManager NavigationManager
 
 <MudNavMenu>
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-    <MudNavLink Href="counter" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter</MudNavLink>
-    
-    <MudNavLink Href="weather" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Weather</MudNavLink>
+    <MudPaper Width="250px" Class="py-3" Elevation="0">
+        <MudNavMenu>
+            <MudText Typo="Typo.h6" Class="px-4">My Application</MudText>
+            <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Secondary Text</MudText>
+            <MudDivider Class="my-2" />
+            <MudNavLink Href="/shortcuts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AppShortcut" IconColor="Color.Default">Shortcuts</MudNavLink>
+            <MudNavLink Href="/dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary">Dashboard</MudNavLink>
+            @* <MudText Typo="Typo.caption" Class="px-4 mud-text-secondary">Pages</MudText> *@
+            <MudDivider Class="my-2" />
+            <MudNavGroup Title="Reserve Studies" Expanded="true">
+                <MudNavLink Href="/reserveStudies/my" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PersonPin" IconColor="Color.Warning">My Requests</MudNavLink>
+                <MudNavLink Href="/reserveStudies/active" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Warning">Active Studies</MudNavLink>
+                <MudNavLink Href="/reserveStudies/sendlink" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Send" IconColor="Color.Warning">Send Link</MudNavLink>
+            </MudNavGroup>
+            <MudDivider Class="my-2" />
+            <MudNavLink Href="/communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.HolidayVillage" IconColor="Color.Warning">Communities</MudNavLink>
+            <MudNavLink Href="/calendar" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Warning">Calendar</MudNavLink>
+            <MudNavLink Href="/contacts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Warning">Contacts</MudNavLink>
+            @* <MudText Typo="Typo.caption" Class="px-4 mud-text-secondary">Admin</MudText> *@
+            <MudDivider Class="my-2" />
+            <MudNavLink Href="/users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PeopleAlt" IconColor="Color.Secondary">Users</MudNavLink>
+            @* <MudText Typo="Typo.caption" Class="px-4 mud-text-secondary">Help</MudText> *@
+            <MudDivider Class="my-2" />
+            <MudNavLink Href="/support" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ContactSupport" IconColor="Color.Primary">Support</MudNavLink>
+            <MudNavLink Href="/faqs" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionAnswer" IconColor="Color.Primary">FAQ's'</MudNavLink>
+        </MudNavMenu>
+    </MudPaper>
 
-    <MudNavLink Href="auth" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Lock">Auth Required</MudNavLink>
     <AuthorizeView>
         <Authorized>
             <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">@context.User.Identity?.Name</MudNavLink>
