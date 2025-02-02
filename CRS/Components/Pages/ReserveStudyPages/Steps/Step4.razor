@@ -1,0 +1,44 @@
+﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps
+
+@using CRS.Models
+@inject ISnackbar Snackbar
+
+<MudForm Model="Model" @ref="form">
+    <MudTextField @bind-Value="Model.Community.Name" Label="Community Name" Required="true" For="@(() => Model.Community.Name)" />
+    <!-- Add other fields for Community Information as needed -->
+</MudForm>
+
+@code {
+    [Parameter]
+    public ReserveStudy Model { get; set; }
+
+    private MudForm form;
+
+    // private void OnValidated()
+    // {
+    //     if (form.IsValid)
+    //     {
+    //         // Notify parent that the step is valid
+    //         StepValidated.InvokeAsync(true);
+    //         Snackbar.Add("Step 1 validated successfully!", Severity.Success);
+    //     }
+    //     else
+    //     {
+    //         // Notify parent that the step is invalid
+    //         StepValidated.InvokeAsync(false);
+    //         Snackbar.Add("Please correct the errors in the form.", Severity.Error);
+    //     }
+    // }
+
+    [Parameter]
+    public EventCallback<bool> StepValidated { get; set; }
+
+    public async Task<bool> ValidateAsync()
+    {
+        await form.Validate();
+        bool valid = form.IsValid;
+        await StepValidated.InvokeAsync(valid);
+        return valid;
+    }
+
+}

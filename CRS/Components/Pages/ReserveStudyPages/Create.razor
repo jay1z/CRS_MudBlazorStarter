@@ -1,95 +1,260 @@
 ﻿@page "/reservestudies/create"
-@using Microsoft.EntityFrameworkCore
+@using CRS.Components.Pages.ReserveStudyPages.Steps
+@using CRS.Data
 @using CRS.Models
 @using static CRS.Models.ReserveStudy
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 
 <PageTitle>Create</PageTitle>
 
 <h1>Create</h1>
 
 <h2>ReserveStudy</h2>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm method="post" Model="ReserveStudy" OnValidSubmit="AddReserveStudy" FormName="create" Enhance>
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert"/>
-            <div class="mb-3">
-                <label for="applicationuserid" class="form-label">ApplicationUserId:</label> 
-                <InputText id="applicationuserid" @bind-Value="ReserveStudy.ApplicationUserId" class="form-control" /> 
-                <ValidationMessage For="() => ReserveStudy.ApplicationUserId" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="specialistuserid" class="form-label">SpecialistUserId:</label> 
-                <InputText id="specialistuserid" @bind-Value="ReserveStudy.SpecialistUserId" class="form-control" /> 
-                <ValidationMessage For="() => ReserveStudy.SpecialistUserId" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="pointofcontacttype" class="form-label">PointOfContactType:</label> 
-                <InputSelect id="pointofcontacttype" @bind-Value="ReserveStudy.PointOfContactType" class="form-control">
-                    @foreach (var type in Enum.GetValues<PointOfContactTypeEnum>())
-                    {
-                        <option value="@type">@type</option>
-                    }
-                </InputSelect>
-                <ValidationMessage For="() => ReserveStudy.PointOfContactType" class="text-danger" /> 
-            </div>
-            <div class="mb-3">
-                <label for="isactive" class="form-label">IsActive:</label> 
-                <InputCheckbox id="isactive" @bind-Value="ReserveStudy.IsActive" class="form-check-input" /> 
-                <ValidationMessage For="() => ReserveStudy.IsActive" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="isapproved" class="form-label">IsApproved:</label> 
-                <InputCheckbox id="isapproved" @bind-Value="ReserveStudy.IsApproved" class="form-check-input" /> 
-                <ValidationMessage For="() => ReserveStudy.IsApproved" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="iscomplete" class="form-label">IsComplete:</label> 
-                <InputCheckbox id="iscomplete" @bind-Value="ReserveStudy.IsComplete" class="form-check-input" /> 
-                <ValidationMessage For="() => ReserveStudy.IsComplete" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="dateapproved" class="form-label">DateApproved:</label> 
-                <InputDate id="dateapproved" @bind-Value="ReserveStudy.DateApproved" class="form-control" /> 
-                <ValidationMessage For="() => ReserveStudy.DateApproved" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="datecreated" class="form-label">DateCreated:</label> 
-                <InputDate id="datecreated" @bind-Value="ReserveStudy.DateCreated" class="form-control" /> 
-                <ValidationMessage For="() => ReserveStudy.DateCreated" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="datemodified" class="form-label">DateModified:</label> 
-                <InputDate id="datemodified" @bind-Value="ReserveStudy.DateModified" class="form-control" /> 
-                <ValidationMessage For="() => ReserveStudy.DateModified" class="text-danger" /> 
-            </div>        
-            <div class="mb-3">
-                <label for="datedeleted" class="form-label">DateDeleted:</label> 
-                <InputDate id="datedeleted" @bind-Value="ReserveStudy.DateDeleted" class="form-control" /> 
-                <ValidationMessage For="() => ReserveStudy.DateDeleted" class="text-danger" /> 
-            </div>        
-            <button type="submit" class="btn btn-primary">Create</button>
-        </EditForm>
-    </div>
-</div>
 
-<div>
-    <a href="/reservestudies">Back to List</a>
-</div>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudCard>
+        <MudCardContent>
+            <MudStepper @bind-ActiveStep="activeStep" Linear="true" CenterLabels="true" CompletedStepColor="Color.Success" CurrentStepColor="Color.Primary" OnPreviewInteraction="OnPreviewInteraction" Class="mb-4" @ref="stepper">
+                <ChildContent>
+                    <MudStep Title="Community Information" HasError="@(currentStepIsValid==false)">
+                        <Step1 @ref="currentStepStep1" Model="Model" StepValidated="OnStepValidated" />
+                    </MudStep>
+                    <MudStep Title="Property Manager">
+                        <Step2 @ref="currentStepStep2" Model="Model" StepValidated="OnStepValidated" />
+                    </MudStep>
+                    <MudStep Title="Property Elements">
+                        <Step3 @ref="currentStepStep3" Model="Model" StepValidated="OnStepValidated" />
+                    </MudStep>
+                    <MudStep Title="Acknowledgement">
+                        <Step4 @ref="currentStepStep4" Model="Model" StepValidated="OnStepValidated" />
+                    </MudStep>
+                    <MudStep Title="Completed">
+                        <Step5 @ref="currentStepStep5" Model="Model" StepValidated="OnStepValidated" />
+                    </MudStep>
+                </ChildContent>
+                <CompletedContent>
+                    <MudStack Row Class="ma-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Done" Color="Color.Success" />
+                        <MudText>
+                            You are checked-in, your ticket will be sent by email.
+                        </MudText>
+                    </MudStack>
+                </CompletedContent>
+                <ActionContent Context="stepper">
+                    @if (!_completed)
+                    {
+                        @* <MudIconButton OnClick="@(() => stepper.PreviousStepAsync())" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Disabled="@(_index <= 0)" /> *@
+                        <MudIconButton OnClick="@(PreviousStep)" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Disabled="@(_index <= 0)" />
+                        <MudSpacer />
+                        <MudIconButton OnClick="@(NextStep)" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary" />
+                        @* <MudIconButton OnClick="@(() => stepper.NextStepAsync())" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary" /> *@
+                    }
+                </ActionContent>
+            </MudStepper>
+
+            <!-- Action Buttons -->
+            @* <MudGrid Justify="Justify.SpaceBetween" Class="mt-4">
+                <MudItem>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="activeStep == 0" OnClick="PreviousStep">
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-2" />
+                        Back
+                    </MudButton>
+                </MudItem>
+                <MudItem>
+                    @if (activeStep < totalSteps - 1)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextStep" Disabled="!currentStepIsValid">
+                            Continue
+                            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" class="ml-2" />
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitForm" Disabled="isSubmitting">
+                            <span class="mud-button-content">
+                                Submit
+                                @if (isSubmitting)
+                                {
+                                    <MudProgressCircular Indeterminate="true" Color="Color.Inherit" Class="ml-2" />
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Send" class="ml-2" />
+                                }
+                            </span>
+                        </MudButton>
+                    }
+                </MudItem>
+            </MudGrid> *@ 
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
 
 @code {
-    [SupplyParameterFromForm]
-    private ReserveStudy ReserveStudy { get; set; }
+    [Inject]
+    IDialogService DialogService { get; set; }
+    private int _index;
+    private bool _completed;
+
+    // [SupplyParameterFromForm]
+    private ReserveStudy Model { get; set; }
+
+    private ApplicationDbContext context = default!;
+    private int activeStep = 0;
+    private readonly int totalSteps = 5;
+    private bool isSubmitting = false;
+    private MudStepper stepper;
+    // private Step1 currentStepStep1;
+    // private Step2 currentStepStep2;
+    // private Step3 currentStepStep3;
+    // private Step4 currentStepStep4;
+    // private Step5 currentStepStep5;
+
+    private bool currentStepIsValid = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState != null)
+        {
+            var user = authState.User;
+            var userId = user?.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("User not found.");
+            Model = new ReserveStudy
+                {
+                    ApplicationUserId = userId,
+                    Community = new Community
+                    {
+                        Addresses = new List<Address> { new Address() }
+                    }
+                };
+
+            context = DbFactory.CreateDbContext();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (context != null)
+        {
+            await context.DisposeAsync();
+        }
+    }
+
+    private async Task NextStep()
+    {
+         var isValid = await currentStep.ValidateAsync();
+        // if (isValid)
+        // {
+        //     activeStep++;
+            await stepper.NextStepAsync();
+            _index++;
+        // }
+        // else
+        // {
+        //     Snackbar.Add("Please correct the errors before proceeding.", Severity.Error);
+        // }
+    }
+
+    private async Task PreviousStep()
+    {
+        // if (activeStep > 0)
+        // {
+        //     activeStep--;
+            await stepper.PreviousStepAsync();
+            _index--;
+        // }
+    }
 
     // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
-    private async Task AddReserveStudy()
+    private async Task SubmitForm()
     {
-        using var context = DbFactory.CreateDbContext();
-        context.ReserveStudy.Add(ReserveStudy);
-        await context.SaveChangesAsync();
-        NavigationManager.NavigateTo("/reservestudies");
+        isSubmitting = true;
+        try
+        {
+            context.ReserveStudies.Add(Model);
+            await context.SaveChangesAsync();
+
+            Snackbar.Add("Reserve Study submitted successfully!", Severity.Success);
+            NavigationManager.NavigateTo("/reservestudies");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
+
+    private void OnStepValidated(bool isValid)
+    {
+        currentStepIsValid = isValid;
+        StateHasChanged();
+    }
+
+    // private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
+    // {
+    //     if (arg.Action == StepAction.Complete)
+    //     {
+    //         currentStepIsValid = await currentStepStep1.ValidateAsync();
+    //         await ControlStepCompletion(arg);
+    //     }
+    //     else if (arg.Action == StepAction.Activate)
+    //     {
+    //         await ControlStepNavigation(arg);
+    //     }
+    // }
+
+    // private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
+    // {
+    //     _index = arg.StepIndex;
+    //     switch (arg.StepIndex)
+    //     {
+    //         case 0:
+    //             if (currentStepIsValid != true)
+    //             {
+    //                 await DialogService.ShowMessageBox("Error", "You have not flipped the switch in step 1");
+    //                 arg.Cancel = true;
+    //             }
+    //             break;
+    //         case 1:
+    //             if (currentStepIsValid != true)
+    //             {
+    //                 await DialogService.ShowMessageBox("Error", "You have not entered text in step 2");
+    //                 arg.Cancel = true;
+    //             }
+    //             break;
+    //     }
+    // }
+
+    // private async Task ControlStepNavigation(StepperInteractionEventArgs arg)
+    // {
+    //     _index = arg.StepIndex;
+    //     switch (arg.StepIndex)
+    //     {
+    //         case 1:
+    //             if (currentStepIsValid != true)
+    //             {
+    //                 await DialogService.ShowMessageBox("Error", "Finish step 1 first");
+    //                 arg.Cancel = true;
+    //             }
+    //             break;
+    //         case 2:
+    //             if (currentStepIsValid != true)
+    //             {
+    //                 await DialogService.ShowMessageBox("Error", "Finish step 1 and 2 first");
+    //                 arg.Cancel = true;
+    //             }
+    //             break;
+    //     }
+    // }
 }

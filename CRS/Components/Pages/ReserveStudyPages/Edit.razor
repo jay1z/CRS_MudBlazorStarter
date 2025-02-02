@@ -98,7 +98,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        ReserveStudy ??= await context.ReserveStudy.FirstOrDefaultAsync(m => m.Id == Id);
+        ReserveStudy ??= await context.ReserveStudies.FirstOrDefaultAsync(m => m.Id == Id);
 
         if (ReserveStudy is null)
         {
@@ -135,6 +135,6 @@ else
     private bool ReserveStudyExists(int id)
     {
         using var context = DbFactory.CreateDbContext();
-        return context.ReserveStudy.Any(e => e.Id == id);
+        return context.ReserveStudies.Any(e => e.Id == id);
     }
 }

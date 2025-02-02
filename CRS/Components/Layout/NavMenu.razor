@@ -3,18 +3,23 @@
 @inject NavigationManager NavigationManager
 
 <MudNavMenu>
-    <MudPaper Width="250px" Class="py-3" Elevation="0">
+    <MudPaper Width="250px" Class="py-3">
         <MudNavMenu>
             <MudText Typo="Typo.h6" Class="px-4">My Application</MudText>
             <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Secondary Text</MudText>
             <MudDivider Class="my-2" />
             <MudNavLink Href="/shortcuts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AppShortcut" IconColor="Color.Default">Shortcuts</MudNavLink>
+        </MudNavMenu>
+    </MudPaper>
+
+    <AuthorizeView>
+        <Authorized>
             <MudNavLink Href="/dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary">Dashboard</MudNavLink>
             @* <MudText Typo="Typo.caption" Class="px-4 mud-text-secondary">Pages</MudText> *@
             <MudDivider Class="my-2" />
             <MudNavGroup Title="Reserve Studies" Expanded="true">
+                <MudNavLink Href="/reserveStudies/" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Warning">Active Studies</MudNavLink>
                 <MudNavLink Href="/reserveStudies/my" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PersonPin" IconColor="Color.Warning">My Requests</MudNavLink>
-                <MudNavLink Href="/reserveStudies/active" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Warning">Active Studies</MudNavLink>
                 <MudNavLink Href="/reserveStudies/sendlink" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Send" IconColor="Color.Warning">Send Link</MudNavLink>
             </MudNavGroup>
             <MudDivider Class="my-2" />
@@ -28,11 +33,6 @@
             <MudDivider Class="my-2" />
             <MudNavLink Href="/support" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ContactSupport" IconColor="Color.Primary">Support</MudNavLink>
             <MudNavLink Href="/faqs" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionAnswer" IconColor="Color.Primary">FAQ's'</MudNavLink>
-        </MudNavMenu>
-    </MudPaper>
-
-    <AuthorizeView>
-        <Authorized>
             <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">@context.User.Identity?.Name</MudNavLink>
             <form action="Account/Logout" method="post">
                 <AntiforgeryToken />

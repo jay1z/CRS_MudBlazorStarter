@@ -14,7 +14,7 @@
     <a href="reservestudies/create">Create New</a>
 </p>
 
-<QuickGrid Class="table" Items="context.ReserveStudy">
+@* <QuickGrid Class="table" Items="context.ReserveStudies">
     <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.ApplicationUserId" />
     <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.SpecialistUserId" />
     <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.PointOfContactType" />
@@ -31,14 +31,66 @@
         <a href="@($"reservestudies/details?id={reservestudy.Id}")">Details</a> |
         <a href="@($"reservestudies/delete?id={reservestudy.Id}")">Delete</a>
     </Microsoft.AspNetCore.Components.QuickGrid.TemplateColumn>
-</QuickGrid>
+</QuickGrid> *@
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudGrid>
+        <MudItem xs="12">
+            <MudCard>
+                <MudCardHeader>
+                    <MudText Typo="Typo.h6" Class="mt-1 fw-semibold">999</MudText>
+                    <MudSpacer />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" Href="/reserveStudy/active">
+                        Refresh
+                    </MudButton>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudTable Items="@reserveStudies" Dense="true" Hover="true">
+                        <HeaderContent>
+                            <MudTh>VIEW</MudTh>
+                            <MudTh class="text-center">COMMUNITY</MudTh>
+                            <MudTh class="text-center">CONTACT</MudTh>
+                            <MudTh class="text-center">EMAIL</MudTh>
+                            <MudTh class="text-end">PHONE</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Href="reservestudy.HashedId">
+                                    View
+                                </MudButton>
+                            </MudTd>
+                            <MudTd Class="text-center">
+                                <MudText Typo="Typo.body1" Class="fw-bold">
+                                    @context.Community.Name
+                                </MudText>
+                            </MudTd>
+                            <MudTd Class="text-center">
+                                <MudText Typo="Typo.body1">@context.PointOfContact?.FullName</MudText>
+                                <MudText Typo="Typo.caption">@context.PointOfContact?.CompanyName</MudText>
+                            </MudTd>
+                            <MudTd Class="text-center">
+                                <MudLink Href="@context.PointOfContact?.Email">@context.PointOfContact?.Email</MudLink>
+                            </MudTd>
+                            <MudTd Class="text-end">
+                                <MudText Typo="Typo.body1">@context.PointOfContact?.Phone</MudText>
+                                <MudText Typo="Typo.caption">ext. @context.PointOfContact?.Extension</MudText>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
 
 @code {
     private ApplicationDbContext context = default!;
+    private List<ReserveStudy> reserveStudies = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        context = DbFactory.CreateDbContext();
+        context = await DbFactory.CreateDbContextAsync();
+        reserveStudies = await context.ReserveStudies.Include(rs => rs.Community).ToListAsync();
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();

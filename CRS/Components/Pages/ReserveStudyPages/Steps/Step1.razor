@@ -1,0 +1,154 @@
+﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps
+
+@using CRS.Models
+@using MudBlazor
+@inherits OwningComponentBase
+@inject ISnackbar Snackbar
+
+<MudForm Model="Model" @ref="form" Validated="OnValidated">
+    <MudGrid>
+        <!-- Header Section -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Class="mb-4">Community Details</MudText>
+            <MudText Typo="Typo.body2" Class="text-muted">
+                If you need more info, please check out the
+                <MudLink Href="#" Class="link-primary fw-bold">Help Page</MudLink>.
+            </MudText>
+        </MudItem>
+
+        <!-- Community Name -->
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Model.Community.Name"
+                          Label="Community Name"
+                          Required="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.TwoTone.LocationCity"
+                          Immediate="true"
+                          For="@(() => Model.Community.Name)"
+                          Validation="ValidateCommunityName" />
+        </MudItem>
+
+        <!-- Street Address -->
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Model.Community.Addresses.First().Street"
+                          Label="Street Address"
+                          Required="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.TwoTone.EditRoad"
+                          Immediate="true"
+                          For="@(() => Model.Community.Addresses.First().Street)"
+                          Validation="ValidateStreetAddress" />
+        </MudItem>
+
+        <!-- State, City, Zip -->
+        <MudItem xs="12">
+            <MudGrid>
+                <!-- State -->
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="Model.Community.Addresses.First().State"
+                                  Label="State"
+                                  Required="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.TwoTone.LocationOn"
+                                  Immediate="true"
+                                  For="@(() => Model.Community.Addresses.First().State)"
+                                  Validation="ValidateState" />
+                </MudItem>
+
+                <!-- City -->
+                <MudItem xs="12" sm="5">
+                    <MudTextField @bind-Value="Model.Community.Addresses.First().City"
+                                  Label="City"
+                                  Required="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.TwoTone.LocationOn"
+                                  Immediate="true"
+                                  For="@(() => Model.Community.Addresses.First().City)"
+                                  Validation="ValidateCity" />
+                </MudItem>
+
+                <!-- Zip Code -->
+                <MudItem xs="12" sm="3">
+                    <MudTextField @bind-Value="Model.Community.Addresses.First().Zip"
+                                  Label="Zip Code"
+                                  Required="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.TwoTone.Mail"
+                                  Immediate="true"
+                                  For="@(() => Model.Community.Addresses.First().Zip)"
+                                  Validation="ValidateZip" />
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+    </MudGrid>
+</MudForm>
+
+@code {
+    [Parameter]
+    public ReserveStudy Model { get; set; }
+
+    private MudForm form;
+
+    // Validation Methods
+    private string ValidateCommunityName(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Community Name is required." : null;
+    }
+
+    private string ValidateStreetAddress(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Street Address is required." : null;
+    }
+
+    private string ValidateCity(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "City is required." : null;
+    }
+
+    private string ValidateState(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "State is required.";
+        if (value.Length != 2)
+            return "State must be a 2-letter abbreviation.";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^[A-Z]{2}$"))
+            return "State must be in uppercase.";
+        return null;
+    }
+
+    private string ValidateZip(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "Zip Code is required.";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^\d{5}(-\d{4})?$"))
+            return "Invalid Zip Code format.";
+        return null;
+    }
+
+    // private void OnValidated()
+    // {
+    //     if (form.IsValid)
+    //     {
+    //         // Notify parent that the step is valid
+    //         StepValidated.InvokeAsync(true);
+    //         Snackbar.Add("Step 1 validated successfully!", Severity.Success);
+    //     }
+    //     else
+    //     {
+    //         // Notify parent that the step is invalid
+    //         StepValidated.InvokeAsync(false);
+    //         Snackbar.Add("Please correct the errors in the form.", Severity.Error);
+    //     }
+    // }
+
+    [Parameter]
+    public EventCallback<bool> StepValidated { get; set; }
+
+    public async Task<bool> ValidateAsync()
+    {
+        await form.Validate();
+        bool valid = form.IsValid;
+        await StepValidated.InvokeAsync(valid);
+        return valid;
+    }
+}

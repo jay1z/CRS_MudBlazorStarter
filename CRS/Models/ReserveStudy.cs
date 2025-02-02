@@ -9,6 +9,10 @@ using static CRS.Helpers.LinkHelper;
 
 namespace CRS.Models {
     public class ReserveStudy : BaseModel {
+        //public ReserveStudy() {
+        //    Community = new Community();
+        //}
+
         [ForeignKey("User")]
         public required string ApplicationUserId { get; set; }
         public ApplicationUser? User { get; set; }
@@ -17,9 +21,9 @@ namespace CRS.Models {
         public string? SpecialistUserId { get; set; }
         public ApplicationUser? Specialist { get; set; }
 
-        public required Community Community { get; set; }
+        public Community Community { get; set; }
         public PointOfContactTypeEnum PointOfContactType { get; set; } = PointOfContactTypeEnum.Contact;
-        public required Contact Contact { get; set; }
+        public Contact Contact { get; set; }
         public PropertyManager? PropertyManager { get; set; }
 
         public List<ReserveStudyBuildingElement>? ReserveStudyBuildingElements { get; set; }
