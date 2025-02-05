@@ -1,140 +1,452 @@
 ﻿@page "/reservestudies/edit"
 @using Microsoft.EntityFrameworkCore
 @using CRS.Models
-@using static CRS.Models.ReserveStudy
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Edit Reserve Study</PageTitle>
 
-<h1>Edit</h1>
+<h1>Edit Reserve Study</h1>
 
-<h2>ReserveStudy</h2>
-<hr />
-@if (ReserveStudy is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="row">
-        <div class="col-md-4">
-            <EditForm method="post" Model="ReserveStudy" OnValidSubmit="UpdateReserveStudy" FormName="edit" Enhance>
-                <DataAnnotationsValidator />
-                <ValidationSummary role="alert"/>
-                <input type="hidden" name="ReserveStudy.Id" value="@ReserveStudy.Id" />
-                <div class="mb-3">
-                    <label for="applicationuserid" class="form-label">ApplicationUserId:</label>
-                    <InputText id="applicationuserid" @bind-Value="ReserveStudy.ApplicationUserId" class="form-control" />
-                    <ValidationMessage For="() => ReserveStudy.ApplicationUserId" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="specialistuserid" class="form-label">SpecialistUserId:</label>
-                    <InputText id="specialistuserid" @bind-Value="ReserveStudy.SpecialistUserId" class="form-control" />
-                    <ValidationMessage For="() => ReserveStudy.SpecialistUserId" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="pointofcontacttype" class="form-label">PointOfContactType:</label>
-                    <InputSelect id="pointofcontacttype" @bind-Value="ReserveStudy.PointOfContactType" class="form-control">
-                        @foreach (var type in Enum.GetValues<PointOfContactTypeEnum>())
-                        {
-                            <option value="@type">@type</option>
-                        }
-                    </InputSelect>
-                    <ValidationMessage For="() => ReserveStudy.PointOfContactType" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="isactive" class="form-label">IsActive:</label>
-                    <InputCheckbox id="isactive" @bind-Value="ReserveStudy.IsActive" class="form-check-input" />
-                    <ValidationMessage For="() => ReserveStudy.IsActive" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="isapproved" class="form-label">IsApproved:</label>
-                    <InputCheckbox id="isapproved" @bind-Value="ReserveStudy.IsApproved" class="form-check-input" />
-                    <ValidationMessage For="() => ReserveStudy.IsApproved" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="iscomplete" class="form-label">IsComplete:</label>
-                    <InputCheckbox id="iscomplete" @bind-Value="ReserveStudy.IsComplete" class="form-check-input" />
-                    <ValidationMessage For="() => ReserveStudy.IsComplete" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="dateapproved" class="form-label">DateApproved:</label>
-                    <InputDate id="dateapproved" @bind-Value="ReserveStudy.DateApproved" class="form-control" />
-                    <ValidationMessage For="() => ReserveStudy.DateApproved" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="datecreated" class="form-label">DateCreated:</label>
-                    <InputDate id="datecreated" @bind-Value="ReserveStudy.DateCreated" class="form-control" />
-                    <ValidationMessage For="() => ReserveStudy.DateCreated" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="datemodified" class="form-label">DateModified:</label>
-                    <InputDate id="datemodified" @bind-Value="ReserveStudy.DateModified" class="form-control" />
-                    <ValidationMessage For="() => ReserveStudy.DateModified" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="datedeleted" class="form-label">DateDeleted:</label>
-                    <InputDate id="datedeleted" @bind-Value="ReserveStudy.DateDeleted" class="form-control" />
-                    <ValidationMessage For="() => ReserveStudy.DateDeleted" class="text-danger" />
-                </div>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </EditForm>
-        </div>
-    </div>
-}
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudGrid>
+        <!-- Aside Column -->
+        <MudItem xs="12" lg="4">
+            <!-- Details Card -->
+            <MudCard Elevation="25" Class="mb-4">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="text-primary">Request ID</MudText>
+                    <MudText Typo="Typo.body2">@reserveStudy?.HashedId</MudText>
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.h6" Class="text-primary">Created</MudText>
+                    <MudText Typo="Typo.body2">@reserveStudy?.DateCreated</MudText>
+                </MudCardContent>
+            </MudCard>
 
-<div>
-    <a href="/reservestudies">Back to List</a>
-</div>
+            <!-- Specialist Card -->
+            <MudCard Elevation="25" Class="mb-4">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="text-primary">Reserve Specialist</MudText>
+                    <MudTextField @bind-Value="specialistEmail" Label="Specialist Email" />
+                </MudCardContent>
+            </MudCard>
+
+            <!-- Actions Card -->
+            <MudCard Elevation="25" Class="mb-4">
+                <MudCardContent>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveChanges">Save Changes</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Main Column -->
+        <MudItem xs="12" lg="8">
+            <MudCard Elevation="0">
+                <MudCardContent>
+                    <MudTabs>
+                        <MudTabPanel Text="Information" Icon="@Icons.Material.TwoTone.Info">
+                            <MudCard Elevation="25">
+                                <MudCardContent Class="py-6">
+                                    <MudGrid>
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.h6" Class="text-muted">Contact</MudText>
+                                        </MudItem>
+                                        <MudItem xs="6">
+                                            <MudTextField @bind-Value="contactFirstName" Label="First Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                            <MudTextField @bind-Value="contactLastName" Label="Last Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                        </MudItem>
+                                        <MudItem xs="2">
+                                            <MudTextField @bind-Value="contactPhone" Label="Phone" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                            <MudTextField @bind-Value="contactExtension" Label="Extension" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudTextField @bind-Value="contactEmail" Label="Email" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.h6" Class="text-muted">Management Company</MudText>
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudTextField @bind-Value="propertyManagerCompanyName" Label="Company Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                        </MudItem>
+                                        <MudItem xs="6">
+                                            <MudTextField @bind-Value="propertyManagerFirstName" Label="First Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                            <MudTextField @bind-Value="propertyManagerLastName" Label="Last Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                        </MudItem>
+                                        <MudItem xs="2">
+                                            <MudTextField @bind-Value="propertyManagerPhone" Label="Phone" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                            <MudTextField @bind-Value="propertyManagerExtension" Label="Extension" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudTextField @bind-Value="propertyManagerEmail" Label="Email" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                        </MudItem>
+                                        <MudDivider Class="my-5 mx-3 " />
+                                    </MudGrid>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudTabPanel>
+                        <MudTabPanel Text="Elements" Icon="@Icons.Material.TwoTone.List">
+                            <MudCard Elevation="25">
+                                <MudCardContent Class="py-6">
+                                    <MudTable Items="@reserveStudy?.ReserveStudyBuildingElements" Dense="true" Hover="true" Elevation="0">
+                                        <HeaderContent>
+                                            <MudTh>Name</MudTh>
+                                            <MudTh>Needs Service</MudTh>
+                                            <MudTh class="text-end">Amount</MudTh>
+                                        </HeaderContent>
+                                        <RowTemplate>
+                                            <MudTd>@context.BuildingElement.Name</MudTd>
+                                            <MudTd>
+                                                <MudSwitch T="bool" @bind-Checked="context.BuildingElement.NeedsService" />
+                                            </MudTd>
+                                            <MudTd class="text-end">
+                                                <MudNumericField @bind-Value="context.Count" Min="0" />
+                                            </MudTd>
+                                        </RowTemplate>
+                                    </MudTable>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudTabPanel>
+                        <MudTabPanel Text="Element Details" Icon="@Icons.Material.TwoTone.Details">
+                            <MudExpansionPanels>
+                                @foreach (var element in reserveStudy?.ReserveStudyBuildingElements)
+                                {
+                                    <MudExpansionPanel>
+                                        <TitleContent>
+                                            <MudText Typo="Typo.body1">@element.BuildingElement.Name</MudText>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudGrid>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Measurement Type</MudText>
+                                                    <MudTextField @bind-Value="element.ElementMeasurementOptions.DisplayText" Label="Measurement Type" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Last Replaced</MudText>
+                                                    <MudDatePicker @bind-Date="element.LastServiced" Label="Last Replaced" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Useful Life</MudText>
+                                                    <MudTextField @bind-Value="element.ElementUsefulLifeOptions.DisplayText" Label="Useful Life" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Remaining Life</MudText>
+                                                    <MudTextField @bind-Value="element.ElementRemainingLifeOptions.DisplayText" Label="Remaining Life" />
+                                                </MudItem>
+                                            </MudGrid>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
+                                @foreach (var element in reserveStudy?.ReserveStudyCommonElements)
+                                {
+                                    <MudExpansionPanel>
+                                        <TitleContent>
+                                            <MudText Typo="Typo.body1">@element.CommonElement.Name</MudText>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudGrid>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Measurement Type</MudText>
+                                                    <MudTextField @bind-Value="element.ElementMeasurementOptions.DisplayText" Label="Measurement Type" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Last Replaced</MudText>
+                                                    <MudDatePicker @bind-Date="element.LastServiced" Label="Last Replaced" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Useful Life</MudText>
+                                                    <MudTextField @bind-Value="element.ElementUsefulLifeOptions.DisplayText" Label="Useful Life" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Remaining Life</MudText>
+                                                    <MudTextField @bind-Value="element.ElementRemainingLifeOptions.DisplayText" Label="Remaining Life" />
+                                                </MudItem>
+                                            </MudGrid>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
+                                @foreach (var element in reserveStudy?.ReserveStudyAdditionalElements)
+                                {
+                                    <MudExpansionPanel>
+                                        <TitleContent>
+                                            <MudText Typo="Typo.body1">@element.Name</MudText>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudGrid>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Measurement Type</MudText>
+                                                    <MudTextField @bind-Value="element.ElementMeasurementOptions.DisplayText" Label="Measurement Type" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Last Replaced</MudText>
+                                                    <MudDatePicker @bind-Date="element.LastServiced" Label="Last Replaced" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Useful Life</MudText>
+                                                    <MudTextField @bind-Value="element.ElementUsefulLifeOptions.DisplayText" Label="Useful Life" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Remaining Life</MudText>
+                                                    <MudTextField @bind-Value="element.ElementRemainingLifeOptions.DisplayText" Label="Remaining Life" />
+                                                </MudItem>
+                                            </MudGrid>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
+                            </MudExpansionPanels>
+                        </MudTabPanel>
+                        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.TwoTone.ContactPhone">
+                            <MudExpansionPanels>
+                                @foreach (var element in reserveStudy?.ReserveStudyBuildingElements.Where(rsbe => rsbe.BuildingElement.NeedsService))
+                                {
+                                    <MudExpansionPanel Text="@element.BuildingElement.Name">
+                                        <TitleContent>
+                                            <MudText Typo="Typo.body1">@element.BuildingElement.Name</MudText>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudGrid>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Company Name</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.CompanyName" Label="Company Name" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Phone</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.Phone" Label="Phone" />
+                                                    <MudTextField @bind-Value="element.ServiceContact.Extension" Label="Extension" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Point Of Contact</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.FirstName" Label="First Name" />
+                                                    <MudTextField @bind-Value="element.ServiceContact.LastName" Label="Last Name" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Email</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.Email" Label="Email" />
+                                                </MudItem>
+                                            </MudGrid>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
+                                @foreach (var element in reserveStudy?.ReserveStudyCommonElements.Where(rsce => rsce.CommonElement.NeedsService))
+                                {
+                                    <MudExpansionPanel Text="@element.CommonElement.Name">
+                                        <TitleContent>
+                                            <MudText Typo="Typo.body1">@element.CommonElement.Name</MudText>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudGrid>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Company Name</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.CompanyName" Label="Company Name" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Phone</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.Phone" Label="Phone" />
+                                                    <MudTextField @bind-Value="element.ServiceContact.Extension" Label="Extension" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Point Of Contact</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.FirstName" Label="First Name" />
+                                                    <MudTextField @bind-Value="element.ServiceContact.LastName" Label="Last Name" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Email</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.Email" Label="Email" />
+                                                </MudItem>
+                                            </MudGrid>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
+                                @foreach (var element in reserveStudy?.ReserveStudyAdditionalElements.Where(rsae => rsae.NeedsService))
+                                {
+                                    <MudExpansionPanel Text="@element.Name">
+                                        <TitleContent>
+                                            <MudText Typo="Typo.body1">@element.Name</MudText>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudGrid>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Company Name</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.CompanyName" Label="Company Name" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Phone</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.Phone" Label="Phone" />
+                                                    <MudTextField @bind-Value="element.ServiceContact.Extension" Label="Extension" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Point Of Contact</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.FirstName" Label="First Name" />
+                                                    <MudTextField @bind-Value="element.ServiceContact.LastName" Label="Last Name" />
+                                                </MudItem>
+                                                <MudItem xs="12">
+                                                    <MudText Typo="Typo.body2" Class="text-muted">Email</MudText>
+                                                    <MudTextField @bind-Value="element.ServiceContact.Email" Label="Email" />
+                                                </MudItem>
+                                            </MudGrid>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
+                            </MudExpansionPanels>
+                        </MudTabPanel>
+                    </MudTabs>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
 
 @code {
+    private ReserveStudy? reserveStudy;
+
     [SupplyParameterFromQuery]
     private int Id { get; set; }
 
-    [SupplyParameterFromForm]
-    private ReserveStudy? ReserveStudy { get; set; }
+    private string? specialistEmail;
+    private string? contactFirstName;
+    private string? contactLastName;
+    private string? contactPhone;
+    private string? contactExtension;
+    private string? contactEmail;
+    private string? propertyManagerCompanyName;
+    private string? propertyManagerFirstName;
+    private string? propertyManagerLastName;
+    private string? propertyManagerPhone;
+    private string? propertyManagerExtension;
+    private string? propertyManagerEmail;
+    // List<ElementMeasurementOptions> elementMeasurementOptions = new List<ElementMeasurementOptions>();
+    // List<int> elementUsefulLife = new List<int>();
+    // List<ElementUsefulLifeOptions> elementUsefulLifeOptions = new List<ElementUsefulLifeOptions>();
+    // List<ElementRemainingLifeOptions> elementRemainingLifeOptions = new List<ElementRemainingLifeOptions>();
+
 
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        ReserveStudy ??= await context.ReserveStudies.FirstOrDefaultAsync(m => m.Id == Id);
+        reserveStudy = await context.ReserveStudies
+            .Include(rs => rs.Community)
+            .Include(rs => rs.Contact)
+            .Include(rs => rs.PropertyManager)
+            .Include(rs => rs.Specialist)
 
-        if (ReserveStudy is null)
+            .Include(rs => rs.ReserveStudyBuildingElements)
+                .ThenInclude(be => be.BuildingElement)
+            .Include(rs => rs.ReserveStudyBuildingElements)
+                .ThenInclude(be => be.ElementMeasurementOptions)
+
+            .Include(rs => rs.ReserveStudyCommonElements)
+                .ThenInclude(ce => ce.CommonElement)
+            .Include(rs => rs.ReserveStudyCommonElements)
+                .ThenInclude(ce => ce.ElementMeasurementOptions)
+
+            .Include(rs => rs.ReserveStudyAdditionalElements)
+            .Include(rs => rs.ReserveStudyAdditionalElements)
+                .ThenInclude(ae => ae.ElementMeasurementOptions)
+
+            .Include(rs => rs.ReserveStudyAdditionalElements)
+            .FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (reserveStudy is null)
         {
             NavigationManager.NavigateTo("notfound");
         }
+        else
+        {
+            specialistEmail = reserveStudy.Specialist?.Email;
+            contactFirstName = reserveStudy.Contact.FirstName;
+            contactLastName = reserveStudy.Contact.LastName;
+            contactPhone = reserveStudy.Contact.Phone;
+            contactExtension = reserveStudy.Contact.Extension;
+            contactEmail = reserveStudy.Contact.Email;
+            propertyManagerCompanyName = reserveStudy.PropertyManager?.CompanyName;
+            propertyManagerFirstName = reserveStudy.PropertyManager?.FirstName;
+            propertyManagerLastName = reserveStudy.PropertyManager?.LastName;
+            propertyManagerPhone = reserveStudy.PropertyManager?.Phone;
+            propertyManagerExtension = reserveStudy.PropertyManager?.Extension;
+            propertyManagerEmail = reserveStudy.PropertyManager?.Email;
+
+            foreach (var element in reserveStudy.ReserveStudyBuildingElements)
+            {
+                element.ElementMeasurementOptions ??= context.ElementMeasurementOptions.FirstOrDefault();
+                element.ElementUsefulLifeOptions ??= context.ElementUsefulLifeOptions.FirstOrDefault();
+                element.ElementRemainingLifeOptions ??= context.ElementRemainingLifeOptions.FirstOrDefault();
+
+                element.ServiceContact ??= new ServiceContact()
+                    {
+                        CompanyName = string.Empty,
+                        FirstName = string.Empty,
+                        LastName = string.Empty,
+                        Phone = string.Empty,
+                        Extension = string.Empty,
+                        Email = string.Empty
+                    };
+            }
+            foreach (var element in reserveStudy.ReserveStudyCommonElements)
+            {
+                element.ElementMeasurementOptions ??= context.ElementMeasurementOptions.FirstOrDefault();
+                element.ElementUsefulLifeOptions ??= context.ElementUsefulLifeOptions.FirstOrDefault();
+                element.ElementRemainingLifeOptions ??= context.ElementRemainingLifeOptions.FirstOrDefault();
+
+                element.ServiceContact ??= new ServiceContact()
+                    {
+                        CompanyName = string.Empty,
+                        FirstName = string.Empty,
+                        LastName = string.Empty,
+                        Phone = string.Empty,
+                        Extension = string.Empty,
+                        Email = string.Empty
+                    };
+            }
+            foreach (var element in reserveStudy.ReserveStudyAdditionalElements)
+            {
+                element.ElementMeasurementOptions ??= context.ElementMeasurementOptions.FirstOrDefault();
+                element.ElementUsefulLifeOptions ??= context.ElementUsefulLifeOptions.FirstOrDefault();
+                element.ElementRemainingLifeOptions ??= context.ElementRemainingLifeOptions.FirstOrDefault();
+
+                element.ServiceContact ??= new ServiceContact()
+                    {
+                        CompanyName = string.Empty,
+                        FirstName = string.Empty,
+                        LastName = string.Empty,
+                        Phone = string.Empty,
+                        Extension = string.Empty,
+                        Email = string.Empty
+                    };
+            }
+        }
     }
 
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
-    private async Task UpdateReserveStudy()
+    private async Task SaveChanges()
     {
-        using var context = DbFactory.CreateDbContext();
-        context.Attach(ReserveStudy!).State = EntityState.Modified;
-
-        try
+        if (reserveStudy != null)
         {
+            reserveStudy.Specialist.Email = specialistEmail;
+            reserveStudy.Contact.FirstName = contactFirstName;
+            reserveStudy.Contact.LastName = contactLastName;
+            reserveStudy.Contact.Phone = contactPhone;
+            reserveStudy.Contact.Extension = contactExtension;
+            reserveStudy.Contact.Email = contactEmail;
+            if (reserveStudy.PropertyManager != null)
+            {
+                reserveStudy.PropertyManager.CompanyName = propertyManagerCompanyName;
+                reserveStudy.PropertyManager.FirstName = propertyManagerFirstName;
+                reserveStudy.PropertyManager.LastName = propertyManagerLastName;
+                reserveStudy.PropertyManager.Phone = propertyManagerPhone;
+                reserveStudy.PropertyManager.Extension = propertyManagerExtension;
+                reserveStudy.PropertyManager.Email = propertyManagerEmail;
+            }
+            using var context = DbFactory.CreateDbContext();
+            context.ReserveStudies.Update(reserveStudy);
             await context.SaveChangesAsync();
+            Snackbar.Add("Changes saved successfully!", Severity.Success);
+            NavigationManager.NavigateTo($"/reservestudies/details?id={reserveStudy.Id}");
         }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!ReserveStudyExists(ReserveStudy!.Id))
-            {
-                NavigationManager.NavigateTo("notfound");
-            }
-            else
-            {
-                throw;
-            }
-        }
-
-        NavigationManager.NavigateTo("/reservestudies");
     }
 
-    private bool ReserveStudyExists(int id)
+    private void Cancel()
     {
-        using var context = DbFactory.CreateDbContext();
-        return context.ReserveStudies.Any(e => e.Id == id);
+        NavigationManager.NavigateTo($"/reservestudies/details?id={reserveStudy.Id}");
     }
 }
+

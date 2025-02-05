@@ -5,7 +5,7 @@
 @inherits OwningComponentBase
 @inject ISnackbar Snackbar
 
-<MudForm Model="Model" @ref="form" Validated="OnValidated">
+<MudForm Model="Model" @ref="form" >
     <MudGrid>
         <!-- Header Section -->
         <MudItem xs="12">
@@ -45,14 +45,12 @@
             <MudGrid>
                 <!-- State -->
                 <MudItem xs="12" sm="4">
-                    <MudTextField @bind-Value="Model.Community.Addresses.First().State"
-                                  Label="State"
-                                  Required="true"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.TwoTone.LocationOn"
-                                  Immediate="true"
-                                  For="@(() => Model.Community.Addresses.First().State)"
-                                  Validation="ValidateState" />
+                    <MudSelect @bind-Value="Model.Community.Addresses.First().State" Label="State" Required="true" Immediate="true" For="@(() => Model.Community.Addresses.First().State)" Validation="ValidateState">
+                        @foreach (var state in States)
+                        {
+                            <MudSelectItem Value="@state">@state</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
 
                 <!-- City -->
@@ -89,6 +87,11 @@
 
     private MudForm form;
 
+    private List<string> States = new List<string>
+    {
+        "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+    };
+
     // Validation Methods
     private string ValidateCommunityName(string value)
     {
@@ -107,39 +110,18 @@
 
     private string ValidateState(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return "State is required.";
-        if (value.Length != 2)
-            return "State must be a 2-letter abbreviation.";
-        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^[A-Z]{2}$"))
-            return "State must be in uppercase.";
+        if (string.IsNullOrWhiteSpace(value)) return "State is required.";
+        if (value.Length != 2) return "State must be a 2-letter abbreviation.";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^[A-Z]{2}$")) return "State must be in uppercase.";
         return null;
     }
 
     private string ValidateZip(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return "Zip Code is required.";
-        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^\d{5}(-\d{4})?$"))
-            return "Invalid Zip Code format.";
+        if (string.IsNullOrWhiteSpace(value)) return "Zip Code is required.";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^\d{5}(-\d{4})?$")) return "Invalid Zip Code format.";
         return null;
     }
-
-    // private void OnValidated()
-    // {
-    //     if (form.IsValid)
-    //     {
-    //         // Notify parent that the step is valid
-    //         StepValidated.InvokeAsync(true);
-    //         Snackbar.Add("Step 1 validated successfully!", Severity.Success);
-    //     }
-    //     else
-    //     {
-    //         // Notify parent that the step is invalid
-    //         StepValidated.InvokeAsync(false);
-    //         Snackbar.Add("Please correct the errors in the form.", Severity.Error);
-    //     }
-    // }
 
     [Parameter]
     public EventCallback<bool> StepValidated { get; set; }

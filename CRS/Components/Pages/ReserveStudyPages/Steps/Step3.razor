@@ -1,34 +1,149 @@
 ﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps
 
+@using CRS.Data
 @using CRS.Models
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 
 <MudForm Model="Model" @ref="form">
-    <MudTextField @bind-Value="Model.Community.Name" Label="Community Name" Required="true" For="@(() => Model.Community.Name)" />
-    <!-- Add other fields for Community Information as needed -->
+    <MudGrid>
+        <!-- Property Elements Header -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Class="mb-4">Property Elements</MudText>
+        </MudItem>
+
+        <!-- Building Elements Section -->
+        <MudItem xs="6">
+            <MudText Typo="Typo.h6" Class="mb-4">Building Elements</MudText>
+            @if (buildingElements != null && buildingElements.Any())
+            {
+                @foreach (var element in buildingElements)
+                {
+                    <MudCheckBox T="bool" Label="@element.Name" @bind-Checked="isSelected" ValueChanged="(isSelected) => OnBuildingElementChanged(isSelected, element)" />
+                }
+            }
+            else
+            {
+                <MudText>No Building Elements available.</MudText>
+            }
+        </MudItem>
+
+        <!-- Common Elements Section -->
+        <MudItem xs="6">
+            <MudText Typo="Typo.h6" Class="mb-4">Common Elements</MudText>
+            @if (commonElements != null && commonElements.Any())
+            {
+                @foreach (var element in commonElements)
+                {
+                    <MudCheckBox T="bool" Label="@element.Name" @bind-Checked="isSelected" ValueChanged="(isSelected) => OnCommonElementChanged(isSelected, element)" />
+                }
+            }
+            else
+            {
+                <MudText>No Common Elements available.</MudText>
+            }
+        </MudItem>
+
+        <!-- Additional Elements Section -->
+        <MudItem xs="6">
+            <MudText Typo="Typo.h6" Class="mb-4">Additional Elements</MudText>
+            <MudList T="ReserveStudyAdditionalElement">
+                @foreach (var additionalElement in Model.ReserveStudyAdditionalElements)
+                {
+                    <MudListItem>
+                        <MudGrid>
+                            <MudItem xs="8">
+                                <MudTextField T="string" @bind-Value="additionalElement.Name" Placeholder="Enter element name" />
+                            </MudItem>
+                            <MudItem xs="2">
+                                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => RemoveAdditionalElement(additionalElement)">
+                                    <MudIcon Icon="@Icons.Material.Filled.Delete" />
+                                    Delete
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
+                    </MudListItem>
+                }
+            </MudList>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddAdditionalElement">
+                <MudIcon Icon="@Icons.Material.Filled.Add" />
+                Add Additional Element
+            </MudButton>
+        </MudItem>
+    </MudGrid>
 </MudForm>
 
 @code {
+    private ApplicationDbContext context = default!;
+
     [Parameter]
     public ReserveStudy Model { get; set; }
+    private List<BuildingElement> buildingElements;
+    private List<CommonElement> commonElements;
+
+    private bool isSelected;
 
     private MudForm form;
 
-    // private void OnValidated()
-    // {
-    //     if (form.IsValid)
-    //     {
-    //         // Notify parent that the step is valid
-    //         StepValidated.InvokeAsync(true);
-    //         Snackbar.Add("Step 1 validated successfully!", Severity.Success);
-    //     }
-    //     else
-    //     {
-    //         // Notify parent that the step is invalid
-    //         StepValidated.InvokeAsync(false);
-    //         Snackbar.Add("Please correct the errors in the form.", Severity.Error);
-    //     }
-    // }
+    protected override async Task OnInitializedAsync()
+    {
+        context = DbFactory.CreateDbContext();
+
+        buildingElements = await context.BuildingElements.ToListAsync();
+        commonElements = await context.CommonElements.ToListAsync();
+    }
+
+    private void AddAdditionalElement()
+    {
+        Model.ReserveStudyAdditionalElements?.Add(new ReserveStudyAdditionalElement { Name = string.Empty });
+    }
+
+    private void RemoveAdditionalElement(ReserveStudyAdditionalElement element)
+    {
+        Model.ReserveStudyAdditionalElements?.Remove(element);
+    }
+
+    private void OnBuildingElementChanged(bool isSelected, BuildingElement element)
+    {
+        if (isSelected)
+        {
+            Model.ReserveStudyBuildingElements?.Add(new ReserveStudyBuildingElement { BuildingElementId = element.Id, ReserveStudyId = Model.Id });
+        }
+        else
+        {
+            var itemToRemove = Model.ReserveStudyBuildingElements?.FirstOrDefault(e => e.BuildingElementId == element.Id);
+            if (itemToRemove != null)
+            {
+                Model.ReserveStudyBuildingElements?.Remove(itemToRemove);
+            }
+        }
+    }
+
+    private void OnCommonElementChanged(bool isSelected, CommonElement element)
+    {
+        if (isSelected)
+        {
+            Model.ReserveStudyCommonElements?.Add(new ReserveStudyCommonElement { CommonElementId = element.Id, ReserveStudyId = Model.Id });
+        }
+        else
+        {
+            var itemToRemove = Model.ReserveStudyCommonElements?.FirstOrDefault(e => e.CommonElementId == element.Id);
+            if (itemToRemove != null)
+            {
+                Model.ReserveStudyCommonElements?.Remove(itemToRemove);
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (context != null)
+        {
+            await context.DisposeAsync();
+        }
+    }
 
     [Parameter]
     public EventCallback<bool> StepValidated { get; set; }
@@ -40,5 +155,5 @@
         await StepValidated.InvokeAsync(valid);
         return valid;
     }
-
 }
+

@@ -4,8 +4,29 @@
 @inject ISnackbar Snackbar
 
 <MudForm Model="Model" @ref="form">
-    <MudTextField @bind-Value="Model.Community.Name" Label="Community Name" Required="true" For="@(() => Model.Community.Name)" />
-    <!-- Add other fields for Community Information as needed -->
+    <MudGrid>
+        <!-- Acknowledgement Header -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Class="mb-4">Please Acknowledge</MudText>
+        </MudItem>
+
+        <!-- Acknowledgement Notice -->
+        <MudItem xs="12">
+            <MudPaper Class="pa-4" Elevation="1" Style="background-color: #fff3cd; border: 1px dashed #ffc107;">
+                <MudGrid>
+                    <MudItem xs="12" sm="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Warning" Size="Size.Large" />
+                    </MudItem>
+                    <MudItem xs="12" sm="11">
+                        <MudText Typo="Typo.body1" Class="text-gray-700 mb-4">
+                            By checking this box, the Association acknowledges it has read and understands the definition of "COMMON ELEMENTS" as set forth in the Association's Declarations and Bylaws. Furthermore, the Association acknowledges that the common elements have been identified and agreed upon by the Board of Directors for purposes of this Reserve Study.
+                        </MudText>
+                        <MudSwitch @bind-Value="acceptTerms" Color="Color.Primary" >Accepts the terms of agreement.</MudSwitch>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
 </MudForm>
 
 @code {
@@ -13,32 +34,28 @@
     public ReserveStudy Model { get; set; }
 
     private MudForm form;
-
-    // private void OnValidated()
-    // {
-    //     if (form.IsValid)
-    //     {
-    //         // Notify parent that the step is valid
-    //         StepValidated.InvokeAsync(true);
-    //         Snackbar.Add("Step 1 validated successfully!", Severity.Success);
-    //     }
-    //     else
-    //     {
-    //         // Notify parent that the step is invalid
-    //         StepValidated.InvokeAsync(false);
-    //         Snackbar.Add("Please correct the errors in the form.", Severity.Error);
-    //     }
-    // }
+    private bool? acceptTerms = false;
 
     [Parameter]
     public EventCallback<bool> StepValidated { get; set; }
 
+    private void OnCheckboxChanged(bool? isChecked)
+    {
+        acceptTerms = isChecked;
+        ValidateForm();
+    }
+
+    private void ValidateForm()
+    {
+        bool valid = acceptTerms == true;
+        StepValidated.InvokeAsync(valid);
+    }
+
     public async Task<bool> ValidateAsync()
     {
-        await form.Validate();
-        bool valid = form.IsValid;
+        ValidateForm();
+        bool valid = acceptTerms == true;
         await StepValidated.InvokeAsync(valid);
         return valid;
     }
-
 }

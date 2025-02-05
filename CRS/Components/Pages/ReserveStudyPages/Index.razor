@@ -8,30 +8,11 @@
 
 <PageTitle>Index</PageTitle>
 
-<h1>Index</h1>
-
+<MudText Typo="Typo.h4">Index</MudText>
 <p>
     <a href="reservestudies/create">Create New</a>
 </p>
 
-@* <QuickGrid Class="table" Items="context.ReserveStudies">
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.ApplicationUserId" />
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.SpecialistUserId" />
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.PointOfContactType" />
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.IsActive" />
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.IsApproved" />
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.IsComplete" />
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.DateApproved" />
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.DateCreated" />
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.DateModified" />
-    <Microsoft.AspNetCore.Components.QuickGrid.PropertyColumn Property="reservestudy => reservestudy.DateDeleted" />
-
-    <Microsoft.AspNetCore.Components.QuickGrid.TemplateColumn Context="reservestudy">
-        <a href="@($"reservestudies/edit?id={reservestudy.Id}")">Edit</a> |
-        <a href="@($"reservestudies/details?id={reservestudy.Id}")">Details</a> |
-        <a href="@($"reservestudies/delete?id={reservestudy.Id}")">Delete</a>
-    </Microsoft.AspNetCore.Components.QuickGrid.TemplateColumn>
-</QuickGrid> *@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudGrid>
         <MudItem xs="12">
@@ -39,14 +20,14 @@
                 <MudCardHeader>
                     <MudText Typo="Typo.h6" Class="mt-1 fw-semibold">999</MudText>
                     <MudSpacer />
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" Href="/reserveStudy/active">
-                        Refresh
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Create" Href="reservestudies/create">
+                        Create
                     </MudButton>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudTable Items="@reserveStudies" Dense="true" Hover="true">
+                    <MudTable Items="@reserveStudies" Dense="true" Hover="true" Elevation="0">
                         <HeaderContent>
-                            <MudTh>VIEW</MudTh>
+                            <MudTh></MudTh>
                             <MudTh class="text-center">COMMUNITY</MudTh>
                             <MudTh class="text-center">CONTACT</MudTh>
                             <MudTh class="text-center">EMAIL</MudTh>
@@ -54,7 +35,7 @@
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd>
-                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Href="reservestudy.HashedId">
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Href="@($"reservestudies/details?id={context.Id}")">
                                     View
                                 </MudButton>
                             </MudTd>

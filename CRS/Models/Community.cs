@@ -8,7 +8,6 @@ namespace CRS.Models {
             Addresses = new List<Address>() { new Address() };
         }
         public string? Name { get; set; }
-        //public Address? Address { get; set; }
         public List<Address>? Addresses { get; set; } = [];
         public string HashedId => new HashingService().HashId(Id, HashType.Community);
     }

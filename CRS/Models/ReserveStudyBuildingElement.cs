@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CRS.Models {
     public class ReserveStudyBuildingElement : BaseModel {
@@ -12,5 +13,8 @@ namespace CRS.Models {
         public ElementMeasurementOptions? ElementMeasurementOptions { get; set; }
         public ElementRemainingLifeOptions? ElementRemainingLifeOptions { get; set; }
         public ElementUsefulLifeOptions? ElementUsefulLifeOptions { get; set; }
+
+        [NotMapped]
+        public bool IsSelected { get; set; }
     }
 }

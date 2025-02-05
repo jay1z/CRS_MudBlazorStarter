@@ -1,10 +1,95 @@
 ﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps
 
 @using CRS.Models
+@using static CRS.Models.ReserveStudy
+@using MudBlazor
+@inherits OwningComponentBase
 @inject ISnackbar Snackbar
 
-<MudForm Model="Model.PropertyManager" @ref="form">
-    <!-- Add other fields for Property Manager as needed -->
+<MudForm Model="Model" @ref="form">
+    <MudGrid>
+        <!-- Board Member Contact Section -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Class="mb-4">Board Member Contact</MudText>
+        </MudItem>
+
+        <!-- First Name and Last Name -->
+        <MudItem xs="12">
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="Model.Contact.FirstName" Label="First Name" Required="true" Immediate="true" For="@(() => Model.Contact.FirstName)" Validation="ValidateFirstName" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="Model.Contact.LastName" Label="Last Name" Required="true" Immediate="true" For="@(() => Model.Contact.LastName)" Validation="ValidateLastName" />
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Email -->
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Model.Contact.Email" Label="Email" Required="true" Immediate="true" For="@(() => Model.Contact.Email)" Validation="ValidateEmail" />
+        </MudItem>
+
+        <!-- Phone and Extension -->
+        <MudItem xs="12">
+            <MudGrid>
+                <MudItem xs="5">
+                    <MudTextField @bind-Value="Model.Contact.Phone" Label="Phone" Required="true" Immediate="true" For="@(() => Model.Contact.Phone)" Validation="ValidatePhone" />
+                </MudItem>
+                <MudItem xs="3">
+                    <MudTextField @bind-Value="Model.Contact.Extension" Label="Extension" Immediate="true" For="@(() => Model.Contact.Extension)" />
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Property Manager Section -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Class="mb-4">Property Manager Contact</MudText>
+        </MudItem>
+
+        <!-- First Name and Last Name -->
+        <MudItem xs="12">
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="Model.PropertyManager.FirstName" Label="First Name" Required="true" Immediate="true" For="@(() => Model.PropertyManager.FirstName)" Validation="ValidateFirstName" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="Model.PropertyManager.LastName" Label="Last Name" Required="true" Immediate="true" For="@(() => Model.PropertyManager.LastName)" Validation="ValidateLastName" />
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Company Name -->
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Model.PropertyManager.CompanyName" Label="Company Name" Required="true" Immediate="true" For="@(() => Model.PropertyManager.CompanyName)" Validation="ValidateCompanyName" />
+        </MudItem>
+
+        <!-- Email -->
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Model.PropertyManager.Email" Label="Email" Required="true" Immediate="true" For="@(() => Model.PropertyManager.Email)" Validation="ValidateEmail" />
+        </MudItem>
+
+        <!-- Phone and Extension -->
+        <MudItem xs="12">
+            <MudGrid>
+                <MudItem xs="5">
+                    <MudTextField @bind-Value="Model.PropertyManager.Phone" Label="Phone" Required="true" Immediate="true" For="@(() => Model.PropertyManager.Phone)" Validation="ValidatePhone" />
+                </MudItem>
+                <MudItem xs="3">
+                    <MudTextField @bind-Value="Model.PropertyManager.Extension" Label="Extension" Immediate="true" For="@(() => Model.PropertyManager.Extension)" />
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Preferred Point of Contact -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Class="mb-4">Preferred Point of Contact</MudText>
+            <MudRadioGroup T="PointOfContactTypeEnum" @bind-Value="Model.PointOfContactType">
+                <MudRadio T="PointOfContactTypeEnum" Option="PointOfContactTypeEnum.Contact" Label="Contact" />
+                <MudRadio T="PointOfContactTypeEnum" Option="PointOfContactTypeEnum.PropertyManager" Label="Property Manager" />
+            </MudRadioGroup>
+        </MudItem>
+    </MudGrid>
 </MudForm>
 
 @code {
@@ -13,21 +98,38 @@
 
     private MudForm form;
 
-    // private void OnValidated()
-    // {
-    //     if (form.IsValid)
-    //     {
-    //         // Notify parent that the step is valid
-    //         StepValidated.InvokeAsync(true);
-    //         Snackbar.Add("Step 1 validated successfully!", Severity.Success);
-    //     }
-    //     else
-    //     {
-    //         // Notify parent that the step is invalid
-    //         StepValidated.InvokeAsync(false);
-    //         Snackbar.Add("Please correct the errors in the form.", Severity.Error);
-    //     }
-    // }
+    // Validation Methods
+    private string ValidateFirstName(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "First Name is required." : null;
+    }
+
+    private string ValidateLastName(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Last Name is required." : null;
+    }
+
+    private string ValidateEmail(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "Email is required.";
+        if (!(new System.ComponentModel.DataAnnotations.EmailAddressAttribute()).IsValid(value)) return "Invalid email format.";
+        //if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^[^@\s]+@[^@\s]+\.[^@\s]+$")) return "Invalid email format.";
+        return null;
+    }
+
+    private string ValidatePhone(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "Phone is required.";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^\d{3}-\d{3}-\d{4}$"))
+            return "Invalid phone format. Use XXX-XXX-XXXX.";
+        return null;
+    }
+
+    private string ValidateCompanyName(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Company Name is required." : null;
+    }
 
     [Parameter]
     public EventCallback<bool> StepValidated { get; set; }
@@ -39,5 +141,5 @@
         await StepValidated.InvokeAsync(valid);
         return valid;
     }
-
 }
+
