@@ -1,197 +1,327 @@
-﻿@page "/reservestudies/details"
+﻿@page "/reservestudies/details/{Id:int}"
+@using CRS.Data
 @using Microsoft.EntityFrameworkCore
-@using CRS.Models
-@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Details</PageTitle>
+<PageTitle>Reserve Study Details</PageTitle>
 
-<h1>Details</h1>
+@if (reserveStudy == null)
+{
+    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+    <MudText Typo="Typo.h4">Loading...</MudText>
+}
+else
+{
+    <MudText Typo="Typo.h4">@reserveStudy.Community?.Name</MudText>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudGrid>
-        <!-- Aside Column -->
-        <MudItem xs="12" lg="4">
-            <!-- Details Card -->
-            <MudCard Elevation="25" Class="mb-4">
-                <MudCardContent>
-                    <MudText Typo="Typo.h6" Class="text-primary">Request ID</MudText>
-                    <MudText Typo="Typo.body2">@reserveStudy?.HashedId</MudText>
-                    <MudDivider Class="my-2" />
-                    <MudText Typo="Typo.h6" Class="text-primary">Created</MudText>
-                    <MudText Typo="Typo.body2">@reserveStudy?.DateCreated</MudText>
-                </MudCardContent>
-            </MudCard>
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+        <MudGrid>
+            <!-- Aside Column -->
+            <MudItem xs="12" lg="4">
+                <!-- Details Card -->
+                <MudCard Elevation="25" Class="mb-4">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6" Color="Color.Primary">Request ID</MudText>
+                        <MudText Typo="Typo.body2">@reserveStudy.HashedId</MudText>
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.h6" Color="Color.Primary">Created</MudText>
+                        <MudText Typo="Typo.body2">@reserveStudy.DateCreated?.ToString("MM/dd/yyyy")</MudText>
+                    </MudCardContent>
+                </MudCard>
+                <!-- Specialist Card -->
+                <MudCard Elevation="25" Class="mb-4">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6" Class="text-primary">Reserve Specialist</MudText>
+                        <MudLink Href="" Typo="Typo.body2">@reserveStudy?.Specialist?.Email</MudLink>
+                    </MudCardContent>
+                </MudCard>
 
-            <!-- Specialist Card -->
-            <MudCard Elevation="25" Class="mb-4">
-                <MudCardContent>
-                    <MudText Typo="Typo.h6" Class="text-primary">Reserve Specialist</MudText>
-                    <MudLink Href="" Typo="Typo.body2">@reserveStudy?.Specialist?.Email</MudLink>
-                </MudCardContent>
-            </MudCard>
+                <!-- Actions Card -->
+                <MudCard Elevation="25" Class="mb-4">
+                    <MudCardContent>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/reservestudies/edit/{reserveStudy?.Id}")">Edit Request</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SendRequestLink">Send Request Link</MudButton>
+                    </MudCardContent>
+                </MudCard>
+                <MudContainer MaxWidth="MaxWidth.Small">
+                    <MudAlert Severity="Severity.Warning" Elevation="25">
+                        <MudText Typo="Typo.h6" Class="text-gray-900 fw-bold">Attention!</MudText>
+                        <MudText Typo="Typo.body2" Class="text-gray-700">
+                            This request has been pending for more than
+                            <MudLink Href="#" Class="fw-bold">257 days</MudLink>.
+                        </MudText>
+                    </MudAlert>
+                </MudContainer>
+            </MudItem>
 
-            <!-- Actions Card -->
-            <MudCard Elevation="25" Class="mb-4">
-                <MudCardContent>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/reservestudies/edit?id={reserveStudy?.Id}")">Edit Request</MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SendRequestLink">Send Request Link</MudButton>
-                </MudCardContent>
-            </MudCard>
-            <MudContainer MaxWidth="MaxWidth.Small">
-                <MudAlert Severity="Severity.Warning" Elevation="25">
-                    <MudText Typo="Typo.h6" Class="text-gray-900 fw-bold">Attention!</MudText>
-                    <MudText Typo="Typo.body2" Class="text-gray-700">
-                        This request has been pending for more than
-                        <MudLink Href="#" Class="fw-bold">257 days</MudLink>.
-                    </MudText>
-                </MudAlert>
-            </MudContainer>
-        </MudItem>
+            <!-- Main Column -->
+            <MudItem xs="12" lg="8">
+                <MudCard Elevation="0">
+                    <MudCardContent>
+                        <MudTabs>
+                            <!-- Information Tab -->
+                            <MudTabPanel Text="Information" Icon="@Icons.Material.Filled.Info">
+                                <MudCard Elevation="25">
+                                    <MudCardContent Class="py-6">
+                                        <MudGrid>
+                                            <!-- Contact Information -->
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.h6" Color="Color.Primary">Contact</MudText>
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Name</MudText>
+                                                <MudText Typo="Typo.body1">@reserveStudy.Contact?.FullNameInverted</MudText>
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
+                                                <MudText Typo="Typo.body1">@reserveStudy.Contact?.Phone</MudText>
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Email</MudText>
+                                                <MudLink Href="@reserveStudy.Contact?.Email" Typo="Typo.body1">
+                                                    @reserveStudy.Contact?.Email
+                                                </MudLink>
+                                            </MudItem>
 
-        <!-- Main Column -->
-        <MudItem xs="12" lg="8">
-            <MudCard Elevation="0">
-                <MudCardContent>
-                    <MudTabs>
-                        <MudTabPanel Text="Information" Icon="@Icons.Material.TwoTone.Info">
-                            <MudCard Elevation="25">
-                                <MudCardContent Class="py-6">
-                                    <MudGrid>
-                                        <MudItem xs="12">
-                                            <MudText Typo="Typo.h6" Class="text-muted">Contact</MudText>
-                                            <MudText Typo="Typo.caption" Class="text-muted">Name</MudText>
-                                            <MudText Typo="Typo.body1">@reserveStudy?.Contact.FullNameInverted</MudText>
-                                        </MudItem>
-                                        <MudItem xs="12">
-                                            <MudText Typo="Typo.caption" Class="text-muted">Phone</MudText>
-                                            <MudText Typo="Typo.body1">@reserveStudy?.Contact.Phone</MudText>
-                                        </MudItem>
-                                        <MudItem xs="12">
-                                            <MudText Typo="Typo.caption" Class="text-muted">Email</MudText>
-                                            <MudLink Href="#" Typo="Typo.body1">@reserveStudy?.Contact?.Email</MudLink>
-                                        </MudItem>
-                                        <MudItem xs="12">
-                                            <MudText Typo="Typo.h6" Class="text-muted">Management Company</MudText>
-                                            <MudText Typo="Typo.caption" Class="text-muted">Company Name</MudText>
-                                            <MudText Typo="Typo.body1">@reserveStudy?.PropertyManager.CompanyName</MudText>
-                                        </MudItem>
-                                        <MudItem xs="12">
-                                            <MudText Typo="Typo.caption" Class="text-muted">Property Manager</MudText>
-                                            <MudText Typo="Typo.body1">@reserveStudy?.PropertyManager.FullNameInverted</MudText>
-                                        </MudItem>
-                                        <MudItem xs="12">
-                                            <MudText Typo="Typo.caption" Class="text-muted">Phone</MudText>
-                                            <MudText Typo="Typo.body1">@reserveStudy?.PropertyManager.Phone</MudText>
-                                        </MudItem>
-                                        <MudItem xs="12">
-                                            <MudText Typo="Typo.caption" Class="text-muted">Email</MudText>
-                                            <MudLink OnClick="SendRequestLink"><MudText Typo="Typo.body1">@reserveStudy?.PropertyManager.Email</MudText></MudLink>
-                                        </MudItem>
-                                    </MudGrid>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudTabPanel>
-                        <MudTabPanel Text="Elements" Icon="@Icons.Material.TwoTone.List">
-                            <MudCard Elevation="25">
-                                <MudCardContent Class="py-6">
-                                    <MudTable Items="@reserveStudy?.ReserveStudyBuildingElements" Dense="true" Hover="true" Elevation="0">
-                                        <HeaderContent>
-                                            <MudTh>Name</MudTh>
-                                            <MudTh>Needs Service</MudTh>
-                                            <MudTh class="text-end">Amount</MudTh>
-                                        </HeaderContent>
-                                        <RowTemplate>
-                                            <MudTd>@context.BuildingElement.Name</MudTd>
-                                            <MudTd>
-                                                <MudSwitch @bind-Value="context.BuildingElement.NeedsService" Disabled="true" />
-                                            </MudTd>
-                                            <MudTd class="text-end">@context.Count</MudTd>
-                                        </RowTemplate>
-                                    </MudTable>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudTabPanel>
-                        <MudTabPanel Text="Element Details" Icon="@Icons.Material.TwoTone.Details">
-                            <MudExpansionPanels>
-                                @foreach (var element in reserveStudy?.ReserveStudyBuildingElements)
-                                {
-                                    <MudExpansionPanel>
-                                        <TitleContent>
-                                                <MudText Typo="Typo.body1">@element.BuildingElement.Name</MudText>
-                                            <MudDivider />
-                                        </TitleContent>
-                                        <ChildContent>
-                                            <MudGrid>
-                                                <MudItem xs="12">
-                                                    <MudText Typo="Typo.body2" Class="text-muted">Measurement Type</MudText>
-                                                    <MudText Typo="Typo.body2">@element?.ElementMeasurementOptions?.DisplayText</MudText>
+                                            <!-- Property Manager Information -->
+                                            @if (reserveStudy.PropertyManager != null)
+                                            {
+                                                <MudItem xs="12" Class="mt-4">
+                                                    <MudText Typo="Typo.h6" Color="Color.Primary">Management Company</MudText>
                                                 </MudItem>
                                                 <MudItem xs="12">
-                                                    <MudText Typo="Typo.body2" Class="text-muted">Last Replaced</MudText>
-                                                    <MudText Typo="Typo.body2">@element?.LastServiced</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Company Name</MudText>
+                                                    <MudText Typo="Typo.body1">@reserveStudy.PropertyManager.CompanyName</MudText>
                                                 </MudItem>
                                                 <MudItem xs="12">
-                                                    <MudText Typo="Typo.body2" Class="text-muted">Useful Life</MudText>
-                                                    <MudText Typo="Typo.body2">@element?.ElementUsefulLifeOptions?.DisplayText</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Property Manager</MudText>
+                                                    <MudText Typo="Typo.body1">@reserveStudy.PropertyManager.FullNameInverted</MudText>
                                                 </MudItem>
                                                 <MudItem xs="12">
-                                                    <MudText Typo="Typo.body2" Class="text-muted">Remaining Life</MudText>
-                                                    <MudText Typo="Typo.body2">@element?.ElementRemainingLifeOptions?.DisplayText</MudText>
-                                                </MudItem>
-                                            </MudGrid>
-                                        </ChildContent>
-                                    </MudExpansionPanel>
-                                }
-                            </MudExpansionPanels>
-                        </MudTabPanel>
-                        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.TwoTone.ContactPhone">
-                            <MudExpansionPanels>
-                                @foreach (var element in reserveStudy?.ReserveStudyBuildingElements.Where(rsbe => rsbe.BuildingElement.NeedsService))
-                                {
-                                    <MudExpansionPanel Text="@element.BuildingElement.Name">
-                                        <TitleContent>
-                                                <MudText Typo="Typo.body1">@element.BuildingElement.Name</MudText>
-                                                <MudDivider />
-                                        </TitleContent>
-                                        <ChildContent>
-                                            <MudGrid>
-                                                <MudItem xs="12">
-                                                    <MudText Typo="Typo.body2" Class="text-muted">Company Name</MudText>
-                                                    <MudText Typo="Typo.body2">@element?.ServiceContact?.CompanyName</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
+                                                    <MudText Typo="Typo.body1">@reserveStudy.PropertyManager.Phone</MudText>
                                                 </MudItem>
                                                 <MudItem xs="12">
-                                                    <MudText Typo="Typo.body2" Class="text-muted">Phone</MudText>
-                                                    <MudText Typo="Typo.body2">@element?.ServiceContact?.Phone</MudText>
-                                                    <MudText Typo="Typo.body2">@element?.ServiceContact?.Extension</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Email</MudText>
+                                                    <MudLink Href="@reserveStudy.PropertyManager.Email" Typo="Typo.body1">
+                                                        @reserveStudy.PropertyManager.Email
+                                                    </MudLink>
                                                 </MudItem>
-                                                <MudItem xs="12">
-                                                    <MudText Typo="Typo.body2" Class="text-muted">Point Of Contact</MudText>
-                                                    <MudText Typo="Typo.body2">@element?.ServiceContact?.FirstName @element?.ServiceContact?.LastName</MudText>
-                                                </MudItem>
-                                                <MudItem xs="12">
-                                                    <MudText Typo="Typo.body2" Class="text-muted">Email</MudText>
-                                                    <MudLink Href="" Typo="Typo.body2">@element?.ServiceContact?.Email</MudLink>
-                                                </MudItem>
-                                            </MudGrid>
-                                        </ChildContent>
-                                    </MudExpansionPanel>
-                                }
-                            </MudExpansionPanels>
-                        </MudTabPanel>
-                    </MudTabs>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
-</MudContainer>
+                                            }
+                                        </MudGrid>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudTabPanel>
+
+                            <!-- Elements Tab -->
+                            <MudTabPanel Text="Elements" Icon="@Icons.Material.Filled.List">
+                                <MudCard Elevation="25">
+                                    <MudCardContent Class="py-6">
+                                        <MudText Typo="Typo.h5">Building Elements</MudText>
+                                        <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyBuildingElements">
+                                            <ColGroup>
+                                                <col style="width:10%;" />
+                                                <col style="width:55%;" />
+                                                <col style="width:25%;" />
+                                                <col style="width:10%;" />
+                                            </ColGroup>
+                                            <HeaderContent>
+                                                <MudTh></MudTh>
+                                                <MudTh>Name</MudTh>
+                                                <MudTh>Needs Service</MudTh>
+                                                <MudTh class="text-end">Amount</MudTh>
+                                            </HeaderContent>
+                                            <RowTemplate Context="childContext">
+                                                <MudTd>
+                                                    <MudIconButton Icon="@((childContext.ShowDetails == true) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="@(() => ShowBuildingElement(childContext.BuildingElementId))" />
+                                                </MudTd>
+                                                <MudTd><MudText Typo="Typo.h6" Color="Color.Tertiary">@childContext.BuildingElement?.Name</MudText></MudTd>
+                                                <MudTd>
+                                                    <MudCheckBox T="bool" @bind-Value="childContext.BuildingElement.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                                                </MudTd>
+                                                <MudTd class="text-end">@childContext.Count</MudTd>
+                                            </RowTemplate>
+                                            <ChildRowContent Context="childContext">
+                                                @if (childContext.ShowDetails)
+                                                {
+                                                    <MudTd colspan="4">
+                                                        <MudGrid>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Measurement Type</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementMeasurementOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Last Replaced</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.LastServiced?.ToString("MM/dd/yyyy")</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Useful Life</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementUsefulLifeOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Life</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementRemainingLifeOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                        </MudGrid>
+                                                    </MudTd>
+                                                }
+                                            </ChildRowContent>
+                                        </MudTable>
+                                        <MudText Typo="Typo.h5">Common Elements</MudText>
+                                        <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyCommonElements">
+                                            <ColGroup>
+                                                <col style="width:10%;" />
+                                                <col style="width:55%;" />
+                                                <col style="width:25%;" />
+                                                <col style="width:10%;" />
+                                            </ColGroup>
+                                            <HeaderContent>
+                                                <MudTh></MudTh>
+                                                <MudTh>Name</MudTh>
+                                                <MudTh>Needs Service</MudTh>
+                                                <MudTh class="text-end">Amount</MudTh>
+                                            </HeaderContent>
+                                            <RowTemplate Context="childContext">
+                                                <MudTd>
+                                                    <MudIconButton Icon="@((childContext.ShowDetails == true) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="@(() => ShowBuildingElement(childContext.CommonElementId))" />
+                                                </MudTd>
+                                                <MudTd><MudText Typo="Typo.h6" Color="Color.Tertiary">@childContext.CommonElement?.Name</MudText></MudTd>
+                                                <MudTd>
+                                                    <MudCheckBox T="bool" @bind-Value="childContext.CommonElement.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                                                </MudTd>
+                                                <MudTd class="text-end">@childContext.Count</MudTd>
+                                            </RowTemplate>
+                                            <ChildRowContent Context="childContext">
+                                                @if (childContext.ShowDetails)
+                                                {
+                                                    <MudTd colspan="4">
+                                                        <MudGrid>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Measurement Type</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementMeasurementOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Last Replaced</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.LastServiced?.ToString("MM/dd/yyyy")</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Useful Life</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementUsefulLifeOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Life</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementRemainingLifeOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                        </MudGrid>
+                                                    </MudTd>
+                                                }
+                                            </ChildRowContent>
+                                        </MudTable>
+                                        <MudText Typo="Typo.h5">Additional Elements</MudText>
+                                        <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyAdditionalElements">
+                                            <ColGroup>
+                                                <col style="width:10%;" />
+                                                <col style="width:55%;" />
+                                                <col style="width:25%;" />
+                                                <col style="width:10%;" />
+                                            </ColGroup>
+                                            <HeaderContent>
+                                                <MudTh></MudTh>
+                                                <MudTh>Name</MudTh>
+                                                <MudTh>Needs Service</MudTh>
+                                                <MudTh class="text-end">Amount</MudTh>
+                                            </HeaderContent>
+                                            <RowTemplate Context="childContext">
+                                                <MudTd>
+                                                    <MudIconButton Icon="@((childContext.ShowDetails == true) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="@(() => ShowBuildingElement(childContext.Id))" />
+                                                </MudTd>
+                                                <MudTd><MudText Typo="Typo.h6" Color="Color.Tertiary">@childContext.Name</MudText></MudTd>
+                                                <MudTd>
+                                                    <MudCheckBox T="bool" @bind-Value="childContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                                                </MudTd>
+                                                <MudTd class="text-end">@childContext.Count</MudTd>
+                                            </RowTemplate>
+                                            <ChildRowContent Context="childContext">
+                                                @if (childContext.ShowDetails)
+                                                {
+                                                    <MudTd colspan="4">
+                                                        <MudGrid>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Measurement Type</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementMeasurementOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Last Replaced</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.LastServiced?.ToString("MM/dd/yyyy")</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Useful Life</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementUsefulLifeOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Life</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementRemainingLifeOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                        </MudGrid>
+                                                    </MudTd>
+                                                }
+                                            </ChildRowContent>
+                                        </MudTable>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudTabPanel>
+
+                            <!-- Service Contacts Tab -->
+                            <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone">
+                                <MudExpansionPanels>
+                                    @foreach (var element in reserveStudy.ReserveStudyBuildingElements.Where(e => e.BuildingElement?.NeedsService == true))
+                                    {
+                                        <MudExpansionPanel Text="@element.BuildingElement?.Name">
+                                            <ChildContent>
+                                                <MudGrid>
+                                                    <MudItem xs="12">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Company Name</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.CompanyName</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.Phone</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Extension</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.Extension</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Point Of Contact</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.FullNameInverted</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Email</MudText>
+                                                        <MudLink Href="@element.ServiceContact?.Email" Typo="Typo.body1">
+                                                            @element.ServiceContact?.Email
+                                                        </MudLink>
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </ChildContent>
+                                        </MudExpansionPanel>
+                                    }
+                                </MudExpansionPanels>
+                            </MudTabPanel>
+                        </MudTabs>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
 
 @code {
-    private ReserveStudy? reserveStudy;
+    [Parameter]
+    public int Id { get; set; }
 
-    [SupplyParameterFromQuery]
-    private int Id { get; set; }
+    private ReserveStudy? reserveStudy;
 
     protected override async Task OnInitializedAsync()
     {
@@ -201,19 +331,55 @@
             .Include(rs => rs.Contact)
             .Include(rs => rs.PropertyManager)
             .Include(rs => rs.Specialist)
+
             .Include(rs => rs.ReserveStudyBuildingElements)
                 .ThenInclude(be => be.BuildingElement)
             .Include(rs => rs.ReserveStudyBuildingElements)
                 .ThenInclude(be => be.ElementMeasurementOptions)
-            .Include(rs => rs.ReserveStudyCommonElements)
-                .ThenInclude(ce => ce.CommonElement)
-            .Include(rs => rs.ReserveStudyAdditionalElements)
-            .FirstOrDefaultAsync(m => m.Id == Id);
+            .Include(rs => rs.ReserveStudyBuildingElements)
+                .ThenInclude(be => be.ElementUsefulLifeOptions)
+            .Include(rs => rs.ReserveStudyBuildingElements)
+                .ThenInclude(be => be.ElementRemainingLifeOptions)
 
-        if (reserveStudy is null)
+            .Include(rs => rs.ReserveStudyCommonElements)
+                .ThenInclude(be => be.CommonElement)
+            .Include(rs => rs.ReserveStudyCommonElements)
+                .ThenInclude(be => be.ElementMeasurementOptions)
+            .Include(rs => rs.ReserveStudyCommonElements)
+                .ThenInclude(be => be.ElementUsefulLifeOptions)
+            .Include(rs => rs.ReserveStudyCommonElements)
+                .ThenInclude(be => be.ElementRemainingLifeOptions)
+
+            .Include(rs => rs.ReserveStudyAdditionalElements)
+                .ThenInclude(be => be.ElementMeasurementOptions)
+            .Include(rs => rs.ReserveStudyAdditionalElements)
+                .ThenInclude(be => be.ElementUsefulLifeOptions)
+            .Include(rs => rs.ReserveStudyAdditionalElements)
+                .ThenInclude(be => be.ElementRemainingLifeOptions)
+
+            .FirstOrDefaultAsync(rs => rs.Id == Id);
+
+        if (reserveStudy == null)
         {
-            NavigationManager.NavigateTo("notfound");
+            NavigationManager.NavigateTo("/reservestudies/notfound");
         }
+    }
+
+    private void ShowBuildingElement(int id)
+    {
+        ReserveStudyBuildingElement element = reserveStudy.ReserveStudyBuildingElements.First(f => f.BuildingElementId == id);
+        element.ShowDetails = !element.ShowDetails;
+    }
+    private void ShowCommonElement(int id)
+    {
+        ReserveStudyCommonElement element = reserveStudy.ReserveStudyCommonElements.First(f => f.CommonElementId == id);
+        element.ShowDetails = !element.ShowDetails;
+    }
+    private void ShowAdditionalElement(int id)
+    {
+
+        ReserveStudyAdditionalElement element = reserveStudy.ReserveStudyAdditionalElements.First(f => f.Id == id);
+        element.ShowDetails = !element.ShowDetails;
     }
 
     private void SendRequestLink()
@@ -221,4 +387,3 @@
         Snackbar.Add("Request link sent successfully!", Severity.Success);
     }
 }
-

@@ -5,21 +5,22 @@ using CRS.Data;
 
 using CRS.Services;
 
-using static CRS.Helpers.LinkHelper;
+using static CRS.Services.HashingService;
 
 namespace CRS.Models {
     public class ReserveStudy : BaseModel {
         [ForeignKey("User")]
-        public required string ApplicationUserId { get; set; }
+        public string ApplicationUserId { get; set; }
         public ApplicationUser? User { get; set; }
 
         [ForeignKey("Specialist")]
         public string? SpecialistUserId { get; set; }
         public ApplicationUser? Specialist { get; set; }
 
-        public required Community Community { get; set; }
+        public Community Community { get; set; }
         public PointOfContactTypeEnum PointOfContactType { get; set; }
-        public required Contact Contact { get; set; }
+
+        public Contact Contact { get; set; }
         public PropertyManager? PropertyManager { get; set; }
 
         public List<ReserveStudyBuildingElement>? ReserveStudyBuildingElements { get; set; }

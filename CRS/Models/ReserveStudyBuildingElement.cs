@@ -5,6 +5,7 @@ namespace CRS.Models {
     public class ReserveStudyBuildingElement : BaseModel {
         public required int ReserveStudyId { get; set; }
         public ReserveStudy? ReserveStudy { get; set; }
+
         public required int BuildingElementId { get; set; }
         public BuildingElement? BuildingElement { get; set; }
         public int Count { get; set; }
@@ -15,6 +16,13 @@ namespace CRS.Models {
         public ElementUsefulLifeOptions? ElementUsefulLifeOptions { get; set; }
 
         [NotMapped]
-        public bool IsSelected { get; set; }
+        public List<ElementMeasurementOptions> ElementMeasurementOptionsList { get; set; } = new();
+        [NotMapped]
+        public List<ElementUsefulLifeOptions> ElementUsefulLifeOptionsList { get; set; } = new();
+        [NotMapped]
+        public List<ElementRemainingLifeOptions> ElementRemainingLifeOptionsList { get; set; } = new();
+
+        [NotMapped]
+        public bool ShowDetails { get; set; } = false;
     }
 }

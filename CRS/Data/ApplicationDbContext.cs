@@ -136,25 +136,25 @@ namespace CRS.Data {
                 .HasForeignKey(rsbe => rsbe.CommonElementId);
         }
         public DbSet<Address> Addresses { get; set; }
-        //public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<BuildingElement> BuildingElements { get; set; }
-        //public DbSet<CalendarEvent> CalendarEvents { get; set; }
+        public DbSet<CalendarEvent> CalendarEvents { get; set; }
         public DbSet<CommonElement> CommonElements { get; set; }
         public DbSet<Community> Communities { get; set; }
         public DbSet<Contact> Contacts { get; set; }
-        //public DbSet<ContactGroup> ContactGroups { get; set; }
-        //public DbSet<ContactXContactGroup> ContactXContactGroups { get; set; }
+        public DbSet<ContactGroup> ContactGroups { get; set; }
+        public DbSet<ContactXContactGroup> ContactXContactGroups { get; set; }
         public DbSet<ElementMeasurementOptions> ElementMeasurementOptions { get; set; }
         public DbSet<ElementRemainingLifeOptions> ElementRemainingLifeOptions { get; set; }
         public DbSet<ElementUsefulLifeOptions> ElementUsefulLifeOptions { get; set; }
-        //public DbSet<Notification> Notifications { get; set; }
-        //public DbSet<Profile> Profiles { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Profile> Profiles { get; set; }
         public DbSet<PropertyManager> PropertyManagers { get; set; }
         public DbSet<ReserveStudyAdditionalElement> ReserveStudyAdditionalElements { get; set; }
         public DbSet<ReserveStudyBuildingElement> ReserveStudyBuildingElements { get; set; }
         public DbSet<ReserveStudyCommonElement> ReserveStudyCommonElements { get; set; }
         public DbSet<ReserveStudy> ReserveStudies { get; set; }
         public DbSet<ServiceContact> ServiceContacts { get; set; }
-        //public DbSet<Settings> Settings { get; set; }
+        public DbSet<Settings> Settings { get; set; }
     }
 }

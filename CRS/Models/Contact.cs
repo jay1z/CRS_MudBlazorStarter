@@ -2,7 +2,6 @@
 
 namespace CRS.Models {
     public class Contact : BaseModel, IContact {
-
         [Display(Name = "First Name")]
         public string? FirstName { get; set; }
 

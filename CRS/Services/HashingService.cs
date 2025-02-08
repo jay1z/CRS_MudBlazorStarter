@@ -61,5 +61,11 @@ namespace CRS.Services {
             //throw new ArgumentException("Invalid hash");
             return false;
         }
+
+        public enum HashType {
+            Community,
+            ReserveStudy,
+            User,
+        }
     }
 }

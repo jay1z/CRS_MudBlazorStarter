@@ -1,78 +1,77 @@
 ﻿@page "/reservestudies"
-@using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Components.QuickGrid
-@using CRS.Models
 @using CRS.Data
-@implements IAsyncDisposable
+@using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Active Studies</PageTitle>
 
-<MudText Typo="Typo.h4">Index</MudText>
-<p>
-    <a href="reservestudies/create">Create New</a>
-</p>
-
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudGrid>
-        <MudItem xs="12">
-            <MudCard>
-                <MudCardHeader>
-                    <MudText Typo="Typo.h6" Class="mt-1 fw-semibold">999</MudText>
-                    <MudSpacer />
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Create" Href="reservestudies/create">
-                        Create
-                    </MudButton>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudTable Items="@reserveStudies" Dense="true" Hover="true" Elevation="0">
-                        <HeaderContent>
-                            <MudTh></MudTh>
-                            <MudTh class="text-center">COMMUNITY</MudTh>
-                            <MudTh class="text-center">CONTACT</MudTh>
-                            <MudTh class="text-center">EMAIL</MudTh>
-                            <MudTh class="text-end">PHONE</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd>
-                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Href="@($"reservestudies/details?id={context.Id}")">
-                                    View
-                                </MudButton>
-                            </MudTd>
-                            <MudTd Class="text-center">
-                                <MudText Typo="Typo.body1" Class="fw-bold">
-                                    @context.Community.Name
-                                </MudText>
-                            </MudTd>
-                            <MudTd Class="text-center">
-                                <MudText Typo="Typo.body1">@context.PointOfContact?.FullName</MudText>
-                                <MudText Typo="Typo.caption">@context.PointOfContact?.CompanyName</MudText>
-                            </MudTd>
-                            <MudTd Class="text-center">
-                                <MudLink Href="@context.PointOfContact?.Email">@context.PointOfContact?.Email</MudLink>
-                            </MudTd>
-                            <MudTd Class="text-end">
-                                <MudText Typo="Typo.body1">@context.PointOfContact?.Phone</MudText>
-                                <MudText Typo="Typo.caption">ext. @context.PointOfContact?.Extension</MudText>
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
-</MudContainer>
-
-
+@if (reserveStudies == null)
+{
+    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+    <MudText Typo="Typo.h4">Loading...</MudText>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+        <MudGrid>
+            <MudItem xs="12">
+                <MudCard Elevation="25">
+                    <MudCardHeader>
+                        <MudText Typo="Typo.h6" Class="mt-1 fw-semibold">@reserveStudies.Count Active Studies</MudText>
+                        <MudSpacer />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Create" Href="reservestudies/create">
+                            Create
+                        </MudButton>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudTable Items="@reserveStudies" Dense="true" Hover="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh class="text-center">COMMUNITY</MudTh>
+                                <MudTh class="text-center">CONTACT</MudTh>
+                                <MudTh class="text-center">EMAIL</MudTh>
+                                <MudTh class="text-end">PHONE</MudTh>
+                                <MudTh></MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd Class="text-center">
+                                    <MudText Typo="Typo.h6" Class="fw-bold">
+                                        @context.Community.Name
+                                    </MudText>
+                                </MudTd>
+                                <MudTd Class="text-center">
+                                    <MudText Typo="Typo.body1">@context.PointOfContact?.FullNameInverted</MudText>
+                                    <MudText Typo="Typo.caption">@context.PointOfContact?.CompanyName</MudText>
+                                </MudTd>
+                                <MudTd Class="text-center">
+                                    <MudLink Href="@context.PointOfContact?.Email">@context.PointOfContact?.Email</MudLink>
+                                </MudTd>
+                                <MudTd Class="text-end">
+                                    <MudText Typo="Typo.body1" Color="Color.Tertiary">@context.PointOfContact?.Phone</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Primary">ext. @context.PointOfContact?.Extension</MudText>
+                                </MudTd>
+                                <MudTd>
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Href="@($"reservestudies/details/{context.Id}")">
+                                        View
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
 @code {
-    private ApplicationDbContext context = default!;
     private List<ReserveStudy> reserveStudies = new();
 
     protected override async Task OnInitializedAsync()
     {
-        context = await DbFactory.CreateDbContextAsync();
-        reserveStudies = await context.ReserveStudies.Include(rs => rs.Community).ToListAsync();
+        using var context = await DbFactory.CreateDbContextAsync();
+        reserveStudies = await context.ReserveStudies
+        .Include(rs => rs.Community)
+        .Include(rs => rs.Contact)
+        .Include(rs => rs.PropertyManager)
+        .ToListAsync();
     }
-
-    public async ValueTask DisposeAsync() => await context.DisposeAsync();
 }

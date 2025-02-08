@@ -2,8 +2,6 @@
 
 using CRS.Data;
 
-using Microsoft.AspNetCore.Identity;
-
 namespace CRS.Models {
     public class Profile : BaseModel {
         public required ApplicationUser User { get; set; }

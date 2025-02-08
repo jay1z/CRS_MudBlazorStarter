@@ -9,11 +9,5 @@
                 ? "show"
                 : string.Empty;
         }
-
-        public enum HashType {
-            Community,
-            ReserveStudy,
-            User,
-        }
     }
 }
