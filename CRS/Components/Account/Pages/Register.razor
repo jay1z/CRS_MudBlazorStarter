@@ -1,4 +1,5 @@
-﻿@page "/Account/Register"
+﻿@attribute [AllowAnonymous]
+@page "/Account/Register"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Text
@@ -14,6 +15,7 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject RoleManager<IdentityRole> RoleManager
 
 <PageTitle>Register</PageTitle>
 
@@ -80,6 +82,15 @@
             identityErrors = result.Errors;
             return;
         }
+        // Ensure the role exists
+        string roleName = "User"; // or any role you want to assign
+        if (!await RoleManager.RoleExistsAsync(roleName))
+        {
+            await RoleManager.CreateAsync(new IdentityRole(roleName));
+        }
+
+        // Assign the role to the user
+        await UserManager.AddToRoleAsync(user, roleName);
 
         Logger.LogInformation("User created a new account with password.");
 

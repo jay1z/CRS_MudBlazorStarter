@@ -1,4 +1,5 @@
-﻿@page "/reservestudies/edit/{Id:int}"
+﻿@attribute [Authorize(Roles = "Specialist")]
+@page "/reservestudies/edit/{Id:int}"
 @using CRS.Data
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
@@ -9,15 +10,14 @@
 
 @if (reserveStudy == null)
 {
-    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+    <MudProgressLinear Color="Color.Info" Indeterminate="true" />
     <MudText Typo="Typo.h4">Loading...</MudText>
 }
 else
 {
     <MudText Typo="Typo.h4">@reserveStudy.Community?.Name</MudText>
-
     <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-        <EditForm Model="reserveStudy" OnValidSubmit="SaveChanges" OnFieldChanged="HandleFieldChanged">
+        <EditForm OnValidSubmit="SaveChanges" EditContext="editContext">
             <MudGrid>
                 <!-- Aside Column -->
                 <MudItem xs="12" lg="4">
@@ -49,6 +49,7 @@ else
                     <!-- Actions Card -->
                     <MudCard Elevation="25" Class="mb-4">
                         <MudCardContent>
+                            @* <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">Save Changes</MudButton> *@
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">Save Changes</MudButton>
                             <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
                         </MudCardContent>
@@ -70,13 +71,13 @@ else
                                                     <MudText Typo="Typo.h6" Color="Color.Primary">Contact</MudText>
                                                 </MudItem>
                                                 <MudItem xs="6">
-                                                    <MudTextField @bind-Value="reserveStudy.Contact.FirstName" Label="First Name" Variant="Variant.Outlined" />
-                                                    <MudTextField @bind-Value="reserveStudy.Contact.LastName" Label="Last Name" Variant="Variant.Outlined" />
+                                                    <MudTextField @bind-Value="reserveStudy.Contact.FirstName" For="@(() => reserveStudy.Contact.FirstName)" Label="First Name" Variant="Variant.Outlined" />
+                                                    <MudTextField @bind-Value="reserveStudy.Contact.LastName" For="@(() => reserveStudy.Contact.LastName)" Label="Last Name" Variant="Variant.Outlined" />
                                                 </MudItem>
                                                 <MudItem xs="6">
-                                                    <MudTextField @bind-Value="reserveStudy.Contact.Phone" Label="Phone" Variant="Variant.Outlined" />
-                                                    <MudTextField @bind-Value="reserveStudy.Contact.Extension" Label="Extension" Variant="Variant.Outlined" />
-                                                    <MudTextField @bind-Value="reserveStudy.Contact.Email" Label="Email" Variant="Variant.Outlined" />
+                                                    <MudTextField @bind-Value="reserveStudy.Contact.Phone" For="@(() => reserveStudy.Contact.Phone)" Label="Phone" InputType="InputType.Telephone" Variant="Variant.Outlined" />
+                                                    <MudTextField @bind-Value="reserveStudy.Contact.Extension" For="@(() => reserveStudy.Contact.Extension)" Label="Extension" Mask="@(new PatternMask("0000"))" Variant="Variant.Outlined" />
+                                                    <MudTextField @bind-Value="reserveStudy.Contact.Email" For="@(() => reserveStudy.Contact.Email)" Label="Email" InputType="InputType.Email" Variant="Variant.Outlined" />
                                                 </MudItem>
 
                                                 <!-- Property Manager Information -->
@@ -86,14 +87,14 @@ else
                                                         <MudText Typo="Typo.h6" Color="Color.Primary">Property Manager</MudText>
                                                     </MudItem>
                                                     <MudItem xs="6">
-                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.CompanyName" Label="Company Name" Variant="Variant.Outlined" />
-                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.FirstName" Label="First Name" Variant="Variant.Outlined" />
-                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.LastName" Label="Last Name" Variant="Variant.Outlined" />
+                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.CompanyName" For="@(() => reserveStudy.PropertyManager.CompanyName)" Label="Company Name" Variant="Variant.Outlined" />
+                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.FirstName" For="@(() => reserveStudy.PropertyManager.FirstName)" Label="First Name" Variant="Variant.Outlined" />
+                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.LastName" For="@(() => reserveStudy.PropertyManager.LastName)" Label="Last Name" Variant="Variant.Outlined" />
                                                     </MudItem>
                                                     <MudItem xs="6">
-                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.Phone" Label="Phone" Variant="Variant.Outlined" />
-                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.Extension" Label="Extension" Variant="Variant.Outlined" />
-                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.Email" Label="Email" Variant="Variant.Outlined" />
+                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.Phone" For="@(() => reserveStudy.PropertyManager.Phone)" Label="Phone" InputType="InputType.Telephone" Variant="Variant.Outlined" />
+                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.Extension" For="@(() => reserveStudy.PropertyManager.Extension)" Label="Extension" Mask="@(new PatternMask("0000"))" Variant="Variant.Outlined" />
+                                                        <MudTextField @bind-Value="reserveStudy.PropertyManager.Email" For="@(() => reserveStudy.PropertyManager.Email)" Label="Email" InputType="InputType.Email" Variant="Variant.Outlined" />
                                                     </MudItem>
                                                 }
                                             </MudGrid>
@@ -115,16 +116,20 @@ else
                                                     <MudTh>Needs Service</MudTh>
                                                     <MudTh class="text-end">Amount</MudTh>
                                                 </HeaderContent>
-                                                <RowTemplate Context="childContext">
-                                                    <MudTd>@childContext.BuildingElement?.Name</MudTd>
+                                                <RowTemplate Context="beContext">
+                                                    <MudTd>@beContext.BuildingElement?.Name</MudTd>
                                                     <MudTd>
-                                                        <MudCheckBox T="bool" @bind-Value="childContext.BuildingElement.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                                                        <MudCheckBox T="bool" @bind-Value="beContext.BuildingElement.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
                                                     </MudTd>
                                                     <MudTd class="text-end">
-                                                        <MudNumericField @bind-Value="childContext.Count" Min="0" />
+                                                        <MudNumericField @bind-Value="beContext.Count" For="@(() => beContext.Count)" Min="0" />
                                                     </MudTd>
                                                 </RowTemplate>
                                             </MudTable>
+                                        </MudCardContent>
+                                    </MudCard>
+                                    <MudCard Elevation="25">
+                                        <MudCardContent Class="py-6">
                                             <MudTable Items="reserveStudy.ReserveStudyCommonElements" Dense="true" Hover="true" Elevation="0" FixedHeader="true" FixedFooter="true">
                                                 <ColGroup>
                                                     <col style="width:65%;" />
@@ -136,16 +141,20 @@ else
                                                     <MudTh>Needs Service</MudTh>
                                                     <MudTh class="text-end">Amount</MudTh>
                                                 </HeaderContent>
-                                                <RowTemplate Context="childContext">
-                                                    <MudTd>@childContext.CommonElement?.Name</MudTd>
+                                                <RowTemplate Context="ceContext">
+                                                    <MudTd>@ceContext.CommonElement?.Name</MudTd>
                                                     <MudTd>
-                                                        <MudCheckBox T="bool" @bind-Value="childContext.CommonElement.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                                                        <MudCheckBox T="bool" @bind-Value="ceContext.CommonElement.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
                                                     </MudTd>
                                                     <MudTd class="text-end">
-                                                        <MudNumericField @bind-Value="childContext.Count" Min="0" />
+                                                        <MudNumericField @bind-Value="ceContext.Count" For="@(() => ceContext.Count)" Min="0" />
                                                     </MudTd>
                                                 </RowTemplate>
                                             </MudTable>
+                                        </MudCardContent>
+                                    </MudCard>
+                                    <MudCard Elevation="25">
+                                        <MudCardContent Class="py-6">
                                             <MudTable Items="reserveStudy.ReserveStudyAdditionalElements" Dense="true" Hover="true" Elevation="0" FixedHeader="true" FixedFooter="true">
                                                 <ColGroup>
                                                     <col style="width:65%;" />
@@ -157,194 +166,18 @@ else
                                                     <MudTh>Needs Service</MudTh>
                                                     <MudTh class="text-end">Amount</MudTh>
                                                 </HeaderContent>
-                                                <RowTemplate Context="childContext">
-                                                    <MudTd>@childContext.Name</MudTd>
+                                                <RowTemplate Context="aeContext">
+                                                    <MudTd>@aeContext.Name</MudTd>
                                                     <MudTd>
-                                                        <MudCheckBox T="bool" @bind-Value="childContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                                                        <MudCheckBox T="bool" @bind-Value="aeContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
                                                     </MudTd>
                                                     <MudTd class="text-end">
-                                                        <MudNumericField @bind-Value="childContext.Count" Min="0" />
+                                                        <MudNumericField @bind-Value="aeContext.Count" For="@(() => aeContext.Count)" Min="0" />
                                                     </MudTd>
                                                 </RowTemplate>
                                             </MudTable>
                                         </MudCardContent>
                                     </MudCard>
-                                </MudTabPanel>
-                                <!-- Element Details Tab -->
-                                <MudTabPanel Text="Element Details" Icon="@Icons.Material.Filled.Details">
-                                    <MudExpansionPanels>
-                                        @foreach (var element in reserveStudy.ReserveStudyBuildingElements)
-                                        {
-                                            <MudExpansionPanel Text="@element.BuildingElement?.Name">
-                                                <ChildContent>
-                                                    <MudGrid>
-                                                        <MudItem xs="12">
-                                                            @if (element.ElementMeasurementOptionsList != null)
-                                                            {
-                                                                <MudSelect T="string" @bind-Value="element.ElementMeasurementOptions.DisplayText" Label="Measurement Type" Variant="Variant.Outlined">
-                                                                    @foreach (var option in element.ElementMeasurementOptionsList)
-                                                                    {
-                                                                        <MudSelectItem Value="@option.DisplayText">@option.DisplayText</MudSelectItem>
-                                                                    }
-                                                                </MudSelect>
-                                                            }
-                                                            else
-                                                            {
-                                                                <MudText Typo="Typo.body2" Color="Color.Error">Measurement Type not available</MudText>
-                                                            }
-                                                        </MudItem>
-                                                        <MudItem xs="12">
-                                                            <MudDatePicker @bind-Date="element.LastServiced" Label="Last Replaced" Variant="Variant.Outlined" />
-                                                        </MudItem>
-                                                        <MudItem xs="12">
-                                                            @if (element.ElementUsefulLifeOptionsList != null)
-                                                            {
-                                                                <MudSelect T="string" @bind-Value="element.ElementUsefulLifeOptions.DisplayText" Label="Useful Life" Variant="Variant.Outlined">
-                                                                    @foreach (var option in element.ElementUsefulLifeOptionsList)
-                                                                    {
-                                                                        <MudSelectItem Value="@option.DisplayText">@option.DisplayText</MudSelectItem>
-                                                                    }
-                                                                </MudSelect>
-                                                            }
-                                                            else
-                                                            {
-                                                                <MudText Typo="Typo.body2" Color="Color.Error">Useful Life not available</MudText>
-                                                            }
-                                                        </MudItem>
-                                                        <MudItem xs="12">
-                                                            @if (element.ElementRemainingLifeOptionsList != null)
-                                                            {
-                                                                <MudSelect T="string" @bind-Value="element.ElementRemainingLifeOptions.DisplayText" Label="Remaining Life" Variant="Variant.Outlined">
-                                                                    @foreach (var option in element.ElementRemainingLifeOptionsList)
-                                                                    {
-                                                                        <MudSelectItem Value="@option.DisplayText">@option.DisplayText</MudSelectItem>
-                                                                    }
-                                                                </MudSelect>
-                                                            }
-                                                            else
-                                                            {
-                                                                <MudText Typo="Typo.body2" Color="Color.Error">Remaining Life not available</MudText>
-                                                            }
-                                                        </MudItem>
-                                                    </MudGrid>
-                                                </ChildContent>
-                                            </MudExpansionPanel>
-                                        }
-                                        @foreach (var element in reserveStudy.ReserveStudyCommonElements)
-                                        {
-                                            <MudExpansionPanel Text="@element.CommonElement?.Name">
-                                                <ChildContent>
-                                                    <MudGrid>
-                                                        <MudItem xs="12">
-                                                            @if (element.ElementMeasurementOptions != null)
-                                                            {
-                                                                <MudSelect T="string" @bind-Value="element.ElementMeasurementOptions.DisplayText" Label="Measurement Type" Variant="Variant.Outlined">
-                                                                    @foreach (var option in element.ElementMeasurementOptionsList)
-                                                                    {
-                                                                        <MudSelectItem Value="@option.DisplayText">@option.DisplayText</MudSelectItem>
-                                                                    }
-                                                                </MudSelect>
-                                                            }
-                                                            else
-                                                            {
-                                                                <MudText Typo="Typo.body2" Color="Color.Error">Measurement Type not available</MudText>
-                                                            }
-                                                        </MudItem>
-                                                        <MudItem xs="12">
-                                                            <MudDatePicker @bind-Date="element.LastServiced" Label="Last Replaced" Variant="Variant.Outlined" />
-                                                        </MudItem>
-                                                        <MudItem xs="12">
-                                                            @if (element.ElementUsefulLifeOptions != null)
-                                                            {
-                                                                <MudSelect T="string" @bind-Value="element.ElementUsefulLifeOptions.DisplayText" Label="Useful Life" Variant="Variant.Outlined">
-                                                                    @foreach (var option in element.ElementUsefulLifeOptionsList)
-                                                                    {
-                                                                        <MudSelectItem Value="@option.DisplayText">@option.DisplayText</MudSelectItem>
-                                                                    }
-                                                                </MudSelect>
-                                                            }
-                                                            else
-                                                            {
-                                                                <MudText Typo="Typo.body2" Color="Color.Error">Useful Life not available</MudText>
-                                                            }
-                                                        </MudItem>
-                                                        <MudItem xs="12">
-                                                            @if (element.ElementRemainingLifeOptions != null)
-                                                            {
-                                                                <MudSelect T="string" @bind-Value="element.ElementRemainingLifeOptions.DisplayText" Label="Remaining Life" Variant="Variant.Outlined">
-                                                                    @foreach (var option in element.ElementRemainingLifeOptionsList)
-                                                                    {
-                                                                        <MudSelectItem Value="@option.DisplayText">@option.DisplayText</MudSelectItem>
-                                                                    }
-                                                                </MudSelect>
-                                                            }
-                                                            else
-                                                            {
-                                                                <MudText Typo="Typo.body2" Color="Color.Error">Remaining Life not available</MudText>
-                                                            }
-                                                        </MudItem>
-                                                    </MudGrid>
-                                                </ChildContent>
-                                            </MudExpansionPanel>
-                                        }
-                                        @foreach (var element in reserveStudy.ReserveStudyAdditionalElements)
-                                        {
-                                            <MudExpansionPanel Text="@element.Name">
-                                                <ChildContent>
-                                                    <MudGrid>
-                                                        <MudItem xs="12">
-                                                            @if (element.ElementMeasurementOptions != null)
-                                                            {
-                                                                <MudSelect T="string" @bind-Value="element.ElementMeasurementOptions.DisplayText" Label="Measurement Type" Variant="Variant.Outlined">
-                                                                    @foreach (var option in element.ElementMeasurementOptionsList)
-                                                                    {
-                                                                        <MudSelectItem Value="@option.DisplayText">@option.DisplayText</MudSelectItem>
-                                                                    }
-                                                                </MudSelect>
-                                                            }
-                                                            else
-                                                            {
-                                                                <MudText Typo="Typo.body2" Color="Color.Error">Measurement Type not available</MudText>
-                                                            }
-                                                        </MudItem>
-                                                        <MudItem xs="12">
-                                                            <MudDatePicker @bind-Date="element.LastServiced" Label="Last Replaced" Variant="Variant.Outlined" />
-                                                        </MudItem>
-                                                        <MudItem xs="12">
-                                                            @if (element.ElementUsefulLifeOptions != null)
-                                                            {
-                                                                <MudSelect T="string" @bind-Value="element.ElementUsefulLifeOptions.DisplayText" Label="Useful Life" Variant="Variant.Outlined">
-                                                                    @foreach (var option in element.ElementUsefulLifeOptionsList)
-                                                                    {
-                                                                        <MudSelectItem Value="@option.DisplayText">@option.DisplayText</MudSelectItem>
-                                                                    }
-                                                                </MudSelect>
-                                                            }
-                                                            else
-                                                            {
-                                                                <MudText Typo="Typo.body2" Color="Color.Error">Useful Life not available</MudText>
-                                                            }
-                                                        </MudItem>
-                                                        <MudItem xs="12">
-                                                            @if (element.ElementRemainingLifeOptions != null)
-                                                            {
-                                                                <MudSelect T="string" @bind-Value="element.ElementRemainingLifeOptions.DisplayText" Label="Remaining Life" Variant="Variant.Outlined">
-                                                                    @foreach (var option in element.ElementRemainingLifeOptionsList)
-                                                                    {
-                                                                        <MudSelectItem Value="@option.DisplayText">@option.DisplayText</MudSelectItem>
-                                                                    }
-                                                                </MudSelect>
-                                                            }
-                                                            else
-                                                            {
-                                                                <MudText Typo="Typo.body2" Color="Color.Error">Remaining Life not available</MudText>
-                                                            }
-                                                        </MudItem>
-                                                    </MudGrid>
-                                                </ChildContent>
-                                            </MudExpansionPanel>
-                                        }
-                                    </MudExpansionPanels>
                                 </MudTabPanel>
                                 <!-- Service Contacts Tab -->
                                 <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone">
@@ -355,22 +188,76 @@ else
                                                 <ChildContent>
                                                     <MudGrid>
                                                         <MudItem xs="12">
-                                                            <MudTextField @bind-Value="element.ServiceContact.CompanyName" Label="Company Name" Variant="Variant.Outlined" />
+                                                            <MudTextField @bind-Value="element.ServiceContact.CompanyName" For="@(() => element.ServiceContact.CompanyName)" Label="Company Name" Variant="Variant.Outlined" />
                                                         </MudItem>
                                                         <MudItem xs="6">
-                                                            <MudTextField @bind-Value="element.ServiceContact.FirstName" Label="First Name" Variant="Variant.Outlined" />
+                                                            <MudTextField @bind-Value="element.ServiceContact.FirstName" For="@(() => element.ServiceContact.FirstName)" Label="First Name" Variant="Variant.Outlined" />
                                                         </MudItem>
                                                         <MudItem xs="6">
-                                                            <MudTextField @bind-Value="element.ServiceContact.LastName" Label="Last Name" Variant="Variant.Outlined" />
+                                                            <MudTextField @bind-Value="element.ServiceContact.LastName" For="@(() => element.ServiceContact.LastName)" Label="Last Name" Variant="Variant.Outlined" />
                                                         </MudItem>
                                                         <MudItem xs="6">
-                                                            <MudTextField @bind-Value="element.ServiceContact.Phone" Label="Phone" Variant="Variant.Outlined" />
+                                                            <MudTextField @bind-Value="element.ServiceContact.Phone" For="@(() => element.ServiceContact.Phone)" Label="Phone" Variant="Variant.Outlined" />
                                                         </MudItem>
                                                         <MudItem xs="6">
-                                                            <MudTextField @bind-Value="element.ServiceContact.Extension" Label="Extension" Variant="Variant.Outlined" />
+                                                            <MudTextField @bind-Value="element.ServiceContact.Extension" For="@(() => element.ServiceContact.Extension)" Label="Extension" Variant="Variant.Outlined" />
                                                         </MudItem>
                                                         <MudItem xs="12">
-                                                            <MudTextField @bind-Value="element.ServiceContact.Email" Label="Email" Variant="Variant.Outlined" />
+                                                            <MudTextField @bind-Value="element.ServiceContact.Email" For="@(() => element.ServiceContact.Email)" Label="Email" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                    </MudGrid>
+                                                </ChildContent>
+                                            </MudExpansionPanel>
+                                        }
+                                        @foreach (var element in reserveStudy.ReserveStudyCommonElements.Where(e => e.CommonElement.NeedsService))
+                                        {
+                                            <MudExpansionPanel Text="@element.CommonElement?.Name">
+                                                <ChildContent>
+                                                    <MudGrid>
+                                                        <MudItem xs="12">
+                                                            <MudTextField @bind-Value="element.ServiceContact.CompanyName" For="@(() => element.ServiceContact.CompanyName)" Label="Company Name" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="6">
+                                                            <MudTextField @bind-Value="element.ServiceContact.FirstName" For="@(() => element.ServiceContact.FirstName)" Label="First Name" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="6">
+                                                            <MudTextField @bind-Value="element.ServiceContact.LastName" For="@(() => element.ServiceContact.LastName)" Label="Last Name" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="6">
+                                                            <MudTextField @bind-Value="element.ServiceContact.Phone" For="@(() => element.ServiceContact.Phone)" Label="Phone" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="6">
+                                                            <MudTextField @bind-Value="element.ServiceContact.Extension" For="@(() => element.ServiceContact.Extension)" Label="Extension" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="12">
+                                                            <MudTextField @bind-Value="element.ServiceContact.Email" For="@(() => element.ServiceContact.Email)" Label="Email" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                    </MudGrid>
+                                                </ChildContent>
+                                            </MudExpansionPanel>
+                                        }
+                                        @foreach (var element in reserveStudy.ReserveStudyAdditionalElements.Where(e => e.NeedsService))
+                                        {
+                                            <MudExpansionPanel Text="@element.Name">
+                                                <ChildContent>
+                                                    <MudGrid>
+                                                        <MudItem xs="12">
+                                                            <MudTextField @bind-Value="element.ServiceContact.CompanyName" For="@(() => element.ServiceContact.CompanyName)" Label="Company Name" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="6">
+                                                            <MudTextField @bind-Value="element.ServiceContact.FirstName" For="@(() => element.ServiceContact.FirstName)" Label="First Name" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="6">
+                                                            <MudTextField @bind-Value="element.ServiceContact.LastName" For="@(() => element.ServiceContact.LastName)" Label="Last Name" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="6">
+                                                            <MudTextField @bind-Value="element.ServiceContact.Phone" For="@(() => element.ServiceContact.Phone)" Label="Phone" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="6">
+                                                            <MudTextField @bind-Value="element.ServiceContact.Extension" For="@(() => element.ServiceContact.Extension)" Label="Extension" Variant="Variant.Outlined" />
+                                                        </MudItem>
+                                                        <MudItem xs="12">
+                                                            <MudTextField @bind-Value="element.ServiceContact.Email" For="@(() => element.ServiceContact.Email)" Label="Email" Variant="Variant.Outlined" />
                                                         </MudItem>
                                                     </MudGrid>
                                                 </ChildContent>
@@ -390,23 +277,25 @@ else
 @code {
     [Parameter]
     public int Id { get; set; }
-
-    private ReserveStudy? reserveStudy;
+    private ApplicationDbContext context;
+    private EditContext? editContext;
     private List<ApplicationUser> applicationUsers = new();
 
-    private ApplicationDbContext context;
+    private ReserveStudy? reserveStudy;
+    private ValidationMessageStore? messageStore;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             context = DbFactory.CreateDbContext();
+
             reserveStudy = await context.ReserveStudies
                 .Include(rs => rs.Community)
-                    .ThenInclude(c => c.Addresses)
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
+
                 .Include(rs => rs.ReserveStudyBuildingElements)
                     .ThenInclude(be => be.BuildingElement)
                 .Include(rs => rs.ReserveStudyBuildingElements)
@@ -415,6 +304,9 @@ else
                     .ThenInclude(be => be.ElementUsefulLifeOptions)
                 .Include(rs => rs.ReserveStudyBuildingElements)
                     .ThenInclude(be => be.ElementRemainingLifeOptions)
+                .Include(rs => rs.ReserveStudyBuildingElements)
+                    .ThenInclude(be => be.ServiceContact)
+
                 .Include(rs => rs.ReserveStudyCommonElements)
                     .ThenInclude(be => be.CommonElement)
                 .Include(rs => rs.ReserveStudyCommonElements)
@@ -423,12 +315,18 @@ else
                     .ThenInclude(be => be.ElementUsefulLifeOptions)
                 .Include(rs => rs.ReserveStudyCommonElements)
                     .ThenInclude(be => be.ElementRemainingLifeOptions)
+                .Include(rs => rs.ReserveStudyCommonElements)
+                    .ThenInclude(be => be.ServiceContact)
+
                 .Include(rs => rs.ReserveStudyAdditionalElements)
                     .ThenInclude(be => be.ElementMeasurementOptions)
                 .Include(rs => rs.ReserveStudyAdditionalElements)
                     .ThenInclude(be => be.ElementUsefulLifeOptions)
                 .Include(rs => rs.ReserveStudyAdditionalElements)
                     .ThenInclude(be => be.ElementRemainingLifeOptions)
+                .Include(rs => rs.ReserveStudyAdditionalElements)
+                    .ThenInclude(be => be.ServiceContact)
+
                 .FirstOrDefaultAsync(rs => rs.Id == Id);
 
             if (reserveStudy == null)
@@ -437,6 +335,10 @@ else
             }
             else
             {
+                editContext = new(reserveStudy);
+                // editContext.OnFieldChanged += HandleFieldChanged;
+                editContext.OnValidationRequested += HandleValidationRequested;
+                messageStore = new(editContext);
                 applicationUsers = await context.Users.ToListAsync();
 
                 foreach (var element in reserveStudy.ReserveStudyAdditionalElements)
@@ -449,7 +351,7 @@ else
                     element.ElementUsefulLifeOptionsList = await context.ElementUsefulLifeOptions.ToListAsync();
                     element.ElementRemainingLifeOptionsList = await context.ElementRemainingLifeOptions.ToListAsync();
 
-                    element.ServiceContact ??= new ServiceContact();
+                    //element.ServiceContact ??= new ServiceContact();
                 }
                 foreach (var element in reserveStudy.ReserveStudyBuildingElements)
                 {
@@ -461,7 +363,7 @@ else
                     element.ElementUsefulLifeOptionsList = await context.ElementUsefulLifeOptions.ToListAsync();
                     element.ElementRemainingLifeOptionsList = await context.ElementRemainingLifeOptions.ToListAsync();
 
-                    element.ServiceContact ??= new ServiceContact();
+                    //element.ServiceContact ??= new ServiceContact();
                 }
                 foreach (var element in reserveStudy.ReserveStudyCommonElements)
                 {
@@ -473,7 +375,7 @@ else
                     element.ElementUsefulLifeOptionsList = await context.ElementUsefulLifeOptions.ToListAsync();
                     element.ElementRemainingLifeOptionsList = await context.ElementRemainingLifeOptions.ToListAsync();
 
-                    element.ServiceContact ??= new ServiceContact();
+                    //element.ServiceContact ??= new ServiceContact();
                 }
             }
         }
@@ -483,53 +385,50 @@ else
         }
     }
 
-    private void HandleFieldChanged(object sender, FieldChangedEventArgs e)
+    // private void HandleFieldChanged(object? sender, FieldChangedEventArgs e)
+    // {
+    //     //Snackbar.Add($"{e.FieldIdentifier.Model.ToString()}:{e.FieldIdentifier.FieldName}", Severity.Success);
+    //     switch (e.FieldIdentifier.Model)
+    //     {
+    //         case ReserveStudy:
+    //             context.Entry(reserveStudy).State = EntityState.Modified;
+    //             break;
+    //         case Contact:
+    //             context.Entry(reserveStudy.Contact).State = EntityState.Modified;
+    //             break;
+    //         case PropertyManager:
+    //             context.Entry(reserveStudy.PropertyManager).State = EntityState.Modified;
+    //             break;
+    //         case ReserveStudyAdditionalElement additionalElement:
+    //             context.Entry(additionalElement).State = EntityState.Modified;
+    //             // if (additionalElement.ServiceContact != null)
+    //             // {
+    //             //     context.Entry(additionalElement.ServiceContact).State = EntityState.Modified;
+    //             // }
+    //             break;
+    //         case ReserveStudyBuildingElement buildingElement:
+    //             context.Entry(buildingElement).State = EntityState.Modified;
+    //             // if (buildingElement.ServiceContact != null)
+    //             // {
+    //             //     context.Entry(buildingElement.ServiceContact).State = EntityState.Modified;
+    //             // }
+    //             break;
+    //         case ReserveStudyCommonElement commonElement:
+    //             context.Entry(commonElement).State = EntityState.Modified;
+    //             // if (commonElement.ServiceContact != null)
+    //             // {
+    //             //     context.Entry(commonElement.ServiceContact).State = EntityState.Modified;
+    //             // }
+    //             break;
+    //         case ServiceContact serviceContact:
+    //             context.Entry(serviceContact).State = EntityState.Modified;
+    //             break;
+    //     }
+    // }
+    private void HandleValidationRequested(object? sender, ValidationRequestedEventArgs args)
     {
-        if (e.FieldIdentifier.Model is ReserveStudy)
-        {
-            reserveStudy.DateModified = DateTime.Now;
-            context.Entry(reserveStudy).State = EntityState.Modified;
-        }
-        else if (e.FieldIdentifier.Model is Contact)
-        {
-            reserveStudy.Contact.DateModified = DateTime.Now;
-            context.Entry(reserveStudy.Contact).State = EntityState.Modified;
-        }
-        else if (e.FieldIdentifier.Model is PropertyManager)
-        {
-            reserveStudy.PropertyManager.DateModified = DateTime.Now;
-            context.Entry(reserveStudy.PropertyManager).State = EntityState.Modified;
-        }
-        else if (e.FieldIdentifier.Model is ReserveStudyBuildingElement buildingElement)
-        {
-            buildingElement.DateModified = DateTime.Now;
-            context.Entry(buildingElement).State = EntityState.Modified;
-            if (buildingElement.ServiceContact != null)
-            {
-                context.Entry(buildingElement.ServiceContact).State = EntityState.Modified;
-            }
-        }
-        else if (e.FieldIdentifier.Model is ReserveStudyCommonElement commonElement)
-        {
-            commonElement.DateModified = DateTime.Now;
-            context.Entry(commonElement).State = EntityState.Modified;
-            if (commonElement.ServiceContact != null)
-            {
-                context.Entry(commonElement.ServiceContact).State = EntityState.Modified;
-            }
-        }
-        else if (e.FieldIdentifier.Model is ReserveStudyAdditionalElement additionalElement)
-        {
-            additionalElement.DateModified = DateTime.Now;
-            context.Entry(additionalElement).State = EntityState.Modified;
-            if (additionalElement.ServiceContact != null)
-            {
-                context.Entry(additionalElement.ServiceContact).State = EntityState.Modified;
-            }
-        }
-
+        messageStore?.Clear();
     }
-
     private async Task SaveChanges()
     {
         try
@@ -548,5 +447,13 @@ else
     private void Cancel()
     {
         NavigationManager.NavigateTo($"/reservestudies/details/{Id}");
+    }
+
+    public void Dispose()
+    {
+        if (editContext is not null)
+        {
+            editContext.OnValidationRequested -= HandleValidationRequested;
+        }
     }
 }

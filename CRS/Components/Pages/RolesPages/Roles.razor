@@ -1,0 +1,188 @@
+﻿@page "/roles"
+@using CRS.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Roles Management</PageTitle>
+<MudLink Href="https://learn.microsoft.com/en-us/aspnet/core/security/authorization/roles?view=aspnetcore-9.0">Roles</MudLink>
+
+<MudContainer>
+    <MudCard Elevation="0">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">User Roles Management</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudIconButton Icon="@Icons.Material.Filled.GroupAdd" Color="Color.Default" OnClick="OpenAddRoleDialogAsync" />
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudTable Items="roles" Hover="true" Striped="true">
+                <ColGroup>
+                    <col/>
+                    <col style="width:150px;" />
+                </ColGroup>
+                <HeaderContent>
+                    <MudTh>Role Name</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Name</MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" OnClick="() => EditRole(context)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => DeleteRole(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+    <MudCard Elevation="0">
+        <MudCardHeader>
+            <MudText Typo="Typo.h5">Users</MudText>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudTable T="ApplicationUser" Items="users" Hover="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>User Name</MudTh>
+                    <MudTh>Email</MudTh>
+                    <MudTh>Roles</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.UserName</MudTd>
+                    <MudTd>@context.Email</MudTd>
+                    <MudTd>
+                        @foreach (string role in context.Roles)
+                        {
+                            <MudChip T="string">@role</MudChip>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="() => OpenAddRoleToUserDialog(context)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Remove" OnClick="() => OpenRemoveRoleFromUserDialog(context)" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private string userId;
+    private string roleName;
+    private string message;
+    private List<IdentityRole> roles = new();
+    private List<ApplicationUser> users = new();
+    private bool isAddRoleDialogVisible;
+    private ApplicationUser selectedUser;
+    private string selectedRoleName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoles();
+        await LoadUsers();
+    }
+
+    private async Task LoadRoles()
+    {
+        roles = await RoleManager.Roles.ToListAsync();
+    }
+
+    private async Task LoadUsers()
+    {
+        users = await UserManager.Users.ToListAsync();
+        foreach (var user in users)
+        {
+            user.Roles = await UserManager.GetRolesAsync(user);
+        }
+    }
+
+    private async Task AddUserToRole()
+    {
+        var user = await UserManager.FindByIdAsync(userId);
+        if (user != null)
+        {
+            var result = await UserManager.AddToRoleAsync(user, roleName);
+            if (result.Succeeded)
+            {
+                message = "User added to role successfully!";
+                await LoadUsers(); // Refresh the user list
+            }
+            else
+            {
+                message = "Error adding user to role: " + string.Join(", ", result.Errors.Select(e => e.Description));
+            }
+        }
+        else
+        {
+            message = "User not found.";
+        }
+    }
+
+    private async Task RemoveUserFromRole(ApplicationUser user, string role)
+    {
+        var result = await UserManager.RemoveFromRoleAsync(user, role);
+        if (result.Succeeded)
+        {
+            message = "User removed from role successfully!";
+            await LoadUsers(); // Refresh the user list
+        }
+        else
+        {
+            message = "Error removing user from role: " + string.Join(", ", result.Errors.Select(e => e.Description));
+        }
+    }
+
+    private Task OpenAddRoleDialogAsync()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true, MaxWidth = MaxWidth.Large };
+
+        return DialogService.ShowAsync<AddRolesDialog>("Simple Dialog", options);
+    }
+
+    private void EditRole(IdentityRole role)
+    {
+        // Logic to edit role
+        Snackbar.Add("EditRole", Severity.Success);
+    }
+
+    private void DeleteRole(IdentityRole role)
+    {
+        roles.Remove(role);
+    }
+
+    private void OpenAddRoleToUserDialog(ApplicationUser user)
+    {
+        selectedUser = user;
+        isAddRoleDialogVisible = true;
+    }
+
+    private async Task AddRoleToUser()
+    {
+        if (selectedUser != null && !string.IsNullOrEmpty(selectedRoleName))
+        {
+            var result = await UserManager.AddToRoleAsync(selectedUser, selectedRoleName);
+            if (result.Succeeded)
+            {
+                message = "Role added to user successfully!";
+                await LoadUsers(); // Refresh the user list
+                isAddRoleDialogVisible = false;
+            }
+            else
+            {
+                message = "Error adding role to user: " + string.Join(", ", result.Errors.Select(e => e.Description));
+            }
+        }
+    }
+
+    private void OpenRemoveRoleFromUserDialog(ApplicationUser user)
+    {
+        // Logic to open Remove Role from User dialog
+        Snackbar.Add($"OpenRemoveRoleFromUserDialog for {user.UserName}", Severity.Success);
+    }
+}

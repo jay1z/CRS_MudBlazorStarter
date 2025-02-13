@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
+using static CRS.Models.IReserveStudyElement;
+
 namespace CRS.Models {
-    public class ReserveStudyAdditionalElement : BaseModel {
+    public class ReserveStudyAdditionalElement : BaseModel, IReserveStudyElement {
         public int? ReserveStudyId { get; set; }
         public ReserveStudy? ReserveStudy { get; set; }
 
@@ -23,6 +25,10 @@ namespace CRS.Models {
         public List<ElementRemainingLifeOptions> ElementRemainingLifeOptionsList { get; set; } = new();
 
         [NotMapped]
+        public ElementTypeEnum ElementType { get => ElementTypeEnum.Additional; set => throw new NotImplementedException(); }
+
+        [NotMapped]
         public bool ShowDetails { get; set; } = false;
+
     }
 }

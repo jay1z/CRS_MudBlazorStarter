@@ -28,6 +28,23 @@ namespace CRS.Models {
         public List<ReserveStudyAdditionalElement>? ReserveStudyAdditionalElements { get; set; }
 
         [NotMapped]
+        public List<IReserveStudyElement> ReserveStudyElements {
+            get {
+                var elements = new List<IReserveStudyElement>();
+                if (ReserveStudyBuildingElements != null) {
+                    elements.AddRange(ReserveStudyBuildingElements);
+                }
+                if (ReserveStudyCommonElements != null) {
+                    elements.AddRange(ReserveStudyCommonElements);
+                }
+                if (ReserveStudyAdditionalElements != null) {
+                    elements.AddRange(ReserveStudyAdditionalElements);
+                }
+                return elements;
+            }
+        }
+
+        [NotMapped]
         public IContact? PointOfContact {
             get {
                 if (PointOfContactType == PointOfContactTypeEnum.Contact) {

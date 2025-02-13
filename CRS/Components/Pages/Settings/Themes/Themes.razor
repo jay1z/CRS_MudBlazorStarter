@@ -1,0 +1,93 @@
+﻿@page "/themes"
+@using CRS.Themes
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+@using MudBlazor.Utilities
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject ThemeService ThemeService
+
+@* https://coolors.co/palettes/trending *@
+@* https://coolors.co/8ecae6-219ebc-023047-ffb703-fb8500 *@
+
+<MudThemeProvider Theme="@ThemeService.CurrentTheme" />
+<PageTitle>Theme Customization</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudCard>
+        <MudCardContent>
+            <MudText Typo="Typo.h4">Presets</MudText>
+            <MudGrid>
+                @foreach (var theme in themes)
+                {
+                    <MudItem xs="6" sm="3">
+                        <MudCard Class="preset-card" @onclick="() => ApplyTheme(theme)">
+                            <MudCardContent>
+                                <MudPaper Square="false" Elevation="25">
+                                    <div style="background-color:@theme.Theme.PaletteLight.Primary; height: 20px;"></div>
+                                    <div style="background-color:@theme.Theme.PaletteLight.Secondary; height: 20px;"></div>
+                                    <div style="background-color:@theme.Theme.PaletteLight.Background; height: 20px;"></div>
+                                    <div style="background-color:@theme.Theme.PaletteLight.TextPrimary; height: 20px;"></div>
+                                </MudPaper>
+                                <MudText Typo="Typo.body2" Class="text-center mt-2">@theme.Name</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    // private ThemeSettings themeSettings = new ThemeSettings();
+    // private MudTheme currentTheme = new MudTheme();
+
+    private List<IMudTheme> themes = new List<IMudTheme>
+    {
+        new CrispyThemeSpaceWalk(),
+        new CrispyThemeSunsetSerenade(),
+        new BlackAndWhite()
+    };
+
+    private void ApplyTheme(IMudTheme theme)
+    {
+        ThemeService.SetTheme(theme.Theme);
+        Snackbar.Add("Theme applied successfully!", Severity.Success);
+    }
+
+    // private void EditPreset(string presetName)
+    // {
+    //     NavigationManager.NavigateTo($"/themepreset/{presetName}");
+    // }
+
+    // public class ThemePreset
+    // {
+    //     public string Name { get; set; }
+    //     public string PrimaryColor { get; set; }
+    //     public string SecondaryColor { get; set; }
+    //     public string BackgroundColor { get; set; }
+    //     public string TextColor { get; set; }
+    // }
+
+    // MudTheme CustomTheme = new MudTheme()
+    //     {
+    //         PaletteLight = new PaletteLight()
+    //         {
+    //             AppbarBackground = Colors.Red.Default,
+    //             Primary = Colors.Blue.Default,
+    //             Secondary = Colors.Green.Accent4,
+    //         },
+    //         PaletteDark = new PaletteDark()
+    //         {
+    //             AppbarBackground = Colors.Red.Default,
+    //             Primary = Colors.Blue.Default,
+    //             Secondary = Colors.Green.Accent4,
+    //         },
+    //         LayoutProperties = new LayoutProperties()
+    //         {
+    //             DrawerWidthLeft = "260px",
+    //             DrawerWidthRight = "300px"
+    //         }
+    //     };
+}

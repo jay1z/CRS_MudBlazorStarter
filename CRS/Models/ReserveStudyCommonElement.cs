@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
+using static CRS.Models.IReserveStudyElement;
+
 namespace CRS.Models {
-    public class ReserveStudyCommonElement : BaseModel {
+    public class ReserveStudyCommonElement : BaseModel, IReserveStudyElement {
         public required int ReserveStudyId { get; set; }
         public ReserveStudy? ReserveStudy { get; set; }
 
@@ -21,6 +23,15 @@ namespace CRS.Models {
         public List<ElementUsefulLifeOptions> ElementUsefulLifeOptionsList { get; set; } = new();
         [NotMapped]
         public List<ElementRemainingLifeOptions> ElementRemainingLifeOptionsList { get; set; } = new();
+
+        [NotMapped]
+        public ElementTypeEnum ElementType { get => ElementTypeEnum.Common; set => throw new NotImplementedException(); }
+
+        [NotMapped]
+        public string Name { get { return CommonElement?.Name ?? throw new ArgumentNullException(); } set { } }
+
+        [NotMapped]
+        public bool NeedsService { get { return CommonElement?.NeedsService ?? false; } set => throw new NotImplementedException();  }
 
         [NotMapped]
         public bool ShowDetails { get; set; } = false;

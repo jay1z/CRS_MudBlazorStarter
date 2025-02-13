@@ -1,0 +1,98 @@
+﻿@page "/themepreset/{presetName}"
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Edit Preset</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudCard>
+        <MudCardContent>
+            <MudText Typo="Typo.h4">Edit Preset: @presetName</MudText>
+            <MudDivider Class="my-2" />
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudColorPicker @bind-Text="preset.PrimaryColor" Label="Primary Color" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudColorPicker @bind-Text="preset.SecondaryColor" Label="Secondary Color" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudColorPicker @bind-Text="preset.BackgroundColor" Label="Background Color" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudColorPicker @bind-Text="preset.TextColor" Label="Text Color" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ApplyPreset">Apply Preset</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string presetName { get; set; }
+
+    private ThemePreset preset;
+
+    protected override void OnInitialized()
+    {
+        // Load the preset based on the presetName parameter
+        preset = presets.FirstOrDefault(p => p.Name == presetName);
+        if (preset == null)
+        {
+            NavigationManager.NavigateTo("/themes");
+        }
+    }
+
+    private void ApplyPreset()
+    {
+        // Apply the preset values to the theme
+        CustomTheme.PaletteLight.Primary = preset.PrimaryColor;
+        CustomTheme.PaletteLight.Secondary = preset.SecondaryColor;
+        CustomTheme.PaletteLight.AppbarBackground = preset.BackgroundColor;
+        CustomTheme.PaletteLight.TextPrimary = preset.TextColor;
+
+        Snackbar.Add("Preset applied successfully!", Severity.Success);
+        NavigationManager.NavigateTo("/themes");
+    }
+
+    private List<ThemePreset> presets = new List<ThemePreset>
+    {
+        new ThemePreset { Name = "Light", PrimaryColor = "#ffffff", SecondaryColor = "#f0f0f0", BackgroundColor = "#ffffff", TextColor = "#000000" },
+        new ThemePreset { Name = "Dark", PrimaryColor = "#000000", SecondaryColor = "#333333", BackgroundColor = "#000000", TextColor = "#ffffff" },
+        new ThemePreset { Name = "Blue", PrimaryColor = "#2196f3", SecondaryColor = "#64b5f6", BackgroundColor = "#e3f2fd", TextColor = "#000000" }
+    };
+
+    MudTheme CustomTheme = new MudTheme()
+        {
+            PaletteLight = new PaletteLight()
+            {
+                Primary = Colors.Blue.Default,
+                Secondary = Colors.Green.Accent4,
+                AppbarBackground = Colors.Red.Default,
+            },
+            PaletteDark = new PaletteDark()
+            {
+                Primary = Colors.Blue.Lighten1
+            },
+
+            LayoutProperties = new LayoutProperties()
+            {
+                DrawerWidthLeft = "260px",
+                DrawerWidthRight = "300px"
+            }
+        };
+
+    public class ThemePreset
+    {
+        public string Name { get; set; }
+        public string PrimaryColor { get; set; }
+        public string SecondaryColor { get; set; }
+        public string BackgroundColor { get; set; }
+        public string TextColor { get; set; }
+    }
+}

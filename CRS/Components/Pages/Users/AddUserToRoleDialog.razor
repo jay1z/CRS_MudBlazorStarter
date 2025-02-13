@@ -1,0 +1,51 @@
+﻿@using CRS.Data
+@using Microsoft.AspNetCore.Identity
+@inject RoleManager<IdentityRole> RoleManager;
+@inject UserManager<ApplicationUser> UserManager;
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        Add User To Role
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="selectedRoleName" Label="Role Name" Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public ApplicationUser User { get; set; }
+
+    private string selectedRoleName;
+
+    private async Task AddRoleToUser()
+    {
+        if (User != null && !string.IsNullOrEmpty(selectedRoleName))
+        {
+            var result = await UserManager.AddToRoleAsync(User, selectedRoleName);
+            if (result.Succeeded)
+            {
+                Snackbar.Add("Role added to user successfully!", Severity.Success);
+
+                //await LoadUsers(); // Refresh the user list
+                //isAddRoleDialogVisible = false;
+            }
+            else
+            {
+                Snackbar.Add("Error adding role to user: " + string.Join(", ", result.Errors.Select(e => e.Description)), Severity.Error);
+            }
+        }
+    }
+
+    private async void Submit() => await AddRoleToUser();
+
+    private void Cancel() => MudDialog.Cancel();
+}

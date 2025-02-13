@@ -1,0 +1,173 @@
+﻿@attribute [Authorize(Roles = "Admin, Specialist")]
+@page "/dashboard"
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Dashboard</PageTitle>
+
+<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
+    <MudGrid>
+        <!-- Reserve Study Overview -->
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="pa-4" Style="height: 200px;">
+                <MudText Typo="Typo.h6">Reserve Study Overview</MudText>
+                <MudText>Total Studies: @totalStudies</MudText>
+                <MudText>Active: @activeStudies</MudText>
+                <MudText>Approved: @approvedStudies</MudText>
+                <MudText>Completed: @completedStudies</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Community Information -->
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="pa-4" Style="height: 200px;">
+                <MudText Typo="Typo.h6">Community Information</MudText>
+                <MudList T="string">
+                    @foreach (var community in communities)
+                    {
+                        <MudListItem>
+                            <MudText>@community.Name</MudText>
+                            @* <MudText>Studies: @community.StudyCount</MudText> *@
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Specialist Performance -->
+        <MudItem xs="12" sm="12" md="4">
+            <MudPaper Elevation="2" Class="pa-4" Style="height: 200px;">
+                <MudText Typo="Typo.h6">Specialist Performance</MudText>
+                <MudList T="string">
+                    @if (specialists != null)
+                    {
+                        @foreach (var specialist in specialists)
+                        {
+                            <MudListItem>
+                                <MudText>@specialist.UserName</MudText>
+                            </MudListItem>
+                        }
+                    }
+                    else
+                    {
+                        <MudSkeleton Width="80%" />
+                        <MudSkeleton Width="50%" />
+                        <MudSkeleton Width="100%" />
+                    }
+
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Service Requests -->
+        <MudItem xs="12" sm="6">
+            <MudPaper Elevation="2" Class="pa-4" Style="height: 200px;">
+                <MudText Typo="Typo.h6">Service Requests</MudText>
+                <MudList T="string">
+                    @foreach (var reserveStudy in reserveStudies)
+                    {
+                        <MudListItem>
+                            <MudText>@reserveStudy.Community.Name</MudText>
+                            <MudText>Status: @(reserveStudy.IsApproved ? "Approved" : "Not Approved")</MudText>
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Upcoming Events -->
+        <MudItem xs="12" sm="6">
+            <MudPaper Elevation="2" Class="pa-4" Style="height: 200px;">
+                <MudText Typo="Typo.h6">Upcoming Events</MudText>
+                <MudList T="string">
+                    @if (upcomingEvents != null)
+                    {
+
+                        @foreach (var calendarEvent in upcomingEvents)
+                        {
+                            <MudListItem>
+                                <MudText>@calendarEvent.Title</MudText>
+                                <MudText>Location: @calendarEvent.Location</MudText>
+                                <MudText>Start: @calendarEvent.Start</MudText>
+                                <MudText>End: @calendarEvent.End</MudText>
+                            </MudListItem>
+                        }
+                    }
+                    else
+                    {
+
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Notifications -->
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="2" Class="pa-4" Style="height: 200px;">
+                <MudText Typo="Typo.h6">Notifications</MudText>
+                <MudList T="string">
+                    @foreach (var notification in notifications)
+                    {
+                        <MudListItem>
+                            <MudText>@notification.Message</MudText>
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Financial Data -->
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="2" Class="pa-4" Style="height: 200px;">
+                <MudText Typo="Typo.h6">Financial Data</MudText>
+                <MudText>Budget: @budget</MudText>
+                <MudText>Expenditure: @expenditure</MudText>
+                <MudText>Upcoming Costs: @upcomingCosts</MudText>
+            </MudPaper>
+        </MudItem>
+
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private int totalStudies;
+    private int activeStudies;
+    private int approvedStudies;
+    private int completedStudies;
+    private List<Community>? communities = new();
+    private IList<ApplicationUser>? specialists;
+    private List<ReserveStudy>? reserveStudies = new();
+    private List<CalendarEvent>? upcomingEvents = new();
+    private List<Notification>? notifications = new();
+    private decimal budget;
+    private decimal expenditure;
+    private decimal upcomingCosts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load data for the dashboard
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        using var context = DbFactory.CreateDbContext();
+
+        specialists = await UserManager.GetUsersInRoleAsync("Specialist");
+        totalStudies = await context.ReserveStudies.CountAsync();
+        activeStudies = await context.ReserveStudies.CountAsync(rs => rs.IsActive);
+        approvedStudies = await context.ReserveStudies.CountAsync(rs => rs.IsApproved);
+        completedStudies = await context.ReserveStudies.CountAsync(rs => rs.IsComplete);
+        communities = await context.Communities.ToListAsync();
+        reserveStudies = await context.ReserveStudies.ToListAsync();
+        upcomingEvents = await context.CalendarEvents.ToListAsync();
+        notifications = await context.Notifications.ToListAsync();
+        // budget = await context.Budget.FirstOrDefaultAsync();
+        // expenditure = await context.Expenditure.FirstOrDefaultAsync();
+        // upcomingCosts = await context.UpcomingCosts.FirstOrDefaultAsync();
+        // userActivities = await context.UserActivities.ToListAsync();
+    }
+}

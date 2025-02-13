@@ -1,0 +1,113 @@
+﻿@attribute [Authorize(Roles = "User")]
+@page "/reservestudies/summary/{Id:int}"
+@using CRS.Components.Layout
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@layout UserLayout
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Reserve Study Summary</PageTitle>
+
+@if (reserveStudy == null)
+{
+    <MudProgressLinear Color="Color.Info" Indeterminate="true" />
+    <MudText Typo="Typo.h4">Loading...</MudText>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <MudPaper Elevation="4">
+            <MudCardContent>
+                <MudText Typo="Typo.h4">@reserveStudy.Community?.Name</MudText>
+                <MudText Typo="Typo.subtitle2">@reserveStudy.HashedId</MudText>
+                <MudDivider />
+                <MudTextField T="string" Label="Created By"  ReadOnly="true" Text="@reserveStudy.User.UserName" />
+                <MudTextField T="string" Label="Created Date" ReadOnly="true" Text="@reserveStudy.DateCreated?.ToString("MM/dd/yyyy")" />
+                <MudTextField T="string" Label="Point of Contact" ReadOnly="true" Text="@reserveStudy.PointOfContact.FullNameInverted" />
+                <MudTextField T="string" Label="Specialist Assigned" ReadOnly="true" Text="@(reserveStudy.Specialist?.Email ?? "Not Assigned")" />
+                <MudTextField T="string" Label="Status" ReadOnly="true" Text="@(reserveStudy.IsComplete ? "Complete" : "In Progress")" />
+
+                <MudDivider />
+
+                <MudText Typo="Typo.h6">Elements Summary</MudText>
+                <MudTable T="IReserveStudyElement" Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyElements">
+                    <ColGroup>
+                        <col style="width:10%;" />
+                        <col style="width:55%;" />
+                        <col style="width:25%;" />
+                        <col style="width:10%;" />
+                    </ColGroup>
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Needs Service</MudTh>
+                        <MudTh class="text-end">Amount</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="childContext">
+                        <MudTd><MudText Typo="Typo.body1">@childContext.Name</MudText></MudTd>
+                        <MudTd>
+                            <MudCheckBox T="bool" @bind-Value="childContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                        </MudTd>
+                        <MudTd class="text-end">@childContext.Count</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudCardContent>
+            <MudDivider />
+
+            <MudCardActions>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="EditReserveStudy">Edit Reserve Study</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="BackToList">Back to List</MudButton>
+            </MudCardActions>
+        </MudPaper>
+    </MudContainer>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    private ApplicationDbContext context;
+    private ReserveStudy? reserveStudy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            context = await DbFactory.CreateDbContextAsync();
+
+            reserveStudy = await context.ReserveStudies
+                .Include(rs => rs.Community)
+                .Include(rs => rs.Contact)
+                .Include(rs => rs.PropertyManager)
+                .Include(rs => rs.Specialist)
+                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.BuildingElement)
+                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(ce => ce.CommonElement)
+                .Include(rs => rs.ReserveStudyAdditionalElements)
+                .FirstOrDefaultAsync(rs => rs.Id == Id);
+
+            if (reserveStudy == null)
+            {
+                NavigationManager.NavigateTo("/reservestudies/notfound");
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void EditReserveStudy()
+    {
+        NavigationManager.NavigateTo($"/reservestudies/update/{reserveStudy.Id}");
+    }
+
+    private void BackToList()
+    {
+        NavigationManager.NavigateTo("/reservestudies");
+    }
+
+    public void Dispose()
+    {
+        context?.Dispose();
+    }
+}

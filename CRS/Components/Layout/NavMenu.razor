@@ -16,9 +16,9 @@
             @* <MudText Typo="Typo.caption" Class="px-4 mud-text-secondary">Pages</MudText> *@
             <MudDivider Class="my-2" />
             <MudNavGroup Title="Reserve Studies" Expanded="true">
-                <MudNavLink Href="/reserveStudies/" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Warning">Active Studies</MudNavLink>
-                <MudNavLink Href="/reserveStudies/my" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PersonPin" IconColor="Color.Warning">My Requests</MudNavLink>
-                <MudNavLink Href="/reserveStudies/sendlink" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Send" IconColor="Color.Warning">Send Link</MudNavLink>
+                <MudNavLink Href="/reservestudies/" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Warning">Active Studies</MudNavLink>
+                <MudNavLink Href="/reservestudies/my" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PersonPin" IconColor="Color.Warning">My Requests</MudNavLink>
+                <MudNavLink Href="/reservestudies/sendlink" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Send" IconColor="Color.Warning">Send Link</MudNavLink>
             </MudNavGroup>
             <MudDivider Class="my-2" />
             <MudNavLink Href="/communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.HolidayVillage" IconColor="Color.Warning">Communities</MudNavLink>
@@ -31,7 +31,10 @@
             <MudDivider Class="my-2" />
             <MudNavLink Href="/support" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ContactSupport" IconColor="Color.Primary">Support</MudNavLink>
             <MudNavLink Href="/faqs" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionAnswer" IconColor="Color.Primary">FAQ's'</MudNavLink>
-            <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">@context.User.Identity?.Name</MudNavLink>
+            <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix">
+                <MudAvatar Color="Color.Primary" Size="Size.Small">JZ</MudAvatar>
+                @* @context.User.Identity?.Name *@
+            </MudNavLink>
             <form action="Account/Logout" method="post">
                 <AntiforgeryToken />
                 <input type="hidden" name="ReturnUrl" value="@currentUrl" />
@@ -39,6 +42,7 @@
                     <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Logout
                 </button>
             </form>
+            <MudNavLink Href="/themes" Icon="@Icons.Material.Filled.Palette">Themes</MudNavLink>
         </Authorized>
         <NotAuthorized>
             <MudNavLink Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">Register</MudNavLink>

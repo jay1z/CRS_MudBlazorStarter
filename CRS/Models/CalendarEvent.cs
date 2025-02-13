@@ -5,14 +5,14 @@ using CRS.Data;
 
 namespace CRS.Models {
     public class CalendarEvent : BaseModel {
-        public required string Title { get; set; }
-        public required ClassName ColorClass { get; set; }
-        public required string Location { get; set; }
-        [ForeignKey(nameof(ApplicationUser))] public required string ApplicationUserId { get; set; }
-        [ForeignKey(nameof(ApplicationUser))] public required string SpecialistUserId { get; set; }
+        public string Title { get; set; }
+        public ClassName ColorClass { get; set; }
+        public string Location { get; set; }
+        [ForeignKey(nameof(ApplicationUser))] public string ApplicationUserId { get; set; }
+        [ForeignKey(nameof(ApplicationUser))] public string SpecialistUserId { get; set; }
         [DataType(DataType.Text)] public string? Description { get; set; }
-        [DataType(DataType.DateTime)] public required DateTime Start { get; set; }
-        [DataType(DataType.DateTime)] public required DateTime End { get; set; }
+        [DataType(DataType.DateTime)] public DateTime Start { get; set; }
+        [DataType(DataType.DateTime)] public DateTime End { get; set; }
         public bool IsAllDay { get; set; }
         public bool IsRecurring { get; set; }
         public bool IsCancelled { get; set; }

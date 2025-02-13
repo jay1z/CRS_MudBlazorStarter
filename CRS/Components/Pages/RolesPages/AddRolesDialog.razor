@@ -1,0 +1,49 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject RoleManager<IdentityRole> RoleManager;
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        Add Role
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="selectedRoleName" Label="Role Name" Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    private string selectedRoleName;
+
+    private async Task CreateRole()
+    {
+        if (!string.IsNullOrWhiteSpace(selectedRoleName))
+        {
+            var role = new IdentityRole { Name = selectedRoleName };
+            var result = await RoleManager.CreateAsync(role);
+            if (result.Succeeded)
+            {
+                MudDialog.Close(DialogResult.Ok(true));
+                Snackbar.Add($"Role added succesfully: {role}", Severity.Success);
+            }
+            else
+            {
+                // Handle errors
+                foreach (var error in result.Errors)
+                {
+                    Snackbar.Add($"{error.Code}:{error.Description}", Severity.Error);
+                }
+            }
+        }
+    }
+
+    private async void Submit() => await CreateRole();
+
+    private void Cancel() => MudDialog.Cancel();
+}

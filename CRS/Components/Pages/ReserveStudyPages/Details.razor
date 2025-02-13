@@ -1,4 +1,5 @@
-﻿@page "/reservestudies/details/{Id:int}"
+﻿@attribute [Authorize(Roles = "Specialist")]
+@page "/reservestudies/details/{Id:int}"
 @using CRS.Data
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
@@ -9,13 +10,12 @@
 
 @if (reserveStudy == null)
 {
-    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+    <MudProgressLinear Color="Color.Info" Indeterminate="true" />
     <MudText Typo="Typo.h4">Loading...</MudText>
 }
 else
 {
     <MudText Typo="Typo.h4">@reserveStudy.Community?.Name</MudText>
-
     <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
         <MudGrid>
             <!-- Aside Column -->
@@ -23,10 +23,10 @@ else
                 <!-- Details Card -->
                 <MudCard Elevation="25" Class="mb-4">
                     <MudCardContent>
-                        <MudText Typo="Typo.h6" Color="Color.Primary">Request ID</MudText>
+                        <MudText Typo="Typo.h6">Request ID</MudText>
                         <MudText Typo="Typo.body2">@reserveStudy.HashedId</MudText>
                         <MudDivider Class="my-2" />
-                        <MudText Typo="Typo.h6" Color="Color.Primary">Created</MudText>
+                        <MudText Typo="Typo.h6">Created</MudText>
                         <MudText Typo="Typo.body2">@reserveStudy.DateCreated?.ToString("MM/dd/yyyy")</MudText>
                     </MudCardContent>
                 </MudCard>
@@ -41,8 +41,8 @@ else
                 <!-- Actions Card -->
                 <MudCard Elevation="25" Class="mb-4">
                     <MudCardContent>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/reservestudies/edit/{reserveStudy?.Id}")">Edit Request</MudButton>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SendRequestLink">Send Request Link</MudButton>
+                        <MudButton Variant="Variant.Filled" Href="@($"/reservestudies/edit/{reserveStudy?.Id}")">Edit Request</MudButton>
+                        <MudButton Variant="Variant.Filled" OnClick="SendRequestLink">Send Request Link</MudButton>
                     </MudCardContent>
                 </MudCard>
                 <MudContainer MaxWidth="MaxWidth.Small">
@@ -68,18 +68,18 @@ else
                                         <MudGrid>
                                             <!-- Contact Information -->
                                             <MudItem xs="12">
-                                                <MudText Typo="Typo.h6" Color="Color.Primary">Contact</MudText>
+                                                <MudText Typo="Typo.h6">Contact</MudText>
                                             </MudItem>
                                             <MudItem xs="12">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Name</MudText>
+                                                <MudText Typo="Typo.caption">Name</MudText>
                                                 <MudText Typo="Typo.body1">@reserveStudy.Contact?.FullNameInverted</MudText>
                                             </MudItem>
                                             <MudItem xs="12">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
+                                                <MudText Typo="Typo.caption">Phone</MudText>
                                                 <MudText Typo="Typo.body1">@reserveStudy.Contact?.Phone</MudText>
                                             </MudItem>
                                             <MudItem xs="12">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Email</MudText>
+                                                <MudText Typo="Typo.caption">Email</MudText>
                                                 <MudLink Href="@reserveStudy.Contact?.Email" Typo="Typo.body1">
                                                     @reserveStudy.Contact?.Email
                                                 </MudLink>
@@ -89,22 +89,22 @@ else
                                             @if (reserveStudy.PropertyManager != null)
                                             {
                                                 <MudItem xs="12" Class="mt-4">
-                                                    <MudText Typo="Typo.h6" Color="Color.Primary">Management Company</MudText>
+                                                    <MudText Typo="Typo.h6">Management Company</MudText>
                                                 </MudItem>
                                                 <MudItem xs="12">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Company Name</MudText>
+                                                    <MudText Typo="Typo.caption">Company Name</MudText>
                                                     <MudText Typo="Typo.body1">@reserveStudy.PropertyManager.CompanyName</MudText>
                                                 </MudItem>
                                                 <MudItem xs="12">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Property Manager</MudText>
+                                                    <MudText Typo="Typo.caption">Property Manager</MudText>
                                                     <MudText Typo="Typo.body1">@reserveStudy.PropertyManager.FullNameInverted</MudText>
                                                 </MudItem>
                                                 <MudItem xs="12">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
+                                                    <MudText Typo="Typo.caption">Phone</MudText>
                                                     <MudText Typo="Typo.body1">@reserveStudy.PropertyManager.Phone</MudText>
                                                 </MudItem>
                                                 <MudItem xs="12">
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Email</MudText>
+                                                    <MudText Typo="Typo.caption">Email</MudText>
                                                     <MudLink Href="@reserveStudy.PropertyManager.Email" Typo="Typo.body1">
                                                         @reserveStudy.PropertyManager.Email
                                                     </MudLink>
@@ -119,7 +119,7 @@ else
                             <MudTabPanel Text="Elements" Icon="@Icons.Material.Filled.List">
                                 <MudCard Elevation="25">
                                     <MudCardContent Class="py-6">
-                                        <MudText Typo="Typo.h5">Building Elements</MudText>
+                                        <MudText Typo="Typo.h6">Building Elements</MudText>
                                         <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyBuildingElements">
                                             <ColGroup>
                                                 <col style="width:10%;" />
@@ -137,7 +137,7 @@ else
                                                 <MudTd>
                                                     <MudIconButton Icon="@((childContext.ShowDetails == true) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="@(() => ShowBuildingElement(childContext.BuildingElementId))" />
                                                 </MudTd>
-                                                <MudTd><MudText Typo="Typo.h6" Color="Color.Tertiary">@childContext.BuildingElement?.Name</MudText></MudTd>
+                                                <MudTd><MudText Typo="Typo.body1">@childContext.BuildingElement?.Name</MudText></MudTd>
                                                 <MudTd>
                                                     <MudCheckBox T="bool" @bind-Value="childContext.BuildingElement.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
                                                 </MudTd>
@@ -149,19 +149,19 @@ else
                                                     <MudTd colspan="4">
                                                         <MudGrid>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Measurement Type</MudText>
+                                                                <MudText Typo="Typo.caption">Measurement Type</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.ElementMeasurementOptions?.DisplayText</MudText>
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Last Replaced</MudText>
+                                                                <MudText Typo="Typo.caption">Last Replaced</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.LastServiced?.ToString("MM/dd/yyyy")</MudText>
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Useful Life</MudText>
+                                                                <MudText Typo="Typo.caption">Useful Life</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.ElementUsefulLifeOptions?.DisplayText</MudText>
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Life</MudText>
+                                                                <MudText Typo="Typo.caption">Remaining Life</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.ElementRemainingLifeOptions?.DisplayText</MudText>
                                                             </MudItem>
                                                         </MudGrid>
@@ -169,7 +169,7 @@ else
                                                 }
                                             </ChildRowContent>
                                         </MudTable>
-                                        <MudText Typo="Typo.h5">Common Elements</MudText>
+                                        <MudText Typo="Typo.h6">Common Elements</MudText>
                                         <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyCommonElements">
                                             <ColGroup>
                                                 <col style="width:10%;" />
@@ -187,7 +187,7 @@ else
                                                 <MudTd>
                                                     <MudIconButton Icon="@((childContext.ShowDetails == true) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="@(() => ShowBuildingElement(childContext.CommonElementId))" />
                                                 </MudTd>
-                                                <MudTd><MudText Typo="Typo.h6" Color="Color.Tertiary">@childContext.CommonElement?.Name</MudText></MudTd>
+                                                <MudTd><MudText Typo="Typo.h6">@childContext.CommonElement?.Name</MudText></MudTd>
                                                 <MudTd>
                                                     <MudCheckBox T="bool" @bind-Value="childContext.CommonElement.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
                                                 </MudTd>
@@ -199,19 +199,19 @@ else
                                                     <MudTd colspan="4">
                                                         <MudGrid>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Measurement Type</MudText>
+                                                                <MudText Typo="Typo.caption">Measurement Type</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.ElementMeasurementOptions?.DisplayText</MudText>
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Last Replaced</MudText>
+                                                                <MudText Typo="Typo.caption">Last Replaced</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.LastServiced?.ToString("MM/dd/yyyy")</MudText>
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Useful Life</MudText>
+                                                                <MudText Typo="Typo.caption">Useful Life</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.ElementUsefulLifeOptions?.DisplayText</MudText>
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Life</MudText>
+                                                                <MudText Typo="Typo.caption">Remaining Life</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.ElementRemainingLifeOptions?.DisplayText</MudText>
                                                             </MudItem>
                                                         </MudGrid>
@@ -219,7 +219,7 @@ else
                                                 }
                                             </ChildRowContent>
                                         </MudTable>
-                                        <MudText Typo="Typo.h5">Additional Elements</MudText>
+                                        <MudText Typo="Typo.h6">Additional Elements</MudText>
                                         <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyAdditionalElements">
                                             <ColGroup>
                                                 <col style="width:10%;" />
@@ -237,7 +237,7 @@ else
                                                 <MudTd>
                                                     <MudIconButton Icon="@((childContext.ShowDetails == true) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="@(() => ShowBuildingElement(childContext.Id))" />
                                                 </MudTd>
-                                                <MudTd><MudText Typo="Typo.h6" Color="Color.Tertiary">@childContext.Name</MudText></MudTd>
+                                                <MudTd><MudText Typo="Typo.h6">@childContext.Name</MudText></MudTd>
                                                 <MudTd>
                                                     <MudCheckBox T="bool" @bind-Value="childContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
                                                 </MudTd>
@@ -249,19 +249,19 @@ else
                                                     <MudTd colspan="4">
                                                         <MudGrid>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Measurement Type</MudText>
+                                                                <MudText Typo="Typo.caption">Measurement Type</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.ElementMeasurementOptions?.DisplayText</MudText>
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Last Replaced</MudText>
+                                                                <MudText Typo="Typo.caption">Last Replaced</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.LastServiced?.ToString("MM/dd/yyyy")</MudText>
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Useful Life</MudText>
+                                                                <MudText Typo="Typo.caption">Useful Life</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.ElementUsefulLifeOptions?.DisplayText</MudText>
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Remaining Life</MudText>
+                                                                <MudText Typo="Typo.caption">Remaining Life</MudText>
                                                                 <MudText Typo="Typo.body1">@childContext.ElementRemainingLifeOptions?.DisplayText</MudText>
                                                             </MudItem>
                                                         </MudGrid>
@@ -272,7 +272,6 @@ else
                                     </MudCardContent>
                                 </MudCard>
                             </MudTabPanel>
-
                             <!-- Service Contacts Tab -->
                             <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone">
                                 <MudExpansionPanels>
@@ -282,23 +281,83 @@ else
                                             <ChildContent>
                                                 <MudGrid>
                                                     <MudItem xs="12">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Company Name</MudText>
+                                                        <MudText Typo="Typo.caption">Company Name</MudText>
                                                         <MudText Typo="Typo.body1">@element.ServiceContact?.CompanyName</MudText>
                                                     </MudItem>
                                                     <MudItem xs="12" sm="6">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Phone</MudText>
+                                                        <MudText Typo="Typo.caption">Phone</MudText>
                                                         <MudText Typo="Typo.body1">@element.ServiceContact?.Phone</MudText>
                                                     </MudItem>
                                                     <MudItem xs="12" sm="6">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Extension</MudText>
+                                                        <MudText Typo="Typo.caption">Extension</MudText>
                                                         <MudText Typo="Typo.body1">@element.ServiceContact?.Extension</MudText>
                                                     </MudItem>
                                                     <MudItem xs="12">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Point Of Contact</MudText>
+                                                        <MudText Typo="Typo.caption">Point Of Contact</MudText>
                                                         <MudText Typo="Typo.body1">@element.ServiceContact?.FullNameInverted</MudText>
                                                     </MudItem>
                                                     <MudItem xs="12">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Email</MudText>
+                                                        <MudText Typo="Typo.caption">Email</MudText>
+                                                        <MudLink Href="@element.ServiceContact?.Email" Typo="Typo.body1">@element.ServiceContact?.Email</MudLink>
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </ChildContent>
+                                        </MudExpansionPanel>
+                                    }
+                                    @foreach (var element in reserveStudy.ReserveStudyCommonElements.Where(e => e.CommonElement?.NeedsService == true))
+                                    {
+                                        <MudExpansionPanel Text="@element.CommonElement?.Name">
+                                            <ChildContent>
+                                                <MudGrid>
+                                                    <MudItem xs="12">
+                                                        <MudText Typo="Typo.caption">Company Name</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.CompanyName</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6">
+                                                        <MudText Typo="Typo.caption">Phone</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.Phone</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6">
+                                                        <MudText Typo="Typo.caption">Extension</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.Extension</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12">
+                                                        <MudText Typo="Typo.caption">Point Of Contact</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.FullNameInverted</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12">
+                                                        <MudText Typo="Typo.caption">Email</MudText>
+                                                        <MudLink Href="@element.ServiceContact?.Email" Typo="Typo.body1">
+                                                            @element.ServiceContact?.Email
+                                                        </MudLink>
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </ChildContent>
+                                        </MudExpansionPanel>
+                                    }
+                                    @foreach (var element in reserveStudy.ReserveStudyAdditionalElements.Where(e => e.NeedsService == true))
+                                    {
+                                        <MudExpansionPanel Text="@element.Name">
+                                            <ChildContent>
+                                                <MudGrid>
+                                                    <MudItem xs="12">
+                                                        <MudText Typo="Typo.caption">Company Name</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.CompanyName</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6">
+                                                        <MudText Typo="Typo.caption">Phone</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.Phone</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6">
+                                                        <MudText Typo="Typo.caption">Extension</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.Extension</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12">
+                                                        <MudText Typo="Typo.caption">Point Of Contact</MudText>
+                                                        <MudText Typo="Typo.body1">@element.ServiceContact?.FullNameInverted</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="12">
+                                                        <MudText Typo="Typo.caption">Email</MudText>
                                                         <MudLink Href="@element.ServiceContact?.Email" Typo="Typo.body1">
                                                             @element.ServiceContact?.Email
                                                         </MudLink>
@@ -340,6 +399,8 @@ else
                 .ThenInclude(be => be.ElementUsefulLifeOptions)
             .Include(rs => rs.ReserveStudyBuildingElements)
                 .ThenInclude(be => be.ElementRemainingLifeOptions)
+            .Include(rs => rs.ReserveStudyBuildingElements)
+                .ThenInclude(be => be.ServiceContact)
 
             .Include(rs => rs.ReserveStudyCommonElements)
                 .ThenInclude(be => be.CommonElement)
@@ -349,6 +410,8 @@ else
                 .ThenInclude(be => be.ElementUsefulLifeOptions)
             .Include(rs => rs.ReserveStudyCommonElements)
                 .ThenInclude(be => be.ElementRemainingLifeOptions)
+            .Include(rs => rs.ReserveStudyCommonElements)
+                .ThenInclude(be => be.ServiceContact)
 
             .Include(rs => rs.ReserveStudyAdditionalElements)
                 .ThenInclude(be => be.ElementMeasurementOptions)
@@ -356,6 +419,8 @@ else
                 .ThenInclude(be => be.ElementUsefulLifeOptions)
             .Include(rs => rs.ReserveStudyAdditionalElements)
                 .ThenInclude(be => be.ElementRemainingLifeOptions)
+            .Include(rs => rs.ReserveStudyAdditionalElements)
+                .ThenInclude(be => be.ServiceContact)
 
             .FirstOrDefaultAsync(rs => rs.Id == Id);
 
@@ -377,7 +442,6 @@ else
     }
     private void ShowAdditionalElement(int id)
     {
-
         ReserveStudyAdditionalElement element = reserveStudy.ReserveStudyAdditionalElements.First(f => f.Id == id);
         element.ShowDetails = !element.ShowDetails;
     }
@@ -385,5 +449,6 @@ else
     private void SendRequestLink()
     {
         Snackbar.Add("Request link sent successfully!", Severity.Success);
+        NavigationManager.NavigateTo($"/reservestudies/update/{reserveStudy.Id}");
     }
 }
