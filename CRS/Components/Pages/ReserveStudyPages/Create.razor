@@ -1,21 +1,20 @@
 ﻿@attribute [Authorize(Roles = "User")]
 @page "/reservestudies/create"
+@using CRS.Components.Layout
 @using CRS.Components.Pages.ReserveStudyPages.Steps
 @using CRS.Data
-@using static CRS.Models.ReserveStudy
+@using CRS.Models
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
-@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
-@inject UserManager<ApplicationUser> UserManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ISnackbar Snackbar
 
 <PageTitle>Create</PageTitle>
 
 <MudText Typo="Typo.h2">Create New Reserve Study</MudText>
-
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <MudCard>
         <MudCardContent>
@@ -31,55 +30,18 @@
                         <Step3 @ref="step3" Model="Model" StepValidated="OnStepValidated" />
                     </MudStep>
                     <MudStep Title="Acknowledgement">
-                        <Step4 @ref="step4" Model="Model" StepValidated="OnStepValidated" />
+                        <Step4 @ref="step4" Model="Model" StepValidated="OnStepValidated" @bind-acceptTerms="acceptTerms" />
                     </MudStep>
                     <MudStep Title="Completed">
                         <Step5 @ref="step5" Model="Model" StepValidated="OnStepValidated" />
                     </MudStep>
                 </ChildContent>
                 <CompletedContent>
-                    <MudGrid>
-                        <!-- Completion Header -->
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.h5" Class="mb-4">You Are Done!</MudText>
-                            <MudText Typo="Typo.body2" Class="text-muted fw-semibold fs-6">
-                                If you need more info, please
-                                <MudLink Href="/login" Class="link-primary fw-bold">Sign In</MudLink>.
-                            </MudText>
-                        </MudItem>
-
-                        <!-- Completion Message -->
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.body1" Class="fs-6 text-gray-600 mb-5">
-                                Writing headlines for blog posts is as much an art as it is a science and probably warrants its own post, but for all advise is with what works for your great & amazing audience.
-                            </MudText>
-                        </MudItem>
-
-                        <!-- Notice Section -->
-                        <MudItem xs="12">
-                            <MudPaper Class="pa-4" Elevation="1" Style="background-color: #fff3cd; border: 1px dashed #ffc107;">
-                                <MudGrid>
-                                    <MudItem xs="12" sm="1">
-                                        <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Warning" Size="Size.Large" />
-                                    </MudItem>
-                                    <MudItem xs="12" sm="11">
-                                        <MudText Typo="Typo.h6" Class="text-gray-900 fw-bold">We need your attention!</MudText>
-                                        <MudText Typo="Typo.body2" Class="fs-6 text-gray-700">
-                                            To start using great tools, please,
-                                            <MudLink Href="utilities/wizards/vertical.html" Class="fw-bold">Create Team Platform</MudLink>
-                                        </MudText>
-                                    </MudItem>
-                                </MudGrid>
-                            </MudPaper>
-                        </MudItem>
-                    </MudGrid>
+                    <!-- Completion Content -->
                 </CompletedContent>
                 <ActionContent Context="stepper">
                     @if (!_completed)
                     {
-                        @* <MudIconButton OnClick="@(PreviousStep)" Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Disabled="@(activeStep <= 0)" />
-                        <MudSpacer />
-                        <MudIconButton OnClick="@(NextStep)" Icon="@Icons.Material.Filled.ArrowForward" Color="Color.Primary" /> *@
                         <MudGrid Justify="Justify.SpaceBetween" Class="mt-4">
                             <MudItem>
                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="activeStep <= 0" OnClick="PreviousStep">
@@ -92,24 +54,29 @@
                                 {
                                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextStep">
                                         Continue
-                                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" class="ml-2" />
+                                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="ml-2" />
                                     </MudButton>
                                 }
                                 else
                                 {
-                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitForm" Disabled="isSubmitting">
-                                        <span class="mud-button-content">
-                                            Submit
-                                            @if (isSubmitting)
-                                            {
-                                                <MudProgressCircular Indeterminate="true" Color="Color.Inherit" Class="ml-2" />
-                                            }
-                                            @* else
-                                            {
-                                                <MudIcon Icon="@Icons.Material.Filled.Send" class="ml-2" />
-                                            } *@
-                                        </span>
-                                    </MudButton>
+                                    @if (acceptTerms)
+                                    {
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitForm" Disabled="isSubmitting">
+                                            <span class="mud-button-content">
+                                                Submit
+                                                @if (isSubmitting)
+                                                {
+                                                    <MudProgressCircular Indeterminate="true" Color="Color.Inherit" Class="ml-2" />
+                                                }
+                                            </span>
+                                        </MudButton>
+                                    }
+                                    else
+                                    {
+                                        <MudText Color="Color.Error" Class="mt-2">
+                                            You must accept the terms to submit.
+                                        </MudText>
+                                    }
                                 }
                             </MudItem>
                         </MudGrid>
@@ -121,30 +88,38 @@
 </MudContainer>
 
 @code {
-    private ApplicationDbContext context = default!;
-    private ReserveStudy Model { get; set; }
+    [CascadingParameter]
+    public Routes Routes { get; set; }
 
-    private MudStepper stepper;
-    private readonly int totalSteps = 4;
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private ApplicationDbContext? context;
+    private ReserveStudy? Model { get; set; }
+
+    private MudStepper? stepper;
+    private readonly int totalSteps = 5;
     private int activeStep = 0;
     private bool isSubmitting = false;
+    private bool acceptTerms = false;
     private bool _completed;
-    private Step1 step1;
-    private Step2 step2;
-    private Step3 step3;
-    private Step4 step4;
-    private Step5 step5;
-
-    private bool currentStepIsValid = false;
+    private Step1? step1;
+    private Step2? step2;
+    private Step3? step3;
+    private Step4? step4;
+    private Step5? step5;
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        if (authState != null)
+        var authState = await AuthenticationStateTask!;
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
         {
-            var user = authState.User;
-            var userId = user?.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value
-                ?? throw new InvalidOperationException("User not found.");
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("User ID not found.");
+
+            var layoutType = IsUserOnly(user) ? typeof(UserLayout) : typeof(MainLayout);
+            Routes.SetLayout(layoutType);
 
             Model = new ReserveStudy
                 {
@@ -152,16 +127,18 @@
                     Community = new Community
                     {
                         Name = "Community 1",
-                        Addresses = new List<Address> {
-                            new Address(){
-                                Street = "123 Main St",
-                                City = "Anytown",
-                                State = "CA",
-                                Zip = "12345"
-                            }
+                        Addresses = new List<Address>
+                    {
+                        new Address
+                        {
+                            Street = "123 Main St",
+                            City = "Anytown",
+                            State = "CA",
+                            Zip = "12345"
                         }
+                    }
                     },
-                    Contact = new Contact()
+                    Contact = new Contact
                     {
                         FirstName = "Peter",
                         LastName = "Zurowski",
@@ -169,7 +146,7 @@
                         Phone = "123-456-7890",
                         Extension = "123",
                     },
-                    PropertyManager = new PropertyManager()
+                    PropertyManager = new PropertyManager
                     {
                         FirstName = "Jeff",
                         LastName = "Ripple",
@@ -177,15 +154,16 @@
                         Email = "jeff@ripple.com",
                         Phone = "123-456-7891"
                     },
-                    PointOfContactType = PointOfContactTypeEnum.Contact,
-                    ReserveStudyBuildingElements = new List<ReserveStudyBuildingElement>(),
-                    ReserveStudyCommonElements = new List<ReserveStudyCommonElement>(),
                     ReserveStudyAdditionalElements = new List<ReserveStudyAdditionalElement>(),
                     IsActive = true,
                     DateCreated = DateTime.Now
                 };
 
-            context = DbFactory.CreateDbContext();
+            context = await DbFactory.CreateDbContextAsync();
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/login");
         }
     }
 
@@ -199,33 +177,31 @@
 
     private async Task NextStep()
     {
-        bool isValid = false;
-        switch (activeStep)
+        bool isValid = activeStep switch
         {
-            case 0:
-                isValid = await step1.ValidateAsync();
-                break;
-            case 1:
-                isValid = await step2.ValidateAsync();
-                break;
-            case 2:
-                isValid = await step3.ValidateAsync();
-                break;
-            case 3:
-                isValid = await step4.ValidateAsync();
-                _completed = isValid;
-                break;
-        }
+            0 => step1 != null && await step1.ValidateAsync(),
+            1 => step2 != null && await step2.ValidateAsync(),
+            2 => step3 != null && await step3.ValidateAsync(),
+            3 => step4 != null && await step4.ValidateAsync(),
+            4 => step5 != null && await step5.ValidateAsync(),
+            _ => false
+        };
 
         if (isValid)
         {
             activeStep++;
-            await stepper.NextStepAsync();
-            currentStepIsValid = false; // Reset for the next step
+            await stepper!.NextStepAsync();
         }
         else
         {
-            Snackbar.Add("Please correct the errors before proceeding.", Severity.Error);
+            if (activeStep == 3)
+            {
+                Snackbar.Add("You must accept the terms to proceed.", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("Please correct the errors before proceeding.", Severity.Error);
+            }
         }
     }
 
@@ -234,21 +210,21 @@
         if (activeStep > 0)
         {
             activeStep--;
-            await stepper.PreviousStepAsync();
+            await stepper!.PreviousStepAsync();
         }
     }
 
-    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
     private async Task SubmitForm()
     {
         isSubmitting = true;
         try
         {
-            context.ReserveStudies.Add(Model);
+            context.ReserveStudies.Add(Model!);
             await context.SaveChangesAsync();
 
             Snackbar.Add("Reserve Study submitted successfully!", Severity.Success);
-            NavigationManager.NavigateTo("/reservestudies");
+            await NextStep();
+            //NavigationManager.NavigateTo("/reservestudies");
         }
         catch (Exception ex)
         {
@@ -262,81 +238,11 @@
 
     private void OnStepValidated(bool isValid)
     {
-        currentStepIsValid = isValid;
-        StateHasChanged();
+        // Handle step validation if needed
     }
 
-    // private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
-    // {
-    //     if (arg.Action == StepAction.Complete)
-    //     {
-    //         switch (activeStep)
-    //         {
-    //             case 0:
-    //                 currentStepIsValid = await step1.ValidateAsync();
-    //                 break;
-    //             case 1:
-    //                 currentStepIsValid = await step2.ValidateAsync();
-    //                 break;
-    //             case 2:
-    //                 currentStepIsValid = await step3.ValidateAsync();
-    //                 break;
-    //             case 3:
-    //                 currentStepIsValid = await step4.ValidateAsync();
-    //                 break;
-    //             case 4:
-    //                 currentStepIsValid = await step5.ValidateAsync();
-    //                 break;
-    //         }
-    //         await ControlStepCompletion(arg);
-    //     }
-    //     else if (arg.Action == StepAction.Activate)
-    //     {
-    //         await ControlStepNavigation(arg);
-    //     }
-    // }
-
-    // private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
-    // {
-    //     activeStep = arg.StepIndex;
-    //     switch (arg.StepIndex)
-    //     {
-    //         case 0:
-    //             if (currentStepIsValid != true)
-    //             {
-    //                 await DialogService.ShowMessageBox("Error", "You have not flipped the switch in step 1");
-    //                 arg.Cancel = true;
-    //             }
-    //             break;
-    //         case 1:
-    //             if (currentStepIsValid != true)
-    //             {
-    //                 await DialogService.ShowMessageBox("Error", "You have not entered text in step 2");
-    //                 arg.Cancel = true;
-    //             }
-    //             break;
-    //     }
-    // }
-
-    // private async Task ControlStepNavigation(StepperInteractionEventArgs arg)
-    // {
-    //     activeStep = arg.StepIndex;
-    //     switch (arg.StepIndex)
-    //     {
-    //         case 1:
-    //             if (currentStepIsValid != true)
-    //             {
-    //                 await DialogService.ShowMessageBox("Error", "Finish step 1 first");
-    //                 arg.Cancel = true;
-    //             }
-    //             break;
-    //         case 2:
-    //             if (currentStepIsValid != true)
-    //             {
-    //                 await DialogService.ShowMessageBox("Error", "Finish step 1 and 2 first");
-    //                 arg.Cancel = true;
-    //             }
-    //             break;
-    //     }
-    // }
+    private bool IsUserOnly(ClaimsPrincipal user)
+    {
+        return user.IsInRole("User") && !user.IsInRole("Admin") && !user.IsInRole("Specialist");
+    }
 }

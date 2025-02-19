@@ -1,8 +1,8 @@
-﻿@using System.Security.Claims
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
+@attribute [Authorize(Roles = "User")]
+@using System.Security.Claims
 @inject IHostEnvironment HostEnvironment
 @inject ThemeService ThemeService
-@attribute [Authorize(Roles = "User")]
 
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" />
 <MudPopoverProvider />

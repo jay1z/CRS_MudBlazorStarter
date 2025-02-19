@@ -3,8 +3,7 @@
 @using CRS.Data
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
-@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
-@inject ISnackbar Snackbar
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <MudForm Model="Model" @ref="form">
     <MudGrid>
@@ -20,7 +19,7 @@
             {
                 @foreach (var element in buildingElements)
                 {
-                    <MudCheckBox T="bool" Label="@element.Name" @bind-Checked="isSelected" ValueChanged="(isSelected) => OnBuildingElementChanged(isSelected, element)" />
+                    <MudCheckBox T="bool" @bind-Checked="isSelected" Label="@element.Name" ValueChanged="(isSelected) => OnBuildingElementChanged(isSelected, element)" />
                 }
             }
             else
@@ -36,7 +35,7 @@
             {
                 @foreach (var element in commonElements)
                 {
-                    <MudCheckBox T="bool" Label="@element.Name" @bind-Checked="isSelected" ValueChanged="(isSelected) => OnCommonElementChanged(isSelected, element)" />
+                    <MudCheckBox T="bool" @bind-Checked="isSelected" Label="@element.Name" OnChanged="(isSelected) => OnCommonElementChanged(isSelected, element)" />
                 }
             }
             else
@@ -46,7 +45,7 @@
         </MudItem>
 
         <!-- Additional Elements Section -->
-        <MudItem xs="6">
+        <MudItem xs="12">
             <MudText Typo="Typo.h6" Class="mb-4">Additional Elements</MudText>
             <MudList T="ReserveStudyAdditionalElement">
                 @foreach (var additionalElement in Model.ReserveStudyAdditionalElements)
@@ -57,7 +56,8 @@
                                 <MudTextField T="string" @bind-Value="additionalElement.Name" Placeholder="Enter element name" />
                             </MudItem>
                             <MudItem xs="2">
-                                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => RemoveAdditionalElement(additionalElement)">
+                                <MudButton Variant="Variant.Text" Color="Color.Error"
+                                           OnClick="() => RemoveAdditionalElement(additionalElement)">
                                     <MudIcon Icon="@Icons.Material.Filled.Delete" />
                                     Delete
                                 </MudButton>
@@ -75,28 +75,42 @@
 </MudForm>
 
 @code {
-    private ApplicationDbContext context = default!;
+    private ApplicationDbContext? context;
 
     [Parameter]
-    public ReserveStudy Model { get; set; }
-    private List<BuildingElement> buildingElements;
-    private List<CommonElement> commonElements;
+    public ReserveStudy? Model { get; set; }
 
+    private List<BuildingElement>? buildingElements;
+    private List<CommonElement>? commonElements;
+
+    private Dictionary<int, bool?> buildingElementSelections = new();
+    private Dictionary<int, bool?> commonElementSelections = new();
     private bool isSelected;
-
-    private MudForm form;
+    private MudForm? form;
 
     protected override async Task OnInitializedAsync()
     {
-        context = DbFactory.CreateDbContext();
+        context = await DbFactory.CreateDbContextAsync();
 
         buildingElements = await context.BuildingElements.ToListAsync();
         commonElements = await context.CommonElements.ToListAsync();
+
+        // Initialize selections based on Model
+        foreach (var element in buildingElements)
+        {
+            buildingElementSelections[element.Id] = Model?.ReserveStudyBuildingElements?.Any(e => e.BuildingElementId == element.Id) ?? false;
+        }
+
+        foreach (var element in commonElements)
+        {
+            commonElementSelections[element.Id] = Model?.ReserveStudyCommonElements?.Any(e => e.CommonElementId == element.Id) ?? false;
+        }
     }
 
     private void AddAdditionalElement()
     {
-        Model.ReserveStudyAdditionalElements?.Add(new ReserveStudyAdditionalElement { Name = string.Empty });
+        Model.ReserveStudyAdditionalElements ??= new List<ReserveStudyAdditionalElement>();
+        Model.ReserveStudyAdditionalElements.Add(new ReserveStudyAdditionalElement { Name = string.Empty });
     }
 
     private void RemoveAdditionalElement(ReserveStudyAdditionalElement element)
@@ -104,34 +118,42 @@
         Model.ReserveStudyAdditionalElements?.Remove(element);
     }
 
-    private void OnBuildingElementChanged(bool isSelected, BuildingElement element)
+    private void OnBuildingElementChanged(bool? isSelected, BuildingElement element)
     {
-        if (isSelected)
+        if (isSelected == true)
         {
-            Model.ReserveStudyBuildingElements?.Add(new ReserveStudyBuildingElement { BuildingElementId = element.Id, ReserveStudyId = Model.Id });
+            Model.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
+            if (!Model.ReserveStudyBuildingElements.Any(e => e.BuildingElementId == element.Id))
+            {
+                Model.ReserveStudyBuildingElements.Add(new ReserveStudyBuildingElement { BuildingElementId = element.Id, ReserveStudyId = Model.Id });
+            }
         }
         else
         {
             var itemToRemove = Model.ReserveStudyBuildingElements?.FirstOrDefault(e => e.BuildingElementId == element.Id);
             if (itemToRemove != null)
             {
-                Model.ReserveStudyBuildingElements?.Remove(itemToRemove);
+                Model.ReserveStudyBuildingElements.Remove(itemToRemove);
             }
         }
     }
 
-    private void OnCommonElementChanged(bool isSelected, CommonElement element)
+    private void OnCommonElementChanged(bool? isSelected, CommonElement element)
     {
-        if (isSelected)
+        if (isSelected == true)
         {
-            Model.ReserveStudyCommonElements?.Add(new ReserveStudyCommonElement { CommonElementId = element.Id, ReserveStudyId = Model.Id });
+            Model.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
+            if (!Model.ReserveStudyCommonElements.Any(e => e.CommonElementId == element.Id))
+            {
+                Model.ReserveStudyCommonElements.Add(new ReserveStudyCommonElement { CommonElementId = element.Id, ReserveStudyId = Model.Id  });
+            }
         }
         else
         {
             var itemToRemove = Model.ReserveStudyCommonElements?.FirstOrDefault(e => e.CommonElementId == element.Id);
             if (itemToRemove != null)
             {
-                Model.ReserveStudyCommonElements?.Remove(itemToRemove);
+                Model.ReserveStudyCommonElements.Remove(itemToRemove);
             }
         }
     }
@@ -155,4 +177,3 @@
         return valid;
     }
 }
-

@@ -1,11 +1,33 @@
 ﻿@using CRS.Components.Account.Shared
-<Router AppAssembly="typeof(Program).Assembly">
-    <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
-            <NotAuthorized>
-                <RedirectToLogin />
-            </NotAuthorized>
-        </AuthorizeRouteView>
-        @* <FocusOnNavigate RouteData="routeData" Selector="h1" /> *@
-    </Found>
-</Router>
+@using CRS.Components.Layout
+
+<CascadingValue Value="this">
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="this.LayoutType">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            @* <FocusOnNavigate RouteData="routeData" Selector="h1" /> *@
+        </Found>
+        <NotFound>
+            <LayoutView Layout="typeof(UserLayout)">
+                <p>Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingValue>
+@code {
+
+    private Type LayoutType = typeof(MainLayout);
+
+    public void SetLayout(Type layout)
+    {
+        if (layout != LayoutType)
+        {
+            this.LayoutType = layout;
+            StateHasChanged();
+        }
+    }
+}

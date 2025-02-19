@@ -9,6 +9,8 @@ namespace CRS.Models {
         public ElementRemainingLifeOptions ElementRemainingLifeOptions { get; set; }
         public ElementUsefulLifeOptions ElementUsefulLifeOptions { get; set; }
         [DataType(DataType.Date)] public DateTime? LastServiced { get; set; }
+        public ServiceContact ServiceContact { get; set; }
+
         string Name { get; set; }
         bool NeedsService { get; set; }
         bool ShowDetails { get; set; }

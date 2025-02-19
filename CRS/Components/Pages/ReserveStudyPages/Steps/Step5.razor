@@ -7,15 +7,15 @@
     <MudItem xs="12">
         <MudText Typo="Typo.h5" Class="mb-4">You Are Done!</MudText>
         <MudText Typo="Typo.body2" Class="text-muted fw-semibold fs-6">
-            If you need more info, please
-            <MudLink Href="/login" Class="link-primary fw-bold">Sign In</MudLink>.
+            Thank you for completing the reserve study request. If you need more information, please
+            <MudLink Href="/login" Class="link-primary fw-bold">Sign In</MudLink> to your account.
         </MudText>
     </MudItem>
 
     <!-- Completion Message -->
     <MudItem xs="12">
         <MudText Typo="Typo.body1" Class="fs-6 text-gray-600 mb-5">
-            Writing headlines for blog posts is as much an art as it is a science and probably warrants its own post, but for all advise is with what works for your great & amazing audience.
+            Our team will review your submission and get back to you shortly. You can track the status of your reserve study in your account dashboard.
         </MudText>
     </MudItem>
 
@@ -27,10 +27,10 @@
                     <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Warning" Size="Size.Large" />
                 </MudItem>
                 <MudItem xs="12" sm="11">
-                    <MudText Typo="Typo.h6" Class="text-gray-900 fw-bold">We need your attention!</MudText>
+                    <MudText Typo="Typo.h6" Class="text-gray-900 fw-bold">Important Notice</MudText>
                     <MudText Typo="Typo.body2" Class="fs-6 text-gray-700">
-                        To start using great tools, please,
-                        <MudLink Href="utilities/wizards/vertical.html" Class="fw-bold">Create Team Platform</MudLink>
+                        To access more features and track your reserve study, please
+                        <MudLink Href="/register" Class="fw-bold">Register an Account</MudLink> if you haven't already.
                     </MudText>
                 </MudItem>
             </MudGrid>
@@ -40,31 +40,14 @@
 
 @code {
     [Parameter]
-    public ReserveStudy Model { get; set; }
-
-    private MudForm form;
-    private bool? acceptTerms = false;
+    public ReserveStudy? Model { get; set; }
 
     [Parameter]
     public EventCallback<bool> StepValidated { get; set; }
 
-    private void OnCheckboxChanged(bool? isChecked)
-    {
-        acceptTerms = isChecked;
-        ValidateForm();
-    }
-
-    private void ValidateForm()
-    {
-        bool valid = acceptTerms == true;
-        StepValidated.InvokeAsync(valid);
-    }
-
     public async Task<bool> ValidateAsync()
     {
-        ValidateForm();
-        bool valid = acceptTerms == true;
-        await StepValidated.InvokeAsync(valid);
-        return valid;
+        await StepValidated.InvokeAsync(true);
+        return true;
     }
 }

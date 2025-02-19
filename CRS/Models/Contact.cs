@@ -12,9 +12,11 @@ namespace CRS.Models {
         public string? CompanyName { get; set; }
 
         [Display(Name = "Email")]
+        [EmailAddress]
         [DataType(DataType.EmailAddress)] public string? Email { get; set; }
 
         [Display(Name = "Phone")]
+        [Phone]
         [DataType(DataType.PhoneNumber)] public string? Phone { get; set; }
 
         [Display(Name = "Ext.")]

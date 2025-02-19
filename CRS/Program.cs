@@ -50,6 +50,12 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
+// Seed roles
+using (var scope = app.Services.CreateScope()) {
+    var services = scope.ServiceProvider;
+    await SeedManager.SeedRolesAsync(services);
+    await SeedManager.SeedAdminUserAsync(services);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment()) {

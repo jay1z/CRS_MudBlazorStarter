@@ -1,8 +1,8 @@
 ﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps
 
-@inject ISnackbar Snackbar
+@using MudBlazor
 
-<MudForm Model="Model" @ref="form">
+<MudForm @ref="form">
     <MudGrid>
         <!-- Acknowledgement Header -->
         <MudItem xs="12">
@@ -20,7 +20,7 @@
                         <MudText Typo="Typo.body1" Class="text-gray-700 mb-4">
                             By checking this box, the Association acknowledges it has read and understands the definition of "COMMON ELEMENTS" as set forth in the Association's Declarations and Bylaws. Furthermore, the Association acknowledges that the common elements have been identified and agreed upon by the Board of Directors for purposes of this Reserve Study.
                         </MudText>
-                        <MudSwitch @bind-Value="acceptTerms" Color="Color.Primary" >Accepts the terms of agreement.</MudSwitch>
+                        <MudCheckBox T="bool" @bind-Checked="acceptTerms" Label="Accepts the terms of agreement." Required="true" RequiredError="You must accept the terms to proceed." />
                     </MudItem>
                 </MudGrid>
             </MudPaper>
@@ -29,31 +29,19 @@
 </MudForm>
 
 @code {
-    [Parameter]
-    public ReserveStudy Model { get; set; }
-
     private MudForm form;
-    private bool? acceptTerms = false;
+    public bool acceptTerms { get; set; } = false;
+
+    [Parameter]
+    public ReserveStudy? Model { get; set; }
 
     [Parameter]
     public EventCallback<bool> StepValidated { get; set; }
 
-    private void OnCheckboxChanged(bool? isChecked)
-    {
-        acceptTerms = isChecked;
-        ValidateForm();
-    }
-
-    private void ValidateForm()
-    {
-        bool valid = acceptTerms == true;
-        StepValidated.InvokeAsync(valid);
-    }
-
     public async Task<bool> ValidateAsync()
     {
-        ValidateForm();
-        bool valid = acceptTerms == true;
+        await form.Validate();
+        bool valid = form.IsValid;
         await StepValidated.InvokeAsync(valid);
         return valid;
     }

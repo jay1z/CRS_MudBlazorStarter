@@ -2,9 +2,8 @@
 
 @using MudBlazor
 @inherits OwningComponentBase
-@inject ISnackbar Snackbar
 
-<MudForm Model="Model" @ref="form" >
+<MudForm Model="Model" @ref="form">
     <MudGrid>
         <!-- Header Section -->
         <MudItem xs="12">
@@ -22,21 +21,17 @@
                           Required="true"
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.TwoTone.LocationCity"
-                          Immediate="true"
-                          For="@(() => Model.Community.Name)"
-                          Validation="ValidateCommunityName" />
+                          Immediate="true" />
         </MudItem>
 
         <!-- Street Address -->
         <MudItem xs="12">
-            <MudTextField @bind-Value="Model.Community.Addresses.First().Street"
+            <MudTextField @bind-Value="Model.Community.Addresses[0].Street"
                           Label="Street Address"
                           Required="true"
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.TwoTone.EditRoad"
-                          Immediate="true"
-                          For="@(() => Model.Community.Addresses.First().Street)"
-                          Validation="ValidateStreetAddress" />
+                          Immediate="true" />
         </MudItem>
 
         <!-- State, City, Zip -->
@@ -44,7 +39,10 @@
             <MudGrid>
                 <!-- State -->
                 <MudItem xs="12" sm="4">
-                    <MudSelect @bind-Value="Model.Community.Addresses.First().State" Label="State" Required="true" Immediate="true" For="@(() => Model.Community.Addresses.First().State)" Validation="ValidateState">
+                    <MudSelect @bind-Value="Model.Community.Addresses[0].State"
+                               Label="State"
+                               Required="true"
+                               Immediate="true">
                         @foreach (var state in States)
                         {
                             <MudSelectItem Value="@state">@state</MudSelectItem>
@@ -54,26 +52,22 @@
 
                 <!-- City -->
                 <MudItem xs="12" sm="5">
-                    <MudTextField @bind-Value="Model.Community.Addresses.First().City"
+                    <MudTextField @bind-Value="Model.Community.Addresses[0].City"
                                   Label="City"
                                   Required="true"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.TwoTone.LocationOn"
-                                  Immediate="true"
-                                  For="@(() => Model.Community.Addresses.First().City)"
-                                  Validation="ValidateCity" />
+                                  Immediate="true" />
                 </MudItem>
 
                 <!-- Zip Code -->
                 <MudItem xs="12" sm="3">
-                    <MudTextField @bind-Value="Model.Community.Addresses.First().Zip"
+                    <MudTextField @bind-Value="Model.Community.Addresses[0].Zip"
                                   Label="Zip Code"
                                   Required="true"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.TwoTone.Mail"
-                                  Immediate="true"
-                                  For="@(() => Model.Community.Addresses.First().Zip)"
-                                  Validation="ValidateZip" />
+                                  Immediate="true" />
                 </MudItem>
             </MudGrid>
         </MudItem>
@@ -86,41 +80,14 @@
 
     private MudForm form;
 
-    private List<string> States = new List<string>
+    private List<string> States = new()
     {
-        "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+        "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
+        "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS",
+        "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK",
+        "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV",
+        "WI", "WY"
     };
-
-    // Validation Methods
-    private string ValidateCommunityName(string value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "Community Name is required." : null;
-    }
-
-    private string ValidateStreetAddress(string value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "Street Address is required." : null;
-    }
-
-    private string ValidateCity(string value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? "City is required." : null;
-    }
-
-    private string ValidateState(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return "State is required.";
-        if (value.Length != 2) return "State must be a 2-letter abbreviation.";
-        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^[A-Z]{2}$")) return "State must be in uppercase.";
-        return null;
-    }
-
-    private string ValidateZip(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return "Zip Code is required.";
-        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^\d{5}(-\d{4})?$")) return "Invalid Zip Code format.";
-        return null;
-    }
 
     [Parameter]
     public EventCallback<bool> StepValidated { get; set; }
