@@ -14,30 +14,27 @@
 
 <PageTitle>Create</PageTitle>
 
-<MudText Typo="Typo.h2">Create New Reserve Study</MudText>
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudCard>
+<MudText Typo="Typo.h4">Create New Reserve Study</MudText>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudCard Elevation="25">
         <MudCardContent>
             <MudStepper @bind-ActiveStep="activeStep" Linear="true" CenterLabels="true" CompletedStepColor="Color.Success" CurrentStepColor="Color.Primary" Class="mb-4" @ref="stepper">
                 <ChildContent>
-                    <MudStep Title="Community Information">
-                        <Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated" />
+                    <MudStep Title="Community Information" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
+                        <Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated"  />
                     </MudStep>
-                    <MudStep Title="Property Manager">
+                    <MudStep Title="Property Manager" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
                         <Step2 @ref="step2" Model="Model" StepValidated="OnStepValidated" />
                     </MudStep>
-                    <MudStep Title="Property Elements">
+                    <MudStep Title="Property Elements" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
                         <Step3 @ref="step3" Model="Model" StepValidated="OnStepValidated" />
                     </MudStep>
-                    <MudStep Title="Acknowledgement">
-                        <Step4 @ref="step4" Model="Model" StepValidated="OnStepValidated" @bind-acceptTerms="acceptTerms" />
-                    </MudStep>
-                    <MudStep Title="Completed">
-                        <Step5 @ref="step5" Model="Model" StepValidated="OnStepValidated" />
+                    <MudStep Title="Acknowledgement" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
+                        <Step4 @ref="step4" Model="Model" StepValidated="OnStepValidated" AcceptTerms="@AcceptTerms" AcceptTermsChanged="@OnAcceptTermsChanged" />
                     </MudStep>
                 </ChildContent>
                 <CompletedContent>
-                    <!-- Completion Content -->
+                    <Step5 />
                 </CompletedContent>
                 <ActionContent Context="stepper">
                     @if (!_completed)
@@ -59,7 +56,7 @@
                                 }
                                 else
                                 {
-                                    @if (acceptTerms)
+                                    @if (AcceptTerms)
                                     {
                                         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitForm" Disabled="isSubmitting">
                                             <span class="mud-button-content">
@@ -96,12 +93,15 @@
 
     private ApplicationDbContext? context;
     private ReserveStudy? Model { get; set; }
+    private Dictionary<int, bool> stepValidationState = new();
+
+    // private const string STORAGE_KEY = "reserve-study-draft";
 
     private MudStepper? stepper;
-    private readonly int totalSteps = 5;
+    private readonly int totalSteps = 4;
     private int activeStep = 0;
     private bool isSubmitting = false;
-    private bool acceptTerms = false;
+    private bool AcceptTerms = false;
     private bool _completed;
     private Step1? step1;
     private Step2? step2;
@@ -109,8 +109,17 @@
     private Step4? step4;
     private Step5? step5;
 
+    private Task OnAcceptTermsChanged(bool value)
+    {
+        AcceptTerms = value;
+        return Task.CompletedTask;
+    }
+
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+        // await LoadProgress();
+
         var authState = await AuthenticationStateTask!;
         var user = authState.User;
 
@@ -124,21 +133,21 @@
             Model = new ReserveStudy
                 {
                     ApplicationUserId = userId,
-                    Community = new Community
+                    Community = new Community()
                     {
                         Name = "Community 1",
-                        Addresses = new List<Address>
-                    {
-                        new Address
+                        Addresses = new List<Address>()
                         {
-                            Street = "123 Main St",
-                            City = "Anytown",
-                            State = "CA",
-                            Zip = "12345"
+                            new Address()
+                            {
+                                Street = "123 Main St",
+                                City = "Anytown",
+                                State = "CA",
+                                Zip = "12345"
+                            }
                         }
-                    }
                     },
-                    Contact = new Contact
+                    Contact = new Contact()
                     {
                         FirstName = "Peter",
                         LastName = "Zurowski",
@@ -146,7 +155,7 @@
                         Phone = "123-456-7890",
                         Extension = "123",
                     },
-                    PropertyManager = new PropertyManager
+                    PropertyManager = new PropertyManager()
                     {
                         FirstName = "Jeff",
                         LastName = "Ripple",
@@ -183,7 +192,6 @@
             1 => step2 != null && await step2.ValidateAsync(),
             2 => step3 != null && await step3.ValidateAsync(),
             3 => step4 != null && await step4.ValidateAsync(),
-            4 => step5 != null && await step5.ValidateAsync(),
             _ => false
         };
 
@@ -194,7 +202,7 @@
         }
         else
         {
-            if (activeStep == 3)
+            if (activeStep == 4)
             {
                 Snackbar.Add("You must accept the terms to proceed.", Severity.Error);
             }
@@ -221,10 +229,10 @@
         {
             context.ReserveStudies.Add(Model!);
             await context.SaveChangesAsync();
-
+            
             Snackbar.Add("Reserve Study submitted successfully!", Severity.Success);
             await NextStep();
-            //NavigationManager.NavigateTo("/reservestudies");
+            _completed = true;
         }
         catch (Exception ex)
         {
@@ -238,7 +246,8 @@
 
     private void OnStepValidated(bool isValid)
     {
-        // Handle step validation if needed
+        stepValidationState[activeStep] = isValid;
+        StateHasChanged();
     }
 
     private bool IsUserOnly(ClaimsPrincipal user)
