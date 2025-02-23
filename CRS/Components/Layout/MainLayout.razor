@@ -39,6 +39,10 @@
             @Body
         </ErrorBoundary>
     </MudMainContent>
+
+    <MudScrollToTop TopOffset="100" Selector="#unique_id_scroll_section">
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowUpward">Go to top</MudButton>
+    </MudScrollToTop>
 </MudLayout>
 
 
@@ -58,13 +62,13 @@
 @code {
 
     // private MudThemeProvider provider;
-    private bool useDarkMode;
+    // private bool useDarkMode;
     private bool _drawerOpen = true;
 
-    protected async override void OnInitialized()
+    protected override void OnInitialized()
     {
         ThemeService.OnThemeChanged += StateHasChanged;
-        ThemeService.SetTheme(new Default().Theme);
+        ThemeService.SetTheme(new Default().Theme!);
 
         // _themeManager.Theme = CrispyThemeSunsetSerenade.Theme;
         // StateHasChanged();

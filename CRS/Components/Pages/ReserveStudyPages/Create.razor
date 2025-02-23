@@ -86,7 +86,7 @@
 
 @code {
     [CascadingParameter]
-    public Routes Routes { get; set; }
+    public Routes? Routes { get; set; }
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
@@ -94,8 +94,6 @@
     private ApplicationDbContext? context;
     private ReserveStudy? Model { get; set; }
     private Dictionary<int, bool> stepValidationState = new();
-
-    // private const string STORAGE_KEY = "reserve-study-draft";
 
     private MudStepper? stepper;
     private readonly int totalSteps = 4;
@@ -109,16 +107,9 @@
     private Step4? step4;
     private Step5? step5;
 
-    private Task OnAcceptTermsChanged(bool value)
-    {
-        AcceptTerms = value;
-        return Task.CompletedTask;
-    }
-
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        // await LoadProgress();
 
         var authState = await AuthenticationStateTask!;
         var user = authState.User;
@@ -128,7 +119,7 @@
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("User ID not found.");
 
             var layoutType = IsUserOnly(user) ? typeof(UserLayout) : typeof(MainLayout);
-            Routes.SetLayout(layoutType);
+            Routes!.SetLayout(layoutType);
 
             Model = new ReserveStudy
                 {
@@ -183,6 +174,13 @@
             await context.DisposeAsync();
         }
     }
+
+    private Task OnAcceptTermsChanged(bool value)
+    {
+        AcceptTerms = value;
+        return Task.CompletedTask;
+    }
+
 
     private async Task NextStep()
     {

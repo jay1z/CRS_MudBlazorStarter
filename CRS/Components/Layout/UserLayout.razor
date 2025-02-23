@@ -3,31 +3,50 @@
 @using System.Security.Claims
 @inject IHostEnvironment HostEnvironment
 @inject ThemeService ThemeService
+@inject NavigationManager NavigationManager
 
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
+
 <MudLayout>
-    <MudAppBar Elevation="0">
-        <MudText Typo="Typo.h5" Class="ml-3">Update Reserve Study</MudText>
+    <MudAppBar Elevation="25">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
+        <MudText Typo="Typo.h5" Class="ml-3">Community Reserve Specialists</MudText>
         <MudSpacer />
-        <AuthorizeView>
-            <MudText Typo="Typo.body1">@context.User.Identity?.Name</MudText>
-            @foreach (var role in context.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value))
-            {
-                <MudChip T="string" Color="Color.Primary" Class="ml-2">@role</MudChip>
-            }
-        </AuthorizeView>
+        <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
+            <AuthorizeView>
+                <MudText Typo="Typo.body1" Class="pa-4">@context.User.Identity?.Name</MudText>
+                <MudDivider />
+                <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/profile"))">Profile</MudMenuItem>
+                <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/Account/Logout"))">Logout</MudMenuItem>
+            </AuthorizeView>
+        </MudMenu>
     </MudAppBar>
-    <MudMainContent Class="mt-16 pa-4">
-        <ErrorBoundary>
-            @Body
-        </ErrorBoundary>
+
+    <MudDrawer @bind-Open="@drawerOpen" Elevation="25" ClipMode="DrawerClipMode.Always">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent Class="pt-16 px-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+            <ErrorBoundary>
+                @Body
+            </ErrorBoundary>
+        </MudContainer>
     </MudMainContent>
+
+    <MudScrollToTop TopOffset="100" Selector="#unique_id_scroll_section">
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowUpward">Go to top</MudButton>
+    </MudScrollToTop>
 </MudLayout>
 
+@code {
+    private bool drawerOpen = true;
 
-   @code {
-    // You can include any code-behind logic here if needed
-   }
+    private void ToggleDrawer()
+    {
+        drawerOpen = !drawerOpen;
+    }
+}

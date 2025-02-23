@@ -1,39 +1,268 @@
 ﻿@page "/"
+@attribute [AllowAnonymous]
 
-<PageTitle>Home</PageTitle>
+@using CRS.Components.Layout
 
-<MudContainer Class="mt-16 px-8" MaxWidth="MaxWidth.False">
-    <MudGrid>
-        <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="25" Class="pa-4" Style="height: 200px;"></MudPaper>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="25" Class="pa-4" Style="height: 200px;"></MudPaper>
-        </MudItem>
-        <MudItem xs="12" sm="12" md="4">
-            <MudPaper Elevation="25" Class="pa-4" Style="height: 200px;"></MudPaper>
-        </MudItem>
-        <MudItem xs="12" sm="6">
-            <MudGrid>
-                <MudItem xs="12">
-                    <MudPaper Elevation="25" Class="pa-4" Style="height: 200px;"></MudPaper>
+<PageTitle>Reserve Study - Community Reserve Specialists</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+    <!-- Hero Section -->
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <MudContainer MaxWidth="MaxWidth.ExtraSmall">
+            <MudCard Elevation="0">
+                <MudImage Src="//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/giftcard%20logo.jpg" Alt="Community Reserve Specialists" Height="152" />
+            </MudCard>
+        </MudContainer>
+        <MudText Typo="Typo.h5" Align="Align.Center">
+            A LOCAL RESERVE STUDY PROVIDER
+        </MudText>
+        <MudPaper Height="650px" Width="100%" Square="true" Elevation="0">
+            <MudCard Elevation="25">
+                <MudCardMedia Image="//img1.wsimg.com/isteam/stock/1258/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=h:500,cg:true" Height="500" />
+                <MudCardContent>
+                    <MudText Typo="Typo.h5" Align="Align.Center">
+                        Preparing for tomorrow, today!
+                    </MudText>
+                    <MudText Typo="Typo.h6" Align="Align.Center">
+                        Find out more about what benefits a Reserve Study can bring to your Community.
+                    </MudText>
+                    <MudText Typo="Typo.body1" Align="Align.Center">
+                        (see below)
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
+        </MudPaper>
+    </MudContainer>
+
+    <!-- About Section -->
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudPaper Elevation="0" Class="py-16">
+            <MudText Typo="Typo.h5">About Us</MudText>
+            <MudDivider />
+            <MudCard Elevation="0">
+                <MudCardContent>
+                    <MudText Typo="Typo.h4" Align="Align.Center">Community Reserve Planning</MudText>
+                    <MudText Typo="Typo.h6" Align="Align.Center">
+                        Helping hundreds of local Communities prepare for future capital replacement expenses using our Reserve Study as a guide.
+                    </MudText>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                            <MudText Typo="Typo.body1">
+                                The State of Ohio Condominium Association (O.R.C. 5311) and Homeowner Association (O.R.C. 5312) laws require the Board of Directors to collect and hold reserves sufficient to cover the future costs of all Community Capital Assets in order to avoid the need for Special Assessments. In order for the Board to comply with these statutes, it must have a complete list of Community Assets, know/obtain their current replacement values for short term expected expenditures, and project long term expected expenditures to ensure an accurate plan going forward. Per Ohio Law, the Board is not required to obtain a firm to provide a Reserve Study (NEW: see next bullet point), however, most reputable Law Firms familiar with Association Law will strongly recommend the Board hire a properly credentialed and qualified specialist to provide a Reserve Study.
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Color="Color.Dark" Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">
+                                As of September 2023, Fannie Mae and Freddie Mac now require Boards to hire a professional provider (R.S., P.R.A., or C.P.A. who specializes in Reserve Studies) to perform the Reserve Study in order to qualify for approval. The Association must also maintain a "Fully Funding" status by following the recommended contributions each year, and the study must be no older than 36 months. Fannie and Freddie own approximately 70% of the paper (loans) currently servicing Condominium Owners and Homeowners throughout the U.S. They will now require documentation from the loan originators to ensure these standards are met. If the Board/Manager cannot provide the required documents, Loan Originators may not be able to sell the loan and therefore may decline funding to applicants trying to purchase within the unqualified Communities. This can obviously effect property values and potentially drop otherwise qualified buyers from being able to purchase within these Communities.
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Color="Color.Dark" Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">
+                                The standards set by the C.A.I. (Community Association Institute) and N.R.S.S. (National Reserve Study Standards) require  a Reserve Study contain not only the information required by the State of Ohio, but also additional information and data (that may meet other state statutes) as these are National Standards. These additional Reserve Study standards are a basic reason the term "Reserve Study" is not used within the Ohio Revised Code.
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Color="Color.Dark" Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">
+                                A Reserve Study is a financial report, not an engineering report. The Board/Managers do not need to know how to install the components within the Community or how they are designed. The goal of the study should be to financially prepare each Board/Manager with data that reflects real time local costs and accurate actual useful life projections from a local historical database right here in Ohio, not nationally averaged numbers. Ohio Law requires Boards collect and maintain funds sufficient to replace/repair capital elements without the need for special assessments, not to install these components on their own.
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Color="Color.Dark" Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">
+                                A Reserve Study can often be "Personalized" to fit the unique needs of the Community. Many times we find Communities have folks on a fixed income and fear increasing the fees to meet the fully funding requirements. We can implement custom planning that allows for maximum considerations given to these folks without jeopardizing Community property values.
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Color="Color.Dark" Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">
+                                A CRS Reserve Study meets and exceeds all the requirements set by the State of Ohio, the N.R.S.S., the C.A.I. and the A.P.R.A. (Association of Professional Reserve Analysts).
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Color="Color.Dark" Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">
+                                CRS is a local Ohio Reserve Study provider and carries all available Reserve Study credentials (Reserve Specialist, Professional Reserve Analyst) from the C.A.I./N.R.S.S., and the A.P.R.A.
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Color="Color.Dark" Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">
+                                CRS has an A+ rating with the BBB, is a Business Partner with the C.A.I., a Member in good standing with the C.A.I., the A.P.R.A., the Stow-Monroe Falls Chamber of Commerce, and is a Veteran Owned and Operated Ohio Company.
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Color="Color.Dark" Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">
+                                We find most Boards/Managers look for 3 primary features/benefits when considering a Reserve Study provider, cost, qualifications, and locality. CRS very rarely is underbid, but if we are, we will do our best to work with a Community/Manager should they wish to work with us. Per the CAI and APRA websites, there is no other individual with both credentials (R.S. and P.R.A.) residing in the State of Ohio, Jeff appears to be the only one. We have performed hundreds and hundreds of Reserve Studies in the State of Ohio, it's all we do. We are located in Northeast Ohio, this makes it very easy to visit properties without the time constraints, costs, time and expenses of flying, hotels, rental cars etc. when coming in from out of state.  Living in Ohio and building relationships with local contractors gives us real time local costs vs companies using national templates. This ensures the highest level of accuracy in your financial projections.
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                    <MudCard Elevation="0">
+                        <MudCardContent>
+                            <MudIcon Color="Color.Dark" Icon="@Icons.Material.Filled.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.body1">
+                                CRS does not maintain fancy websites, and we spend nothing on advertising. We find these things don't make the report any better, just more expensive.  We continue to rely solely on word of mouth as we feel it is the best way to continue growing our business as well as keep our, and therefore your costs down. Every dollar counts when it comes out of Community Members pockets.
+                            </MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudCardContent>
+            </MudCard>
+
+            <MudStack Row="true">
+                <MudCard Elevation="0">
+                    <MudCardHeader>
+                        <MudText Typo="Typo.h4" Align="Align.Center">Comprehensive Approach</MudText>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText>
+                            Community Reserve Specialists uses real time local costs from years of relationships with local contractors and vendors currently serving Communities throughout Ohio. Local and real time data helps ensure the most accurate financial projections vs the National "templates" used by many other, non-local Reserve Study providers. Having real-time local data ensures the highest level of accuracy.
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+                <MudCard Elevation="0">
+                    <MudCardHeader>
+                        <MudText Typo="Typo.h4" Align="Align.Center">Committed To Service</MudText>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText>
+                            All aspects of the Community may be considered in order to educate the Board of Directors and Association Managers of any potential options for incorporating the plan into the Community. Our mission is to simply meet and exceed our client’s expectations. Call us today to find out how we can help plan long and short term strategies that will help your Community prepare for the future needs.
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudStack>
+        </MudPaper>
+    </MudContainer>
+
+    <!-- Team Section -->
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudPaper Elevation="0">
+            <MudText Typo="Typo.h5" Class="mb-8">Meet The CRS Staff</MudText>
+            <MudDivider />
+            <MudCarousel TData="TeamMember" Class="mud-width-full" ItemsSource="@teamMembers" Style="height:600px;" ShowArrows="true" ShowBullets="true" EnableSwipeGesture="true" AutoCycle="true">
+                <ItemTemplate>
+                    <div class="d-flex flex-column flex-column justify-center" style="height:100%">
+                        <MudIcon Class="mx-auto" Icon="@Icons.Material.Filled.VerifiedUser" Size="@Size.Large" />
+                        <MudText Typo="Typo.h3" Align="@Align.Center" >@context.Name</MudText>
+                        <MudText Typo="Typo.body1" Align="@Align.Center" Class="mx-20">@context.Description</MudText>
+                    </div>
+                </ItemTemplate>
+            </MudCarousel>
+            <MudText Typo="Typo.h6" Class="mb-8">Feel free to call with any questions or click the button below to request a free quote for your Community Reserve Study.</MudText>
+        </MudPaper>
+        <MudPaper Elevation="0">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Email" Size="Size.Large" Style="width: 200px; height: 60px;">Contact Us</MudButton>
+        </MudPaper>
+    </MudContainer>
+
+
+    <!-- Logo Section -->
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+        <MudGrid Justify="Justify.Center">
+            @foreach (var logo in logos) {
+                <MudItem xs="3">
+                    <MudCard Elevation="0">
+                        <MudImage Src="@logo.Src" Alt="@logo.Alt" Height="100" ObjectFit="ObjectFit.Contain" ObjectPosition="ObjectPosition.Center" />
+                    </MudCard>
                 </MudItem>
-                <MudItem xs="12">
-                    <MudPaper Elevation="25" Class="pa-4" Style="height: 200px;"></MudPaper>
+            }
+        </MudGrid>
+        <MudBreakpointProvider>
+            @foreach (var logo in logos) {
+                <MudHidden Breakpoint="Breakpoint.Xl" Invert="true">
+                    <MudImage Src="@logo.Src" Alt="@logo.Alt" Height="100" />
+                </MudHidden>
+                <MudItem xs="3">
                 </MudItem>
-            </MudGrid>
-        </MudItem>
-        <MudItem xs="12" sm="6">
-            <MudPaper Elevation="25" Class="pa-4" Style="height: 100%"></MudPaper>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="25" Class="pa-4" Style="height: 200px;"></MudPaper>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="25" Class="pa-4" Style="height: 200px;"></MudPaper>
-        </MudItem>
-        <MudItem xs="12" sm="12" md="4">
-            <MudPaper Elevation="25" Class="pa-4" Style="height: 200px;"></MudPaper>
-        </MudItem>
-    </MudGrid>
+            }
+        </MudBreakpointProvider>
+    </MudContainer>
+
+    <!-- Footer -->
+    <MudDivider />
+    <MudText Align="Align.Center" Class="mb-4">
+        Copyright © @DateTime.Today.Year Community Reserve Specialists - All Rights Reserved.
+    </MudText>
 </MudContainer>
+
+@code {
+    [CascadingParameter]
+    public Routes? Routes { get; set; }
+
+    private IEnumerable<TeamMember> teamMembers = new List<TeamMember>() {
+         new TeamMember() {Name = "Lian Velasco", Description="Lian is our Narrative Coordinator. Lian is helping develop and maintain our new, more efficient report processing. She attended Kent Roosevelt High School where she played on the Varsity Tennis team for 2 years and graduated Magna Cum Laude in 2021. Lian enjoys traveling and art, and since coming to the US in 2015 from the Philippines, has visited many cities throughout Canada and cruised into many ports along the Eastern US Coast. Lian is currently attending Kent State University pursuing a degree in the Aviation field." },
+         new TeamMember() {Name = "John Stojak, R.A.", Description="John is our Research Analyst, he has over 20 years of experience as a Board President for a Condominium Owners Association in northeast Ohio and 20+ years as a managing partner in a Sales and Marketing company in the automotive and truck aftermarket. This experience has helped to foster a sense of attention to detail, project planning and understanding association documents. Personally, John is happily married with two children and two grandchildren residing in Northeast and Central Ohio. John graduated from the Illinois Institute of Technology with B.S. in Economics and a background in architectural studies. Hobbies include volunteering for youth Ice hockey programs in northeast Ohio for ages 5 through High School." },
+         new TeamMember() {Name = "Pete Zurowski, S.R.A.", Description="Pete is our Senior Research Analyst (S.R.A.). With over 15 years of expertise as an Association Manager and over 30 years in the construction field, his professional background and experience make him a well-rounded, valuable asset to CRS. Pete is a family man, with his wife of 44 years, 4 children, and 15 grandchildren. He was born, raised, and still resides in Northeast Ohio. Growing up, he was active in the Boy Scouts and went on to play on the golf team in high school. Pete studied at Cuyahoga Community College as he transitioned into Association Management. When he is not working, he enjoys his favorite pastime of golfing and cherishes quality time with family and loved ones." },
+         new TeamMember() {Name = "Jeff Ripple, R.S., P.R.A.", Description="Jeff is our Reserve Specialist (RS), Professional Reserve Analyst (PRA), and Owner of Community Reserve Specialists. Jeff brings with him over 25 years of Business Management experience and has achieved such designations in the Financial Services and Wealth Management  industry as Certified Senior Advisor (CSA), Registered Tax Preparer (RTP), Investment Advisor Representative (IAR) and Licensed P&C Agent. Jeff proudly served in the United States Marine Corps during Desert Shield/Desert Storm and is a decorated Veteran.  With a Criminal Justice degree from the University of Akron, he served as a Law Enforcement Officer upon separation from the Military. He was the youngest to achieve Eagle Scout in the State of Ohio at the time of appointment and was the founder of Mysterious Ways, a small not for profit organization that acquires, repairs and anonymously donates power wheelchairs to those who otherwise could not afford or obtain them. Jeff has performed hundreds of Reserve Studies throughout Ohio." }
+    };
+    protected override async Task OnInitializedAsync() {
+        await base.OnInitializedAsync();
+
+        Routes!.SetLayout(typeof(HomeLayout));
+    }
+
+    private class TeamMember {
+        public string Name { get; set; }
+        public string Description { get; set; }
+    }
+
+    private class Logo {
+        public string Src { get; set; }
+        public string Alt { get; set; }
+    }
+
+    private List<Logo> logos = new()
+                                                                                    {
+        new Logo {
+            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/BBB%20A%2B%20logo.jpeg",
+            Alt = "BBB A+ Rating"
+        },
+        new Logo {
+            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/blob-0010.png",
+            Alt = "Business Partner Community Associations Institue"
+        },
+        new Logo {
+            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/Stow%20Chamber-0001.jpg",
+            Alt = ""
+        },
+        new Logo {
+            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/blob-0009.png",
+            Alt = ""
+        },
+        new Logo {
+            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/RS%20designation.png",
+            Alt = ""
+        },
+        new Logo {
+            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/blob-0003.png",
+            Alt = ""
+        },
+        new Logo {
+            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/vetran-owned-operated%20252-0002.png",
+            Alt = ""
+        },
+        new Logo {
+            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/PRA%20Seal.jpg",
+            Alt = ""
+        },
+    };
+}

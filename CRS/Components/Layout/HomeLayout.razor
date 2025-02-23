@@ -1,0 +1,59 @@
+﻿@inherits LayoutComponentBase
+@attribute [AllowAnonymous]
+@using System.Security.Claims
+@inject IHostEnvironment HostEnvironment
+@inject ThemeService ThemeService
+@inject NavigationManager NavigationManager
+
+<MudThemeProvider Theme="@ThemeService.CurrentTheme" />
+<MudPopoverProvider />
+@* <MudDialogProvider />
+<MudSnackbarProvider /> *@
+<MudLayout>
+    <MudAppBar Elevation="25">
+        <MudText Typo="Typo.h5" Class="ml-3">Community Reserve Specialists</MudText>
+        <MudSpacer />
+        @* <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
+            <AuthorizeView>
+                <Authorized>
+                    <MudText Typo="Typo.body1" Class="pa-4">@context.User.Identity?.Name</MudText>
+                    <MudDivider />
+                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/profile"))">Profile</MudMenuItem>
+                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/Account/Logout"))">Logout</MudMenuItem>
+                </Authorized>
+                <NotAuthorized>
+                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/Account/Login"))">Login</MudMenuItem>
+                </NotAuthorized>
+            </AuthorizeView>
+        </MudMenu> *@
+        <AuthorizeView>
+            <Authorized>
+                <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
+                    <MudText Typo="Typo.body1" Class="pa-4">@context.User.Identity?.Name</MudText>
+                    <MudDivider />
+                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/profile"))">Profile</MudMenuItem>
+                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/Account/Logout"))">Logout</MudMenuItem>
+                </MudMenu>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Href="/Account/Login" Variant="Variant.Filled" Size="Size.Large" Style="background-color: gray; color: white;">Login</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudMainContent Class="pt-16 px-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+            <ErrorBoundary>
+                @Body
+            </ErrorBoundary>
+        </MudContainer>
+    </MudMainContent>
+
+    <MudScrollToTop TopOffset="100" Selector="#unique_id_scroll_section">
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowUpward">Go to top</MudButton>
+    </MudScrollToTop>
+</MudLayout>
+
+@code {
+
+}
