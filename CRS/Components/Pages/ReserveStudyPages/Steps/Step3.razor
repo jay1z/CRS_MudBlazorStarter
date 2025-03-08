@@ -15,15 +15,12 @@
         <!-- Building Elements Section -->
         <MudItem xs="6">
             <MudText Typo="Typo.h6" Class="mb-4">Building Elements</MudText>
-            @if (buildingElements != null && buildingElements.Any())
-            {
-                @foreach (var element in buildingElements)
-                {
+            @if (buildingElements != null && buildingElements.Any()) {
+                @foreach (var element in buildingElements) {
                     <MudCheckBox T="bool" @bind-Checked="isSelected" Label="@element.Name" ValueChanged="(isSelected) => OnBuildingElementChanged(isSelected, element)" />
                 }
             }
-            else
-            {
+            else {
                 <MudText>No Building Elements available.</MudText>
             }
         </MudItem>
@@ -31,15 +28,12 @@
         <!-- Common Elements Section -->
         <MudItem xs="6">
             <MudText Typo="Typo.h6" Class="mb-4">Common Elements</MudText>
-            @if (commonElements != null && commonElements.Any())
-            {
-                @foreach (var element in commonElements)
-                {
-                    <MudCheckBox T="bool" @bind-Checked="isSelected" Label="@element.Name" OnChanged="(isSelected) => OnCommonElementChanged(isSelected, element)" />
+            @if (commonElements != null && commonElements.Any()) {
+                @foreach (var element in commonElements) {
+                    <MudCheckBox T="bool" @bind-Checked="isSelected" Label="@element.Name" ValueChanged="(isSelected) => OnCommonElementChanged(isSelected, element)" />
                 }
             }
-            else
-            {
+            else {
                 <MudText>No Common Elements available.</MudText>
             }
         </MudItem>
@@ -48,12 +42,14 @@
         <MudItem xs="12">
             <MudText Typo="Typo.h6" Class="mb-4">Additional Elements</MudText>
             <MudList T="ReserveStudyAdditionalElement">
-                @foreach (var additionalElement in Model.ReserveStudyAdditionalElements)
-                {
+                @foreach (var additionalElement in Model.ReserveStudyAdditionalElements) {
                     <MudListItem>
                         <MudGrid>
-                            <MudItem xs="8">
+                            <MudItem xs="7">
                                 <MudTextField T="string" @bind-Value="additionalElement.Name" Placeholder="Enter element name" />
+                            </MudItem>
+                            <MudItem xs="3">
+                                <MudCheckBox T="bool" @bind-Value="additionalElement.NeedsService" Label="Needs Service" />
                             </MudItem>
                             <MudItem xs="2">
                                 <MudButton Variant="Variant.Text" Color="Color.Error"
@@ -66,7 +62,7 @@
                     </MudListItem>
                 }
             </MudList>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddAdditionalElement">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="AddAdditionalElement">
                 <MudIcon Icon="@Icons.Material.Filled.Add" />
                 Add Additional Element
             </MudButton>
@@ -83,85 +79,68 @@
     private List<BuildingElement>? buildingElements;
     private List<CommonElement>? commonElements;
 
-    private Dictionary<int, bool?> buildingElementSelections = new();
-    private Dictionary<int, bool?> commonElementSelections = new();
+    private Dictionary<Guid, bool?> buildingElementSelections = new();
+    private Dictionary<Guid, bool?> commonElementSelections = new();
     private bool isSelected;
     private MudForm? form;
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnInitializedAsync() {
         context = await DbFactory.CreateDbContextAsync();
 
         buildingElements = await context.BuildingElements.ToListAsync();
         commonElements = await context.CommonElements.ToListAsync();
 
         // Initialize selections based on Model
-        foreach (var element in buildingElements)
-        {
+        foreach (var element in buildingElements) {
             buildingElementSelections[element.Id] = Model?.ReserveStudyBuildingElements?.Any(e => e.BuildingElementId == element.Id) ?? false;
         }
 
-        foreach (var element in commonElements)
-        {
+        foreach (var element in commonElements) {
             commonElementSelections[element.Id] = Model?.ReserveStudyCommonElements?.Any(e => e.CommonElementId == element.Id) ?? false;
         }
     }
 
-    private void AddAdditionalElement()
-    {
+    private void AddAdditionalElement() {
         Model.ReserveStudyAdditionalElements ??= new List<ReserveStudyAdditionalElement>();
         Model.ReserveStudyAdditionalElements.Add(new ReserveStudyAdditionalElement { Name = string.Empty });
     }
 
-    private void RemoveAdditionalElement(ReserveStudyAdditionalElement element)
-    {
+    private void RemoveAdditionalElement(ReserveStudyAdditionalElement element) {
         Model.ReserveStudyAdditionalElements?.Remove(element);
     }
 
-    private void OnBuildingElementChanged(bool? isSelected, BuildingElement element)
-    {
-        if (isSelected == true)
-        {
+    private void OnBuildingElementChanged(bool? isSelected, BuildingElement element) {
+        if (isSelected == true) {
             Model.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
-            if (!Model.ReserveStudyBuildingElements.Any(e => e.BuildingElementId == element.Id))
-            {
+            if (!Model.ReserveStudyBuildingElements.Any(e => e.BuildingElementId == element.Id)) {
                 Model.ReserveStudyBuildingElements.Add(new ReserveStudyBuildingElement { BuildingElementId = element.Id, ReserveStudyId = Model.Id });
             }
         }
-        else
-        {
+        else {
             var itemToRemove = Model.ReserveStudyBuildingElements?.FirstOrDefault(e => e.BuildingElementId == element.Id);
-            if (itemToRemove != null)
-            {
+            if (itemToRemove != null) {
                 Model.ReserveStudyBuildingElements.Remove(itemToRemove);
             }
         }
     }
 
-    private void OnCommonElementChanged(bool? isSelected, CommonElement element)
-    {
-        if (isSelected == true)
-        {
+    private void OnCommonElementChanged(bool? isSelected, CommonElement element) {
+        if (isSelected == true) {
             Model.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
-            if (!Model.ReserveStudyCommonElements.Any(e => e.CommonElementId == element.Id))
-            {
-                Model.ReserveStudyCommonElements.Add(new ReserveStudyCommonElement { CommonElementId = element.Id, ReserveStudyId = Model.Id  });
+            if (!Model.ReserveStudyCommonElements.Any(e => e.CommonElementId == element.Id)) {
+                Model.ReserveStudyCommonElements.Add(new ReserveStudyCommonElement { CommonElementId = element.Id, ReserveStudyId = Model.Id });
             }
         }
-        else
-        {
+        else {
             var itemToRemove = Model.ReserveStudyCommonElements?.FirstOrDefault(e => e.CommonElementId == element.Id);
-            if (itemToRemove != null)
-            {
+            if (itemToRemove != null) {
                 Model.ReserveStudyCommonElements.Remove(itemToRemove);
             }
         }
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (context != null)
-        {
+    public async ValueTask DisposeAsync() {
+        if (context != null) {
             await context.DisposeAsync();
         }
     }
@@ -169,8 +148,7 @@
     [Parameter]
     public EventCallback<bool> StepValidated { get; set; }
 
-    public async Task<bool> ValidateAsync()
-    {
+    public async Task<bool> ValidateAsync() {
         await form.Validate();
         bool valid = form.IsValid;
         await StepValidated.InvokeAsync(valid);

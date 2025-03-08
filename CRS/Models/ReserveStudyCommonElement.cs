@@ -5,10 +5,13 @@ using static CRS.Models.IReserveStudyElement;
 
 namespace CRS.Models {
     public class ReserveStudyCommonElement : BaseModel, IReserveStudyElement {
-        public required int ReserveStudyId { get; set; }
+        public ReserveStudyCommonElement() {
+            ServiceContact ??= new ServiceContact();
+        }
+        public required Guid ReserveStudyId { get; set; }
         public ReserveStudy? ReserveStudy { get; set; }
 
-        public required int CommonElementId { get; set; }
+        public required Guid CommonElementId { get; set; }
         public CommonElement? CommonElement { get; set; }
         public int Count { get; set; }
         public ServiceContact? ServiceContact { get; set; }

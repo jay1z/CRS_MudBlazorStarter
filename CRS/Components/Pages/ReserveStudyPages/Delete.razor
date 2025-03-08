@@ -1,4 +1,4 @@
-﻿@page "/reservestudies/delete"
+﻿@page "/ReserveStudies/Delete"
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
@@ -58,7 +58,7 @@
         </dl>
         <EditForm method="post" Model="reservestudy" OnValidSubmit="DeleteReserveStudy" FormName="delete" Enhance>
             <button type="submit" class="btn btn-danger" disabled="@(reservestudy is null)">Delete</button> |
-            <a href="/reservestudies">Back to List</a>
+            <a href="/ReserveStudies">Back to List</a>
         </EditForm>
     }
 </div>
@@ -67,7 +67,7 @@
     private ReserveStudy? reservestudy;
 
     [SupplyParameterFromQuery]
-    private int Id { get; set; }
+    private Guid Id { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -85,6 +85,6 @@
         using var context = DbFactory.CreateDbContext();
         context.ReserveStudies.Remove(reservestudy!);
         await context.SaveChangesAsync();
-        NavigationManager.NavigateTo("/reservestudies");
+        NavigationManager.NavigateTo("/ReserveStudies");
     }
 }

@@ -1,0 +1,153 @@
+﻿@attribute [Authorize]
+@page "/Communities/Details/{Id:guid}"
+@using CRS.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Community Details</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    @if (isLoading) {
+        <MudPaper Elevation="0" Class="pa-8">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.h5" Class="mt-4">Loading Community...</MudText>
+        </MudPaper>
+    }
+    else if (!isAuthorized) {
+        <MudAlert Severity="Severity.Error">You are not authorized to view this community.</MudAlert>
+    }
+    else if (community == null) {
+        NavigationManager.NavigateTo("/Communities/NotFound");
+    }
+    else {
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+            <MudText Typo="Typo.h4">@community.Name</MudText>
+            <MudGrid>
+                <!-- Aside Column -->
+                <MudItem xs="12" lg="4">
+                    <!-- Details Card -->
+                    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6">Request ID</MudText>
+                            <MudText Typo="Typo.body2">@community.Id</MudText>
+                            <MudDivider Class="my-2" />
+                            <MudText Typo="Typo.h6">Created</MudText>
+                            <MudText Typo="Typo.body2">@community.DateCreated?.ToString("MM/dd/yyyy")</MudText>
+                        </MudCardContent>
+                    </MudCard>
+
+                    <!-- Community Card -->
+                    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@community.Name</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/Communities/Details/{@community.Id}")">View Community</MudButton>
+                        </MudCardContent>
+                    </MudCard>
+
+                    <!-- Actions Card -->
+                    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+                        <MudCardContent>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="">Update Request</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4">Send Request Link</MudButton>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+
+                <!-- Main Column -->
+                <MudItem xs="12" lg="8">
+                    <MudTabs Elevation="0" Outlined="true" Color="Color.Primary">
+                        <!-- Information Tab -->
+                        <MudTabPanel Text="Information" Icon="@Icons.Material.Filled.Info">
+                            <MudCard Elevation="25">
+                                <MudCardContent Class="py-6">
+                                    <MudGrid>
+
+                                    </MudGrid>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudTabPanel>
+                        <!-- Elements Tab -->
+                        <MudTabPanel Text="Elements" Icon="@Icons.Material.Filled.List">
+                            <MudCard Elevation="25">
+                                <MudCardContent Class="py-6">
+
+                                </MudCardContent>
+                            </MudCard>
+                        </MudTabPanel>
+                        <!-- Service Contacts Tab -->
+                        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone">
+
+                        </MudTabPanel>
+                    </MudTabs>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private List<ReserveStudy> reserveStudies;
+    private Community community;
+    private ApplicationUser currentUser;
+
+    private bool isLoading = true;
+    private bool isAuthorized = false;
+
+    protected override async Task OnInitializedAsync() {
+        try {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            using var context = await DbFactory.CreateDbContextAsync();
+            var reserveStudies = await context.ReserveStudies
+            .AsNoTracking()
+            .Include(rs => rs.Community)
+            .AsSplitQuery()
+            .Where(rs => rs.Community.Id == Id).ToListAsync();
+
+            if (reserveStudies != null) {
+                community = context.Communities.AsNoTracking().FirstOrDefault(c => c.Id == Id);
+
+                // Check if the user is authorized
+                await GetCurrentUserInfo(user);
+
+                isAuthorized = user.Identity.IsAuthenticated; // &&
+                //                (await UserManager.IsInRoleAsync(currentUser, "Admin") ||
+                //                 reserveStudy.ApplicationUserId == currentUser.Id ||
+                //                 reserveStudy.SpecialistUserId == currentUser.Id ||
+                //                 reserveStudy.PointOfContactType == ReserveStudy.PointOfContactTypeEnum.Contact && reserveStudy.Contact?.Email == currentUser.Email ||
+                //                 reserveStudy.PointOfContactType == ReserveStudy.PointOfContactTypeEnum.PropertyManager && reserveStudy.PropertyManager?.Email == currentUser.Email);
+            }
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading community: {ex.Message}", Severity.Error);
+        }
+        finally {
+            isLoading = false;
+        }
+    }
+
+    private async Task GetCurrentUserInfo(ClaimsPrincipal user) {
+        currentUser = await UserManager.GetUserAsync(user);
+        if (currentUser == null) {
+            Snackbar.Add("User not found.", Severity.Error);
+        }
+    }
+
+}

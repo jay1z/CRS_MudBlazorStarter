@@ -10,6 +10,8 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject INavigationService NavigationService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Log in</PageTitle>
 
@@ -25,14 +27,14 @@
 
             <MudGrid>
                 <MudItem md="12">
-                    <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email" 
-                        Label="Email" Placeholder="name@example.com" 
-                        UserAttributes="@(new() { { "autocomplete", "username" }, { "aria-required", "true" } } )" />
+                    <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email"
+                                        Label="Email" Placeholder="name@example.com"
+                                        UserAttributes="@(new() { { "autocomplete", "username" }, { "aria-required", "true" } } )" />
                 </MudItem>
                 <MudItem md="12">
-                    <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" 
-                        Label="Password" InputType="InputType.Password" Placeholder="password" 
-                        UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } } )" />
+                    <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password"
+                                        Label="Password" InputType="InputType.Password" Placeholder="password"
+                                        UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } } )" />
                 </MudItem>
                 <MudItem md="12">
                     <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Remember me</MudStaticCheckBox>
@@ -70,44 +72,40 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (HttpMethods.IsGet(HttpContext.Request.Method))
-        {
+    protected override async Task OnInitializedAsync() {
+        if (HttpMethods.IsGet(HttpContext.Request.Method)) {
             // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         }
     }
 
-    public async Task LoginUser()
-    {
+    public async Task LoginUser() {
         // This doesn't count login failures towards account lockout
         // To enable password failures to trigger account lockout, set lockoutOnFailure: true
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-        if (result.Succeeded)
-        {
+        if (result.Succeeded) {
             Logger.LogInformation("User logged in.");
+
+            //NavigationService Start
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            await NavigationService.NavigateToHomePageByRole(authState.User);
+            //NavigationService End
+
             RedirectManager.RedirectTo(ReturnUrl);
         }
-        else if (result.RequiresTwoFactor)
-        {
-            RedirectManager.RedirectTo(
-                "Account/LoginWith2fa",
-                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+        else if (result.RequiresTwoFactor) {
+            RedirectManager.RedirectTo("Account/LoginWith2fa", new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
         }
-        else if (result.IsLockedOut)
-        {
+        else if (result.IsLockedOut) {
             Logger.LogWarning("User account locked out.");
             RedirectManager.RedirectTo("Account/Lockout");
         }
-        else
-        {
+        else {
             errorMessage = "Error: Invalid login attempt.";
         }
     }
 
-    private sealed class InputModel
-    {
+    private sealed class InputModel {
         [Required]
         [EmailAddress]
         public string Email { get; set; } = "";

@@ -1,9 +1,8 @@
 ﻿@attribute [Authorize(Roles = "User")]
-@page "/reservestudies/summary/{Id:int}"
+@page "/ReserveStudies/Summary/{Id:int}"
 @using CRS.Components.Layout
 @using CRS.Data
 @using Microsoft.EntityFrameworkCore
-@layout UserLayout
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -21,7 +20,7 @@ else
         <MudPaper Elevation="4">
             <MudCardContent>
                 <MudText Typo="Typo.h4">@reserveStudy.Community?.Name</MudText>
-                <MudText Typo="Typo.subtitle2">@reserveStudy.HashedId</MudText>
+                <MudText Typo="Typo.subtitle2">@reserveStudy.Id</MudText>
                 <MudDivider />
                 <MudTextField T="string" Label="Created By"  ReadOnly="true" Text="@reserveStudy.User.UserName" />
                 <MudTextField T="string" Label="Created Date" ReadOnly="true" Text="@reserveStudy.DateCreated?.ToString("MM/dd/yyyy")" />
@@ -65,7 +64,7 @@ else
 
 @code {
     [Parameter]
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     private ApplicationDbContext context;
     private ReserveStudy? reserveStudy;
 
@@ -87,7 +86,7 @@ else
 
             if (reserveStudy == null)
             {
-                NavigationManager.NavigateTo("/reservestudies/notfound");
+                NavigationManager.NavigateTo("/ReserveStudies/NotFound");
             }
         }
         catch (Exception ex)
@@ -98,12 +97,12 @@ else
 
     private void EditReserveStudy()
     {
-        NavigationManager.NavigateTo($"/reservestudies/update/{reserveStudy.Id}");
+        NavigationManager.NavigateTo($"/ReserveStudies/Update/{reserveStudy.Id}");
     }
 
     private void BackToList()
     {
-        NavigationManager.NavigateTo("/reservestudies");
+        NavigationManager.NavigateTo("/ReserveStudies");
     }
 
     public void Dispose()

@@ -23,6 +23,16 @@
             <MudStaticTextField Value="@username" Label="Username" Disabled="true" Placeholder="Please choose your username." />
         </MudItem>
         <MudItem md="12">
+            <MudStaticTextField For="@(() => Input.FirstName)" @bind-Value="Input.FirstName"
+                          Label="First Name" HelperText="Please enter your first name."
+                          UserAttributes="@(new() { { "autocomplete", "given-name" } } )" />
+        </MudItem>
+        <MudItem md="12">
+            <MudStaticTextField For="@(() => Input.LastName)" @bind-Value="Input.LastName"
+                                Label="Last Name" HelperText="Please enter your last name."
+                                UserAttributes="@(new() { { "autocomplete", "family-name" } } )" />
+        </MudItem>
+        <MudItem md="12">
             <MudStaticTextField For="@(() => Input.PhoneNumber)" @bind-Value="Input.PhoneNumber"
                                 Label="Phone Number" HelperText="Please enter your phone number."
                                 UserAttributes="@(new() { { "autocomplete", "tel-national" } } )" />
@@ -44,23 +54,43 @@
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnInitializedAsync() {
         user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         username = await UserManager.GetUserNameAsync(user);
         phoneNumber = await UserManager.GetPhoneNumberAsync(user);
 
+        Input.FirstName ??= user.FirstName;
+        Input.LastName ??= user.LastName;
+
         Input.PhoneNumber ??= phoneNumber;
     }
 
-    private async Task OnValidSubmitAsync()
-    {
-        if (Input.PhoneNumber != phoneNumber)
-        {
+    private async Task OnValidSubmitAsync() {
+        var hasChanges = false;
+
+        if (Input.PhoneNumber != phoneNumber) {
             var setPhoneResult = await UserManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
-            if (!setPhoneResult.Succeeded)
-            {
+            if (!setPhoneResult.Succeeded) {
                 RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to set phone number.", HttpContext);
+                return;
+            }
+        }
+
+        if (Input.FirstName != user.FirstName) {
+            user.FirstName = Input.FirstName;
+            hasChanges = true;
+        }
+
+        if (Input.LastName != user.LastName) {
+            user.LastName = Input.LastName;
+            hasChanges = true;
+        }
+
+        if (hasChanges) {
+            var updateResult = await UserManager.UpdateAsync(user);
+            if (!updateResult.Succeeded) {
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Failed to update profile.", HttpContext);
+                return;
             }
         }
 
@@ -68,8 +98,9 @@
         RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
     }
 
-    private sealed class InputModel
-    {
+    private sealed class InputModel {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
         [Phone]
         [Display(Name = "Phone number")]
         public string? PhoneNumber { get; set; }

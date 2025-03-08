@@ -1,0 +1,155 @@
+﻿@page "/MudBlazorFontIcons"
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+    <MudPaper Elevation="0" Class="d-flex flex-column gap-4">
+        <MudText Typo="Typo.h3">Icon Browser</MudText>
+
+        <div class="d-flex gap-4 align-center">
+            <MudTextField @bind-Value="searchString"
+                          Label="Search icons"
+                          Variant="Variant.Outlined"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Class="flex-1" />
+
+            <MudSelect T="Size" @bind-Value="selectedSize" Label="Icon Size" Class="ml-auto">
+                @foreach (var size in Enum.GetValues<Size>()) {
+                    <MudSelectItem Value="@size">@size.ToString()</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            <MudTabPanel Text="Material Symbols" Icon="@Icons.Material.Filled.Category">
+                <MudTabs Elevation="0" Border="true" ApplyEffectsToContainer="true" PanelClass="pt-6">
+                    @foreach (var style in MaterialSymbolStyles) {
+                        <MudTabPanel Text="@style.Name" Icon="@style.Icon">
+                            <MudGrid Spacing="2">
+                                @{
+                                    var icons = GetMaterialSymbolsFields(style.Type);
+                                    if (!icons.Any(field => string.IsNullOrEmpty(searchString) ||
+                                    field.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))) {
+                                        <MudItem xs="12">
+                                            <MudAlert Severity="Severity.Info">
+                                                No icons found matching "@searchString"
+                                            </MudAlert>
+                                        </MudItem>
+                                    }
+                                    else {
+                                        @foreach (var iconField in icons.Where(field =>
+                                   string.IsNullOrEmpty(searchString) ||
+                                   field.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))) {
+                                            <MudItem xs="6" sm="4" md="3" lg="2">
+                                                <MudPaper Class="pa-4" Style="height: 100%">
+                                                    <div class="d-flex flex-column align-center gap-2">
+                                                        <MudIcon Icon="@iconField.GetValue(null)?.ToString()"
+                                                                 Size="@selectedSize"
+                                                                 Class="ma-2" />
+                                                        <MudText Typo="Typo.body2"
+                                                                 Style="word-break: break-word; text-align: center">
+                                                            @iconField.Name
+                                                        </MudText>
+                                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                                       Size="Size.Small"
+                                                                       OnClick="@(() => CopyToClipboard(iconField.Name))"
+                                                                       Title="Copy icon name" />
+                                                    </div>
+                                                </MudPaper>
+                                            </MudItem>
+                                        }
+                                    }
+                                }
+                            </MudGrid>
+                        </MudTabPanel>
+                    }
+                </MudTabs>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Material Icons" Icon="@Icons.Material.Filled.Apps">
+                <MudTabs Elevation="0" Border="true" ApplyEffectsToContainer="true" PanelClass="pt-6">
+                    @foreach (var style in MaterialIconStyles) {
+                        <MudTabPanel Text="@style.Name" Icon="@style.Icon">
+                            <MudGrid Spacing="2">
+                                @{
+                                    var icons = GetMaterialIconsFields(style.Type);
+                                    if (!icons.Any(field => string.IsNullOrEmpty(searchString) ||
+                                    field.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))) {
+                                        <MudItem xs="12">
+                                            <MudAlert Severity="Severity.Info">
+                                                No icons found matching "@searchString"
+                                            </MudAlert>
+                                        </MudItem>
+                                    }
+                                    else {
+                                        @foreach (var iconField in icons.Where(field =>
+                                   string.IsNullOrEmpty(searchString) ||
+                                   field.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))) {
+                                            <MudItem xs="6" sm="4" md="3" lg="2">
+                                                <MudPaper Class="pa-4" Style="height: 100%">
+                                                    <div class="d-flex flex-column align-center gap-2">
+                                                        <MudIcon Icon="@iconField.GetValue(null)?.ToString()"
+                                                                 Size="@selectedSize"
+                                                                 Class="ma-2" />
+                                                        <MudText Typo="Typo.body2"
+                                                                 Style="word-break: break-word; text-align: center">
+                                                            @iconField.Name
+                                                        </MudText>
+                                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                                       Size="Size.Small"
+                                                                       OnClick="@(() => CopyToClipboard(iconField.Name))"
+                                                                       Title="Copy icon name" />
+                                                    </div>
+                                                </MudPaper>
+                                            </MudItem>
+                                        }
+                                    }
+                                }
+                            </MudGrid>
+                        </MudTabPanel>
+                    }
+                </MudTabs>
+            </MudTabPanel>
+        </MudTabs>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string searchString = "";
+    private Size selectedSize = Size.Large;
+
+    private record IconStyle(string Name, string Icon, Type Type);
+
+    private readonly IconStyle[] MaterialSymbolStyles = new[] {
+        new IconStyle("Outlined", MaterialSymbols.Outlined.Flag, typeof(MaterialSymbols.Outlined)),
+        new IconStyle("Rounded", MaterialSymbols.Rounded.Flag, typeof(MaterialSymbols.Rounded)),
+        new IconStyle("Sharp", MaterialSymbols.Sharp.Flag, typeof(MaterialSymbols.Sharp))
+    };
+
+    private readonly IconStyle[] MaterialIconStyles = new[] {
+        new IconStyle("Filled", MaterialIcons.Filled.Flag, typeof(MaterialIcons.Filled)),
+        new IconStyle("Outlined", MaterialIcons.Outlined.Flag, typeof(MaterialIcons.Outlined)),
+        new IconStyle("Rounded", MaterialIcons.Rounded.Flag, typeof(MaterialIcons.Rounded)),
+        new IconStyle("Sharp", MaterialIcons.Sharp.Flag, typeof(MaterialIcons.Sharp))
+    };
+
+    private System.Reflection.FieldInfo[] GetMaterialSymbolsFields(Type symbolType) => GetIconFields(symbolType);
+    private System.Reflection.FieldInfo[] GetMaterialIconsFields(Type iconType) => GetIconFields(iconType);
+
+    private static System.Reflection.FieldInfo[] GetIconFields(Type type) =>
+        type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(f => f.FieldType == typeof(string))
+            .OrderBy(f => f.Name)
+            .ToArray();
+
+    private async Task CopyToClipboard(string iconName) {
+        try {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", iconName);
+            Snackbar.Add($"Copied: {iconName}", Severity.Success);
+        }
+        catch {
+            Snackbar.Add("Failed to copy to clipboard", Severity.Error);
+        }
+    }
+}

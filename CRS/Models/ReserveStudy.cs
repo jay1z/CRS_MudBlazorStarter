@@ -9,12 +9,11 @@ using static CRS.Services.HashingService;
 
 namespace CRS.Models {
     public class ReserveStudy : BaseModel {
-        [ForeignKey("User")]
-        public string? ApplicationUserId { get; set; }
+        [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
         public ApplicationUser? User { get; set; }
 
         [ForeignKey("Specialist")]
-        public string? SpecialistUserId { get; set; }
+        public Guid? SpecialistUserId { get; set; }
         public ApplicationUser? Specialist { get; set; }
 
         public Community? Community { get; set; }
@@ -60,18 +59,9 @@ namespace CRS.Models {
         public bool IsApproved { get; set; }
         public bool IsComplete { get; set; }
 
-        [DataType(DataType.DateTime)] 
+        [DataType(DataType.DateTime)]
         public DateTime? DateApproved { get; set; }
 
-        private string? _hashedId;
-        public string HashedId {
-            get {
-                if (_hashedId == null && Id != 0) {
-                    _hashedId = new HashingService().HashId(Id, HashType.ReserveStudy);
-                }
-                return _hashedId ?? string.Empty;
-            }
-        }
         public enum PointOfContactTypeEnum {
             Contact = 0,
             PropertyManager = 1

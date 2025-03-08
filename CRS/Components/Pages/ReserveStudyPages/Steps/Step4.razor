@@ -17,13 +17,13 @@
                         <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Warning" Size="Size.Large" />
                     </MudItem>
                     <MudItem xs="12" sm="11">
-                        <MudText Typo="Typo.body1" Class="text-gray-700 mb-4">
+                        <MudText Typo="Typo.body1" Class="mb-4">
                             By checking this box, the Association acknowledges it has read and understands the definition of "COMMON ELEMENTS" as set forth in the Association's Declarations and Bylaws.
                         </MudText>
                         <MudText Typo="Typo.body1" Class="text-gray-700 mb-4">
                             Furthermore, the Association acknowledges that the common elements have been identified and agreed upon by the Board of Directors for purposes of this Reserve Study.
                         </MudText>                        
-                        <MudCheckBox T="bool" @bind-Value="AcceptTerms" Label="Accepts the terms of agreement." Required="true" RequiredError="You must accept the terms to proceed." />
+                        <MudCheckBox T="bool" @bind-Value="AcceptTerms" Label="Accepts the terms of agreement." Required="true" RequiredError="You must accept the terms to proceed." Color="Color.Warning" />
                     </MudItem>
                 </MudGrid>
             </MudPaper>

@@ -22,6 +22,8 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
     <PackageReference Include="MudBlazor" Version="8.*" />
     <PackageReference Include="Extensions.MudBlazor.StaticInput" Version="3.*" />
+    <PackageReference Include="MudBlazor.FontIcons.MaterialIcons" Version="1.2.0" />
+    <PackageReference Include="MudBlazor.FontIcons.MaterialSymbols" Version="1.2.0" />
     <PackageReference Include="Mudblazor.ThemeManager" Version="3.0.0" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.2.efcore.9.0.0" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql.Design" Version="1.1.2" />

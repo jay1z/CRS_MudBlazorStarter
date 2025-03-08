@@ -25,8 +25,9 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Data.ApplicationUser", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
@@ -102,17 +103,15 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.Address", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("City")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("CommunityId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("CommunityId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -141,22 +140,17 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.AuditLog", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Action")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid?>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ColumnName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DateCreated")
@@ -169,19 +163,15 @@ namespace CRS.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("NewValue")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OldValue")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RecordId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TableName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -193,11 +183,9 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.BuildingElement", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -224,181 +212,16 @@ namespace CRS.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("BuildingElements", "crs");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Pitched Roof",
-                            NeedsService = true
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Flat Roof",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Siding",
-                            NeedsService = true
-                        },
-                        new
-                        {
-                            Id = 4,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Gutters/Downspouts",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 5,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Attached Lighting",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 6,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Shutters",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 7,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Decks",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 8,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Flooring",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 9,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Lighting",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 10,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Intercom",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 11,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Security System",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 12,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Elevator(s)",
-                            NeedsService = true
-                        },
-                        new
-                        {
-                            Id = 13,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "AC Unit(s)",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 14,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Heating Unit(s)",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 15,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Water Unit(s)",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 16,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Kitchen",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 17,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Bathroom(s)",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 18,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Doors",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 19,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Windows",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 20,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Balconies",
-                            NeedsService = false
-                        });
                 });
 
             modelBuilder.Entity("CRS.Models.CalendarEvent", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid?>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("ColorClass")
                         .HasColumnType("int");
@@ -527,18 +350,15 @@ namespace CRS.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("Location")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("SpecialistUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid?>("SpecialistUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("Start")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Title")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -548,11 +368,9 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.CommonElement", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -579,241 +397,13 @@ namespace CRS.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CommonElements", "crs");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Clubhouse",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Pool",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Playground",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 4,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Tennis/Ball Courts",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 5,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Property Fencing",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 6,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Pool(s)/Lake(s)",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 7,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Gazebos(s)/Pavilion(s)",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 8,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Entry Signage/Structure(s)",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 9,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Street Signage",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 10,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Roads",
-                            NeedsService = true
-                        },
-                        new
-                        {
-                            Id = 11,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Catch Basins",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 12,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Parking",
-                            NeedsService = true
-                        },
-                        new
-                        {
-                            Id = 13,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Sidewalks",
-                            NeedsService = true
-                        },
-                        new
-                        {
-                            Id = 14,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Driveways",
-                            NeedsService = true
-                        },
-                        new
-                        {
-                            Id = 15,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Patios",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 16,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Porches",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 17,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Privacy Fencing",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 18,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Garage(s)",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 19,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Pump Station",
-                            NeedsService = true
-                        },
-                        new
-                        {
-                            Id = 20,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Retaining Walls",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 21,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Fountains",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 22,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Property Lighting",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 23,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Street Lighting",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 24,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Paved Trails/Paths",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 25,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Mail Huts/Boxes",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 26,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Fire Hydrants",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 27,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Sports Fields",
-                            NeedsService = false
-                        },
-                        new
-                        {
-                            Id = 28,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            IsActive = true,
-                            Name = "Shed(s)/Storage",
-                            NeedsService = false
-                        });
                 });
 
             modelBuilder.Entity("CRS.Models.Community", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -834,11 +424,9 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.Contact", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CompanyName")
                         .HasColumnType("nvarchar(max)");
@@ -874,15 +462,12 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ContactGroup", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -909,17 +494,15 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ContactXContactGroup", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("ContactGroupId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ContactGroupId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ContactId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ContactId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -941,11 +524,9 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ElementMeasurementOptions", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -970,41 +551,13 @@ namespace CRS.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ElementMeasurementOptions", "crs");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "Square Feet",
-                            Unit = "sq. ft.",
-                            ZOrder = 0
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "Linear Feet",
-                            Unit = "LF.",
-                            ZOrder = 0
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "Each",
-                            Unit = "ea.",
-                            ZOrder = 0
-                        });
                 });
 
             modelBuilder.Entity("CRS.Models.ElementRemainingLifeOptions", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -1029,145 +582,13 @@ namespace CRS.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ElementRemainingLifeOptions", "crs");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "1-5 Years",
-                            Unit = "1-5",
-                            ZOrder = 0
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "6-10 Years",
-                            Unit = "6-10",
-                            ZOrder = 1
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "11-15 Years",
-                            Unit = "11-15",
-                            ZOrder = 2
-                        },
-                        new
-                        {
-                            Id = 4,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "16-20 Years",
-                            Unit = "16-20",
-                            ZOrder = 3
-                        },
-                        new
-                        {
-                            Id = 5,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "21-25 Years",
-                            Unit = "21-25",
-                            ZOrder = 4
-                        },
-                        new
-                        {
-                            Id = 6,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "26-30 Years",
-                            Unit = "26-30",
-                            ZOrder = 5
-                        },
-                        new
-                        {
-                            Id = 7,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "31-35 Years",
-                            Unit = "31-35",
-                            ZOrder = 6
-                        },
-                        new
-                        {
-                            Id = 8,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "36-40 Years",
-                            Unit = "36-40",
-                            ZOrder = 7
-                        },
-                        new
-                        {
-                            Id = 9,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "41-45 Years",
-                            Unit = "41-45",
-                            ZOrder = 8
-                        },
-                        new
-                        {
-                            Id = 10,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "46-50 Years",
-                            Unit = "46-50",
-                            ZOrder = 9
-                        },
-                        new
-                        {
-                            Id = 11,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "51-55 Years",
-                            Unit = "51-55",
-                            ZOrder = 10
-                        },
-                        new
-                        {
-                            Id = 12,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "56-60 Years",
-                            Unit = "56-60",
-                            ZOrder = 11
-                        },
-                        new
-                        {
-                            Id = 13,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "61-65 Years",
-                            Unit = "61-65",
-                            ZOrder = 12
-                        },
-                        new
-                        {
-                            Id = 14,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "66-70 Years",
-                            Unit = "66-70",
-                            ZOrder = 13
-                        },
-                        new
-                        {
-                            Id = 15,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "71-75 Years",
-                            Unit = "71-75",
-                            ZOrder = 14
-                        },
-                        new
-                        {
-                            Id = 16,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "76-80 Years",
-                            Unit = "76-80",
-                            ZOrder = 15
-                        });
                 });
 
             modelBuilder.Entity("CRS.Models.ElementUsefulLifeOptions", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -1192,145 +613,13 @@ namespace CRS.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ElementUsefulLifeOptions", "crs");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "1-5 Years",
-                            Unit = "1-5",
-                            ZOrder = 0
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "6-10 Years",
-                            Unit = "6-10",
-                            ZOrder = 1
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "11-15 Years",
-                            Unit = "11-15",
-                            ZOrder = 2
-                        },
-                        new
-                        {
-                            Id = 4,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "16-20 Years",
-                            Unit = "16-20",
-                            ZOrder = 3
-                        },
-                        new
-                        {
-                            Id = 5,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "21-25 Years",
-                            Unit = "21-25",
-                            ZOrder = 4
-                        },
-                        new
-                        {
-                            Id = 6,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "26-30 Years",
-                            Unit = "26-30",
-                            ZOrder = 5
-                        },
-                        new
-                        {
-                            Id = 7,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "31-35 Years",
-                            Unit = "31-35",
-                            ZOrder = 6
-                        },
-                        new
-                        {
-                            Id = 8,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "36-40 Years",
-                            Unit = "36-40",
-                            ZOrder = 7
-                        },
-                        new
-                        {
-                            Id = 9,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "41-45 Years",
-                            Unit = "41-45",
-                            ZOrder = 8
-                        },
-                        new
-                        {
-                            Id = 10,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "46-50 Years",
-                            Unit = "46-50",
-                            ZOrder = 9
-                        },
-                        new
-                        {
-                            Id = 11,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "51-55 Years",
-                            Unit = "51-55",
-                            ZOrder = 10
-                        },
-                        new
-                        {
-                            Id = 12,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "56-60 Years",
-                            Unit = "56-60",
-                            ZOrder = 11
-                        },
-                        new
-                        {
-                            Id = 13,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "61-65 Years",
-                            Unit = "61-65",
-                            ZOrder = 12
-                        },
-                        new
-                        {
-                            Id = 14,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "66-70 Years",
-                            Unit = "66-70",
-                            ZOrder = 13
-                        },
-                        new
-                        {
-                            Id = 15,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "71-75 Years",
-                            Unit = "71-75",
-                            ZOrder = 14
-                        },
-                        new
-                        {
-                            Id = 16,
-                            DateCreated = new DateTime(2025, 2, 1, 17, 56, 22, 0, DateTimeKind.Local),
-                            DisplayText = "76-80 Years",
-                            Unit = "76-80",
-                            ZOrder = 15
-                        });
                 });
 
             modelBuilder.Entity("CRS.Models.Notification", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -1359,15 +648,12 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.Profile", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("City")
                         .HasColumnType("nvarchar(max)");
@@ -1417,11 +703,9 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.PropertyManager", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CompanyName")
                         .HasColumnType("nvarchar(max)");
@@ -1457,21 +741,18 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<Guid?>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid?>("CommunityId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("CommunityId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ContactId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ContactId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateApproved")
                         .HasColumnType("datetime2");
@@ -1497,11 +778,11 @@ namespace CRS.Migrations
                     b.Property<int>("PointOfContactType")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PropertyManagerId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("PropertyManagerId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("SpecialistUserId")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid?>("SpecialistUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -1520,11 +801,9 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ReserveStudyAdditionalElement", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Count")
                         .HasColumnType("int");
@@ -1538,14 +817,14 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("ElementMeasurementOptionsId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ElementMeasurementOptionsId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("ElementRemainingLifeOptionsId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ElementRemainingLifeOptionsId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("ElementUsefulLifeOptionsId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ElementUsefulLifeOptionsId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
@@ -1557,11 +836,11 @@ namespace CRS.Migrations
                     b.Property<bool>("NeedsService")
                         .HasColumnType("bit");
 
-                    b.Property<int?>("ReserveStudyId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("ServiceContactId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ServiceContactId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -1580,11 +859,11 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ReserveStudyBuildingElement", b =>
                 {
-                    b.Property<int>("ReserveStudyId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("BuildingElementId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("BuildingElementId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Count")
                         .HasColumnType("int");
@@ -1598,23 +877,24 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("ElementMeasurementOptionsId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ElementMeasurementOptionsId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("ElementRemainingLifeOptionsId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ElementRemainingLifeOptionsId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("ElementUsefulLifeOptionsId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ElementUsefulLifeOptionsId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("ServiceContactId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ServiceContactId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ReserveStudyId", "BuildingElementId");
 
@@ -1633,11 +913,11 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ReserveStudyCommonElement", b =>
                 {
-                    b.Property<int>("ReserveStudyId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("CommonElementId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("CommonElementId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Count")
                         .HasColumnType("int");
@@ -1651,23 +931,24 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("ElementMeasurementOptionsId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ElementMeasurementOptionsId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("ElementRemainingLifeOptionsId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ElementRemainingLifeOptionsId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int?>("ElementUsefulLifeOptionsId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ElementUsefulLifeOptionsId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("ServiceContactId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("ServiceContactId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ReserveStudyId", "CommonElementId");
 
@@ -1686,11 +967,9 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ServiceContact", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CompanyName")
                         .HasColumnType("nvarchar(max)");
@@ -1726,15 +1005,12 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.Settings", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("uniqueidentifier");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Class")
                         .IsRequired()
@@ -1772,10 +1048,11 @@ namespace CRS.Migrations
                     b.ToTable("Settings", "crs");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -1799,7 +1076,7 @@ namespace CRS.Migrations
                     b.ToTable("AspNetRoles", "crs");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1813,9 +1090,8 @@ namespace CRS.Migrations
                     b.Property<string>("ClaimValue")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("RoleId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -1824,7 +1100,7 @@ namespace CRS.Migrations
                     b.ToTable("AspNetRoleClaims", "crs");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1838,9 +1114,8 @@ namespace CRS.Migrations
                     b.Property<string>("ClaimValue")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -1849,7 +1124,7 @@ namespace CRS.Migrations
                     b.ToTable("AspNetUserClaims", "crs");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.Property<string>("LoginProvider")
                         .HasColumnType("nvarchar(450)");
@@ -1860,9 +1135,8 @@ namespace CRS.Migrations
                     b.Property<string>("ProviderDisplayName")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
@@ -1871,13 +1145,13 @@ namespace CRS.Migrations
                     b.ToTable("AspNetUserLogins", "crs");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("RoleId")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -1886,10 +1160,10 @@ namespace CRS.Migrations
                     b.ToTable("AspNetUserRoles", "crs");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("LoginProvider")
                         .HasColumnType("nvarchar(450)");
@@ -1916,9 +1190,7 @@ namespace CRS.Migrations
                 {
                     b.HasOne("CRS.Data.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ApplicationUserId");
 
                     b.Navigation("User");
                 });
@@ -1968,21 +1240,15 @@ namespace CRS.Migrations
                 {
                     b.HasOne("CRS.Data.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ApplicationUserId");
 
                     b.HasOne("CRS.Models.Community", "Community")
                         .WithMany()
-                        .HasForeignKey("CommunityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CommunityId");
 
                     b.HasOne("CRS.Models.Contact", "Contact")
                         .WithMany()
-                        .HasForeignKey("ContactId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ContactId");
 
                     b.HasOne("CRS.Models.PropertyManager", "PropertyManager")
                         .WithMany()
@@ -2133,16 +1399,16 @@ namespace CRS.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", null)
                         .WithMany()
@@ -2151,7 +1417,7 @@ namespace CRS.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", null)
                         .WithMany()
@@ -2160,9 +1426,9 @@ namespace CRS.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2175,7 +1441,7 @@ namespace CRS.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", null)
                         .WithMany()

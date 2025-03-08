@@ -1,0 +1,31 @@
+﻿@using CRS.Data
+
+<MudDialog>
+    <DialogContent>
+        <MudSelect T="ApplicationUser" Label="Select Specialist" @bind-Value="selectedSpecialist">
+            @foreach (var user in specialists) {
+                <MudSelectItem Value="user">@user.FullName</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Submit" Color="Color.Primary">Submit</MudButton>
+        <MudButton OnClick="Cancel" Color="Color.Secondary">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    private IMudDialogInstance MudDialog { get; set; }
+    
+    [Parameter] public List<ApplicationUser> specialists { get; set; }
+    private ApplicationUser selectedSpecialist;
+
+    private void Submit() {
+        MudDialog.Close(DialogResult.Ok(selectedSpecialist));
+    }
+
+    private void Cancel() {
+        MudDialog.Cancel();
+    }
+}

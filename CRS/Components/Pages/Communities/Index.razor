@@ -1,5 +1,5 @@
 ﻿@attribute [Authorize]
-@page "/ReserveStudies"
+@page "/Communities"
 @using CRS.Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
@@ -9,18 +9,18 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ISnackbar Snackbar
 
-<PageTitle>Active Studies</PageTitle>
+<PageTitle>Communities</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @if (isLoading) {
         <MudPaper Elevation="25" Class="pa-8">
             <MudProgressLinear Color="Color.Info" Indeterminate="true" />
-            <MudText Typo="Typo.h5" Class="mt-4">Loading Reserve Studies...</MudText>
+            <MudText Typo="Typo.h5" Class="mt-4">Loading Communities...</MudText>
         </MudPaper>
     }
-    else if (reserveStudies == null || !reserveStudies.Any()) {
+    else if (communities == null || !communities.Any()) {
         <MudAlert Severity="Severity.Info">
-            <MudText Typo="Typo.body1">No reserve studies found.</MudText>
+            <MudText Typo="Typo.body1">No communities found.</MudText>
         </MudAlert>
     }
     else {
@@ -28,7 +28,7 @@
             <MudCardHeader>
                 <MudGrid>
                     <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.h6" Class="mt-1">@reserveStudies.Count Active Studies</MudText>
+                        <MudText Typo="Typo.h6" Class="mt-1">@communities.Count Active Communities</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" Class="d-flex justify-end align-center gap-2">
                         <MudTextField @bind-Value="searchString" Placeholder="Search..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Class="mt-0" />
@@ -36,50 +36,31 @@
                 </MudGrid>
             </MudCardHeader>
             <MudCardContent>
-                <MudTable Items="@(FilteredStudies)"
+                <MudTable Items="@(FilteredCommunities)"
                           Dense="true"
                           Hover="true"
                           Elevation="0"
                           Loading="@isLoading"
                           SortLabel="Sort by"
-                          Filter="@(study => FilterFunc(study, searchString))">
+                          Filter="@(community => FilterFunc(community, searchString))">
                     <HeaderContent>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Community.Name)">COMMUNITY</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact.FullNameInverted)">CONTACT</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact.Email)">EMAIL</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact.Phone)">PHONE</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Specialist.FullName)">SPECIALIST</MudTableSortLabel></MudTh>
+                        <MudTh>
+                            <MudTableSortLabel T="Community" SortBy="@(x => x.Name)">Name</MudTableSortLabel>
+                        </MudTh>
                         <MudTh></MudTh>
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Community">
-                            <MudText Typo="Typo.h5" Class="fw-bold">@context.Community.Name</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Contact">
-                            <MudText Typo="Typo.body1">@context.PointOfContact?.FullNameInverted</MudText>
-                            <MudText Typo="Typo.caption">@context.PointOfContact?.CompanyName</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Email">
-                            <MudLink Href="@($"mailto:{context.PointOfContact?.Email}")">@context.PointOfContact?.Email</MudLink>
-                        </MudTd>
-                        <MudTd DataLabel="Phone">
-                            <MudText Typo="Typo.body1">@context.PointOfContact?.Phone</MudText>
-                            @if (!string.IsNullOrEmpty(context.PointOfContact?.Extension)) {
-                                <MudText Typo="Typo.caption">ext. @context.PointOfContact?.Extension</MudText>
-                            }
-                        </MudTd>
-                        <MudTd DataLabel="Specialist">
-                            <MudText Typo="Typo.body1">@context.Specialist?.FullName</MudText>
-                            <MudText Typo="Typo.caption">@context.Specialist?.Email</MudText>
+                        <MudTd DataLabel="Name">
+                            <MudText Typo="Typo.h5" Class="fw-bold">@context.Name</MudText>
                         </MudTd>
                         <MudTd>
-                            <MudButton Href="@($"ReserveStudies/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
+                            <MudButton Href="@($"Communities/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
                                 View
                             </MudButton>
                         </MudTd>
                     </RowTemplate>
                     <LoadingContent>
-                        <MudText>Loading studies...</MudText>
+                        <MudText>Loading Communities...</MudText>
                     </LoadingContent>
                     <NoRecordsContent>
                         <MudText>No matching records found</MudText>
@@ -92,9 +73,10 @@
         </MudCard>
     }
 </MudContainer>
-
 @code {
     private List<ReserveStudy> reserveStudies;
+
+    private List<Community> communities = new();
     private ApplicationUser currentUser;
     private IList<string> userRoles;
     private bool isLoading = true;
@@ -108,12 +90,10 @@
             var user = authState.User;
 
             if (user.Identity is not null && user.Identity.IsAuthenticated) {
-                //Snackbar.Add($"{user.Identity.Name} is authenticated.", Severity.Success);
-
                 await GetCurrentUserInfo(user);
                 await GetUserRoles();
 
-                LoadReserveStudies();
+                LoadCommunities();
             }
             else {
                 Snackbar.Add("User not authenticated.", Severity.Warning);
@@ -123,25 +103,17 @@
         }
         catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-            //reserveStudies = new List<ReserveStudy>();
         }
         finally {
             isLoading = false;
         }
     }
 
-    private void LoadReserveStudies() {
-        isLoading = true;
-
-        // try {
+    private void LoadCommunities() {
         using var context = DbFactory.CreateDbContext();
         var query = context.ReserveStudies
             .AsNoTracking()
             .Include(rs => rs.Community)
-            .Include(rs => rs.Contact)
-            .Include(rs => rs.PropertyManager)
-            .Include(rs => rs.Specialist)
-            .Include(rs => rs.User)
             .AsSplitQuery();
 
         reserveStudies = userRoles.Contains("Admin") ? query.ToList() :
@@ -149,29 +121,24 @@
                        userRoles.Contains("User") ? query.Where(rs => rs.ApplicationUserId == currentUser.Id).ToList() :
                        new List<ReserveStudy>();
 
-        // }
-        // catch (Exception ex) {
-        //     Snackbar.Add($"Database error: {ex.Message}", Severity.Error);
-        //     reserveStudies = new List<ReserveStudy>();
-        // }
-        // finally {
-        isLoading = false;
-        //     StateHasChanged();
-        // }
+        foreach (ReserveStudy reserveStudy in reserveStudies) {
+            communities.Add(reserveStudy.Community);
+        }
     }
 
-    private IEnumerable<ReserveStudy> FilteredStudies => reserveStudies.Where(study => FilterFunc(study, searchString));
+    private IEnumerable<Community> FilteredCommunities => communities.Where(community => FilterFunc(community, searchString));
 
-    private bool FilterFunc(ReserveStudy study, string searchString) {
+    private bool FilterFunc(Community community, string searchString) {
         if (string.IsNullOrWhiteSpace(searchString)) {
             return true;
         }
 
         searchString = searchString.Trim().ToLower();
-        return study.Community?.Name?.ToLower().Contains(searchString) == true ||
-               study.PointOfContact?.FullName?.ToLower().Contains(searchString) == true ||
-               study.PointOfContact?.Email?.ToLower().Contains(searchString) == true ||
-               study.Specialist?.FullName?.ToLower().Contains(searchString) == true;
+        return community.Name?.ToLower().Contains(searchString) == true ||
+            community.Addresses?.Any(address => address.Street?.ToLower().Contains(searchString) == true ||
+                address.City?.ToLower().Contains(searchString) == true ||
+                address.State?.ToLower().Contains(searchString) == true ||
+                address.Zip?.ToLower().Contains(searchString) == true) == true;
     }
 
     private async Task GetCurrentUserInfo(ClaimsPrincipal user) {

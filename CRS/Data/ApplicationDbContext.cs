@@ -1,114 +1,42 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
+﻿using System.Security.Claims;
+
 using CRS.Models;
 
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+
 namespace CRS.Data {
-    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options) {
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid> {
+        private const string DefaultSchema = "crs";
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor)
+            : base(options) {
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
+            base.OnConfiguring(optionsBuilder);
+
+            optionsBuilder
+                .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
+                //.ConfigureWarnings(w => w.Throw(SqlServerEventId.SavepointsDisabledBecauseOfMARS))
+                .UseSeeding((context, _) => {
+                    SeedData(context);
+                });
+        }
+
         protected override void OnModelCreating(ModelBuilder builder) {
             base.OnModelCreating(builder);
 
-            builder.HasDefaultSchema("crs");
+            builder.HasDefaultSchema(DefaultSchema);
 
-            var staticDate = new DateTime(2025, 2, 1, 17, 56, 22, DateTimeKind.Local);
+            ConfigureEntities(builder);
+        }
 
-            builder.Entity<BuildingElement>().HasData(
-                new BuildingElement { Id = 1, Name = "Pitched Roof", IsActive = true, NeedsService = true, DateCreated = staticDate },
-                new BuildingElement { Id = 2, Name = "Flat Roof", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 3, Name = "Siding", IsActive = true, NeedsService = true, DateCreated = staticDate },
-                new BuildingElement { Id = 4, Name = "Gutters/Downspouts", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 5, Name = "Attached Lighting", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 6, Name = "Shutters", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 7, Name = "Decks", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 8, Name = "Flooring", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 9, Name = "Lighting", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 10, Name = "Intercom", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 11, Name = "Security System", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 12, Name = "Elevator(s)", IsActive = true, NeedsService = true, DateCreated = staticDate },
-                new BuildingElement { Id = 13, Name = "AC Unit(s)", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 14, Name = "Heating Unit(s)", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 15, Name = "Water Unit(s)", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 16, Name = "Kitchen", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 17, Name = "Bathroom(s)", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 18, Name = "Doors", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 19, Name = "Windows", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new BuildingElement { Id = 20, Name = "Balconies", IsActive = true, NeedsService = false, DateCreated = staticDate }
-            );
-
-            builder.Entity<CommonElement>().HasData(
-                new CommonElement { Id = 1, Name = "Clubhouse", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 2, Name = "Pool", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 3, Name = "Playground", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 4, Name = "Tennis/Ball Courts", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 5, Name = "Property Fencing", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 6, Name = "Pool(s)/Lake(s)", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 7, Name = "Gazebos(s)/Pavilion(s)", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 8, Name = "Entry Signage/Structure(s)", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 9, Name = "Street Signage", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 10, Name = "Roads", IsActive = true, NeedsService = true, DateCreated = staticDate },
-                new CommonElement { Id = 11, Name = "Catch Basins", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 12, Name = "Parking", IsActive = true, NeedsService = true, DateCreated = staticDate },
-                new CommonElement { Id = 13, Name = "Sidewalks", IsActive = true, NeedsService = true, DateCreated = staticDate },
-                new CommonElement { Id = 14, Name = "Driveways", IsActive = true, NeedsService = true, DateCreated = staticDate },
-                new CommonElement { Id = 15, Name = "Patios", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 16, Name = "Porches", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 17, Name = "Privacy Fencing", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 18, Name = "Garage(s)", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 19, Name = "Pump Station", IsActive = true, NeedsService = true, DateCreated = staticDate },
-                new CommonElement { Id = 20, Name = "Retaining Walls", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 21, Name = "Fountains", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 22, Name = "Property Lighting", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 23, Name = "Street Lighting", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 24, Name = "Paved Trails/Paths", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 25, Name = "Mail Huts/Boxes", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 26, Name = "Fire Hydrants", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 27, Name = "Sports Fields", IsActive = true, NeedsService = false, DateCreated = staticDate },
-                new CommonElement { Id = 28, Name = "Shed(s)/Storage", IsActive = true, NeedsService = false, DateCreated = staticDate }
-            );
-
-            builder.Entity<ElementMeasurementOptions>().HasData(
-                new ElementMeasurementOptions { Id = 1, DisplayText = "Square Feet", Unit = "sq. ft.", ZOrder = 0, DateCreated = staticDate },
-                new ElementMeasurementOptions { Id = 2, DisplayText = "Linear Feet", Unit = "LF.", ZOrder = 0, DateCreated = staticDate },
-                new ElementMeasurementOptions { Id = 3, DisplayText = "Each", Unit = "ea.", ZOrder = 0, DateCreated = staticDate }
-            );
-
-            builder.Entity<ElementRemainingLifeOptions>().HasData(
-                new ElementRemainingLifeOptions { Id = 1, DisplayText = "1-5 Years", Unit = "1-5", ZOrder = 0, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 2, DisplayText = "6-10 Years", Unit = "6-10", ZOrder = 1, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 3, DisplayText = "11-15 Years", Unit = "11-15", ZOrder = 2, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 4, DisplayText = "16-20 Years", Unit = "16-20", ZOrder = 3, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 5, DisplayText = "21-25 Years", Unit = "21-25", ZOrder = 4, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 6, DisplayText = "26-30 Years", Unit = "26-30", ZOrder = 5, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 7, DisplayText = "31-35 Years", Unit = "31-35", ZOrder = 6, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 8, DisplayText = "36-40 Years", Unit = "36-40", ZOrder = 7, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 9, DisplayText = "41-45 Years", Unit = "41-45", ZOrder = 8, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 10, DisplayText = "46-50 Years", Unit = "46-50", ZOrder = 9, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 11, DisplayText = "51-55 Years", Unit = "51-55", ZOrder = 10, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 12, DisplayText = "56-60 Years", Unit = "56-60", ZOrder = 11, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 13, DisplayText = "61-65 Years", Unit = "61-65", ZOrder = 12, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 14, DisplayText = "66-70 Years", Unit = "66-70", ZOrder = 13, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 15, DisplayText = "71-75 Years", Unit = "71-75", ZOrder = 14, DateCreated = staticDate },
-                new ElementRemainingLifeOptions { Id = 16, DisplayText = "76-80 Years", Unit = "76-80", ZOrder = 15, DateCreated = staticDate }
-            );
-
-            builder.Entity<ElementUsefulLifeOptions>().HasData(
-                new ElementUsefulLifeOptions { Id = 1, DisplayText = "1-5 Years", Unit = "1-5", ZOrder = 0, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 2, DisplayText = "6-10 Years", Unit = "6-10", ZOrder = 1, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 3, DisplayText = "11-15 Years", Unit = "11-15", ZOrder = 2, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 4, DisplayText = "16-20 Years", Unit = "16-20", ZOrder = 3, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 5, DisplayText = "21-25 Years", Unit = "21-25", ZOrder = 4, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 6, DisplayText = "26-30 Years", Unit = "26-30", ZOrder = 5, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 7, DisplayText = "31-35 Years", Unit = "31-35", ZOrder = 6, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 8, DisplayText = "36-40 Years", Unit = "36-40", ZOrder = 7, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 9, DisplayText = "41-45 Years", Unit = "41-45", ZOrder = 8, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 10, DisplayText = "46-50 Years", Unit = "46-50", ZOrder = 9, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 11, DisplayText = "51-55 Years", Unit = "51-55", ZOrder = 10, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 12, DisplayText = "56-60 Years", Unit = "56-60", ZOrder = 11, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 13, DisplayText = "61-65 Years", Unit = "61-65", ZOrder = 12, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 14, DisplayText = "66-70 Years", Unit = "66-70", ZOrder = 13, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 15, DisplayText = "71-75 Years", Unit = "71-75", ZOrder = 14, DateCreated = staticDate },
-                new ElementUsefulLifeOptions { Id = 16, DisplayText = "76-80 Years", Unit = "76-80", ZOrder = 15, DateCreated = staticDate }
-            );
-
+        private void ConfigureEntities(ModelBuilder builder) {
             builder.Entity<ReserveStudyBuildingElement>()
                 .HasKey(rsbe => new { rsbe.ReserveStudyId, rsbe.BuildingElementId });
 
@@ -135,6 +63,51 @@ namespace CRS.Data {
                 .WithMany(ce => ce.ReserveStudyCommonElements)
                 .HasForeignKey(rsbe => rsbe.CommonElementId);
         }
+
+        public override int SaveChanges() {
+            AddAuditLogs();
+            return base.SaveChanges();
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) {
+            AddAuditLogs();
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
+        private Guid? GetCurrentUserId() {
+            var userIdString = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            return userIdString != null && Guid.TryParse(userIdString, out Guid userId) ? userId : null;
+        }
+
+        private void AddAuditLogs() {
+            var entries = ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Modified)
+                .ToList();
+
+            foreach (var entry in entries) {
+                var entityType = entry.Entity.GetType();
+                if (entityType == typeof(AuditLog)) continue; // Skip audit logs themselves
+
+                var primaryKey = entry.Properties
+                    .First(p => p.Metadata.IsPrimaryKey())
+                    .CurrentValue?.ToString() ?? "Unknown";
+
+                foreach (var property in entry.Properties.Where(p => p.IsModified)) {
+                    AuditLogs.Add(new AuditLog {
+                        ApplicationUserId = GetCurrentUserId(),
+                        Action = "Update",
+                        TableName = entityType.Name,
+                        RecordId = primaryKey,
+                        ColumnName = property.Metadata.Name,
+                        OldValue = property.OriginalValue?.ToString() ?? "",
+                        NewValue = property.CurrentValue?.ToString() ?? ""
+                    });
+                }
+            }
+        }
+
+
+        #region DbSet Properties
         public DbSet<Address> Addresses { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<BuildingElement> BuildingElements { get; set; }
@@ -156,5 +129,165 @@ namespace CRS.Data {
         public DbSet<ReserveStudy> ReserveStudies { get; set; }
         public DbSet<ServiceContact> ServiceContacts { get; set; }
         public DbSet<Settings> Settings { get; set; }
+        #endregion
+
+        #region Seed Data
+        private void SeedData(DbContext context) {
+            GenerateBuildingElements(context);
+            context.SaveChanges();
+            GenerateCommonElements(context);
+            context.SaveChanges();
+            GenerateElementMeasurementOptions(context);
+            context.SaveChanges();
+            GenerateElementRemainingLifeOptions(context);
+            context.SaveChanges();
+            GenerateElementUsefulLifeOptions(context);
+            context.SaveChanges();
+        }
+
+        private void GenerateBuildingElements(DbContext context) {
+            IEnumerable<BuildingElement> buildingElements =
+            [
+                new BuildingElement {  Name = "Pitched Roof", IsActive = true, NeedsService = true },
+                new BuildingElement {  Name = "Flat Roof", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Siding", IsActive = true, NeedsService = true },
+                new BuildingElement {  Name = "Gutters/Downspouts", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Attached Lighting", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Shutters", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Decks", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Flooring", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Lighting", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Intercom", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Security System", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Elevator(s)", IsActive = true, NeedsService = true },
+                new BuildingElement {  Name = "AC Unit(s)", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Heating Unit(s)", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Water Unit(s)", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Kitchen", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Bathroom(s)", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Doors", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Windows", IsActive = true, NeedsService = false },
+                new BuildingElement {  Name = "Balconies", IsActive = true, NeedsService = false }
+            ];
+
+            foreach (BuildingElement buildingElement in buildingElements) {
+                BuildingElement element = context.Set<BuildingElement>().FirstOrDefault(e => e.Name == buildingElement.Name);
+                if (element is null) {
+                    context.Set<BuildingElement>().Add(buildingElement);
+                }
+            }
+        }
+
+        private void GenerateCommonElements(DbContext context) {
+            IEnumerable<CommonElement> commonElements =
+            [
+                new CommonElement {  Name = "Clubhouse", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Pool", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Playground", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Tennis/Ball Courts", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Property Fencing", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Pool(s)/Lake(s)", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Gazebos(s)/Pavilion(s)", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Entry Signage/Structure(s)", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Street Signage", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Roads", IsActive = true, NeedsService = true },
+                new CommonElement {  Name = "Catch Basins", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Parking", IsActive = true, NeedsService = true },
+                new CommonElement {  Name = "Sidewalks", IsActive = true, NeedsService = true },
+                new CommonElement {  Name = "Driveways", IsActive = true, NeedsService = true },
+                new CommonElement {  Name = "Patios", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Porches", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Privacy Fencing", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Garage(s)", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Pump Station", IsActive = true, NeedsService = true },
+                new CommonElement {  Name = "Retaining Walls", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Fountains", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Property Lighting", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Street Lighting", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Paved Trails/Paths", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Mail Huts/Boxes", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Fire Hydrants", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Sports Fields", IsActive = true, NeedsService = false },
+                new CommonElement {  Name = "Shed(s)/Storage", IsActive = true, NeedsService = false }
+            ];
+            foreach (CommonElement commonElement in commonElements) {
+                CommonElement element = context.Set<CommonElement>().FirstOrDefault(e => e.Name == commonElement.Name);
+                if (element is null) {
+                    context.Set<CommonElement>().Add(commonElement);
+                }
+            }
+        }
+
+        private void GenerateElementMeasurementOptions(DbContext context) {
+            IEnumerable<ElementMeasurementOptions> elementMeasurementOptions =
+            [
+                new ElementMeasurementOptions {  DisplayText = "Square Feet", Unit = "sq. ft.", ZOrder = 0 },
+                new ElementMeasurementOptions {  DisplayText = "Linear Feet", Unit = "LF.", ZOrder = 0 },
+                new ElementMeasurementOptions {  DisplayText = "Each", Unit = "ea.", ZOrder = 0 }
+            ];
+            foreach (ElementMeasurementOptions elementMeasurementOption in elementMeasurementOptions) {
+                ElementMeasurementOptions option = context.Set<ElementMeasurementOptions>().FirstOrDefault(e => e.DisplayText == elementMeasurementOption.DisplayText);
+                if (option is null) {
+                    context.Set<ElementMeasurementOptions>().Add(elementMeasurementOption);
+                }
+            }
+        }
+
+        private void GenerateElementRemainingLifeOptions(DbContext context) {
+            IEnumerable<ElementRemainingLifeOptions> elementRemainingLifeOptions =
+            [
+                new ElementRemainingLifeOptions {  DisplayText = "1-5 Years", Unit = "1-5", ZOrder = 0 },
+                new ElementRemainingLifeOptions {  DisplayText = "6-10 Years", Unit = "6-10", ZOrder = 1 },
+                new ElementRemainingLifeOptions {  DisplayText = "11-15 Years", Unit = "11-15", ZOrder = 2 },
+                new ElementRemainingLifeOptions {  DisplayText = "16-20 Years", Unit = "16-20", ZOrder = 3 },
+                new ElementRemainingLifeOptions {  DisplayText = "21-25 Years", Unit = "21-25", ZOrder = 4 },
+                new ElementRemainingLifeOptions {  DisplayText = "26-30 Years", Unit = "26-30", ZOrder = 5 },
+                new ElementRemainingLifeOptions {  DisplayText = "31-35 Years", Unit = "31-35", ZOrder = 6 },
+                new ElementRemainingLifeOptions {  DisplayText = "36-40 Years", Unit = "36-40", ZOrder = 7 },
+                new ElementRemainingLifeOptions {  DisplayText = "41-45 Years", Unit = "41-45", ZOrder = 8 },
+                new ElementRemainingLifeOptions {  DisplayText = "46-50 Years", Unit = "46-50", ZOrder = 9 },
+                new ElementRemainingLifeOptions {  DisplayText = "51-55 Years", Unit = "51-55", ZOrder = 10 },
+                new ElementRemainingLifeOptions {  DisplayText = "61-65 Years", Unit = "61-65", ZOrder = 12 },
+                new ElementRemainingLifeOptions {  DisplayText = "66-70 Years", Unit = "66-70", ZOrder = 13 },
+                new ElementRemainingLifeOptions {  DisplayText = "71-75 Years", Unit = "71-75", ZOrder = 14 },
+                new ElementRemainingLifeOptions {  DisplayText = "76-80 Years", Unit = "76-80", ZOrder = 15 }
+            ];
+            foreach (ElementRemainingLifeOptions elementRemainingLifeOption in elementRemainingLifeOptions) {
+                ElementRemainingLifeOptions option = context.Set<ElementRemainingLifeOptions>().FirstOrDefault(e => e.DisplayText == elementRemainingLifeOption.DisplayText);
+                if (option is null) {
+                    context.Set<ElementRemainingLifeOptions>().Add(elementRemainingLifeOption);
+                }
+            }
+        }
+
+        private void GenerateElementUsefulLifeOptions(DbContext context) {
+            IEnumerable<ElementUsefulLifeOptions> elementUsefulLifeOptions =
+            [
+                new ElementUsefulLifeOptions {  DisplayText = "1-5 Years", Unit = "1-5", ZOrder = 0 },
+                new ElementUsefulLifeOptions {  DisplayText = "6-10 Years", Unit = "6-10", ZOrder = 1 },
+                new ElementUsefulLifeOptions {  DisplayText = "11-15 Years", Unit = "11-15", ZOrder = 2 },
+                new ElementUsefulLifeOptions {  DisplayText = "16-20 Years", Unit = "16-20", ZOrder = 3 },
+                new ElementUsefulLifeOptions {  DisplayText = "21-25 Years", Unit = "21-25", ZOrder = 4 },
+                new ElementUsefulLifeOptions {  DisplayText = "26-30 Years", Unit = "26-30", ZOrder = 5 },
+                new ElementUsefulLifeOptions {  DisplayText = "31-35 Years", Unit = "31-35", ZOrder = 6 },
+                new ElementUsefulLifeOptions {  DisplayText = "36-40 Years", Unit = "36-40", ZOrder = 7 },
+                new ElementUsefulLifeOptions {  DisplayText = "41-45 Years", Unit = "41-45", ZOrder = 8 },
+                new ElementUsefulLifeOptions {  DisplayText = "46-50 Years", Unit = "46-50", ZOrder = 9 },
+                new ElementUsefulLifeOptions {  DisplayText = "51-55 Years", Unit = "51-55", ZOrder = 10 },
+                new ElementUsefulLifeOptions {  DisplayText = "56-60 Years", Unit = "56-60", ZOrder = 11 },
+                new ElementUsefulLifeOptions {  DisplayText = "61-65 Years", Unit = "61-65", ZOrder = 12 },
+                new ElementUsefulLifeOptions {  DisplayText = "66-70 Years", Unit = "66-70", ZOrder = 13 },
+                new ElementUsefulLifeOptions {  DisplayText = "71-75 Years", Unit = "71-75", ZOrder = 14 },
+                new ElementUsefulLifeOptions {  DisplayText = "76-80 Years", Unit = "76-80", ZOrder = 15 }
+            ];
+            foreach (ElementUsefulLifeOptions elementUsefulLifeOption in elementUsefulLifeOptions) {
+                ElementUsefulLifeOptions option = context.Set<ElementUsefulLifeOptions>().FirstOrDefault(e => e.DisplayText == elementUsefulLifeOption.DisplayText);
+                if (option is null) {
+                    context.Set<ElementUsefulLifeOptions>().Add(elementUsefulLifeOption);
+                }
+            }
+        }
+        #endregion
     }
 }
+

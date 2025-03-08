@@ -1,11 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 using CRS.Data;
 
 namespace CRS.Models {
     public class Profile : BaseModel {
-        public required ApplicationUser User { get; set; }
-        public required string ApplicationUserId { get; set; }
+        public ApplicationUser User { get; set; }
+        [ForeignKey(nameof(ApplicationUser))] public Guid ApplicationUserId { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         [DataType(DataType.EmailAddress)] public string? Email { get; set; }

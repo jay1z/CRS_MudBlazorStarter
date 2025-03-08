@@ -1,5 +1,5 @@
-﻿@attribute [Authorize(Roles = "User")]
-@page "/reservestudies/create"
+﻿@page "/ReserveStudies/Create"
+@attribute [Authorize(Roles = "User")]
 @using CRS.Components.Layout
 @using CRS.Components.Pages.ReserveStudyPages.Steps
 @using CRS.Data
@@ -21,7 +21,7 @@
             <MudStepper @bind-ActiveStep="activeStep" Linear="true" CenterLabels="true" CompletedStepColor="Color.Success" CurrentStepColor="Color.Primary" Class="mb-4" @ref="stepper">
                 <ChildContent>
                     <MudStep Title="Community Information" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
-                        <Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated"  />
+                        <Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated" />
                     </MudStep>
                     <MudStep Title="Property Manager" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
                         <Step2 @ref="step2" Model="Model" StepValidated="OnStepValidated" />
@@ -37,39 +37,33 @@
                     <Step5 />
                 </CompletedContent>
                 <ActionContent Context="stepper">
-                    @if (!_completed)
-                    {
+                    @if (!_completed) {
                         <MudGrid Justify="Justify.SpaceBetween" Class="mt-4">
                             <MudItem>
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="activeStep <= 0" OnClick="PreviousStep">
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="activeStep <= 0" OnClick="PreviousStep">
                                     <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-2" />
                                     Back
                                 </MudButton>
                             </MudItem>
                             <MudItem>
-                                @if (activeStep < totalSteps - 1)
-                                {
+                                @if (activeStep < totalSteps - 1) {
                                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextStep">
                                         Continue
                                         <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="ml-2" />
                                     </MudButton>
                                 }
-                                else
-                                {
-                                    @if (AcceptTerms)
-                                    {
+                                else {
+                                    @if (AcceptTerms) {
                                         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitForm" Disabled="isSubmitting">
                                             <span class="mud-button-content">
                                                 Submit
-                                                @if (isSubmitting)
-                                                {
+                                                @if (isSubmitting) {
                                                     <MudProgressCircular Indeterminate="true" Color="Color.Inherit" Class="ml-2" />
                                                 }
                                             </span>
                                         </MudButton>
                                     }
-                                    else
-                                    {
+                                    else {
                                         <MudText Color="Color.Error" Class="mt-2">
                                             You must accept the terms to submit.
                                         </MudText>
@@ -107,28 +101,24 @@
     private Step4? step4;
     private Step5? step5;
 
-    protected override async Task OnInitializedAsync()
-    {
+    protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
 
         var authState = await AuthenticationStateTask!;
         var user = authState.User;
 
-        if (user.Identity?.IsAuthenticated == true)
-        {
+        if (user.Identity?.IsAuthenticated == true) {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("User ID not found.");
 
-            var layoutType = IsUserOnly(user) ? typeof(UserLayout) : typeof(MainLayout);
-            Routes!.SetLayout(layoutType);
+            // var layoutType = IsUserOnly(user) ? typeof(UserLayout) : typeof(MainLayout);
+            Routes!.SetLayout(typeof(MainLayout));
 
-            Model = new ReserveStudy
-                {
-                    ApplicationUserId = userId,
-                    Community = new Community()
-                    {
+            Model = new ReserveStudy {
+                    ApplicationUserId = GetCurrentUserId(user),
+                    Community = new Community() {
                         Name = "Community 1",
                         Addresses = new List<Address>()
-                        {
+                            {
                             new Address()
                             {
                                 Street = "123 Main St",
@@ -138,16 +128,14 @@
                             }
                         }
                     },
-                    Contact = new Contact()
-                    {
+                    Contact = new Contact() {
                         FirstName = "Peter",
                         LastName = "Zurowski",
-                        Email = "peter@email.com",
+                        Email = "peter@zurowski.com",
                         Phone = "123-456-7890",
                         Extension = "123",
                     },
-                    PropertyManager = new PropertyManager()
-                    {
+                    PropertyManager = new PropertyManager() {
                         FirstName = "Jeff",
                         LastName = "Ripple",
                         CompanyName = "Ripple Property Management",
@@ -155,37 +143,29 @@
                         Phone = "123-456-7891"
                     },
                     ReserveStudyAdditionalElements = new List<ReserveStudyAdditionalElement>(),
-                    IsActive = true,
-                    DateCreated = DateTime.Now
+                    IsActive = true
                 };
 
             context = await DbFactory.CreateDbContextAsync();
         }
-        else
-        {
+        else {
             NavigationManager.NavigateTo("/login");
         }
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (context != null)
-        {
+    public async ValueTask DisposeAsync() {
+        if (context != null) {
             await context.DisposeAsync();
         }
     }
 
-    private Task OnAcceptTermsChanged(bool value)
-    {
+    private Task OnAcceptTermsChanged(bool value) {
         AcceptTerms = value;
         return Task.CompletedTask;
     }
 
-
-    private async Task NextStep()
-    {
-        bool isValid = activeStep switch
-        {
+    private async Task NextStep() {
+        bool isValid = activeStep switch {
             0 => step1 != null && await step1.ValidateAsync(),
             1 => step2 != null && await step2.ValidateAsync(),
             2 => step3 != null && await step3.ValidateAsync(),
@@ -193,63 +173,60 @@
             _ => false
         };
 
-        if (isValid)
-        {
+        if (isValid) {
             activeStep++;
             await stepper!.NextStepAsync();
         }
-        else
-        {
-            if (activeStep == 4)
-            {
+        else {
+            if (activeStep == 4) {
                 Snackbar.Add("You must accept the terms to proceed.", Severity.Error);
             }
-            else
-            {
+            else {
                 Snackbar.Add("Please correct the errors before proceeding.", Severity.Error);
             }
         }
     }
 
-    private async Task PreviousStep()
-    {
-        if (activeStep > 0)
-        {
+    private async Task PreviousStep() {
+        if (activeStep > 0) {
             activeStep--;
             await stepper!.PreviousStepAsync();
         }
     }
 
-    private async Task SubmitForm()
-    {
+    private async Task SubmitForm() {
         isSubmitting = true;
-        try
-        {
-            context.ReserveStudies.Add(Model!);
+        try {
+            context!.ReserveStudies.Add(Model!);
             await context.SaveChangesAsync();
-            
+
             Snackbar.Add("Reserve Study submitted successfully!", Severity.Success);
             await NextStep();
             _completed = true;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error: {ex.InnerException}", Severity.Error);
         }
-        finally
-        {
+        finally {
             isSubmitting = false;
         }
     }
 
-    private void OnStepValidated(bool isValid)
-    {
+    private void OnStepValidated(bool isValid) {
         stepValidationState[activeStep] = isValid;
         StateHasChanged();
     }
 
-    private bool IsUserOnly(ClaimsPrincipal user)
-    {
+    private Guid? GetCurrentUserId(ClaimsPrincipal user) {
+        var userIdString = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userIdString == null || !Guid.TryParse(userIdString, out Guid userId)) {
+            throw new InvalidOperationException("User ID not found or invalid");
+        }
+        return userId;
+    }
+
+    private bool IsUserOnly(ClaimsPrincipal user) {
         return user.IsInRole("User") && !user.IsInRole("Admin") && !user.IsInRole("Specialist");
     }
 }

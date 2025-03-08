@@ -1,14 +1,16 @@
-﻿using CRS.Data;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+using CRS.Data;
 
 namespace CRS.Models {
     public class AuditLog : BaseModel {
-        public required ApplicationUser User { get; set; }
-        public required string ApplicationUserId { get; set; }
-        public required string Action { get; set; }
-        public required string TableName { get; set; }
-        public required string RecordId { get; set; }
-        public required string ColumnName { get; set; }
-        public required string OldValue { get; set; }
-        public required string NewValue { get; set; }
+        public ApplicationUser? User { get; set; }
+        [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
+        public string? Action { get; set; }
+        public string? TableName { get; set; }
+        public string? RecordId { get; set; }
+        public string? ColumnName { get; set; }
+        public string? OldValue { get; set; }
+        public string? NewValue { get; set; }
     }
 }

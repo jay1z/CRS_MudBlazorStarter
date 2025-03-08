@@ -3,6 +3,9 @@
 
 @using CRS.Components.Layout
 
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject INavigationService NavigationService
+
 <PageTitle>Reserve Study - Community Reserve Specialists</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
@@ -208,28 +211,34 @@
     [CascadingParameter]
     public Routes? Routes { get; set; }
 
-    private IEnumerable<TeamMember> teamMembers = new List<TeamMember>() {
-         new TeamMember() {Name = "Lian Velasco", Description="Lian is our Narrative Coordinator. Lian is helping develop and maintain our new, more efficient report processing. She attended Kent Roosevelt High School where she played on the Varsity Tennis team for 2 years and graduated Magna Cum Laude in 2021. Lian enjoys traveling and art, and since coming to the US in 2015 from the Philippines, has visited many cities throughout Canada and cruised into many ports along the Eastern US Coast. Lian is currently attending Kent State University pursuing a degree in the Aviation field." },
-         new TeamMember() {Name = "John Stojak, R.A.", Description="John is our Research Analyst, he has over 20 years of experience as a Board President for a Condominium Owners Association in northeast Ohio and 20+ years as a managing partner in a Sales and Marketing company in the automotive and truck aftermarket. This experience has helped to foster a sense of attention to detail, project planning and understanding association documents. Personally, John is happily married with two children and two grandchildren residing in Northeast and Central Ohio. John graduated from the Illinois Institute of Technology with B.S. in Economics and a background in architectural studies. Hobbies include volunteering for youth Ice hockey programs in northeast Ohio for ages 5 through High School." },
-         new TeamMember() {Name = "Pete Zurowski, S.R.A.", Description="Pete is our Senior Research Analyst (S.R.A.). With over 15 years of expertise as an Association Manager and over 30 years in the construction field, his professional background and experience make him a well-rounded, valuable asset to CRS. Pete is a family man, with his wife of 44 years, 4 children, and 15 grandchildren. He was born, raised, and still resides in Northeast Ohio. Growing up, he was active in the Boy Scouts and went on to play on the golf team in high school. Pete studied at Cuyahoga Community College as he transitioned into Association Management. When he is not working, he enjoys his favorite pastime of golfing and cherishes quality time with family and loved ones." },
-         new TeamMember() {Name = "Jeff Ripple, R.S., P.R.A.", Description="Jeff is our Reserve Specialist (RS), Professional Reserve Analyst (PRA), and Owner of Community Reserve Specialists. Jeff brings with him over 25 years of Business Management experience and has achieved such designations in the Financial Services and Wealth Management  industry as Certified Senior Advisor (CSA), Registered Tax Preparer (RTP), Investment Advisor Representative (IAR) and Licensed P&C Agent. Jeff proudly served in the United States Marine Corps during Desert Shield/Desert Storm and is a decorated Veteran.  With a Criminal Justice degree from the University of Akron, he served as a Law Enforcement Officer upon separation from the Military. He was the youngest to achieve Eagle Scout in the State of Ohio at the time of appointment and was the founder of Mysterious Ways, a small not for profit organization that acquires, repairs and anonymously donates power wheelchairs to those who otherwise could not afford or obtain them. Jeff has performed hundreds of Reserve Studies throughout Ohio." }
-    };
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
 
         Routes!.SetLayout(typeof(HomeLayout));
+
+        //NavigationService Start
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true) {
+            await NavigationService.NavigateToHomePageByRole(authState.User);
+        }
+        //NavigationService End
     }
 
     private class TeamMember {
         public string Name { get; set; }
         public string Description { get; set; }
     }
+    private IEnumerable<TeamMember> teamMembers = new List<TeamMember>() {
+         new TeamMember() {Name = "Lian Velasco", Description="Lian is our Narrative Coordinator. Lian is helping develop and maintain our new, more efficient report processing. She attended Kent Roosevelt High School where she played on the Varsity Tennis team for 2 years and graduated Magna Cum Laude in 2021. Lian enjoys traveling and art, and since coming to the US in 2015 from the Philippines, has visited many cities throughout Canada and cruised into many ports along the Eastern US Coast. Lian is currently attending Kent State University pursuing a degree in the Aviation field." },
+         new TeamMember() {Name = "John Stojak, R.A.", Description="John is our Research Analyst, he has over 20 years of experience as a Board President for a Condominium Owners Association in northeast Ohio and 20+ years as a managing partner in a Sales and Marketing company in the automotive and truck aftermarket. This experience has helped to foster a sense of attention to detail, project planning and understanding association documents. Personally, John is happily married with two children and two grandchildren residing in Northeast and Central Ohio. John graduated from the Illinois Institute of Technology with B.S. in Economics and a background in architectural studies. Hobbies include volunteering for youth Ice hockey programs in northeast Ohio for ages 5 through High School." },
+         new TeamMember() {Name = "Pete Zurowski, S.R.A.", Description="Pete is our Senior Research Analyst (S.R.A.). With over 15 years of expertise as an Association Manager and over 30 years in the construction field, his professional background and experience make him a well-rounded, valuable asset to CRS. Pete is a family man, with his wife of 44 years, 4 children, and 15 grandchildren. He was born, raised, and still resides in Northeast Ohio. Growing up, he was active in the Boy Scouts and went on to play on the golf team in high school. Pete studied at Cuyahoga Community College as he transitioned into Association Management. When he is not working, he enjoys his favorite pastime of golfing and cherishes quality time with family and loved ones." },
+         new TeamMember() {Name = "Jeff Ripple, R.S., P.R.A.", Description="Jeff is our Reserve Specialist (RS), Professional Reserve Analyst (PRA), and Owner of Community Reserve Specialists. Jeff brings with him over 25 years of Business Management experience and has achieved such designations in the Financial Services and Wealth Management  industry as Certified Senior Advisor (CSA), Registered Tax Preparer (RTP), Investment Advisor Representative (IAR) and Licensed P&C Agent. Jeff proudly served in the United States Marine Corps during Desert Shield/Desert Storm and is a decorated Veteran.  With a Criminal Justice degree from the University of Akron, he served as a Law Enforcement Officer upon separation from the Military. He was the youngest to achieve Eagle Scout in the State of Ohio at the time of appointment and was the founder of Mysterious Ways, a small not for profit organization that acquires, repairs and anonymously donates power wheelchairs to those who otherwise could not afford or obtain them. Jeff has performed hundreds of Reserve Studies throughout Ohio." }
+    };
 
     private class Logo {
         public string Src { get; set; }
         public string Alt { get; set; }
     }
-
     private List<Logo> logos = new()
                                                                                     {
         new Logo {

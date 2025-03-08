@@ -3,6 +3,7 @@
 @implements IDisposable
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <MudNavMenu>
     <MudDivider Class="my-2" />
@@ -10,7 +11,7 @@
         <MudText Typo="Typo.h6" Class="px-4">My Application</MudText>
         <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Secondary Text</MudText>
         <MudDivider Class="my-2" />
-        <MudNavLink Href="/shortcuts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AppShortcut" IconColor="Color.Default">Shortcuts</MudNavLink>
+        <MudNavLink Href="/Shortcuts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AppShortcut" IconColor="Color.Primary" Class="mud-text-secondary">Shortcuts</MudNavLink>
     </MudNavMenu>
 
     <AuthorizeView Context="authContext">
@@ -21,50 +22,56 @@
 
         <Authorized>
             <!-- Common Links for All Authenticated Users -->
-            <MudNavLink Href="/dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary">Dashboard</MudNavLink>
+            <MudNavLink Href="/Dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary" Class="mud-text-primary">Dashboard</MudNavLink>
 
             <!-- User Role Specific Links -->
             <AuthorizeView Roles="User">
-                <MudNavGroup Title="Reserve Studies" Expanded="true">
-                    <MudNavLink Href="/reservestudies/create" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Create New Study</MudNavLink>
-                    <MudNavLink Href="/reservestudies/my" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PersonPin">My Requests</MudNavLink>
+                <MudNavGroup Title="Reserve Studies" Expanded="true" Class="mud-text-primary">
+                    <MudNavLink Href="/ReserveStudies/Create" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="mud-text-primary">Create New Study</MudNavLink>
+                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary" Class="mud-text-primary">My Requests</MudNavLink>
                 </MudNavGroup>
 
-                <MudNavLink Href="/communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Business">My Communities</MudNavLink>
+                <MudNavLink Href="/Communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary" Class="mud-text-primary">My Communities</MudNavLink>
             </AuthorizeView>
 
             <!-- Admin Role Specific Links -->
             <AuthorizeView Roles="Admin">
                 <MudNavGroup Title="Administration" Expanded="true">
-                    <MudNavLink Href="/reservestudies" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment">All Studies</MudNavLink>
-                    <MudNavLink Href="/users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PeopleAlt">Users</MudNavLink>
-                    <MudNavLink Href="/communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Business">Communities</MudNavLink>
-                    <MudNavLink Href="/calendar" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth">Calendar</MudNavLink>
-                    <MudNavLink Href="/contacts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Contacts">Contacts</MudNavLink>
+                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary" Class="mud-text-primary">All Requests</MudNavLink>
+                    <MudNavLink Href="/Communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary" Class="mud-text-primary">Communities</MudNavLink>
+                    <MudNavLink Href="/Calendar" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary" Class="mud-text-primary">Calendar</MudNavLink>
+                    <MudNavLink Href="/Contacts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary" Class="mud-text-primary">Contacts</MudNavLink>
+                    <MudNavLink Href="/Users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PeopleAlt" IconColor="Color.Primary" Class="mud-text-primary">Users</MudNavLink>
                 </MudNavGroup>
             </AuthorizeView>
 
             <!-- Specialist Role Specific Links -->
             <AuthorizeView Roles="Specialist">
                 <MudNavGroup Title="Specialist Tools" Expanded="true">
-                    <MudNavLink Href="/reservestudies" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment">Assigned Studies</MudNavLink>
-                    <MudNavLink Href="/calendar" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth">Calendar</MudNavLink>
+                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary" Class="mud-text-primary">Assigned Studies</MudNavLink>
+                    <MudNavLink Href="/Communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary" Class="mud-text-primary">Communities</MudNavLink>
+                    <MudNavLink Href="/Calendar" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary" Class="mud-text-primary">Calendar</MudNavLink>
+                    <MudNavLink Href="/Contacts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary" Class="mud-text-primary">Contacts</MudNavLink>
                 </MudNavGroup>
             </AuthorizeView>
 
             <!-- Common Support Section for All Authenticated Users -->
             <MudDivider Class="my-2" />
             <MudNavGroup Title="Support" Expanded="false">
-                <MudNavLink Href="/help" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Help">Help Center</MudNavLink>
-                <MudNavLink Href="/contact" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ContactSupport">Contact</MudNavLink>
-                <MudNavLink Href="/faqs" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionAnswer">FAQs</MudNavLink>
+                <MudNavLink Href="/Help" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Help" IconColor="Color.Primary" Class="mud-text-primary">Help Center</MudNavLink>
+                <MudNavLink Href="/Contact" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ContactSupport" IconColor="Color.Primary" Class="mud-text-primary">Contact</MudNavLink>
+                <MudNavLink Href="/Faqs" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionAnswer" IconColor="Color.Primary" Class="mud-text-primary">FAQs</MudNavLink>
             </MudNavGroup>
 
             <!-- User Profile Section -->
             <MudDivider Class="my-2" />
             <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix">
-                <MudAvatar Color="Color.Primary" Size="Size.Small">@GetUserInitials(authContext)</MudAvatar>
-                <span class="ml-3">@((authContext.User.Identity as ApplicationUser)?.FullName)</span>
+                @if (user != null) {
+                    <MudText Typo="Typo.body2">
+                        <MudAvatar Color="Color.Primary" Size="Size.Small">@userInitials</MudAvatar>
+                        @($"{user.FullName}")
+                    </MudText>
+                }
             </MudNavLink>
 
             <!-- Logout Form -->
@@ -81,10 +88,22 @@
 
 @code {
     private string? currentUrl;
+    private ApplicationUser? user;
+    private string userInitials = "";
 
-    protected override void OnInitialized() {
+    protected override async Task OnInitializedAsync() {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
+
+        // Get user info for the avatar
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true) {
+            user = await UserManager.GetUserAsync(authState.User);
+            if (user != null) {
+                // userInitials = !string.IsNullOrEmpty(user.FirstName) && !string.IsNullOrEmpty(user.LastName) ? $"{user.FirstName[0]}{user.LastName[0]}".ToUpper() : "";
+                userInitials = GetUserInitials();
+            }
+        }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) {
@@ -92,10 +111,19 @@
         StateHasChanged();
     }
 
-    private string GetUserInitials(AuthenticationState context) {
-        var name = context.User.Identity?.Name ?? "";
-        var parts = name.Split('@')[0].Split('.');
-        return string.Join("", parts.Select(p => p.Length > 0 ? char.ToUpper(p[0]).ToString() : ""));
+    // private string GetUserInitials(AuthenticationState context) {
+    //     var name = context.User.Identity?.Name ?? "";
+    //     var parts = name.Split('@')[0].Split('.');
+    //     return string.Join("", parts.Select(p => p.Length > 0 ? char.ToUpper(p[0]).ToString() : ""));
+    // }
+
+    private string GetUserInitials() {
+        if (user is null) return "";
+
+        var firstInitial = !string.IsNullOrEmpty(user.FirstName) ? user.FirstName[0].ToString().ToUpper() : "";
+        var lastInitial = !string.IsNullOrEmpty(user.LastName) ? user.LastName[0].ToString().ToUpper() : "";
+
+        return $"{firstInitial}{lastInitial}";
     }
 
     public void Dispose() {

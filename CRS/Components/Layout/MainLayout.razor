@@ -17,7 +17,7 @@
     @* <MudThemeManagerButton OnClick="@((e) => OpenThemeManager(true))" />
     <MudThemeManager Open="_themeManagerOpen" OpenChanged="OpenThemeManager" Theme="_themeManager" ThemeChanged="UpdateTheme" />
     <MudAppBar Elevation="_themeManager.AppBarElevation"> *@
-    <MudAppBar Elevation="0">
+    <MudAppBar Elevation="25">
         <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
         <MudText Typo="Typo.h5" Class="ml-3">Community Reserve Specialists</MudText>
         <MudSpacer />
@@ -45,7 +45,6 @@
     </MudScrollToTop>
 </MudLayout>
 
-
 <div id="blazor-error-ui" data-nosnippet>
     @if (HostEnvironment.IsProduction())
     {
@@ -68,7 +67,7 @@
     protected override void OnInitialized()
     {
         ThemeService.OnThemeChanged += StateHasChanged;
-        ThemeService.SetTheme(new Default().Theme!);
+        ThemeService.SetTheme(new Litera().Theme!);
 
         // _themeManager.Theme = CrispyThemeSunsetSerenade.Theme;
         // StateHasChanged();

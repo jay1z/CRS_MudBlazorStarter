@@ -2,10 +2,14 @@
 using System.ComponentModel.DataAnnotations.Schema;
 
 using static CRS.Models.IReserveStudyElement;
+using static MudBlazor.CategoryTypes;
 
 namespace CRS.Models {
     public class ReserveStudyAdditionalElement : BaseModel, IReserveStudyElement {
-        public int? ReserveStudyId { get; set; }
+        public ReserveStudyAdditionalElement() {
+            ServiceContact ??= new ServiceContact();
+        }
+        public Guid? ReserveStudyId { get; set; }
         public ReserveStudy? ReserveStudy { get; set; }
 
         public required string Name { get; set; }

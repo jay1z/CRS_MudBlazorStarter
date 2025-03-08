@@ -1,41 +1,27 @@
 ﻿@inherits LayoutComponentBase
 @attribute [AllowAnonymous]
 @using System.Security.Claims
+@using CRS.Themes
 @inject IHostEnvironment HostEnvironment
 @inject ThemeService ThemeService
 @inject NavigationManager NavigationManager
 
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" />
 <MudPopoverProvider />
-@* <MudDialogProvider />
-<MudSnackbarProvider /> *@
 <MudLayout>
     <MudAppBar Elevation="25">
         <MudText Typo="Typo.h5" Class="ml-3">Community Reserve Specialists</MudText>
         <MudSpacer />
-        @* <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
-            <AuthorizeView>
-                <Authorized>
-                    <MudText Typo="Typo.body1" Class="pa-4">@context.User.Identity?.Name</MudText>
-                    <MudDivider />
-                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/profile"))">Profile</MudMenuItem>
-                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/Account/Logout"))">Logout</MudMenuItem>
-                </Authorized>
-                <NotAuthorized>
-                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/Account/Login"))">Login</MudMenuItem>
-                </NotAuthorized>
-            </AuthorizeView>
-        </MudMenu> *@
         <AuthorizeView>
             <Authorized>
                 <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
                     <MudText Typo="Typo.body1" Class="pa-4">@context.User.Identity?.Name</MudText>
                     <MudDivider />
-                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/profile"))">Profile</MudMenuItem>
-                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/Account/Logout"))">Logout</MudMenuItem>
+                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/Account/Manage"))">Profile</MudMenuItem>
                 </MudMenu>
             </Authorized>
             <NotAuthorized>
+                <MudButton Href="/Account/Register" Variant="Variant.Filled" Size="Size.Large" Style="background-color: gray; color: white;" Class="mx-4">Register</MudButton>
                 <MudButton Href="/Account/Login" Variant="Variant.Filled" Size="Size.Large" Style="background-color: gray; color: white;">Login</MudButton>
             </NotAuthorized>
         </AuthorizeView>
@@ -54,6 +40,25 @@
     </MudScrollToTop>
 </MudLayout>
 
+<div id="blazor-error-ui" data-nosnippet>
+    @if (HostEnvironment.IsProduction()) {
+        <span>An error has occurred.</span>
+    }
+    else {
+        <span>An unhandled exception occurred.</span>
+    }
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
 @code {
+    protected override void OnInitialized() {
+        ThemeService.OnThemeChanged += StateHasChanged;
+        ThemeService.SetTheme(new Litera().Theme!);
+    }
+
+    public void Dispose() {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+    }
 
 }

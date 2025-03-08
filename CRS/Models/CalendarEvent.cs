@@ -5,11 +5,11 @@ using CRS.Data;
 
 namespace CRS.Models {
     public class CalendarEvent : BaseModel {
-        public string Title { get; set; }
+        public string? Title { get; set; }
         public ClassName ColorClass { get; set; }
-        public string Location { get; set; }
-        [ForeignKey(nameof(ApplicationUser))] public string ApplicationUserId { get; set; }
-        [ForeignKey(nameof(ApplicationUser))] public string SpecialistUserId { get; set; }
+        public string? Location { get; set; }
+        [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
+        [ForeignKey("Specialist")] public Guid? SpecialistUserId { get; set; }
         [DataType(DataType.Text)] public string? Description { get; set; }
         [DataType(DataType.DateTime)] public DateTime Start { get; set; }
         [DataType(DataType.DateTime)] public DateTime End { get; set; }
