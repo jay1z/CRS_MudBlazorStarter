@@ -1,32 +1,59 @@
 ﻿@using CRS.Components.Account.Shared
 @using CRS.Components.Layout
+@using CRS.Data
+@using CRS.Services
+@using Microsoft.AspNetCore.Identity
 
-<CascadingValue Value="this">
-    <Router AppAssembly="typeof(Program).Assembly">
-        <Found Context="routeData">
-            <AuthorizeRouteView RouteData="routeData" DefaultLayout="this.LayoutType">
-                <NotAuthorized>
-                    <RedirectToLogin />
-                </NotAuthorized>
-            </AuthorizeRouteView>
-            @* <FocusOnNavigate RouteData="routeData" Selector="h1" /> *@
-        </Found>
-        <NotFound>
-            <LayoutView Layout="typeof(MainLayout)">
-                <p>Sorry, there's nothing at this address.</p>
-            </LayoutView>
-        </NotFound>
-    </Router>
-</CascadingValue>
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject UserStateService UserState
+
+<CascadingAuthenticationState>
+    <CascadingValue Value="this">
+        <Router AppAssembly="typeof(Program).Assembly">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        @{
+                            var authState = AuthenticationStateProvider.GetAuthenticationStateAsync().Result;
+                            if (!authState.User.Identity?.IsAuthenticated ?? true) {
+                                <RedirectToLogin />
+                            }
+                            else {
+                                <p>You are not authorized to access this resource.</p>
+                            }
+                        }
+                    </NotAuthorized>
+                    <Authorizing>
+                        <p>Authorizing...</p>
+                    </Authorizing>
+                </AuthorizeRouteView>
+            </Found>
+            <NotFound>
+                <PageTitle>Not Found</PageTitle>
+                <LayoutView Layout="@typeof(MainLayout)">
+                    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+                        <MudContainer MaxWidth="MaxWidth.ExtraSmall">
+                            <MudCard Elevation="0">
+                                <MudText Typo="Typo.h1">Whoops!</MudText>
+                            </MudCard>
+                        </MudContainer>
+                        <MudText Typo="Typo.h5" Align="Align.Center">
+                            We can't find that page.
+                        </MudText>
+                    </MudContainer>
+                </LayoutView>
+            </NotFound>
+        </Router>
+    </CascadingValue>
+</CascadingAuthenticationState>
+
 @code {
-
     private Type LayoutType = typeof(MainLayout);
 
-    public void SetLayout(Type layout)
-    {
-        if (layout != LayoutType)
-        {
-            this.LayoutType = layout;
+    public void SetLayout(Type layout) {
+        if (layout != null && layout != LayoutType) {
+            LayoutType = layout;
             StateHasChanged();
         }
     }

@@ -2,7 +2,8 @@
 @attribute [AllowAnonymous]
 
 @using CRS.Components.Layout
-
+@using CRS.Services
+@inject UserStateService UserState
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject INavigationService NavigationService
 
@@ -217,7 +218,7 @@
         Routes!.SetLayout(typeof(HomeLayout));
 
         //NavigationService Start
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true) {
             await NavigationService.NavigateToHomePageByRole(authState.User);
         }

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250308210610_InitialCreate")]
+    [Migration("20250311210156_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -21,7 +21,7 @@ namespace CRS.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("crs")
-                .HasAnnotation("ProductVersion", "9.0.2")
+                .HasAnnotation("ProductVersion", "9.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -226,8 +226,8 @@ namespace CRS.Migrations
                     b.Property<Guid?>("ApplicationUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ColorClass")
-                        .HasColumnType("int");
+                    b.Property<string>("Color")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -241,7 +241,7 @@ namespace CRS.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("End")
+                    b.Property<DateTime?>("End")
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsAccepted")
@@ -358,7 +358,7 @@ namespace CRS.Migrations
                     b.Property<Guid?>("SpecialistUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("Start")
+                    b.Property<DateTime?>("Start")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Title")

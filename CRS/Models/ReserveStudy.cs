@@ -16,10 +16,17 @@ namespace CRS.Models {
         public Guid? SpecialistUserId { get; set; }
         public ApplicationUser? Specialist { get; set; }
 
+        [ForeignKey("Community")]
+        public Guid? CommunityId { get; set; }
         public Community? Community { get; set; }
         public PointOfContactTypeEnum PointOfContactType { get; set; }
 
+        [ForeignKey("Contact")]
+        public Guid? ContactId { get; set; }
         public Contact? Contact { get; set; }
+
+        [ForeignKey("PropertyManager")]
+        public Guid? PropertyManagerId { get; set; }
         public PropertyManager? PropertyManager { get; set; }
 
         public List<ReserveStudyBuildingElement>? ReserveStudyBuildingElements { get; set; }

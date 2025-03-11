@@ -1,10 +1,12 @@
 ﻿@attribute [Authorize]
 @page "/Communities"
 @using CRS.Data
+@using CRS.Services
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
 @using System.Security.Claims
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+@inject UserStateService UserState
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ISnackbar Snackbar
@@ -13,8 +15,8 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @if (isLoading) {
-        <MudPaper Elevation="25" Class="pa-8">
-            <MudProgressLinear Color="Color.Info" Indeterminate="true" />
+        <MudPaper Elevation="0" Class="pa-8">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
             <MudText Typo="Typo.h5" Class="mt-4">Loading Communities...</MudText>
         </MudPaper>
     }
@@ -36,13 +38,7 @@
                 </MudGrid>
             </MudCardHeader>
             <MudCardContent>
-                <MudTable Items="@(FilteredCommunities)"
-                          Dense="true"
-                          Hover="true"
-                          Elevation="0"
-                          Loading="@isLoading"
-                          SortLabel="Sort by"
-                          Filter="@(community => FilterFunc(community, searchString))">
+                <MudTable Items="@(FilteredCommunities)" Dense="true" Hover="true" Elevation="0" Loading="@isLoading" SortLabel="Sort by" Filter="@(community => FilterFunc(community, searchString))">
                     <HeaderContent>
                         <MudTh>
                             <MudTableSortLabel T="Community" SortBy="@(x => x.Name)">Name</MudTableSortLabel>
@@ -75,10 +71,7 @@
 </MudContainer>
 @code {
     private List<ReserveStudy> reserveStudies;
-
     private List<Community> communities = new();
-    private ApplicationUser currentUser;
-    private IList<string> userRoles;
     private bool isLoading = true;
     private string searchString = "";
 
@@ -86,13 +79,9 @@
         try {
             isLoading = true;
 
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
+            await UserState.InitializeAsync();
 
-            if (user.Identity is not null && user.Identity.IsAuthenticated) {
-                await GetCurrentUserInfo(user);
-                await GetUserRoles();
-
+            if (UserState.ClaimsPrincipal.Identity is not null && UserState.ClaimsPrincipal.Identity.IsAuthenticated) {
                 LoadCommunities();
             }
             else {
@@ -116,14 +105,21 @@
             .Include(rs => rs.Community)
             .AsSplitQuery();
 
-        reserveStudies = userRoles.Contains("Admin") ? query.ToList() :
-                       userRoles.Contains("Specialist") ? query.Where(rs => rs.SpecialistUserId == currentUser.Id).ToList() :
-                       userRoles.Contains("User") ? query.Where(rs => rs.ApplicationUserId == currentUser.Id).ToList() :
-                       new List<ReserveStudy>();
+        // Filter ReserveStudies based on user role and ownership
+        reserveStudies = UserState.UserRoles.Contains("Admin")
+            ? query.ToList()
+            : UserState.UserRoles.Contains("Specialist")
+                ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList()
+                : UserState.UserRoles.Contains("User")
+                    ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList()
+                    : new List<ReserveStudy>();
 
-        foreach (ReserveStudy reserveStudy in reserveStudies) {
-            communities.Add(reserveStudy.Community);
-        }
+        // Extract unique communities from the filtered ReserveStudies
+        communities = reserveStudies
+            .Where(rs => rs.Community != null)
+            .Select(rs => rs.Community)
+            .DistinctBy(c => c.Id)
+            .ToList();
     }
 
     private IEnumerable<Community> FilteredCommunities => communities.Where(community => FilterFunc(community, searchString));
@@ -139,19 +135,5 @@
                 address.City?.ToLower().Contains(searchString) == true ||
                 address.State?.ToLower().Contains(searchString) == true ||
                 address.Zip?.ToLower().Contains(searchString) == true) == true;
-    }
-
-    private async Task GetCurrentUserInfo(ClaimsPrincipal user) {
-        currentUser = await UserManager.GetUserAsync(user);
-        if (currentUser == null) {
-            Snackbar.Add("User not found.", Severity.Error);
-        }
-    }
-
-    private async Task GetUserRoles() {
-        userRoles = await UserManager.GetRolesAsync(currentUser);
-        if (userRoles == null) {
-            Snackbar.Add("User roles not found.", Severity.Error);
-        }
     }
 }

@@ -1,7 +1,12 @@
 ﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps
 
+@using CRS.Data
+@using CRS.Services
+@using Microsoft.EntityFrameworkCore
 @using MudBlazor
 @inherits OwningComponentBase
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserStateService UserState
 
 <MudForm Model="Model" @ref="form">
     <MudGrid>
@@ -14,63 +19,85 @@
             </MudText>
         </MudItem>
 
-        <!-- Community Name -->
+        <!-- Community Selection Type -->
         <MudItem xs="12">
-            <MudTextField @bind-Value="Model.Community.Name"
-                          Label="Community Name"
-                          Required="true"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.TwoTone.LocationCity"
-                          Immediate="true" />
+            <MudRadioGroup ValueChanged="@((bool val) => OnCommunityTypeChanged(val))">
+                <MudRadio Value="false" Color="Color.Primary">Create New Community</MudRadio>
+                <MudRadio Value="true" Color="Color.Primary">Select Existing Community</MudRadio>
+            </MudRadioGroup>
         </MudItem>
 
-        <!-- Street Address -->
-        <MudItem xs="12">
-            <MudTextField @bind-Value="Model.Community.Addresses[0].Street"
-                          Label="Street Address"
-                          Required="true"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.TwoTone.EditRoad"
-                          Immediate="true" />
-        </MudItem>
+        @if (useExistingCommunity) {
+            <!-- Existing Community Selector -->
+            <MudItem xs="12">
+                <MudSelect T="Community" Label="Select Community" @bind-Value="selectedCommunity" Required="true" AdornmentIcon="@Icons.Material.TwoTone.LocationCity"
+                           For="@(() => selectedCommunity)" SelectedValuesChanged="@OnExistingCommunitySelected">
+                    @foreach (var community in existingCommunities) {
+                        <MudSelectItem Value="@community">
+                            @($"{community.Name} - {community.Addresses?.FirstOrDefault()?.City}, {community.Addresses?.FirstOrDefault()?.State}")
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        }
+        else {
+            <!-- New Community Form -->
+            <MudItem xs="12">
+                <MudTextField @bind-Value="Model.Community.Name"
+                              Label="Community Name"
+                              Required="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.TwoTone.LocationCity"
+                              Immediate="true" />
+            </MudItem>
 
-        <!-- State, City, Zip -->
-        <MudItem xs="12">
-            <MudGrid>
-                <!-- State -->
-                <MudItem xs="12" sm="4">
-                    <MudSelect @bind-Value="Model.Community.Addresses[0].State"
-                               Label="State"
-                               Required="true"
-                               Immediate="true">
-                        @foreach (var state in States)
-                        {
-                            <MudSelectItem Value="@state">@state</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
+            <!-- Street Address -->
+            <MudItem xs="12">
+                <MudTextField @bind-Value="Model.Community.Addresses[0].Street"
+                              Label="Street Address"
+                              Required="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.TwoTone.EditRoad"
+                              Immediate="true" />
+            </MudItem>
 
-                <!-- City -->
-                <MudItem xs="12" sm="5">
-                    <MudTextField @bind-Value="Model.Community.Addresses[0].City"
-                                  Label="City"
-                                  Required="true"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.TwoTone.LocationOn"
-                                  Immediate="true" />
-                </MudItem>
+            <!-- State, City, Zip -->
+            <MudItem xs="12">
+                <MudGrid>
+                    <!-- State -->
+                    <MudItem xs="12" sm="4">
+                        <MudSelect @bind-Value="Model.Community.Addresses[0].State"
+                                   Label="State"
+                                   Required="true"
+                                   Immediate="true">
+                            @foreach (var state in States) {
+                                <MudSelectItem Value="@state">@state</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
 
-                <!-- Zip Code -->
-                <MudItem xs="12" sm="3">
-                    <MudTextField @bind-Value="Model.Community.Addresses[0].Zip"
-                                  Label="Zip Code"
-                                  Required="true"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.TwoTone.Mail"
-                                  Immediate="true" />
-                </MudItem>
-            </MudGrid>
-        </MudItem>
+                    <!-- City -->
+                    <MudItem xs="12" sm="5">
+                        <MudTextField @bind-Value="Model.Community.Addresses[0].City"
+                                      Label="City"
+                                      Required="true"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.TwoTone.LocationOn"
+                                      Immediate="true" />
+                    </MudItem>
+
+                    <!-- Zip Code -->
+                    <MudItem xs="12" sm="3">
+                        <MudTextField @bind-Value="Model.Community.Addresses[0].Zip"
+                                      Label="Zip Code"
+                                      Required="true"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.TwoTone.Mail"
+                                      Immediate="true" />
+                    </MudItem>
+                </MudGrid>
+            </MudItem>
+        }
     </MudGrid>
 </MudForm>
 
@@ -78,10 +105,15 @@
     [Parameter]
     public ReserveStudy Model { get; set; }
 
-    private MudForm form;
+    [Parameter]
+    public EventCallback<bool> OnExistingCommunityChanged { get; set; }
 
-    private List<string> States = new()
-    {
+    private MudForm form;
+    private bool useExistingCommunity;
+    private Community selectedCommunity;
+    private List<Community> existingCommunities = new();
+
+    private List<string> States = new() {
         "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
         "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS",
         "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK",
@@ -92,8 +124,51 @@
     [Parameter]
     public EventCallback<bool> StepValidated { get; set; }
 
-    public async Task<bool> ValidateAsync()
-    {
+    protected override async Task OnInitializedAsync() {
+        await LoadUserCommunities();
+    }
+
+    private async Task LoadUserCommunities() {
+        using var context = await DbFactory.CreateDbContextAsync();
+        existingCommunities = await context.Communities
+            .Include(c => c.Addresses) // Include addresses
+            .AsNoTracking()
+            .Where(c => context.ReserveStudies
+                .Any(rs => rs.Community.Id == c.Id && rs.ApplicationUserId == UserState.CurrentUser.Id))
+            .ToListAsync();
+    }
+
+    protected override async Task OnParametersSetAsync() {
+        // Ensure Addresses collection is initialized
+        if (Model.Community.Addresses == null || !Model.Community.Addresses.Any()) {
+            Model.Community.Addresses = new List<Address> { new Address() };
+        }
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task OnCommunityTypeChanged(bool useExisting) {
+        useExistingCommunity = useExisting;
+        if (!useExisting) {
+            selectedCommunity = null;
+            Model.Community = new Community {
+                    Addresses = new List<Address> { new Address() }
+                };
+        }
+        await OnExistingCommunityChanged.InvokeAsync(IsExistingCommunity());
+    }
+
+    private async Task OnExistingCommunitySelected() {
+        if (selectedCommunity != null) {
+            //Model.CommunityId = selectedCommunity.Id;
+            Model.Community = selectedCommunity;
+        }
+    }
+
+    public bool IsExistingCommunity() {
+        return useExistingCommunity; // && selectedCommunity != null;
+    }
+
+    public async Task<bool> ValidateAsync() {
         await form.Validate();
         bool valid = form.IsValid;
         await StepValidated.InvokeAsync(valid);

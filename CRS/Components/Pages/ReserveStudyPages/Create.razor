@@ -4,167 +4,188 @@
 @using CRS.Components.Pages.ReserveStudyPages.Steps
 @using CRS.Data
 @using CRS.Models
+@using CRS.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
+@implements IAsyncDisposable
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserStateService UserState
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<PageTitle>Create</PageTitle>
+<PageTitle>Create Reserve Study</PageTitle>
 
-<MudText Typo="Typo.h4">Create New Reserve Study</MudText>
-<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
-    <MudCard Elevation="25">
-        <MudCardContent>
-            <MudStepper @bind-ActiveStep="activeStep" Linear="true" CenterLabels="true" CompletedStepColor="Color.Success" CurrentStepColor="Color.Primary" Class="mb-4" @ref="stepper">
-                <ChildContent>
-                    <MudStep Title="Community Information" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
-                        <Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated" />
-                    </MudStep>
-                    <MudStep Title="Property Manager" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
-                        <Step2 @ref="step2" Model="Model" StepValidated="OnStepValidated" />
-                    </MudStep>
-                    <MudStep Title="Property Elements" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
-                        <Step3 @ref="step3" Model="Model" StepValidated="OnStepValidated" />
-                    </MudStep>
-                    <MudStep Title="Acknowledgement" Icon="@(stepValidationState.GetValueOrDefault(0) ? Icons.Material.Filled.CheckCircle : null)" IconColor="@(stepValidationState.GetValueOrDefault(0) ? Color.Success : Color.Default)">
-                        <Step4 @ref="step4" Model="Model" StepValidated="OnStepValidated" AcceptTerms="@AcceptTerms" AcceptTermsChanged="@OnAcceptTermsChanged" />
-                    </MudStep>
-                </ChildContent>
-                <CompletedContent>
-                    <Step5 />
-                </CompletedContent>
-                <ActionContent Context="stepper">
-                    @if (!_completed) {
-                        <MudGrid Justify="Justify.SpaceBetween" Class="mt-4">
-                            <MudItem>
-                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="activeStep <= 0" OnClick="PreviousStep">
-                                    <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-2" />
-                                    Back
-                                </MudButton>
-                            </MudItem>
-                            <MudItem>
-                                @if (activeStep < totalSteps - 1) {
-                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextStep">
-                                        Continue
-                                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="ml-2" />
+@if (isLoading) {
+    <MudPaper Elevation="0" Class="pa-8">
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        <MudText Typo="Typo.h5" Class="mt-4">Loading Reserve Studies...</MudText>
+    </MudPaper>
+}
+else {
+    <MudText Typo="Typo.h4" Class="mb-4">Create New Reserve Study</MudText>
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <MudCard Elevation="25">
+            <MudCardContent>
+                <MudStepper @bind-ActiveStep="activeStep" Linear="true" CenterLabels="true" CompletedStepColor="Color.Success" CurrentStepColor="Color.Primary" Class="mb-4" @ref="stepper">
+                    <ChildContent>
+                        @foreach (var step in steps) {
+                            <MudStep Title="@step.Title"
+                                     Icon="@(stepValidationState.GetValueOrDefault(step.Index) ? Icons.Material.Filled.CheckCircle : null)"
+                                     IconColor="@(stepValidationState.GetValueOrDefault(step.Index) ? Color.Success : Color.Default)">
+                                @step.Content
+                            </MudStep>
+                        }
+                    </ChildContent>
+                    <CompletedContent>
+                        <Step5 />
+                    </CompletedContent>
+                    <ActionContent>
+                        @if (!_completed) {
+                            <MudGrid Justify="Justify.SpaceBetween" Class="mt-4">
+                                <MudItem>
+                                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="activeStep <= 0" OnClick="PreviousStep">
+                                        <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-2" />
+                                        Back
                                     </MudButton>
-                                }
-                                else {
-                                    @if (AcceptTerms) {
-                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitForm" Disabled="isSubmitting">
-                                            <span class="mud-button-content">
-                                                Submit
-                                                @if (isSubmitting) {
-                                                    <MudProgressCircular Indeterminate="true" Color="Color.Inherit" Class="ml-2" />
-                                                }
-                                            </span>
+                                </MudItem>
+                                <MudItem>
+                                    @if (activeStep < steps.Count - 1) {
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextStep">
+                                            Continue
+                                            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="ml-2" />
                                         </MudButton>
                                     }
-                                    else {
-                                        <MudText Color="Color.Error" Class="mt-2">
-                                            You must accept the terms to submit.
-                                        </MudText>
+                                    else if (AcceptTerms) {
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitForm" Disabled="isSubmitting || !IsFormValid()">
+                                            @if (isSubmitting) {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                                <span>Submitting...</span>
+                                            }
+                                            else {
+                                                <span>Submit</span>
+                                            }
+                                        </MudButton>
                                     }
-                                }
-                            </MudItem>
-                        </MudGrid>
-                    }
-                </ActionContent>
-            </MudStepper>
-        </MudCardContent>
-    </MudCard>
-</MudContainer>
+                                </MudItem>
+                            </MudGrid>
+                        }
+                    </ActionContent>
+                </MudStepper>
+            </MudCardContent>
+        </MudCard>
+    </MudContainer>
+}
 
 @code {
-    [CascadingParameter]
-    public Routes? Routes { get; set; }
+    private record StepDefinition(int Index, string Title, RenderFragment Content);
 
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+    [CascadingParameter] public Routes? Routes { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
     private ApplicationDbContext? context;
     private ReserveStudy? Model { get; set; }
     private Dictionary<int, bool> stepValidationState = new();
 
     private MudStepper? stepper;
-    private readonly int totalSteps = 4;
-    private int activeStep = 0;
-    private bool isSubmitting = false;
-    private bool AcceptTerms = false;
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private bool AcceptTerms;
     private bool _completed;
+    private bool isExistingCommunity;
+    private int activeStep;
+
     private Step1? step1;
     private Step2? step2;
     private Step3? step3;
     private Step4? step4;
-    private Step5? step5;
+
+    private List<StepDefinition> steps = new();
 
     protected override async Task OnInitializedAsync() {
-        await base.OnInitializedAsync();
+        try {
+            if (!UserState.ClaimsPrincipal.Identity?.IsAuthenticated ?? true) {
+                NavigationManager.NavigateTo("/login");
+                return;
+            }
 
-        var authState = await AuthenticationStateTask!;
-        var user = authState.User;
+            await InitializeModel();
+            InitializeSteps();
+            context = await DbFactory.CreateDbContextAsync();
+            Routes?.SetLayout(typeof(MainLayout));
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error initializing: {ex.Message}", Severity.Error);
+        }
+        finally {
+            isLoading = false;
+        }
+    }
 
-        if (user.Identity?.IsAuthenticated == true) {
-            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("User ID not found.");
+    private void InitializeSteps() {
+        steps = new List<StepDefinition>
+                                        {
+            new(0, "Community Information", @<Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated" OnExistingCommunityChanged="@((bool isExisting) => isExistingCommunity = isExisting)" />),
+            new(1, "Property Manager", @<Step2 @ref="step2" Model="Model" StepValidated="OnStepValidated" />),
+            new(2, "Property Elements", @<Step3 @ref="step3" Model="Model" StepValidated="OnStepValidated" />),
+            new(3, "Acknowledgement", @<Step4 @ref="step4" Model="Model" StepValidated="OnStepValidated" AcceptTerms="@AcceptTerms" AcceptTermsChanged="@OnAcceptTermsChanged" />)
+        };
+    }
 
-            // var layoutType = IsUserOnly(user) ? typeof(UserLayout) : typeof(MainLayout);
-            Routes!.SetLayout(typeof(MainLayout));
-
-            Model = new ReserveStudy {
-                    ApplicationUserId = GetCurrentUserId(user),
-                    Community = new Community() {
-                        Name = "Community 1",
-                        Addresses = new List<Address>()
-                            {
-                            new Address()
-                            {
+    private async Task InitializeModel() {
+        Model = new ReserveStudy {
+                ApplicationUserId = GetCurrentUserId(UserState.ClaimsPrincipal),
+                Community = new Community() {
+                    Name = "Community",
+                    Addresses = new List<Address>() {
+                            new Address() {
                                 Street = "123 Main St",
                                 City = "Anytown",
                                 State = "CA",
                                 Zip = "12345"
                             }
                         }
-                    },
-                    Contact = new Contact() {
-                        FirstName = "Peter",
-                        LastName = "Zurowski",
-                        Email = "peter@zurowski.com",
-                        Phone = "123-456-7890",
-                        Extension = "123",
-                    },
-                    PropertyManager = new PropertyManager() {
-                        FirstName = "Jeff",
-                        LastName = "Ripple",
-                        CompanyName = "Ripple Property Management",
-                        Email = "jeff@ripple.com",
-                        Phone = "123-456-7891"
-                    },
-                    ReserveStudyAdditionalElements = new List<ReserveStudyAdditionalElement>(),
-                    IsActive = true
-                };
-
-            context = await DbFactory.CreateDbContextAsync();
-        }
-        else {
-            NavigationManager.NavigateTo("/login");
-        }
+                },
+                Contact = new Contact() {
+                    FirstName = "Peter",
+                    LastName = "Zurowski",
+                    Email = "peter@zurowski.com",
+                    Phone = "123-456-7890",
+                    Extension = "123",
+                },
+                PropertyManager = new PropertyManager() {
+                    FirstName = "Jeff",
+                    LastName = "Ripple",
+                    CompanyName = "Ripple Property Management",
+                    Email = "jeff@ripple.com",
+                    Phone = "123-456-7891"
+                },
+                ReserveStudyAdditionalElements = new List<ReserveStudyAdditionalElement>(),
+                IsActive = true
+            };
     }
 
     public async ValueTask DisposeAsync() {
-        if (context != null) {
+        if (context is not null) {
             await context.DisposeAsync();
         }
     }
 
-    private Task OnAcceptTermsChanged(bool value) {
-        AcceptTerms = value;
-        return Task.CompletedTask;
+    private async Task NextStep() {
+        try {
+            bool isValid = await ValidateCurrentStep();
+            if (isValid) {
+                activeStep++;
+                await stepper!.NextStepAsync();
+            }
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error validating step: {ex.Message}", Severity.Error);
+        }
     }
 
-    private async Task NextStep() {
+    private async Task<bool> ValidateCurrentStep() {
         bool isValid = activeStep switch {
             0 => step1 != null && await step1.ValidateAsync(),
             1 => step2 != null && await step2.ValidateAsync(),
@@ -173,18 +194,14 @@
             _ => false
         };
 
-        if (isValid) {
-            activeStep++;
-            await stepper!.NextStepAsync();
+        if (!isValid) {
+            Snackbar.Add(activeStep == 3
+                ? "You must accept the terms to proceed."
+                : "Please correct the errors before proceeding.",
+                Severity.Warning);
         }
-        else {
-            if (activeStep == 4) {
-                Snackbar.Add("You must accept the terms to proceed.", Severity.Error);
-            }
-            else {
-                Snackbar.Add("Please correct the errors before proceeding.", Severity.Error);
-            }
-        }
+
+        return isValid;
     }
 
     private async Task PreviousStep() {
@@ -194,23 +211,59 @@
         }
     }
 
+    private bool IsFormValid() =>
+        steps.All(step => stepValidationState.GetValueOrDefault(step.Index)) && AcceptTerms;
+
     private async Task SubmitForm() {
+        if (!IsFormValid()) {
+            Snackbar.Add("Please complete all required fields.", Severity.Warning);
+            return;
+        }
+
         isSubmitting = true;
         try {
-            context!.ReserveStudies.Add(Model!);
-            await context.SaveChangesAsync();
+            // Create a new context for the submission
+            await using var submitContext = await DbFactory.CreateDbContextAsync();
+
+            if (isExistingCommunity && Model?.Community?.Id != null) {
+                // For existing community, just set the reference without trying to attach
+                Model.CommunityId = Model.Community.Id;
+                // Detach the Community from the Model to prevent tracking conflicts
+                Model.Community = null;
+            }
+            else {
+                // For new community, ensure it's tracked as a new entity
+                if (Model?.Community != null) {
+                    Model.Community.Id = Guid.Empty; // Ensure new ID is generated
+                    foreach (var address in Model.Community.Addresses ?? Enumerable.Empty<Address>()) {
+                        address.Id = Guid.Empty; // Ensure new IDs for addresses
+                    }
+                }
+            }
+
+            // Add the reserve study
+            submitContext.ReserveStudies.Add(Model!);
+            await submitContext.SaveChangesAsync();
 
             Snackbar.Add("Reserve Study submitted successfully!", Severity.Success);
-            await NextStep();
             _completed = true;
+            await stepper!.NextStepAsync();
         }
         catch (Exception ex) {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-            Snackbar.Add($"Error: {ex.InnerException}", Severity.Error);
+            Snackbar.Add($"Error submitting form: {ex.Message}", Severity.Error);
+            if (ex.InnerException != null) {
+                Snackbar.Add($"Additional details: {ex.InnerException.Message}", Severity.Error);
+            }
         }
         finally {
             isSubmitting = false;
         }
+    }
+
+    private Task OnAcceptTermsChanged(bool value) {
+        AcceptTerms = value;
+        stepValidationState[3] = value;
+        return Task.CompletedTask;
     }
 
     private void OnStepValidated(bool isValid) {
@@ -220,13 +273,9 @@
 
     private Guid? GetCurrentUserId(ClaimsPrincipal user) {
         var userIdString = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userIdString == null || !Guid.TryParse(userIdString, out Guid userId)) {
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId)) {
             throw new InvalidOperationException("User ID not found or invalid");
         }
         return userId;
-    }
-
-    private bool IsUserOnly(ClaimsPrincipal user) {
-        return user.IsInRole("User") && !user.IsInRole("Admin") && !user.IsInRole("Specialist");
     }
 }

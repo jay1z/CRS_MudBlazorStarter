@@ -17,6 +17,16 @@ namespace CRS.Data {
                 return $"{LastName}, {FirstName}";
             }
         }
+
+        public string Initials { get { return GetUserInitials(); } }
+
+        private string GetUserInitials() {
+            var firstInitial = !string.IsNullOrEmpty(FirstName) ? FirstName[0].ToString().ToUpper() : string.Empty;
+            var lastInitial = !string.IsNullOrEmpty(LastName) ? LastName[0].ToString().ToUpper() : string.Empty;
+
+            return $"{firstInitial}{lastInitial}";
+        }
+
     }
 
     public enum StatusEnum {

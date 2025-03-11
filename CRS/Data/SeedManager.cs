@@ -19,24 +19,27 @@ namespace CRS.Data {
 
         public static async Task SeedAdminUserAsync(IServiceProvider serviceProvider) {
             // Use our helper to create the admin user if it doesn't exist.
-            await SeedUserIfNotExists(serviceProvider, email: "jason@admin.com", password: "Letmein1_", firstName: "Jason", lastName: "Admin", role: "Admin");
+            await SeedUserIfNotExists(serviceProvider, email: "jason@admin.com", password: "Letmein1_", firstName: "Jason", lastName: "Admin", roles: new List<string>() { "Admin" });
         }
 
         public static async Task SeedTestUsersAsync(IServiceProvider serviceProvider) {
             // Specialist test user
-            await SeedUserIfNotExists(serviceProvider, email: "peter@specialist.com", password: "Letmein1_", firstName: "Peter", lastName: "Specialist", role: "Specialist");
+            await SeedUserIfNotExists(serviceProvider, email: "peter@specialist.com", password: "Letmein1_", firstName: "Peter", lastName: "Specialist", roles: new List<string>() { "Specialist" });
 
-            // Regular test user Jeff
-            await SeedUserIfNotExists(serviceProvider, email: "jeff@user.com", password: "Letmein1_", firstName: "Jeff", lastName: "User", role: "User");
+            // Specialist test user
+            await SeedUserIfNotExists(serviceProvider, email: "jeff@specialist.com", password: "Letmein1_", firstName: "Jeff", lastName: "Specialist", roles: new List<string>() { "Specialist" });
 
-            // Regular test user Jason
-            await SeedUserIfNotExists(serviceProvider, email: "jason@user.com", password: "Letmein1_", firstName: "Jason", lastName: "User", role: "User");
+            // Regular test user
+            await SeedUserIfNotExists(serviceProvider, email: "jeff@user.com", password: "Letmein1_", firstName: "Jeff", lastName: "User", roles: new List<string>() { "User" });
+
+            // Regular test user
+            await SeedUserIfNotExists(serviceProvider, email: "jason@user.com", password: "Letmein1_", firstName: "Jason", lastName: "User", roles: new List<string>() { "User" });
         }
 
         /// <summary>
         /// Creates a new user with the specified details and role if a user with the given email does not already exist.
         /// </summary>
-        private static async Task SeedUserIfNotExists(IServiceProvider serviceProvider, string email, string password, string firstName, string lastName, string role) {
+        private static async Task SeedUserIfNotExists(IServiceProvider serviceProvider, string email, string password, string firstName, string lastName, List<string> roles) {
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var logger = serviceProvider.GetRequiredService<ILogger<SeedManager>>();
 
@@ -55,8 +58,10 @@ namespace CRS.Data {
 
             var result = await userManager.CreateAsync(user, password);
             if (result.Succeeded) {
-                await userManager.AddToRoleAsync(user, role);
-                logger.LogInformation($"Seeded {role} user: {email}");
+                foreach (var role in roles) {
+                    await userManager.AddToRoleAsync(user, role);
+                    logger.LogInformation($"Seeded {role} user: {email}");
+                }
             }
             else {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));

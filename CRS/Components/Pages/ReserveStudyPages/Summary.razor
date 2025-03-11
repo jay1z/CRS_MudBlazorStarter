@@ -9,20 +9,18 @@
 
 <PageTitle>Reserve Study Summary</PageTitle>
 
-@if (reserveStudy == null)
-{
-    <MudProgressLinear Color="Color.Info" Indeterminate="true" />
+@if (reserveStudy == null) {
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
     <MudText Typo="Typo.h4">Loading...</MudText>
 }
-else
-{
+else {
     <MudContainer MaxWidth="MaxWidth.Medium">
         <MudPaper Elevation="4">
             <MudCardContent>
                 <MudText Typo="Typo.h4">@reserveStudy.Community?.Name</MudText>
                 <MudText Typo="Typo.subtitle2">@reserveStudy.Id</MudText>
                 <MudDivider />
-                <MudTextField T="string" Label="Created By"  ReadOnly="true" Text="@reserveStudy.User.UserName" />
+                <MudTextField T="string" Label="Created By" ReadOnly="true" Text="@reserveStudy.User.UserName" />
                 <MudTextField T="string" Label="Created Date" ReadOnly="true" Text="@reserveStudy.DateCreated?.ToString("MM/dd/yyyy")" />
                 <MudTextField T="string" Label="Point of Contact" ReadOnly="true" Text="@reserveStudy.PointOfContact.FullNameInverted" />
                 <MudTextField T="string" Label="Specialist Assigned" ReadOnly="true" Text="@(reserveStudy.Specialist?.Email ?? "Not Assigned")" />
@@ -68,10 +66,8 @@ else
     private ApplicationDbContext context;
     private ReserveStudy? reserveStudy;
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
+    protected override async Task OnInitializedAsync() {
+        try {
             context = await DbFactory.CreateDbContextAsync();
 
             reserveStudy = await context.ReserveStudies
@@ -84,29 +80,24 @@ else
                 .Include(rs => rs.ReserveStudyAdditionalElements)
                 .FirstOrDefaultAsync(rs => rs.Id == Id);
 
-            if (reserveStudy == null)
-            {
+            if (reserveStudy == null) {
                 NavigationManager.NavigateTo("/ReserveStudies/NotFound");
             }
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
         }
     }
 
-    private void EditReserveStudy()
-    {
+    private void EditReserveStudy() {
         NavigationManager.NavigateTo($"/ReserveStudies/Update/{reserveStudy.Id}");
     }
 
-    private void BackToList()
-    {
+    private void BackToList() {
         NavigationManager.NavigateTo("/ReserveStudies");
     }
 
-    public void Dispose()
-    {
+    public void Dispose() {
         context?.Dispose();
     }
 }

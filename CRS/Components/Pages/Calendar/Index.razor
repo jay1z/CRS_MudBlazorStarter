@@ -1,0 +1,80 @@
+﻿@page "/Calendar"
+@using CRS.Components.Pages.Calendar.Dialog
+@using MudBlazor
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    <MudCard>
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h2" Class="fw-bold">Calendar</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateEventDialog">Add Event</MudButton>
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Default" />
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudCalendar Outlined=true CurrentDay="@currentDate" Items="events" />
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private DateTime currentDate = DateTime.Now;
+    private List<CalendarItem> events = new()
+                            {
+        new CalendarItem
+        {
+            Start = DateTime.Today.AddHours(10),
+            End = DateTime.Today.AddHours(11),
+            Text = "Event 1"
+        },
+        new CalendarItem
+        {
+            Start = DateTime.Today.AddHours(11),
+            End = DateTime.Today.AddHours(12),
+            Text = "Event 2"
+        },
+        new CalendarItem
+        {
+            Start = DateTime.Today.AddHours(13),
+            End = DateTime.Today.AddHours(14),
+            Text = "Event 3"
+        },
+        new CalendarItem
+        {
+            Start = DateTime.Today.AddHours(14),
+            End = DateTime.Today.AddHours(15),
+            Text = "Event 4"
+        },
+        new CalendarItem
+        {
+            Start = DateTime.Today.AddHours(17),
+            End = DateTime.Today.AddHours(18),
+            Text = "Event 5"
+        },
+        new CalendarItem
+        {
+            Start = DateTime.Today.AddHours(17),
+            End = DateTime.Today.AddHours(18),
+            Text = "Event 6"
+        },
+        new CalendarItem
+        {
+            Start = DateTime.Today.AddDays(1).AddHours(11),
+            End = DateTime.Today.AddDays(1).AddHours(12.5),
+            Text = "Event 7"
+        }
+    };
+
+    private async Task OpenCreateEventDialog() {
+        // var specialists = await GetSpecialists();
+        var dialog = await DialogService.ShowAsync<CreateEventDialog>("Create Event");
+        var result = await dialog.Result;
+
+        if (!result.Canceled) {
+            events.Add(result.Data as CalendarItem);
+        }
+    }
+}

@@ -1,10 +1,12 @@
 ﻿@attribute [Authorize]
 @page "/ReserveStudies"
 @using CRS.Data
+@using CRS.Services
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
 @using System.Security.Claims
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+@inject UserStateService UserState
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ISnackbar Snackbar
@@ -13,8 +15,8 @@
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     @if (isLoading) {
-        <MudPaper Elevation="25" Class="pa-8">
-            <MudProgressLinear Color="Color.Info" Indeterminate="true" />
+        <MudPaper Elevation="0" Class="pa-8">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
             <MudText Typo="Typo.h5" Class="mt-4">Loading Reserve Studies...</MudText>
         </MudPaper>
     }
@@ -94,70 +96,71 @@
 </MudContainer>
 
 @code {
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly CancellationTokenSource _cts = new();
     private List<ReserveStudy> reserveStudies;
-    private ApplicationUser currentUser;
-    private IList<string> userRoles;
+    //private ApplicationUser currentUser;
+    //private IList<string> userRoles;
     private bool isLoading = true;
     private string searchString = "";
 
     protected override async Task OnInitializedAsync() {
         try {
             isLoading = true;
+            await _semaphore.WaitAsync(_cts.Token);
 
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
-
-            if (user.Identity is not null && user.Identity.IsAuthenticated) {
-                //Snackbar.Add($"{user.Identity.Name} is authenticated.", Severity.Success);
-
-                await GetCurrentUserInfo(user);
-                await GetUserRoles();
-
-                LoadReserveStudies();
-            }
-            else {
-                Snackbar.Add("User not authenticated.", Severity.Warning);
-                return;
-            }
-
+            await UserState.InitializeAsync();
+            await LoadReserveStudiesAsync(_cts.Token);
+        }
+        catch (OperationCanceledException) {
+            Snackbar.Add("Operation cancelled.", Severity.Warning);
         }
         catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-            //reserveStudies = new List<ReserveStudy>();
+            reserveStudies = new List<ReserveStudy>();
         }
         finally {
             isLoading = false;
+            _semaphore.Release();
         }
     }
 
-    private void LoadReserveStudies() {
-        isLoading = true;
+    private async Task LoadReserveStudiesAsync(CancellationToken cancellationToken) {
+        try {
+            using var context = await DbFactory.CreateDbContextAsync(cancellationToken);
+            var query = context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.Community)
+                .Include(rs => rs.Contact)
+                .Include(rs => rs.PropertyManager)
+                .Include(rs => rs.Specialist)
+                .Include(rs => rs.User)
+                .AsSplitQuery();
 
-        // try {
-        using var context = DbFactory.CreateDbContext();
-        var query = context.ReserveStudies
-            .AsNoTracking()
-            .Include(rs => rs.Community)
-            .Include(rs => rs.Contact)
-            .Include(rs => rs.PropertyManager)
-            .Include(rs => rs.Specialist)
-            .Include(rs => rs.User)
-            .AsSplitQuery();
+            // Use async operation with cancellation support
+            //reserveStudies = await Task.FromResult(new List<ReserveStudy>());
+            reserveStudies = await (UserState.UserRoles.Contains("Admin")
+                ? query.ToListAsync(cancellationToken)
+                : UserState.UserRoles.Contains("Specialist")
+                    ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToListAsync(cancellationToken)
+                    : UserState.UserRoles.Contains("User")
+                        ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToListAsync(cancellationToken)
+                        : Task.FromResult(new List<ReserveStudy>()));
+        }
+        catch (DbUpdateConcurrencyException ex) {
+            Snackbar.Add("Data has been modified by another user. Please refresh.", Severity.Warning);
+            throw;
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Database error: {ex.Message}", Severity.Error);
+            reserveStudies = new List<ReserveStudy>();
+        }
+    }
 
-        reserveStudies = userRoles.Contains("Admin") ? query.ToList() :
-                       userRoles.Contains("Specialist") ? query.Where(rs => rs.SpecialistUserId == currentUser.Id).ToList() :
-                       userRoles.Contains("User") ? query.Where(rs => rs.ApplicationUserId == currentUser.Id).ToList() :
-                       new List<ReserveStudy>();
-
-        // }
-        // catch (Exception ex) {
-        //     Snackbar.Add($"Database error: {ex.Message}", Severity.Error);
-        //     reserveStudies = new List<ReserveStudy>();
-        // }
-        // finally {
-        isLoading = false;
-        //     StateHasChanged();
-        // }
+    public void Dispose() {
+        _cts.Cancel();
+        _cts.Dispose();
+        _semaphore.Dispose();
     }
 
     private IEnumerable<ReserveStudy> FilteredStudies => reserveStudies.Where(study => FilterFunc(study, searchString));
@@ -172,19 +175,5 @@
                study.PointOfContact?.FullName?.ToLower().Contains(searchString) == true ||
                study.PointOfContact?.Email?.ToLower().Contains(searchString) == true ||
                study.Specialist?.FullName?.ToLower().Contains(searchString) == true;
-    }
-
-    private async Task GetCurrentUserInfo(ClaimsPrincipal user) {
-        currentUser = await UserManager.GetUserAsync(user);
-        if (currentUser == null) {
-            Snackbar.Add("User not found.", Severity.Error);
-        }
-    }
-
-    private async Task GetUserRoles() {
-        userRoles = await UserManager.GetRolesAsync(currentUser);
-        if (userRoles == null) {
-            Snackbar.Add("User roles not found.", Severity.Error);
-        }
     }
 }

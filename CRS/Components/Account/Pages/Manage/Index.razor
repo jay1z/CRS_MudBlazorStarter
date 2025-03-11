@@ -1,9 +1,12 @@
 ﻿@page "/Account/Manage"
+@attribute [Authorize]
 
 @using System.ComponentModel.DataAnnotations
+@using CRS.Services
 @using Microsoft.AspNetCore.Identity
 @using CRS.Data
 
+@inject UserStateService UserState
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityUserAccessor UserAccessor
@@ -11,38 +14,46 @@
 
 <PageTitle>Profile</PageTitle>
 
-<MudText Typo="Typo.h6" GutterBottom="true">Profile</MudText>
+<ErrorBoundary>
+    <ChildContent>
+        <!-- Your existing component content -->
 
-<StatusMessage />
+        <MudText Typo="Typo.h6" GutterBottom="true">Profile</MudText>
 
-<EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
-    <DataAnnotationsValidator />
+        <StatusMessage />
 
-    <MudGrid>
-        <MudItem md="12">
-            <MudStaticTextField Value="@username" Label="Username" Disabled="true" Placeholder="Please choose your username." />
-        </MudItem>
-        <MudItem md="12">
-            <MudStaticTextField For="@(() => Input.FirstName)" @bind-Value="Input.FirstName"
-                          Label="First Name" HelperText="Please enter your first name."
-                          UserAttributes="@(new() { { "autocomplete", "given-name" } } )" />
-        </MudItem>
-        <MudItem md="12">
-            <MudStaticTextField For="@(() => Input.LastName)" @bind-Value="Input.LastName"
-                                Label="Last Name" HelperText="Please enter your last name."
-                                UserAttributes="@(new() { { "autocomplete", "family-name" } } )" />
-        </MudItem>
-        <MudItem md="12">
-            <MudStaticTextField For="@(() => Input.PhoneNumber)" @bind-Value="Input.PhoneNumber"
-                                Label="Phone Number" HelperText="Please enter your phone number."
-                                UserAttributes="@(new() { { "autocomplete", "tel-national" } } )" />
-        </MudItem>
-        <MudItem md="12">
-            <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Save</MudStaticButton>
-        </MudItem>
-    </MudGrid>
-</EditForm>
+        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <DataAnnotationsValidator />
 
+            <MudGrid>
+                <MudItem md="12">
+                    <MudStaticTextField Value="@username" Label="Username" Disabled="true" Placeholder="Please choose your username." />
+                </MudItem>
+                <MudItem md="12">
+                    <MudStaticTextField For="@(() => Input.FirstName)" @bind-Value="Input.FirstName"
+                                        Label="First Name" HelperText="Please enter your first name."
+                                        UserAttributes="@(new() { { "autocomplete", "given-name" } } )" />
+                </MudItem>
+                <MudItem md="12">
+                    <MudStaticTextField For="@(() => Input.LastName)" @bind-Value="Input.LastName"
+                                        Label="Last Name" HelperText="Please enter your last name."
+                                        UserAttributes="@(new() { { "autocomplete", "family-name" } } )" />
+                </MudItem>
+                <MudItem md="12">
+                    <MudStaticTextField For="@(() => Input.PhoneNumber)" @bind-Value="Input.PhoneNumber"
+                                        Label="Phone Number" HelperText="Please enter your phone number."
+                                        UserAttributes="@(new() { { "autocomplete", "tel-national" } } )" />
+                </MudItem>
+                <MudItem md="12">
+                    <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Save</MudStaticButton>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </ChildContent>
+    <ErrorContent>
+        <MudAlert Severity="Severity.Error">Error loading profile. Please refresh the page.</MudAlert>
+    </ErrorContent>
+</ErrorBoundary>
 @code {
     private ApplicationUser user = default!;
     private string? username;
@@ -55,14 +66,24 @@
     private InputModel Input { get; set; } = new();
 
     protected override async Task OnInitializedAsync() {
-        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-        username = await UserManager.GetUserNameAsync(user);
-        phoneNumber = await UserManager.GetPhoneNumberAsync(user);
+        try {
+            await UserState.InitializeAsync();
+            if (HttpContext is not null) {
+                StateHasChanged();
 
-        Input.FirstName ??= user.FirstName;
-        Input.LastName ??= user.LastName;
+                user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+                username = await UserManager.GetUserNameAsync(user);
+                phoneNumber = await UserManager.GetPhoneNumberAsync(user);
 
-        Input.PhoneNumber ??= phoneNumber;
+                Input.FirstName ??= user.FirstName;
+                Input.LastName ??= user.LastName;
+                Input.PhoneNumber ??= phoneNumber;
+            }
+        }
+        catch (Exception) {
+            // Handle or log the error
+            RedirectManager.RedirectToCurrentPageWithStatus("Error loading user data", HttpContext);
+        }
     }
 
     private async Task OnValidSubmitAsync() {

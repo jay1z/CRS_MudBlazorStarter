@@ -1,12 +1,14 @@
 ﻿@attribute [Authorize]
 @page "/ReserveStudies/Details/{Id:guid}"
 @using CRS.Data
+@using CRS.Services
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserStateService UserState
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -276,8 +278,8 @@
 
     protected override async Task OnInitializedAsync() {
         try {
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
+            // var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            // var user = authState.User;
 
             // Determine if the user can update based on role
             //canUpdate = user.IsInRole("Specialist") || user.IsInRole("User");

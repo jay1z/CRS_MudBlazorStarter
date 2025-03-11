@@ -13,9 +13,10 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddLogging();
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddLogging();
+builder.Services.AddScoped<UserStateService>();
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
