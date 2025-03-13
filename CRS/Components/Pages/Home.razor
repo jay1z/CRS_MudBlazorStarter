@@ -3,6 +3,7 @@
 
 @using CRS.Components.Layout
 @using CRS.Services
+@inject ILogger<Home> Logger
 @inject UserStateService UserState
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject INavigationService NavigationService
@@ -214,6 +215,8 @@
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
+
+        Logger.LogInformation("Home");
 
         Routes!.SetLayout(typeof(HomeLayout));
 

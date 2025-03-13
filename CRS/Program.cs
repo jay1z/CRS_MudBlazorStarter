@@ -12,8 +12,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 using MudBlazor.Services;
 
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddLogging();
+//builder.Logging.ClearProviders();
+//builder.Logging.AddConsole();
+builder.Host.UseSerilog((context, loggerConfiguration) => {
+    loggerConfiguration.WriteTo.Console();
+});
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<UserStateService>();
@@ -102,7 +108,6 @@ else {
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 

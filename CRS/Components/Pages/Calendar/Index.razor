@@ -22,55 +22,21 @@
 
 @code {
     private DateTime currentDate = DateTime.Now;
-    private List<CalendarItem> events = new()
-                            {
-        new CalendarItem
-        {
-            Start = DateTime.Today.AddHours(10),
-            End = DateTime.Today.AddHours(11),
-            Text = "Event 1"
-        },
-        new CalendarItem
-        {
-            Start = DateTime.Today.AddHours(11),
-            End = DateTime.Today.AddHours(12),
-            Text = "Event 2"
-        },
-        new CalendarItem
-        {
-            Start = DateTime.Today.AddHours(13),
-            End = DateTime.Today.AddHours(14),
-            Text = "Event 3"
-        },
-        new CalendarItem
-        {
-            Start = DateTime.Today.AddHours(14),
-            End = DateTime.Today.AddHours(15),
-            Text = "Event 4"
-        },
-        new CalendarItem
-        {
-            Start = DateTime.Today.AddHours(17),
-            End = DateTime.Today.AddHours(18),
-            Text = "Event 5"
-        },
-        new CalendarItem
-        {
-            Start = DateTime.Today.AddHours(17),
-            End = DateTime.Today.AddHours(18),
-            Text = "Event 6"
-        },
-        new CalendarItem
-        {
-            Start = DateTime.Today.AddDays(1).AddHours(11),
-            End = DateTime.Today.AddDays(1).AddHours(12.5),
-            Text = "Event 7"
-        }
-    };
+    private List<CalendarItem> events = new();
 
     private async Task OpenCreateEventDialog() {
-        // var specialists = await GetSpecialists();
-        var dialog = await DialogService.ShowAsync<CreateEventDialog>("Create Event");
+        var parameters = new DialogParameters {
+                ["calendarEvent"] = new CalendarEvent() {
+                    Title = "New Event",
+                    Description = "Description",
+                    Location = "Location",
+                    Start = DateTime.Today,
+                    End = DateTime.Today.AddHours(1),
+                    IsAllDay = false,
+                    Color = "primary"
+                }
+            };
+        var dialog = await DialogService.ShowAsync<CreateEventDialog>("Create Event", parameters);
         var result = await dialog.Result;
 
         if (!result.Canceled) {

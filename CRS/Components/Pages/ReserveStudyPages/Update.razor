@@ -406,7 +406,7 @@
     private async Task OpenAssignSpecialistDialog() {
         var specialists = await GetSpecialists();
         var parameters = new DialogParameters { ["specialists"] = specialists };
-        var dialog = DialogService.Show<AssignSpecialistDialog>("Assign Specialist", parameters);
+        var dialog = await DialogService.ShowAsync<AssignSpecialistDialog>("Assign Specialist", parameters);
         var result = await dialog.Result;
 
         if (!result.Canceled) {

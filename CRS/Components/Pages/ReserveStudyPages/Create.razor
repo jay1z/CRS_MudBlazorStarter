@@ -110,7 +110,7 @@ else {
                 return;
             }
 
-            await InitializeModel();
+            InitializeModel();
             InitializeSteps();
             context = await DbFactory.CreateDbContextAsync();
             Routes?.SetLayout(typeof(MainLayout));
@@ -133,7 +133,7 @@ else {
         };
     }
 
-    private async Task InitializeModel() {
+    private void InitializeModel() {
         Model = new ReserveStudy {
                 ApplicationUserId = GetCurrentUserId(UserState.ClaimsPrincipal),
                 Community = new Community() {

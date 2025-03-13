@@ -91,7 +91,7 @@
 @code {
     private string? currentUrl;
 
-    protected override async Task OnInitializedAsync() {
+    protected override void OnInitialized() {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
         UserState.OnChange += StateHasChanged;

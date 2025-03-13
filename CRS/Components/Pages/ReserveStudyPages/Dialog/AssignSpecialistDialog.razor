@@ -1,6 +1,9 @@
 ﻿@using CRS.Data
 
 <MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Select Specialist</MudText>
+    </TitleContent>
     <DialogContent>
         <MudSelect T="ApplicationUser" Label="Select Specialist" @bind-Value="selectedSpecialist">
             @foreach (var user in specialists) {
