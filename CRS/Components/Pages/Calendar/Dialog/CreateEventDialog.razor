@@ -1,56 +1,65 @@
 ﻿@using CRS.Data
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
 
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">Add Event</MudText>
     </TitleContent>
     <DialogContent>
-        <MudForm @* @ref="form" *@ Model="calendarEvent" OnValidSubmit="Submit">
-            <MudTextField T="string" Label="Event Name" Required="true" RequiredError="Event name is required!" @bind-Value="calendarEvent.Title" />
+        <MudForm @ref="form" Model="calendarEvent">
+            <MudTextField T="string" Variant="Variant.Outlined" Label="Event Name" Required="true" RequiredError="Event name is required!" @bind-Value="calendarEvent.Title" Immediate="true" />
+            <MudTextField T="string" Variant="Variant.Outlined" Label="Event Description" @bind-Value="calendarEvent.Description" Lines="3" />
+            <MudTextField T="string" Variant="Variant.Outlined" Label="Event Location" @bind-Value="calendarEvent.Location" />
 
-            <MudTextField T="string" Label="Event Description" @bind-Value="calendarEvent.Description" />
+            <div class="d-flex flex-column gap-2 my-2">
+                <MudSelect T="string" Label="Event Color" @bind-Value="calendarEvent.Color">
+                    @foreach (var color in eventColors) {
+                        <MudSelectItem Value="@color">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Color="@GetColorFromString(color)" Class="mr-2" />
+                                <span class="text-capitalize">@color</span>
+                            </div>
+                        </MudSelectItem>
+                    }
+                </MudSelect>
 
-            <MudTextField T="string" Label="Event Location" @bind-Value="calendarEvent.Location" />
-
-            <MudCheckBox T="bool" @bind-Checked="calendarEvent.IsAllDay" Label="All Day" Color="Color.Primary" />
-
-            <div class="d-flex gap-4">
-                <MudDatePicker Label="Start Date" Required="true" @bind-Date="calendarEvent.Start" />
-
-                @* @if (!calendarEvent.IsAllDay) {
-                    <MudTimePicker Label="Start Time" Required="true" @bind-Time="startTime" />
-                } *@
+                <MudCheckBox T="bool" @bind-Checked="calendarEvent.IsAllDay" Label="All Day" Color="Color.Primary" />
             </div>
 
             <div class="d-flex gap-4">
-                <MudDatePicker Label="End Date" Required="true" @bind-Date="calendarEvent.End" />
+                <MudDatePicker Label="Start Date" Required="true" @bind-Date="calendarEvent.Start" DateFormat="MM/dd/yyyy" RequiredError="Start date is required" />
+                <MudTimePicker Label="Start Time" Required="true" @bind-Time="startTime" AmPm="true" ReadOnly="@calendarEvent.IsAllDay" Disabled="@calendarEvent.IsAllDay" RequiredError="Start time is required" />
+            </div>
 
-                @* @if (!calendarEvent.IsAllDay) {
-                    <MudTimePicker Label="End Time" Required="true" @bind-Time="endTime" />
-                } *@
+            <div class="d-flex gap-4">
+                <MudDatePicker Label="End Date" Required="true" @bind-Date="calendarEvent.End" DateFormat="MM/dd/yyyy" RequiredError="End date is required" />
+                <MudTimePicker Label="End Time" Required="true" @bind-Time="endTime" AmPm="true" ReadOnly="@calendarEvent.IsAllDay" Disabled="@calendarEvent.IsAllDay" RequiredError="End time is required" />
+            </div>
+
+            <div class="d-flex flex-column gap-2 my-2">
+                <MudCheckBox T="bool" @bind-Checked="calendarEvent.IsPrivate" Label="Private Event" Color="Color.Secondary" />
             </div>
         </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Color="Color.Secondary">Cancel</MudButton>
-        <MudButton OnClick="Submit" Color="Color.Primary" @* Disabled="@(!form.IsValid)" *@>Submit</MudButton>
+        <MudButton OnClick="Cancel" Color="Color.Default" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Submit" Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="@_isProcessing">@(_isProcessing ? "Saving..." : "Submit")</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    //public MudForm form;
-    // private void OnInitialized() {
-    //     startTime = calendarEvent.Start.Value.TimeOfDay;
-    //     endTime = calendarEvent.End.Value.TimeOfDay;
-    // }
+    private MudForm form;
+    private bool _isProcessing = false;
 
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; }
+    private IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter]
-    public CalendarEvent calendarEvent { get; set; }
+    public CalendarEvent calendarEvent { get; set; } = null!;
+
     private TimeSpan? startTime;
     private TimeSpan? endTime;
 
@@ -58,20 +67,64 @@
         "primary", "info", "success", "warning", "error", "dark"
     };
 
+    protected override void OnInitialized() {
+        // Initialize values safely
+        calendarEvent.Start ??= DateTime.Now;
+        calendarEvent.End ??= DateTime.Now.AddHours(1);
+        calendarEvent.Color ??= "primary";
+
+        startTime = calendarEvent.Start?.TimeOfDay;
+        endTime = calendarEvent.End?.TimeOfDay;
+    }
+
+    private Color GetColorFromString(string colorName) =>
+        colorName switch {
+            "primary" => Color.Primary,
+            "info" => Color.Info,
+            "success" => Color.Success,
+            "warning" => Color.Warning,
+            "error" => Color.Error,
+            "dark" => Color.Dark,
+            _ => Color.Primary
+        };
+
     private async Task Submit() {
-        // await form.Validate();
-        // if (form.IsValid) {
-        if (!calendarEvent.IsAllDay && startTime.HasValue) {
-            calendarEvent.Start = calendarEvent.Start?.Date.Add(startTime.Value);
-            calendarEvent.End = calendarEvent.End?.Date.Add(endTime ?? startTime.Value);
+        await form.Validate();
+        if (!form.IsValid) return;
+
+        try {
+            _isProcessing = true;
+
+            // Set the times on the dates
+            if (!calendarEvent.IsAllDay && startTime.HasValue) {
+                calendarEvent.Start = calendarEvent.Start?.Date.Add(startTime.Value);
+                calendarEvent.End = calendarEvent.End?.Date.Add(endTime ?? startTime.Value);
+            }
+            else if (calendarEvent.IsAllDay) {
+                // For all-day events, set start time to beginning of day and end time to end of day
+                calendarEvent.Start = calendarEvent.Start?.Date;
+                calendarEvent.End = calendarEvent.End?.Date.AddDays(1).AddSeconds(-1);
+            }
+
+            // Validate dates
+            if (calendarEvent.End < calendarEvent.Start) {
+                Snackbar.Add("End time cannot be before start time", Severity.Error);
+                _isProcessing = false;
+                return;
+            }
+
+            using var context = await DbFactory.CreateDbContextAsync();
+            context.Add(calendarEvent);
+            await context.SaveChangesAsync();
+
+            MudDialog.Close(DialogResult.Ok(calendarEvent.ToCalendarItem()));
         }
-
-        var context = await DbFactory.CreateDbContextAsync();
-        context.Add(calendarEvent);
-        await context.SaveChangesAsync();
-
-        MudDialog.Close(DialogResult.Ok(calendarEvent));
-        // }
+        catch (Exception ex) {
+            Snackbar.Add($"Error saving event: {ex.Message}", Severity.Error);
+        }
+        finally {
+            _isProcessing = false;
+        }
     }
 
     private void Cancel() {

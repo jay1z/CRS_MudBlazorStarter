@@ -21,11 +21,14 @@
                             }
                             else {
                                 <p>You are not authorized to access this resource.</p>
+                                <MudAlert Severity="Severity.Error">
+                                    You do not have access to this resource.
+                                </MudAlert>
                             }
                         }
                     </NotAuthorized>
                     <Authorizing>
-                        <p>Authorizing...</p>
+                        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
                     </Authorizing>
                 </AuthorizeRouteView>
             </Found>
@@ -50,6 +53,10 @@
 
 @code {
     private Type LayoutType = typeof(MainLayout);
+
+    protected override async Task OnInitializedAsync() {
+        await base.OnInitializedAsync();
+    }
 
     public void SetLayout(Type layout) {
         if (layout != null && layout != LayoutType) {

@@ -1,5 +1,4 @@
 ﻿@page "/ReserveStudies/Create"
-@attribute [Authorize(Roles = "User")]
 @using CRS.Components.Layout
 @using CRS.Components.Pages.ReserveStudyPages.Steps
 @using CRS.Data
@@ -105,6 +104,7 @@ else {
 
     protected override async Task OnInitializedAsync() {
         try {
+            //await UserState.InitializeAsync();
             if (!UserState.ClaimsPrincipal.Identity?.IsAuthenticated ?? true) {
                 NavigationManager.NavigateTo("/login");
                 return;
@@ -113,7 +113,6 @@ else {
             InitializeModel();
             InitializeSteps();
             context = await DbFactory.CreateDbContextAsync();
-            Routes?.SetLayout(typeof(MainLayout));
         }
         catch (Exception ex) {
             Snackbar.Add($"Error initializing: {ex.Message}", Severity.Error);

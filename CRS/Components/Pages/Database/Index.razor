@@ -1,0 +1,337 @@
+﻿@page "/dbmanager"
+@attribute [AllowAnonymous]
+
+@using Microsoft.EntityFrameworkCore
+@using System.Reflection
+@using System.ComponentModel.DataAnnotations
+@using CRS.Data
+@using System.ComponentModel
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+@inject ISnackbar Snackbar
+
+<PageTitle>Database Explorer</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h3" Class="mb-4">Database Explorer</MudText>
+
+    <MudGrid>
+        <MudItem xs="3">
+            <MudCard Elevation="3" Class="pa-2">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h5">Tables</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent Style="max-height: 70vh; overflow-y: auto;">
+                    <MudList T="Type" Clickable Dense>
+                        @foreach (var entityType in EntityTypes) {
+                            <MudListItem @onclick="() => SelectTable(entityType)"
+                                         Text="@entityType.Name"
+                                         Icon="@Icons.Material.Filled.Storage"
+                                         Selected="entityType == SelectedEntityType" />
+                        }
+                    </MudList>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="9">
+            <MudCard Elevation="3" Class="pa-2">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h5">
+                            @(SelectedEntityType?.Name ?? "Select a table")
+                        </MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudTooltip Text="Refresh Data">
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                           Color="Color.Default"
+                                           OnClick="RefreshData" />
+                        </MudTooltip>
+                        <MudTooltip Text="Export to CSV">
+                            <MudIconButton Icon="@Icons.Material.Filled.Download"
+                                           Color="Color.Primary"
+                                           OnClick="ExportToCsv"
+                                           Disabled="@(SelectedEntityType == null || Data.Count == 0)" />
+                        </MudTooltip>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent Style="max-height: 70vh; overflow-y: auto;">
+                    @if (IsLoading) {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+                    }
+                    else if (SelectedEntityType == null) {
+                        <MudAlert Severity="Severity.Info">Select a table from the list to view its data.</MudAlert>
+                    }
+                    else if (Data.Count == 0) {
+                        <MudAlert Severity="Severity.Info">No records found in this table.</MudAlert>
+                    }
+                    else {
+                        <MudGrid>
+                            <MudItem xs="12" Class="d-flex align-center mb-2">
+                                <MudTextField @bind-Value="SearchString"
+                                              Placeholder="Search"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="@Icons.Material.Filled.Search"
+                                              IconSize="Size.Medium"
+                                              Class="mr-3" />
+
+                                <MudText>Records: @Data.Count</MudText>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudTable Items="@Data"
+                                  Dense
+                                  Hover
+                                  Bordered
+                                  Striped
+                                  Filter="FilterFunc"
+                                  Virtualize="true"
+                                  Height="55vh"
+                                  FixedHeader="true"
+                                  SortLabel="Sort By">
+                            <HeaderContent>
+                                @foreach (var property in DisplayProperties) {
+                                    <MudTh>
+                                        <MudTableSortLabel T="object" SortBy="@(item => GetSortValue(item, property))">
+                                            @GetDisplayName(property)
+                                        </MudTableSortLabel>
+                                    </MudTh>
+                                }
+                            </HeaderContent>
+                            <RowTemplate>
+                                @foreach (var property in DisplayProperties) {
+                                    <MudTd DataLabel="@GetDisplayName(property)">
+                                        @FormatPropertyValue(context, property)
+                                    </MudTd>
+                                }
+                            </RowTemplate>
+                            <PagerContent>
+                                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+                            </PagerContent>
+                            <NoRecordsContent>
+                                <MudText>No matching records found.</MudText>
+                            </NoRecordsContent>
+                        </MudTable>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudExpansionPanels Class="mt-4">
+        <MudExpansionPanel Text="Query Details" IsInitiallyExpanded="false">
+            <MudText Typo="Typo.body2" Class="py-2">
+                Showing data from table: <b>@SelectedEntityType?.Name</b>
+            </MudText>
+
+            @if (SelectedEntityType != null) {
+                <MudDivider />
+                <MudText Typo="Typo.body2" Class="py-2">
+                    Table Schema:
+                </MudText>
+                <MudTable Items="@DisplayProperties" Dense Hover Class="mb-4">
+                    <HeaderContent>
+                        <MudTh>Property Name</MudTh>
+                        <MudTh>Data Type</MudTh>
+                        <MudTh>Nullable</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.Name</MudTd>
+                        <MudTd>@GetFriendlyTypeName(context.PropertyType)</MudTd>
+                        <MudTd>@(IsNullableType(context.PropertyType) ? "Yes" : "No")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+</MudContainer>
+
+@code {
+    private List<Type> EntityTypes { get; set; } = new List<Type>();
+    private Type? SelectedEntityType { get; set; }
+    private List<object> Data { get; set; } = new List<object>();
+    private bool IsLoading { get; set; } = false;
+    private string SearchString { get; set; } = "";
+    private PropertyInfo[] DisplayProperties { get; set; } = Array.Empty<PropertyInfo>();
+
+    protected override async Task OnInitializedAsync() {
+        await LoadEntityTypes();
+    }
+
+    private async Task LoadEntityTypes() {
+        using var context = await DbContextFactory.CreateDbContextAsync();
+        EntityTypes = context.Model.GetEntityTypes()
+            .Select(t => t.ClrType)
+            .OrderBy(t => t.Name)
+            .ToList();
+    }
+
+    private async Task SelectTable(Type entityType) {
+        IsLoading = true;
+        SelectedEntityType = entityType;
+        DisplayProperties = GetDisplayProperties(entityType);
+        await LoadData();
+        IsLoading = false;
+    }
+
+    private async Task LoadData() {
+        if (SelectedEntityType == null) return;
+
+        try {
+            using var context = await DbContextFactory.CreateDbContextAsync();
+            var dbSetProperty = context.GetType().GetProperties()
+                .FirstOrDefault(p => p.PropertyType.IsGenericType &&
+                                    p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) &&
+                                    p.PropertyType.GetGenericArguments()[0] == SelectedEntityType);
+
+            if (dbSetProperty != null) {
+                var dbSet = dbSetProperty.GetValue(context);
+                var items = ((IQueryable)dbSet).Cast<object>().ToList();
+                Data = items;
+            }
+            else {
+                Data = new List<object>();
+                Snackbar.Add($"Could not find DbSet for type {SelectedEntityType.Name}", Severity.Error);
+            }
+        }
+        catch (Exception ex) {
+            Data = new List<object>();
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private PropertyInfo[] GetDisplayProperties(Type type) {
+        return type.GetProperties()
+            .Where(p => !p.Name.Contains("Password") && !p.PropertyType.IsGenericType && !(p.PropertyType.IsClass && p.PropertyType != typeof(string))) /* &&                       !p.GetCustomAttributes(typeof(NoDisplayAttribute), true).Any()) */
+            .ToArray();
+    }
+
+    private string GetDisplayName(PropertyInfo property) {
+        var displayAttribute = property.GetCustomAttribute<DisplayAttribute>();
+        return displayAttribute?.Name ?? SplitCamelCase(property.Name);
+    }
+
+    private string SplitCamelCase(string input) {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        var result = new System.Text.StringBuilder();
+        result.Append(input[0]);
+
+        for (int i = 1; i < input.Length; i++) {
+            if (char.IsUpper(input[i]))
+                result.Append(' ');
+            result.Append(input[i]);
+        }
+
+        return result.ToString();
+    }
+
+    private string FormatPropertyValue(object item, PropertyInfo property) {
+        var value = property.GetValue(item);
+
+        if (value == null)
+            return "";
+
+        if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTime?)) {
+            var dateValue = value as DateTime?;
+            return dateValue?.ToString("MM/dd/yyyy hh:mm tt") ?? "";
+        }
+        else if (property.PropertyType == typeof(bool) || property.PropertyType == typeof(bool?)) {
+            return (value as bool? ?? false) ? "Yes" : "No";
+        }
+        else if (property.PropertyType == typeof(Guid) || property.PropertyType == typeof(Guid?)) {
+            return value.ToString()?.Substring(0, 8) + "...";
+        }
+
+        return value.ToString() ?? "";
+    }
+
+    private bool FilterFunc(object item) {
+        if (string.IsNullOrWhiteSpace(SearchString))
+            return true;
+
+        foreach (var property in DisplayProperties) {
+            var value = property.GetValue(item)?.ToString();
+            if (!string.IsNullOrEmpty(value) &&
+                value.Contains(SearchString, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private async Task RefreshData() {
+        if (SelectedEntityType != null) {
+            IsLoading = true;
+            await LoadData();
+            IsLoading = false;
+        }
+    }
+
+    private object GetSortValue(object item, PropertyInfo property) {
+        return property.GetValue(item) ?? "";
+    }
+
+    private string GetFriendlyTypeName(Type type) {
+        if (type == typeof(string))
+            return "String";
+        else if (type == typeof(int) || type == typeof(int?))
+            return "Integer";
+        else if (type == typeof(decimal) || type == typeof(decimal?))
+            return "Decimal";
+        else if (type == typeof(bool) || type == typeof(bool?))
+            return "Boolean";
+        else if (type == typeof(DateTime) || type == typeof(DateTime?))
+            return "DateTime";
+        else if (type == typeof(Guid) || type == typeof(Guid?))
+            return "GUID";
+        else if (type.IsEnum)
+            return "Enum";
+        else
+            return type.Name;
+    }
+
+    private bool IsNullableType(Type type) {
+        return Nullable.GetUnderlyingType(type) != null || type == typeof(string) || !type.IsValueType;
+    }
+
+    private void ExportToCsv() {
+        // if (SelectedEntityType == null || Data.Count == 0) return;
+
+        // try {
+        //     var fileName = $"{SelectedEntityType.Name}_Export_{DateTime.Now:yyyyMMdd}.csv";
+        //     var sb = new System.Text.StringBuilder();
+
+        //     // Add headers
+        //     sb.AppendLine(string.Join(",", DisplayProperties.Select(p => $"\"{GetDisplayName(p)}\"")));
+
+        //     // Add data rows
+        //     foreach (var item in Data) {
+        //         var values = DisplayProperties.Select(p => {
+        //             var value = FormatPropertyValue(item, p);
+        //             // Escape quotes and wrap in quotes if needed
+        //             return $"\"{value.Replace("\"", "\"\"")}\"";
+        //         });
+
+        //         sb.AppendLine(string.Join(",", values));
+        //     }
+
+        //     Snackbar.Add($"Ready to export {Data.Count} records. File will download in your browser.", Severity.Success);
+
+        //     // In a real application, you'd implement actual file download here
+        //     // Since Blazor Server can't directly force downloads, you'd typically:
+        //     // 1. Use a JavaScript interop to trigger download
+        //     // 2. Or save to a temporary server file and provide a link
+
+        //     // For a truly working solution, you'd add JS Interop code to trigger the download
+        // }
+        //     catch (Exception ex)
+        //     {
+        //         Snackbar.Add($"Error exporting data: {ex.Message}", Severity.Error);
+        //     }
+        // }
+    }
+}

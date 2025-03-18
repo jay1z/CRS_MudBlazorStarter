@@ -32,19 +32,19 @@ public class NavigationService : INavigationService
         // Check if user is ONLY in the User role
         if (userRoles.Count == 1 && userRoles.Contains("User"))
         {
-            _navigationManager.NavigateTo("/ReserveStudies");
+            _navigationManager.NavigateTo("/ReserveStudies", true);
         }
         else if (userRoles.Contains("Admin"))
         {
-            _navigationManager.NavigateTo("/Dashboard");
+            _navigationManager.NavigateTo("/Dashboard", true);
         }
         else if (userRoles.Contains("Specialist"))
         {
-            _navigationManager.NavigateTo("/ReserveStudies");
+            _navigationManager.NavigateTo("/ReserveStudies", true);
         }
         else
         {
-            _navigationManager.NavigateTo("/Dashboard");
+            _navigationManager.NavigateTo("/Dashboard", true);
         }
     }
 }

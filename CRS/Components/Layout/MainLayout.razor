@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
-@attribute [Authorize(Roles = "Admin,Specialist")]
+@implements IDisposable
+
 @using CRS.Data
 @using CRS.Themes
 @using Microsoft.AspNetCore.Authorization
@@ -30,19 +31,31 @@
                 <MudChip T="string" Color="Color.Primary" Class="ml-2">@role</MudChip>
             }
         </AuthorizeView>
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+            <MudMenuItem Href="/Account/Manage">Profile</MudMenuItem>
+            <MudMenuItem Href="/Settings">Settings</MudMenuItem>
+            <MudDivider />
+            <MudMenuItem>
+                <form action="Account/Logout" method="post" style="width: 100%">
+                    <AntiforgeryToken />
+                    <button type="submit" style="background: none; border: none; color: inherit; width: 100%; text-align: left; cursor: pointer">
+                        Logout
+                    </button>
+                </form>
+            </MudMenuItem>
+        </MudMenu>
     </MudAppBar>
     @* <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="_themeManager.DrawerClipMode" Elevation="_themeManager.DrawerElevation"> *@
     <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="25">
         <NavMenu />
     </MudDrawer>
-    <MudMainContent Class="mt-16 pa-4">
+    <MudMainContent id="main-content" Class="mt-16 pa-4">
         <ErrorBoundary>
             @Body
         </ErrorBoundary>
     </MudMainContent>
 
-    <MudScrollToTop TopOffset="100" Selector="#unique_id_scroll_section">
+    <MudScrollToTop TopOffset="100" Selector="#main-content">
         <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowUpward">Go to top</MudButton>
     </MudScrollToTop>
 </MudLayout>

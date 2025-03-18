@@ -1,5 +1,4 @@
-﻿@attribute [Authorize]
-@page "/Communities/Details/{Id:guid}"
+﻿@page "/Communities/Details/{Id:guid}"
 @using CRS.Data
 @using CRS.Services
 @using Microsoft.AspNetCore.Identity
@@ -37,7 +36,7 @@
                 <!-- Aside Column -->
                 <MudItem xs="12" lg="4">
                     <!-- Details Card -->
-                    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+                    <MudCard Outlined="true" Class="mb-4">
                         <MudCardContent>
                             <MudText Typo="Typo.h6">Community ID</MudText>
                             <MudText Typo="Typo.body2">@community.Id</MudText>
@@ -48,7 +47,7 @@
                     </MudCard>
 
                     <!-- Actions Card -->
-                    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+                    <MudCard Outlined="true" Class="mb-4">
                         <MudCardContent>
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="">Update Community</MudButton>
                         </MudCardContent>
@@ -57,10 +56,10 @@
 
                 <!-- Main Column -->
                 <MudItem xs="12" lg="8">
-                    <MudTabs Elevation="0" Outlined="true" Color="Color.Primary">
+                    <MudTabs Outlined="true" Color="Color.Primary">
                         <!-- Reserve Study List Tab -->
                         <MudTabPanel Text="Reserve Studies" Icon="@Icons.Material.Filled.Info">
-                            <MudCard Elevation="25">
+                            <MudCard Outlined="true">
                                 <MudCardContent Class="py-6">
                                     <MudDataGrid Items="@reserveStudies" Filterable="false" SortMode="@SortMode.None" Groupable="false">
                                         <Columns>
@@ -100,7 +99,7 @@
 
     protected override async Task OnInitializedAsync() {
         try {
-            await UserState.InitializeAsync();
+            //await UserState.InitializeAsync();
             using var context = await DbFactory.CreateDbContextAsync();
             community = context.Communities.AsNoTracking().FirstOrDefault(c => c.Id == id);
             if (community is not null) {

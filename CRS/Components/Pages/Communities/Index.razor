@@ -1,5 +1,4 @@
-﻿@attribute [Authorize]
-@page "/Communities"
+﻿@page "/Communities"
 @using CRS.Data
 @using CRS.Services
 @using Microsoft.EntityFrameworkCore
@@ -26,7 +25,7 @@
         </MudAlert>
     }
     else {
-        <MudCard Elevation="25">
+        <MudCard Outlined="true">
             <MudCardHeader>
                 <MudGrid>
                     <MudItem xs="12" sm="6">
@@ -79,8 +78,7 @@
         try {
             isLoading = true;
 
-            await UserState.InitializeAsync();
-
+            //await UserState.InitializeAsync();
             if (UserState.ClaimsPrincipal.Identity is not null && UserState.ClaimsPrincipal.Identity.IsAuthenticated) {
                 LoadCommunities();
             }
@@ -99,27 +97,38 @@
     }
 
     private void LoadCommunities() {
-        using var context = DbFactory.CreateDbContext();
-        var query = context.ReserveStudies
-            .AsNoTracking()
-            .Include(rs => rs.Community)
-            .AsSplitQuery();
+        try {
 
-        // Filter ReserveStudies based on user role and ownership
-        reserveStudies = UserState.UserRoles.Contains("Admin")
-            ? query.ToList()
-            : UserState.UserRoles.Contains("Specialist")
-                ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList()
-                : UserState.UserRoles.Contains("User")
-                    ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList()
-                    : new List<ReserveStudy>();
+            using var context = DbFactory.CreateDbContext();
+            var query = context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.Community)
+                .AsSplitQuery();
 
-        // Extract unique communities from the filtered ReserveStudies
-        communities = reserveStudies
-            .Where(rs => rs.Community != null)
-            .Select(rs => rs.Community)
-            .DistinctBy(c => c.Id)
-            .ToList();
+            if (UserState.UserRoles != null && UserState.UserRoles.Contains("Admin")) {
+                reserveStudies = UserState.UserRoles.Contains("Admin")
+                    ? query.ToList()
+                    : UserState.UserRoles.Contains("Specialist")
+                        ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList()
+                        : UserState.UserRoles.Contains("User")
+                            ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList()
+                            : new List<ReserveStudy>();
+            }
+            else {
+                Snackbar.Add("Unable to determine user permissions. Please log out and log back in.", Severity.Warning);
+            }
+
+            // Extract unique communities from the filtered ReserveStudies
+            communities = reserveStudies.Where(rs => rs.Community != null).Select(rs => rs.Community).DistinctBy(c => c.Id).ToList();
+        }
+        catch (DbUpdateConcurrencyException ex) {
+            Snackbar.Add("Data has been modified by another user. Please refresh.", Severity.Warning);
+            throw;
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Database error: {ex.Message}", Severity.Error);
+            reserveStudies = new List<ReserveStudy>();
+        }
     }
 
     private IEnumerable<Community> FilteredCommunities => communities.Where(community => FilterFunc(community, searchString));

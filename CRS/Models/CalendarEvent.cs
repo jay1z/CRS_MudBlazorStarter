@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 using CRS.Data;
 
+using Heron.MudCalendar;
+
 namespace CRS.Models {
     public class CalendarEvent : BaseModel {
         public string? Title { get; set; }
@@ -49,6 +51,15 @@ namespace CRS.Models {
         public bool IsMuted { get; set; }
         public bool IsReported { get; set; }
         public bool IsIgnored { get; set; }
+
+        public CalendarItem ToCalendarItem() {
+            return new CalendarItem {
+                Text = this.Title!,
+                Start = this.Start ?? DateTime.Now,
+                End = this.End ?? DateTime.Now.AddHours(1),
+                AllDay = this.IsAllDay
+            };
+        }
 
         public enum ClassName {
             Primary,

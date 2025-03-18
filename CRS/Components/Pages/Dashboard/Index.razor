@@ -1,0 +1,306 @@
+﻿@page "/Dashboard"
+@attribute [Authorize(Roles = "Admin,Specialist")]
+@using CRS.Services
+@implements IDisposable
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+
+<PageTitle>Dashboard</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @if (_isLoading) {
+        <MudPaper Elevation="0" Class="pa-8">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.h5" Class="mt-4">Loading Dashboard...</MudText>
+        </MudPaper>
+    }
+    else {
+        <MudCard Elevation="0" Outlined="false">
+            <MudCardHeader>
+                <MudText Typo="Typo.h5" Class="mb-4">Dashboard</MudText>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12" Class="mb-2">
+                        <MudSelect T="string" Label="Select Reserve Study"
+                                   Variant="Variant.Outlined"
+                                   Value="_selectedReserveStudy"
+                                   ValueChanged="OnReserveStudyChanged">
+                            @foreach (var study in _reserveStudies) {
+                                <MudSelectItem Value="@study">@study</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudCard Elevation="2" Class="h-100">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Reserve Fund Allocation (7 days)</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                @if (_chartData.Length > 0) {
+                                    <MudChart ChartType="ChartType.Donut"
+                                              InputLabels="@_chartLabels"
+                                              InputData="@_chartData"
+                                              Width="200px"
+                                              Height="200px" />
+                                }
+                                else {
+                                    <MudText>No data available</MudText>
+                                }
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudCard Elevation="2" Class="h-100">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Fund Allocations</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudTable Dense="true" Items="@fundAllocations" Hover="true" Elevation="0">
+                                    <HeaderContent>
+                                        <MudTh>Category</MudTh>
+                                        <MudTh Style="text-align: right">Amount</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd>@context.Category</MudTd>
+                                        <MudTd Style="text-align: right">@context.Amount.ToString("C0")</MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudCard Elevation="2" Class="h-100">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Recent Expenditures</MudText>
+                                </CardHeaderContent>
+                                <CardHeaderActions>
+                                    <MudTooltip Text="Refresh data">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Default" OnClick="RefreshData" />
+                                    </MudTooltip>
+                                </CardHeaderActions>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudTable Dense="true" Items="@recentExpenditures" Hover="true" Elevation="0">
+                                    <HeaderContent>
+                                        <MudTh>Date</MudTh>
+                                        <MudTh>Category</MudTh>
+                                        <MudTh Style="text-align: right">Amount</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd>@context.Date</MudTd>
+                                        <MudTd>@context.Category</MudTd>
+                                        <MudTd Style="text-align: right">@context.Amount.ToString("C0")</MudTd>
+                                    </RowTemplate>
+                                    <PagerContent>
+                                        <MudTablePager HideRowsPerPage="true" HidePageNumber="true" />
+                                    </PagerContent>
+                                </MudTable>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" md="8">
+                        <MudCard Elevation="2">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Average Monthly Expenditure</MudText>
+                                </CardHeaderContent>
+                                <CardHeaderActions>
+                                    <MudMenu Icon="@Icons.Material.Filled.FilterList" Color="Color.Default" TransformOrigin="Origin.BottomRight">
+                                        <MudMenuItem>Last 6 Months</MudMenuItem>
+                                        <MudMenuItem>Last Year</MudMenuItem>
+                                        <MudMenuItem>All Time</MudMenuItem>
+                                    </MudMenu>
+                                </CardHeaderActions>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudChart ChartType="ChartType.Line" ChartSeries="@avgExpData" XAxisLabels="@avgExpLabels" Height="300" />
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudCard Elevation="2" Class="h-100">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Reserve Study Locations</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudPaper Elevation="0" Class="d-flex justify-center">
+                                    <MudImage Src="https://placehold.co/450x200" Alt="World Map" Class="rounded" />
+                                </MudPaper>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudCard Elevation="2" Class="h-100">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Highest Expenditure Categories</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudList T="ExpenditureCategory" Dense="true">
+                                    @foreach (var category in highestExpenditureCategories) {
+                                        <MudListItem Icon="@Icons.Material.Filled.AttachMoney">
+                                            <div class="d-flex justify-space-between align-center width-100">
+                                                <span>@category.Category</span>
+                                                <span class="ml-auto">@category.Amount.ToString("C0")</span>
+                                            </div>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" md="8">
+                        <MudCard Elevation="2">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Expenditure Percentile 95</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudChart ChartType="ChartType.Bar" ChartSeries="@percentileData" XAxisLabels="@percentileLabels" Height="300" />
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" md="8">
+                        <MudCard Elevation="2">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Grouped Expenditure by Category</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudPaper Elevation="0" Class="d-flex justify-center">
+                                    <MudImage Src="https://placehold.co/1000x400" Alt="Heatmap" Class="rounded" />
+                                </MudPaper>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudCard Elevation="2" Class="h-100">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Total Expenditures</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <div class="d-flex flex-column align-center">
+                                    <MudText Typo="Typo.h3">896</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Success">+12.5% from last month</MudText>
+                                </div>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    }
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private string _selectedReserveStudy = "";
+    private List<string> _reserveStudies = new() { "Reserve Study 1", "Reserve Study 2", "Reserve Study 3" };
+    private Timer? _refreshTimer;
+
+    // Chart data
+    private string[] _chartLabels = { "Maintenance", "Repairs", "Upgrades", "Other" };
+    private double[] _chartData = { 50, 20, 20, 10 };
+
+    private string[] avgExpLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul" };
+    // private double[] avgExpData = { 1000, 1200, 1500, 1100, 1300, 1400, 1600 };
+    private List<ChartSeries> avgExpData = new List<ChartSeries>()
+                {
+        new ChartSeries() { Name = "In", Data = new double[] { 90, 79, 72, 69, 62, 62, 55, 65, 70 } },
+        new ChartSeries() { Name = "Out", Data = new double[] { 10, 41, 35, 51, 49, 62, 69, 91, 148 } },
+    };
+
+    // Tables data
+    private List<FundAllocation> fundAllocations = new()
+                                {
+        new("Maintenance", 5000), new("Repairs", 2000), new("Upgrades", 3000), new("Other", 1000)
+    };
+
+    private List<Expenditure> recentExpenditures = new()
+                                {
+        new("2025-03-01", "Maintenance", 500),
+        new("2025-03-02", "Repairs", 300),
+        new("2025-03-05", "Upgrades", 750),
+        new("2025-03-10", "Maintenance", 225)
+    };
+
+    private List<ExpenditureCategory> highestExpenditureCategories = new()
+                                {
+        new("Maintenance", 5000), new("Repairs", 2000), new("Upgrades", 3000)
+    };
+
+    private string[] percentileLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul" };
+    // private double[] percentileData = { 1000, 1200, 1500, 1100, 1300, 1400, 1600 };
+    private List<ChartSeries> percentileData = new List<ChartSeries>()
+                {
+        new ChartSeries() { Name = "Month", Data = new double[] { 1000, 1200, 1500, 1100, 1300, 1400, 1600 } },
+    };
+
+    protected override async Task OnInitializedAsync() {
+        await UserState.InitializeAsync();
+        await LoadDashboardDataAsync();
+
+        // Set up periodic refresh
+        _refreshTimer = new Timer(async _ => {
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    private async Task LoadDashboardDataAsync() {
+        try {
+            _isLoading = true;
+            // Simulate data fetching
+            await Task.Delay(500);
+
+            // Here you would fetch actual data from your service
+            // Example: var data = await DashboardService.GetDashboardDataAsync();
+
+            _isLoading = false;
+        }
+        catch (Exception ex) {
+            _isLoading = false;
+            Snackbar.Add($"Error loading dashboard data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OnReserveStudyChanged(string value) {
+        _selectedReserveStudy = value;
+        await LoadDashboardDataAsync();
+    }
+
+    private async Task RefreshData() {
+        await LoadDashboardDataAsync();
+        Snackbar.Add("Dashboard data refreshed", Severity.Success);
+    }
+
+    public void Dispose() {
+        _refreshTimer?.Dispose();
+    }
+
+    // Data models
+    record FundAllocation(string Category, double Amount);
+    record Expenditure(string Date, string Category, double Amount);
+    record ExpenditureCategory(string Category, double Amount);
+}

@@ -1,5 +1,4 @@
-﻿@attribute [Authorize]
-@page "/ReserveStudies"
+﻿@page "/ReserveStudies"
 @using CRS.Data
 @using CRS.Services
 @using Microsoft.EntityFrameworkCore
@@ -26,7 +25,7 @@
         </MudAlert>
     }
     else {
-        <MudCard Elevation="25">
+        <MudCard Outlined="true">
             <MudCardHeader>
                 <MudGrid>
                     <MudItem xs="12" sm="6">
@@ -96,21 +95,21 @@
 </MudContainer>
 
 @code {
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly CancellationTokenSource _cts = new();
     private List<ReserveStudy> reserveStudies;
-    //private ApplicationUser currentUser;
-    //private IList<string> userRoles;
     private bool isLoading = true;
     private string searchString = "";
 
     protected override async Task OnInitializedAsync() {
         try {
             isLoading = true;
-            await _semaphore.WaitAsync(_cts.Token);
 
             await UserState.InitializeAsync();
-            await LoadReserveStudiesAsync(_cts.Token);
+            if (UserState.ClaimsPrincipal.Identity is not null && UserState.ClaimsPrincipal.Identity.IsAuthenticated) {
+                LoadReserveStudies();
+            }
+            else {
+                Snackbar.Add("User not authenticated.", Severity.Warning);
+            }
         }
         catch (OperationCanceledException) {
             Snackbar.Add("Operation cancelled.", Severity.Warning);
@@ -121,13 +120,36 @@
         }
         finally {
             isLoading = false;
-            _semaphore.Release();
         }
     }
 
-    private async Task LoadReserveStudiesAsync(CancellationToken cancellationToken) {
+    private async Task LoadData() {
         try {
-            using var context = await DbFactory.CreateDbContextAsync(cancellationToken);
+            isLoading = true;
+
+            // await UserState.InitializeAsync();
+            if (UserState.ClaimsPrincipal.Identity is not null && UserState.ClaimsPrincipal.Identity.IsAuthenticated) {
+                LoadReserveStudies();
+            }
+            else {
+                Snackbar.Add("User not authenticated.", Severity.Warning);
+            }
+        }
+        catch (OperationCanceledException) {
+            Snackbar.Add("Operation cancelled.", Severity.Warning);
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            reserveStudies = new List<ReserveStudy>();
+        }
+        finally {
+            isLoading = false;
+        }
+    }
+
+    private void LoadReserveStudies() {
+        try {
+            using var context = DbFactory.CreateDbContext();
             var query = context.ReserveStudies
                 .AsNoTracking()
                 .Include(rs => rs.Community)
@@ -137,15 +159,18 @@
                 .Include(rs => rs.User)
                 .AsSplitQuery();
 
-            // Use async operation with cancellation support
-            //reserveStudies = await Task.FromResult(new List<ReserveStudy>());
-            reserveStudies = await (UserState.UserRoles.Contains("Admin")
-                ? query.ToListAsync(cancellationToken)
-                : UserState.UserRoles.Contains("Specialist")
-                    ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToListAsync(cancellationToken)
-                    : UserState.UserRoles.Contains("User")
-                        ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToListAsync(cancellationToken)
-                        : Task.FromResult(new List<ReserveStudy>()));
+            if (UserState.UserRoles != null && UserState.UserRoles.Contains("Admin")) {
+                reserveStudies = UserState.UserRoles.Contains("Admin")
+                    ? query.ToList()
+                    : UserState.UserRoles.Contains("Specialist")
+                        ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList()
+                        : UserState.UserRoles.Contains("User")
+                            ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList()
+                            : new List<ReserveStudy>();
+            }
+            else {
+                Snackbar.Add("Unable to determine user permissions. Please log out and log back in.", Severity.Warning);
+            }
         }
         catch (DbUpdateConcurrencyException ex) {
             Snackbar.Add("Data has been modified by another user. Please refresh.", Severity.Warning);
@@ -157,14 +182,11 @@
         }
     }
 
-    public void Dispose() {
-        _cts.Cancel();
-        _cts.Dispose();
-        _semaphore.Dispose();
+    protected override async Task OnParametersSetAsync() {
+        await LoadData();
     }
 
     private IEnumerable<ReserveStudy> FilteredStudies => reserveStudies.Where(study => FilterFunc(study, searchString));
-
     private bool FilterFunc(ReserveStudy study, string searchString) {
         if (string.IsNullOrWhiteSpace(searchString)) {
             return true;
@@ -175,5 +197,11 @@
                study.PointOfContact?.FullName?.ToLower().Contains(searchString) == true ||
                study.PointOfContact?.Email?.ToLower().Contains(searchString) == true ||
                study.Specialist?.FullName?.ToLower().Contains(searchString) == true;
+    }
+
+    public void Dispose() {
+        // _cts.Cancel();
+        // _cts.Dispose();
+        // _semaphore.Dispose();
     }
 }

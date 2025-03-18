@@ -1,46 +1,232 @@
 ﻿@page "/Calendar"
 @using CRS.Components.Pages.Calendar.Dialog
+@using CRS.Models
 @using MudBlazor
+@using Microsoft.EntityFrameworkCore
+@using CRS.Data
+@using System.Globalization
+@using Microsoft.AspNetCore.Identity
 @inject IDialogService DialogService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject UserManager<ApplicationUser> UserManager
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge">
-    <MudCard>
-        <MudCardHeader>
-            <CardHeaderContent>
-                <MudText Typo="Typo.h2" Class="fw-bold">Calendar</MudText>
-            </CardHeaderContent>
-            <CardHeaderActions>
-                <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateEventDialog">Add Event</MudButton>
-                <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Default" />
-            </CardHeaderActions>
-        </MudCardHeader>
-        <MudCardContent>
-            <MudCalendar Outlined=true CurrentDay="@currentDate" Items="events" />
-        </MudCardContent>
-    </MudCard>
+<PageTitle>Calendar</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudPaper Elevation="3" Class="pa-4">
+        <MudGrid>
+            <MudItem xs="12">
+                <div class="d-flex justify-space-between align-center mb-4">
+                    <div>
+                        <MudText Typo="Typo.h4" Class="fw-bold">Calendar</MudText>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Surface" Style="opacity:0.8">
+                            @currentDate.ToString("MMMM yyyy", CultureInfo.InvariantCulture)
+                        </MudText>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="mx-2"></div>
+                        <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateEventDialog">New Event</MudButton>
+                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Default" Edge="Edge.End">
+                            <MudMenuItem OnClick="@(() => RefreshCalendar())">Refresh</MudMenuItem>
+                            <MudMenuItem OnClick="@(() => ExportCalendar())">Export</MudMenuItem>
+                            <MudMenuItem OnClick="@(() => NavigateToday())">Today</MudMenuItem>
+                        </MudMenu>
+                    </div>
+                </div>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudPaper Elevation="0">
+                    <MudCalendar @ref="calendar" Outlined="true" CurrentDay="@currentDate" Items="@events" ItemClicked="@OnEventClick" CellClicked="@OnDayClick">
+                        <CellTemplate>
+                            <div style="width: 100%; height: 100%; border: 2px solid @GetColor(((CustomItem)context).Color)">
+                                <div style="background-color: @GetColor(((CustomItem)context).Color)">
+                                    <MudText Typo="Typo.body1" Align="Align.Center">@(((CustomItem)context).Title)</MudText>
+                                </div>
+                                <div class="pa-2">
+                                    <MudText Typo="Typo.body2">@context.Text</MudText>
+                                </div>
+                            </div>
+                        </CellTemplate>
+                    </MudCalendar>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 </MudContainer>
 
 @code {
+    private MudCalendar calendar;
     private DateTime currentDate = DateTime.Now;
-    private List<CalendarItem> events = new();
+    private List<CustomItem> events = new();
+    // Dictionary to store user information for quick lookup
+    private Dictionary<string, string> userNameCache = new();
+    private bool isLoading = false;
+    private string userName = string.Empty;
+
+    protected override async Task OnInitializedAsync() {
+        await LoadEventsAsync();
+    }
+
+    private async Task LoadEventsAsync() {
+        try {
+            isLoading = true;
+            events.Clear();
+
+            using var context = await DbFactory.CreateDbContextAsync();
+            var calendarEvents = await context.CalendarEvents
+                .Where(e => !e.IsDeleted)
+                .ToListAsync();
+
+            foreach (var evt in calendarEvents) {
+                // Preload user information if needed
+                if (evt.ApplicationUserId.HasValue) {
+                    userName = await GetOwnerNameAsync(evt.ApplicationUserId.Value.ToString());
+                }
+
+                var calendarItem = evt.ToCalendarItem();
+                events.Add(new() {
+                        Id = evt.Id,
+                        Title = evt.Title,
+                        Text = evt.Description ?? string.Empty,
+                        Start = evt.Start ?? DateTime.Now,
+                        End = evt.End ?? DateTime.Now.AddHours(1),
+                        AllDay = evt.IsAllDay,
+                        Color = evt.Color,
+                        Location = evt.Location,
+                        Owner = userName
+                    });
+
+            }
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading events: {ex.Message}", Severity.Error);
+        }
+        finally {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // Method to get owner name from ApplicationUserId
+    private async Task<string> GetOwnerNameAsync(string userId) {
+        if (string.IsNullOrEmpty(userId)) {
+            return "Unknown";
+        }
+
+        // Check if we already have this user's name cached
+        if (userNameCache.TryGetValue(userId, out string cachedName)) {
+            return cachedName;
+        }
+
+        try {
+            // If not in cache, let's query the database
+            using var context = await DbFactory.CreateDbContextAsync();
+            var user = await context.Users.FindAsync(Guid.Parse(userId));
+
+            if (user != null) {
+                // Build the user's display name
+                string displayName = $"{user.FullNameInverted}";
+
+                // Cache the result for later use
+                userNameCache[userId] = displayName;
+
+                return displayName;
+            }
+
+            return "Unknown";
+        }
+        catch {
+            return "Unknown";
+        }
+    }
+
+    // Overload for Guid
+    private async Task<string> GetOwnerNameAsync(Guid? userId) {
+        if (!userId.HasValue)
+            return "Unknown";
+
+        return await GetOwnerNameAsync(userId.Value.ToString());
+    }
 
     private async Task OpenCreateEventDialog() {
         var parameters = new DialogParameters {
                 ["calendarEvent"] = new CalendarEvent() {
                     Title = "New Event",
-                    Description = "Description",
-                    Location = "Location",
+                    Description = "",
+                    Location = "",
                     Start = DateTime.Today,
                     End = DateTime.Today.AddHours(1),
                     IsAllDay = false,
                     Color = "primary"
                 }
             };
+
         var dialog = await DialogService.ShowAsync<CreateEventDialog>("Create Event", parameters);
         var result = await dialog.Result;
 
         if (!result.Canceled) {
-            events.Add(result.Data as CalendarItem);
+            var newEvent = result.Data as CustomItem;
+            if (newEvent != null) {
+                events.Add(newEvent);
+                // Instead of relying on refresh, we should load all events again to ensure proper mappings
+                await LoadEventsAsync();
+            }
         }
+    }
+
+    private async Task OnEventClick(CalendarItem item) {
+        if (item == null || !(item is CustomItem customItem))
+            return;
+
+        using var context = await DbFactory.CreateDbContextAsync();
+        var calendarEvent = await context.CalendarEvents.FindAsync(customItem.Id);
+
+        if (calendarEvent != null) {
+            var parameters = new DialogParameters {
+                    ["calendarEvent"] = calendarEvent
+                };
+
+            var options = new DialogOptions { CloseOnEscapeKey = true };
+            var dialog = await DialogService.ShowAsync<CreateEventDialog>("Edit Event", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled) {
+                await LoadEventsAsync();
+            }
+        }
+        else {
+            Snackbar.Add("Could not find the event in the database", Severity.Warning);
+        }
+    }
+
+    private async Task OnDayClick(DateTime date) {
+        currentDate = date;
+        StateHasChanged();
+    }
+
+    private async Task RefreshCalendar() {
+        await LoadEventsAsync();
+    }
+
+    private void NavigateToday() {
+        currentDate = DateTime.Today;
+        StateHasChanged();
+    }
+
+    private void ExportCalendar() {
+        Snackbar.Add("Calendar export functionality will be implemented soon.", Severity.Info);
+    }
+
+    private string GetColor(string color) => $"var(--mud-palette-{color})";
+
+    private class CustomItem : CalendarItem {
+        public Guid Id { get; set; } = Guid.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public string Owner { get; set; } = string.Empty;
+        public string Color { get; set; } = "primary";
     }
 }

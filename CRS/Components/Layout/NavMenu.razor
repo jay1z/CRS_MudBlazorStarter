@@ -1,6 +1,7 @@
 ﻿@using CRS.Data
 @using CRS.Services
 @using Microsoft.AspNetCore.Identity
+@inject UserStateService UserState
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -95,12 +96,6 @@
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
         UserState.OnChange += StateHasChanged;
-
-        // Get user info for the avatar
-        // var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        // if (authState.User.Identity?.IsAuthenticated == true) {
-        //     user = await UserManager.GetUserAsync(authState.User);
-        // }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) {

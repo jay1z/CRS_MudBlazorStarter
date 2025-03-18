@@ -19,6 +19,7 @@ namespace CRS.Data {
 
         public static async Task SeedAdminUserAsync(IServiceProvider serviceProvider) {
             // Use our helper to create the admin user if it doesn't exist.
+            await SeedUserIfNotExists(serviceProvider, email: "admin@company.com", password: "admin", firstName: "Admin", lastName: "", roles: new List<string>() { "Admin" });
             await SeedUserIfNotExists(serviceProvider, email: "jason@admin.com", password: "Letmein1_", firstName: "Jason", lastName: "Admin", roles: new List<string>() { "Admin" });
         }
 
