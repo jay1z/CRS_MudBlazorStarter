@@ -1,5 +1,6 @@
 ﻿@page "/Dashboard"
 @attribute [Authorize(Roles = "Admin,Specialist")]
+
 @using CRS.Services
 @implements IDisposable
 @inject UserStateService UserState
@@ -22,10 +23,7 @@
             <MudCardContent>
                 <MudGrid>
                     <MudItem xs="12" Class="mb-2">
-                        <MudSelect T="string" Label="Select Reserve Study"
-                                   Variant="Variant.Outlined"
-                                   Value="_selectedReserveStudy"
-                                   ValueChanged="OnReserveStudyChanged">
+                        <MudSelect T="string" Label="Select Reserve Study" Variant="Variant.Outlined" Value="_selectedReserveStudy" ValueChanged="OnReserveStudyChanged">
                             @foreach (var study in _reserveStudies) {
                                 <MudSelectItem Value="@study">@study</MudSelectItem>
                             }
@@ -41,11 +39,7 @@
                             </MudCardHeader>
                             <MudCardContent>
                                 @if (_chartData.Length > 0) {
-                                    <MudChart ChartType="ChartType.Donut"
-                                              InputLabels="@_chartLabels"
-                                              InputData="@_chartData"
-                                              Width="200px"
-                                              Height="200px" />
+                                    <MudChart ChartType="ChartType.Donut" InputLabels="@_chartLabels" InputData="@_chartData" Width="200px" Height="200px" />
                                 }
                                 else {
                                     <MudText>No data available</MudText>
@@ -227,19 +221,19 @@
     private string[] avgExpLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul" };
     // private double[] avgExpData = { 1000, 1200, 1500, 1100, 1300, 1400, 1600 };
     private List<ChartSeries> avgExpData = new List<ChartSeries>()
-                {
+                    {
         new ChartSeries() { Name = "In", Data = new double[] { 90, 79, 72, 69, 62, 62, 55, 65, 70 } },
         new ChartSeries() { Name = "Out", Data = new double[] { 10, 41, 35, 51, 49, 62, 69, 91, 148 } },
     };
 
     // Tables data
     private List<FundAllocation> fundAllocations = new()
-                                {
+                                    {
         new("Maintenance", 5000), new("Repairs", 2000), new("Upgrades", 3000), new("Other", 1000)
     };
 
     private List<Expenditure> recentExpenditures = new()
-                                {
+                                    {
         new("2025-03-01", "Maintenance", 500),
         new("2025-03-02", "Repairs", 300),
         new("2025-03-05", "Upgrades", 750),
@@ -247,14 +241,14 @@
     };
 
     private List<ExpenditureCategory> highestExpenditureCategories = new()
-                                {
+                                    {
         new("Maintenance", 5000), new("Repairs", 2000), new("Upgrades", 3000)
     };
 
     private string[] percentileLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul" };
     // private double[] percentileData = { 1000, 1200, 1500, 1100, 1300, 1400, 1600 };
     private List<ChartSeries> percentileData = new List<ChartSeries>()
-                {
+                    {
         new ChartSeries() { Name = "Month", Data = new double[] { 1000, 1200, 1500, 1100, 1300, 1400, 1600 } },
     };
 
