@@ -54,7 +54,7 @@
 @code {
     protected override void OnInitialized() {
         ThemeService.OnThemeChanged += StateHasChanged;
-        ThemeService.SetTheme(new Litera().Theme!);
+        ThemeService.SetTheme(new Default().Theme!);
     }
 
     public void Dispose() {

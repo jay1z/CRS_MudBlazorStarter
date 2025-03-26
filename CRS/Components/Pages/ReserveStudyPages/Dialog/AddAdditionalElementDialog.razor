@@ -1,0 +1,56 @@
+﻿@using CRS.Models
+@using System.ComponentModel.DataAnnotations
+@inject MudBlazor.ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer>
+            <EditForm Model="@newElement" OnValidSubmit="AddElement">
+                <DataAnnotationsValidator />
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="newElement.Name" Label="Element Name" Required="true" Variant="Variant.Outlined" For="@(() => newElement.Name)" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudCheckBox T="bool" @bind-Checked="newElement.NeedsService" Label="Requires Service Contact" Color="Color.Primary" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudNumericField @bind-Value="newElement.Count" Label="Quantity" Min="0" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudDatePicker @bind-Date="newElement.LastServiced" Label="Last Serviced Date" Variant="Variant.Outlined" />
+                    </MudItem>
+                </MudGrid>
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Class="mt-4">Add Element</MudButton>
+            </EditForm>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Outlined" Color="Color.Secondary">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    private ReserveStudyAdditionalElement newElement = new() {
+            Name = "",
+            Count = 1,
+            ServiceContact = new ServiceContact()
+        };
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void AddElement() {
+        // Validate element name is provided
+        if (string.IsNullOrWhiteSpace(newElement.Name)) {
+            Snackbar.Add("Element name is required", Severity.Warning);
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(newElement));
+    }
+}

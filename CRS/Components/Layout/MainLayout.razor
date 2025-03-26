@@ -26,8 +26,7 @@
         <MudSpacer />
         <AuthorizeView>
             <MudText Typo="Typo.body1">@context.User.Identity?.Name</MudText>
-            @foreach (var role in context.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value))
-            {
+            @foreach (var role in context.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value)) {
                 <MudChip T="string" Color="Color.Primary" Class="ml-2">@role</MudChip>
             }
         </AuthorizeView>
@@ -61,12 +60,10 @@
 </MudLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
-    @if (HostEnvironment.IsProduction())
-    {
+    @if (HostEnvironment.IsProduction()) {
         <span>An error has occurred.</span>
     }
-    else
-    {
+    else {
         <span>An unhandled exception occurred.</span>
     }
     <a href="" class="reload">Reload</a>
@@ -117,8 +114,7 @@
     //     StateHasChanged();
     // }
 
-    public void Dispose()
-    {
+    public void Dispose() {
         ThemeService.OnThemeChanged -= StateHasChanged;
     }
 }

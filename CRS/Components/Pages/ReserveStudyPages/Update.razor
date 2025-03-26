@@ -5,6 +5,7 @@
 @using CRS.Services
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using static CRS.Models.IReserveStudyElement
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
@@ -50,10 +51,11 @@
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <MudText Typo="Typo.h6">@reserveStudy.Community.Name</MudText>
+                                <MudText Typo="Typo.body1">@reserveStudy.Community.Addresses[0].FullAddress</MudText>
                             </CardHeaderContent>
                         </MudCardHeader>
                         <MudCardContent>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/Communities/Details/{@reserveStudy.Community.Id}")">View Community</MudButton>
+                            @* <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/Communities/Details/{@reserveStudy.Community.Id}")">View Community</MudButton> *@
                         </MudCardContent>
                     </MudCard>
 
@@ -79,7 +81,7 @@
                     <!-- Actions Card -->
                     <MudCard Elevation="0" Outlined="true" Class="mb-4">
                         <MudCardContent>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit">Save Changes</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Warning" ButtonType="ButtonType.Submit">Save Changes</MudButton>
                             <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="Cancel">Cancel</MudButton>
                         </MudCardContent>
                     </MudCard>
@@ -99,7 +101,7 @@
                 <MudItem xs="12" lg="8">
                     <MudTabs Elevation="25" Color="Color.Warning">
                         <!-- Information Tab -->
-                        <MudTabPanel Text="Information" Icon="@Icons.Material.Filled.Info" IconColor="Color.Warning">
+                        <MudTabPanel Text="Information" Icon="@Icons.Material.Filled.Info">
                             <MudCard Elevation="25">
                                 <MudCardContent Class="py-6">
                                     <MudGrid>
@@ -152,24 +154,38 @@
                             </MudCard>
                         </MudTabPanel>
                         <!-- Elements Tab -->
-                        <MudTabPanel Text="Elements" Icon="@Icons.Material.Filled.List" IconColor="Color.Warning">
+                        <MudTabPanel Text="Elements" Icon="@Icons.Material.Filled.List">
                             <MudCard Elevation="25">
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">Elements</MudText>
+                                    </CardHeaderContent>
+                                    <CardHeaderActions>
+                                        <MudMenu Icon="@Icons.Material.Filled.Add" Color="Color.Success" Label="Add Element" Variant="Variant.Outlined">
+                                            <MudMenuItem OnClick="OpenAddBuildingElementDialog">Add Building Element</MudMenuItem>
+                                            <MudMenuItem OnClick="OpenAddCommonElementDialog">Add Common Element</MudMenuItem>
+                                            <MudMenuItem OnClick="AddAdditionalElement">Add Additional Element</MudMenuItem>
+                                        </MudMenu>
+                                    </CardHeaderActions>
+                                </MudCardHeader>
                                 <MudCardContent Class="py-6">
                                     <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyElements"
-                                    GroupBy="@_groupDefinition"
-                                    GroupHeaderStyle="background-color:var(--mud-palette-background-gray)"
-                                    GroupFooterClass="mb-4">
+                                              GroupBy="@_groupDefinition"
+                                              GroupHeaderStyle="background-color:var(--mud-palette-background-gray)"
+                                              GroupFooterClass="mb-4">
                                         <ColGroup>
                                             <col style="width:10%;" />
-                                            <col style="width:50%;" />
+                                            <col style="width:40%;" />
                                             <col style="width:20%;" />
                                             <col style="width:20%;" />
+                                            <col style="width:10%;" />
                                         </ColGroup>
                                         <HeaderContent>
                                             <MudTh></MudTh>
                                             <MudTh>Name</MudTh>
                                             <MudTh>Needs Service</MudTh>
                                             <MudTh class="text-end">Amount</MudTh>
+                                            <MudTh class="text-center">Actions</MudTh>
                                         </HeaderContent>
                                         <GroupHeaderTemplate Context="headerContext">
                                             <MudTh colspan="4">@GetGroupName(headerContext)</MudTh>
@@ -186,6 +202,9 @@
                                             </MudTd>
                                             <MudTd class="text-end">
                                                 <MudNumericField @bind-Value="rowContext.Count" Min="0" />
+                                            </MudTd>
+                                            <MudTd class="text-center">
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="() => RemoveElement(rowContext)" />
                                             </MudTd>
                                         </RowTemplate>
                                         <ChildRowContent Context="childContext">
@@ -229,10 +248,10 @@
                             </MudCard>
                         </MudTabPanel>
                         <!-- Service Contacts Tab -->
-                        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone" IconColor="Color.Warning">
+                        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone">
                             @if (elementsWithServiceContact.Any()) {
                                 <MudExpansionPanels>
-                            @foreach (var element in elementsWithServiceContact) {
+                                    @foreach (var element in elementsWithServiceContact) {
                                         <MudExpansionPanel>
                                             <TitleContent>
                                                 <div class="d-flex">
@@ -268,8 +287,7 @@
                                     }
                                 </MudExpansionPanels>
                             }
-                            else
-                            {
+                            else {
                                 <MudText Typo="Typo.body1" Class="mt-4">No service contacts available.</MudText>
                             }
                         </MudTabPanel>
@@ -296,12 +314,12 @@
     private List<ElementMeasurementOptions> measurementOptions;
     private List<ElementUsefulLifeOptions> usefulLifeOptions;
     private List<ElementRemainingLifeOptions> remainingLifeOptions;
-
+    private List<BuildingElement> availableBuildingElements = new();
+    private List<CommonElement> availableCommonElements = new();
 
     protected override async Task OnInitializedAsync() {
         try {
-            // var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            // var user = authState.User;
+            await UserState.InitializeAsync();
 
             // Determine if the user can edit based on role
             //canUpdate = user.IsInRole("Specialist") || user.IsInRole("Admin");
@@ -310,7 +328,7 @@
             context = await DbFactory.CreateDbContextAsync();
 
             reserveStudy = context.ReserveStudies
-                .Include(rs => rs.Community)
+                .Include(rs => rs.Community).ThenInclude(c => c.Addresses)
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
@@ -336,13 +354,16 @@
 
             elementsWithServiceContact = reserveStudy.ReserveStudyElements.Where(e => e.NeedsService).ToList();
 
-                InitializeEditContext();
-                messageStore = new(editContext);
-                applicationUsers = await context.Users.ToListAsync();
 
-                measurementOptions = await context.ElementMeasurementOptions.ToListAsync();
-                usefulLifeOptions = await context.ElementUsefulLifeOptions.ToListAsync();
-                remainingLifeOptions = await context.ElementRemainingLifeOptions.ToListAsync();
+            InitializeEditContext();
+            messageStore = new(editContext);
+            applicationUsers = await context.Users.ToListAsync();
+
+            measurementOptions = await context.ElementMeasurementOptions.ToListAsync();
+            usefulLifeOptions = await context.ElementUsefulLifeOptions.ToListAsync();
+            remainingLifeOptions = await context.ElementRemainingLifeOptions.ToListAsync();
+            availableBuildingElements = await context.BuildingElements.ToListAsync();
+            availableCommonElements = await context.CommonElements.ToListAsync();
         }
         catch (Exception ex) {
             Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
@@ -423,6 +444,118 @@
             }
         }
         return specialists;
+    }
+
+    private async Task OpenAddBuildingElementDialog() {
+        // Get building elements that aren't already associated with this study
+        var unusedElements = availableBuildingElements
+            .Where(be => !reserveStudy.ReserveStudyBuildingElements
+                .Any(rsbe => rsbe.BuildingElementId == be.Id))
+            .ToList();
+
+        if (!unusedElements.Any()) {
+            Snackbar.Add("All building elements have already been added", Severity.Info);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["elements"] = unusedElements };
+        var dialog = await DialogService.ShowAsync<SelectBuildingElementDialog>("Add Building Element", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is BuildingElement selectedElement) {
+            reserveStudy.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
+            var newElement = new ReserveStudyBuildingElement {
+                    BuildingElementId = selectedElement.Id,
+                    ReserveStudyId = reserveStudy.Id,
+                    BuildingElement = selectedElement,
+                    ServiceContact = new ServiceContact()
+                };
+            reserveStudy.ReserveStudyBuildingElements.Add(newElement);
+
+            // Refresh the elements list for the UI
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddCommonElementDialog() {
+        // Get common elements that aren't already associated with this study
+        var unusedElements = availableCommonElements
+            .Where(ce => !reserveStudy.ReserveStudyCommonElements
+                .Any(rsce => rsce.CommonElementId == ce.Id))
+            .ToList();
+
+        if (!unusedElements.Any()) {
+            Snackbar.Add("All common elements have already been added", Severity.Info);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["elements"] = unusedElements };
+        var dialog = await DialogService.ShowAsync<SelectCommonElementDialog>("Add Common Element", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is CommonElement selectedElement) {
+            reserveStudy.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
+            var newElement = new ReserveStudyCommonElement {
+                    CommonElementId = selectedElement.Id,
+                    ReserveStudyId = reserveStudy.Id,
+                    CommonElement = selectedElement,
+                    ServiceContact = new ServiceContact()
+                };
+            reserveStudy.ReserveStudyCommonElements.Add(newElement);
+
+            // Refresh the elements list for the UI
+            StateHasChanged();
+        }
+    }
+
+    private async Task AddAdditionalElement() {
+        var dialog = await DialogService.ShowAsync<AddAdditionalElementDialog>("Add Custom Element");
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is ReserveStudyAdditionalElement newElement) {
+            reserveStudy.ReserveStudyAdditionalElements ??= new List<ReserveStudyAdditionalElement>();
+            newElement.ReserveStudyId = reserveStudy.Id;
+            reserveStudy.ReserveStudyAdditionalElements.Add(newElement);
+
+            // Update the service contacts list if needed
+            if (newElement.NeedsService) {
+                elementsWithServiceContact = reserveStudy.ReserveStudyElements.Where(e => e.NeedsService).ToList();
+            }
+
+            // Refresh the UI
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveElement(IReserveStudyElement element) {
+        switch (element.ElementType) {
+            case ElementTypeEnum.Building:
+                var buildingElement = reserveStudy.ReserveStudyBuildingElements
+                    .FirstOrDefault(e => e == element);
+                if (buildingElement != null)
+                    reserveStudy.ReserveStudyBuildingElements.Remove(buildingElement);
+                break;
+
+            case ElementTypeEnum.Common:
+                var commonElement = reserveStudy.ReserveStudyCommonElements
+                    .FirstOrDefault(e => e == element);
+                if (commonElement != null)
+                    reserveStudy.ReserveStudyCommonElements.Remove(commonElement);
+                break;
+
+            case ElementTypeEnum.Additional:
+                var additionalElement = reserveStudy.ReserveStudyAdditionalElements
+                    .FirstOrDefault(e => e == element);
+                if (additionalElement != null)
+                    reserveStudy.ReserveStudyAdditionalElements.Remove(additionalElement);
+                break;
+        }
+
+        // Update the service contacts list if needed
+        elementsWithServiceContact = reserveStudy.ReserveStudyElements.Where(e => e.NeedsService).ToList();
+
+        // Refresh the UI
+        StateHasChanged();
     }
 
     private void Cancel() {

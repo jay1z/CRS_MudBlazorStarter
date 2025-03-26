@@ -100,8 +100,12 @@
     private bool isAuthorized = false;
 
     protected override async Task OnInitializedAsync() {
+    }
+
+    private async Task LoadData() {
+        isLoading = true;
         try {
-            //await UserState.InitializeAsync();
+            await UserState.InitializeAsync();
             using var context = await DbFactory.CreateDbContextAsync();
             community = context.Communities.AsNoTracking().FirstOrDefault(c => c.Id == id);
             if (community is not null) {
@@ -129,4 +133,9 @@
             isLoading = false;
         }
     }
+
+    protected override async Task OnParametersSetAsync() {
+        await LoadData();
+    }
+
 }

@@ -127,7 +127,7 @@
         try {
             isLoading = true;
 
-            // await UserState.InitializeAsync();
+             await UserState.InitializeAsync();
             if (UserState.ClaimsPrincipal.Identity is not null && UserState.ClaimsPrincipal.Identity.IsAuthenticated) {
                 LoadReserveStudies();
             }

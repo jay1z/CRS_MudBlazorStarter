@@ -46,9 +46,9 @@ namespace CRS.Services {
         public async Task InitializeAsync() {
             if (_isInitialized) return;
 
-            using ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole());
-            ILogger logger = factory.CreateLogger("UserStateService");
-            logger.LogInformation("Hello World! Logging is {Description}.", "fun");
+            //using ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole());
+            //ILogger logger = factory.CreateLogger("UserStateService");
+            //logger.LogInformation("Hello World! Logging is {Description}.", "fun");
 
             var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated == true) {
