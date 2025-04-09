@@ -23,9 +23,10 @@ namespace CRS.Data {
             optionsBuilder
                 .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
                 //.ConfigureWarnings(w => w.Throw(SqlServerEventId.SavepointsDisabledBecauseOfMARS))
-                .UseSeeding((context, _) => {
-                    SeedData(context);
-                });
+                .UseSeeding((context, _) => { SeedData(context); });
+            //.UseAsyncSeeding(async (context, _, cancellationToken) => {
+            //    await SeedDataAsync(context);
+            //});
         }
 
         protected override void OnModelCreating(ModelBuilder builder) {
@@ -106,7 +107,6 @@ namespace CRS.Data {
             }
         }
 
-
         #region DbSet Properties
         public DbSet<Address> Addresses { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
@@ -145,95 +145,95 @@ namespace CRS.Data {
             context.SaveChanges();
         }
 
-        private void GenerateBuildingElements(DbContext context) {
+        private static void GenerateBuildingElements(DbContext context) {
             IEnumerable<BuildingElement> buildingElements =
             [
-                new BuildingElement {  Name = "Pitched Roof", IsActive = true, NeedsService = true },
-                new BuildingElement {  Name = "Flat Roof", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Siding", IsActive = true, NeedsService = true },
-                new BuildingElement {  Name = "Gutters/Downspouts", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Attached Lighting", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Shutters", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Decks", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Flooring", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Lighting", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Intercom", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Security System", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Elevator(s)", IsActive = true, NeedsService = true },
-                new BuildingElement {  Name = "AC Unit(s)", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Heating Unit(s)", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Water Unit(s)", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Kitchen", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Bathroom(s)", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Doors", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Windows", IsActive = true, NeedsService = false },
-                new BuildingElement {  Name = "Balconies", IsActive = true, NeedsService = false }
+                new BuildingElement {  Name = "Pitched Roof", IsActive = true, NeedsService = true,ZOrder=0 },
+                new BuildingElement {  Name = "Flat Roof", IsActive = true, NeedsService = false , ZOrder = 1},
+                new BuildingElement {  Name = "Siding", IsActive = true, NeedsService = true , ZOrder = 2},
+                new BuildingElement {  Name = "Gutters/Downspouts", IsActive = true, NeedsService = false , ZOrder = 3},
+                new BuildingElement {  Name = "Attached Lighting", IsActive = true, NeedsService = false , ZOrder = 4},
+                new BuildingElement {  Name = "Shutters", IsActive = true, NeedsService = false , ZOrder = 5},
+                new BuildingElement {  Name = "Decks", IsActive = true, NeedsService = false , ZOrder = 6},
+                new BuildingElement {  Name = "Flooring", IsActive = true, NeedsService = false , ZOrder = 7},
+                new BuildingElement {  Name = "Lighting", IsActive = true, NeedsService = false , ZOrder = 8},
+                new BuildingElement {  Name = "Intercom", IsActive = true, NeedsService = false , ZOrder = 9},
+                new BuildingElement {  Name = "Security System", IsActive = true, NeedsService = false, ZOrder = 10 },
+                new BuildingElement {  Name = "Elevator(s)", IsActive = true, NeedsService = true, ZOrder = 11 },
+                new BuildingElement {  Name = "AC Unit(s)", IsActive = true, NeedsService = false, ZOrder = 12 },
+                new BuildingElement {  Name = "Heating Unit(s)", IsActive = true, NeedsService = false, ZOrder = 13},
+                new BuildingElement {  Name = "Water Unit(s)", IsActive = true, NeedsService = false, ZOrder = 14 },
+                new BuildingElement {  Name = "Kitchen", IsActive = true, NeedsService = false, ZOrder = 15 },
+                new BuildingElement {  Name = "Bathroom(s)", IsActive = true, NeedsService = false, ZOrder = 16 },
+                new BuildingElement {  Name = "Doors", IsActive = true, NeedsService = false, ZOrder = 17 },
+                new BuildingElement {  Name = "Windows", IsActive = true, NeedsService = false, ZOrder = 18 },
+                new BuildingElement {  Name = "Balconies", IsActive = true, NeedsService = false, ZOrder = 19 }
             ];
 
             foreach (BuildingElement buildingElement in buildingElements) {
-                BuildingElement element = context.Set<BuildingElement>().FirstOrDefault(e => e.Name == buildingElement.Name);
+                BuildingElement element = context.Set<BuildingElement>().FirstOrDefault(e => e.Name == buildingElement.Name)!;
                 if (element is null) {
                     context.Set<BuildingElement>().Add(buildingElement);
                 }
             }
         }
 
-        private void GenerateCommonElements(DbContext context) {
+        private static void GenerateCommonElements(DbContext context) {
             IEnumerable<CommonElement> commonElements =
             [
-                new CommonElement {  Name = "Clubhouse", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Pool", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Playground", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Tennis/Ball Courts", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Property Fencing", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Pool(s)/Lake(s)", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Gazebos(s)/Pavilion(s)", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Entry Signage/Structure(s)", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Street Signage", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Roads", IsActive = true, NeedsService = true },
-                new CommonElement {  Name = "Catch Basins", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Parking", IsActive = true, NeedsService = true },
-                new CommonElement {  Name = "Sidewalks", IsActive = true, NeedsService = true },
-                new CommonElement {  Name = "Driveways", IsActive = true, NeedsService = true },
-                new CommonElement {  Name = "Patios", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Porches", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Privacy Fencing", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Garage(s)", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Pump Station", IsActive = true, NeedsService = true },
-                new CommonElement {  Name = "Retaining Walls", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Fountains", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Property Lighting", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Street Lighting", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Paved Trails/Paths", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Mail Huts/Boxes", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Fire Hydrants", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Sports Fields", IsActive = true, NeedsService = false },
-                new CommonElement {  Name = "Shed(s)/Storage", IsActive = true, NeedsService = false }
+                new CommonElement {  Name = "Clubhouse", IsActive = true, NeedsService = false, ZOrder = 0 },
+                new CommonElement {  Name = "Pool", IsActive = true, NeedsService = false, ZOrder = 1},
+                new CommonElement {  Name = "Playground", IsActive = true, NeedsService = false, ZOrder = 2 },
+                new CommonElement {  Name = "Tennis/Ball Courts", IsActive = true, NeedsService = false, ZOrder = 3 },
+                new CommonElement {  Name = "Property Fencing", IsActive = true, NeedsService = false, ZOrder = 4 },
+                new CommonElement {  Name = "Pool(s)/Lake(s)", IsActive = true, NeedsService = false, ZOrder = 5 },
+                new CommonElement {  Name = "Gazebos(s)/Pavilion(s)", IsActive = true, NeedsService = false, ZOrder = 6},
+                new CommonElement {  Name = "Entry Signage/Structure(s)", IsActive = true, NeedsService = false , ZOrder = 7},
+                new CommonElement {  Name = "Street Signage", IsActive = true, NeedsService = false , ZOrder = 8},
+                new CommonElement {  Name = "Roads", IsActive = true, NeedsService = true , ZOrder = 9},
+                new CommonElement {  Name = "Catch Basins", IsActive = true, NeedsService = false , ZOrder = 10},
+                new CommonElement {  Name = "Parking", IsActive = true, NeedsService = true , ZOrder = 11},
+                new CommonElement {  Name = "Sidewalks", IsActive = true, NeedsService = true , ZOrder = 12},
+                new CommonElement {  Name = "Driveways", IsActive = true, NeedsService = true , ZOrder = 13},
+                new CommonElement {  Name = "Patios", IsActive = true, NeedsService = false , ZOrder = 14},
+                new CommonElement {  Name = "Porches", IsActive = true, NeedsService = false , ZOrder = 15},
+                new CommonElement {  Name = "Privacy Fencing", IsActive = true, NeedsService = false , ZOrder = 16},
+                new CommonElement {  Name = "Garage(s)", IsActive = true, NeedsService = false , ZOrder = 17},
+                new CommonElement {  Name = "Pump Station", IsActive = true, NeedsService = true , ZOrder = 18},
+                new CommonElement {  Name = "Retaining Walls", IsActive = true, NeedsService = false , ZOrder = 19},
+                new CommonElement {  Name = "Fountains", IsActive = true, NeedsService = false , ZOrder = 20},
+                new CommonElement {  Name = "Property Lighting", IsActive = true, NeedsService = false, ZOrder = 21 },
+                new CommonElement {  Name = "Street Lighting", IsActive = true, NeedsService = false , ZOrder = 22},
+                new CommonElement {  Name = "Paved Trails/Paths", IsActive = true, NeedsService = false , ZOrder = 23},
+                new CommonElement {  Name = "Mail Huts/Boxes", IsActive = true, NeedsService = false , ZOrder = 24},
+                new CommonElement {  Name = "Fire Hydrants", IsActive = true, NeedsService = false , ZOrder = 25},
+                new CommonElement {  Name = "Sports Fields", IsActive = true, NeedsService = false , ZOrder = 26},
+                new CommonElement {  Name = "Shed(s)/Storage", IsActive = true, NeedsService = false, ZOrder = 27}
             ];
             foreach (CommonElement commonElement in commonElements) {
-                CommonElement element = context.Set<CommonElement>().FirstOrDefault(e => e.Name == commonElement.Name);
+                CommonElement element = context.Set<CommonElement>().FirstOrDefault(e => e.Name == commonElement.Name)!;
                 if (element is null) {
                     context.Set<CommonElement>().Add(commonElement);
                 }
             }
         }
 
-        private void GenerateElementMeasurementOptions(DbContext context) {
+        private static void GenerateElementMeasurementOptions(DbContext context) {
             IEnumerable<ElementMeasurementOptions> elementMeasurementOptions =
             [
                 new ElementMeasurementOptions {  DisplayText = "Square Feet", Unit = "sq. ft.", ZOrder = 0 },
-                new ElementMeasurementOptions {  DisplayText = "Linear Feet", Unit = "LF.", ZOrder = 0 },
-                new ElementMeasurementOptions {  DisplayText = "Each", Unit = "ea.", ZOrder = 0 }
+                new ElementMeasurementOptions {  DisplayText = "Linear Feet", Unit = "LF.", ZOrder = 1 },
+                new ElementMeasurementOptions {  DisplayText = "Each", Unit = "ea.", ZOrder = 2 }
             ];
             foreach (ElementMeasurementOptions elementMeasurementOption in elementMeasurementOptions) {
-                ElementMeasurementOptions option = context.Set<ElementMeasurementOptions>().FirstOrDefault(e => e.DisplayText == elementMeasurementOption.DisplayText);
+                ElementMeasurementOptions option = context.Set<ElementMeasurementOptions>().FirstOrDefault(e => e.DisplayText == elementMeasurementOption.DisplayText)!;
                 if (option is null) {
                     context.Set<ElementMeasurementOptions>().Add(elementMeasurementOption);
                 }
             }
         }
 
-        private void GenerateElementRemainingLifeOptions(DbContext context) {
+        private static void GenerateElementRemainingLifeOptions(DbContext context) {
             IEnumerable<ElementRemainingLifeOptions> elementRemainingLifeOptions =
             [
                 new ElementRemainingLifeOptions {  DisplayText = "1-5 Years", Unit = "1-5", ZOrder = 0 },
@@ -253,14 +253,14 @@ namespace CRS.Data {
                 new ElementRemainingLifeOptions {  DisplayText = "76-80 Years", Unit = "76-80", ZOrder = 15 }
             ];
             foreach (ElementRemainingLifeOptions elementRemainingLifeOption in elementRemainingLifeOptions) {
-                ElementRemainingLifeOptions option = context.Set<ElementRemainingLifeOptions>().FirstOrDefault(e => e.DisplayText == elementRemainingLifeOption.DisplayText);
+                ElementRemainingLifeOptions option = context.Set<ElementRemainingLifeOptions>().FirstOrDefault(e => e.DisplayText == elementRemainingLifeOption.DisplayText)!;
                 if (option is null) {
                     context.Set<ElementRemainingLifeOptions>().Add(elementRemainingLifeOption);
                 }
             }
         }
 
-        private void GenerateElementUsefulLifeOptions(DbContext context) {
+        private static void GenerateElementUsefulLifeOptions(DbContext context) {
             IEnumerable<ElementUsefulLifeOptions> elementUsefulLifeOptions =
             [
                 new ElementUsefulLifeOptions {  DisplayText = "1-5 Years", Unit = "1-5", ZOrder = 0 },
@@ -281,7 +281,7 @@ namespace CRS.Data {
                 new ElementUsefulLifeOptions {  DisplayText = "76-80 Years", Unit = "76-80", ZOrder = 15 }
             ];
             foreach (ElementUsefulLifeOptions elementUsefulLifeOption in elementUsefulLifeOptions) {
-                ElementUsefulLifeOptions option = context.Set<ElementUsefulLifeOptions>().FirstOrDefault(e => e.DisplayText == elementUsefulLifeOption.DisplayText);
+                ElementUsefulLifeOptions option = context.Set<ElementUsefulLifeOptions>().FirstOrDefault(e => e.DisplayText == elementUsefulLifeOption.DisplayText)!;
                 if (option is null) {
                     context.Set<ElementUsefulLifeOptions>().Add(elementUsefulLifeOption);
                 }

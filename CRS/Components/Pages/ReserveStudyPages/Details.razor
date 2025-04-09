@@ -1,6 +1,9 @@
 ﻿@page "/ReserveStudies/Details/{Id:guid}"
+@attribute [Authorize]
+
 @using CRS.Data
 @using CRS.Services
+@using CRS.Services.Email
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components
@@ -12,6 +15,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IEmailService EmailService
 
 <PageTitle>Reserve Study Details</PageTitle>
 
@@ -147,71 +151,76 @@
                         </MudTabPanel>
                         <!-- Elements Tab -->
                         <MudTabPanel Text="Elements" Icon="@Icons.Material.Filled.List">
-                            <MudCard Elevation="25">
-                                <MudCardContent Class="py-6">
-                                    <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyElements"
-                                              GroupBy="@_groupDefinition"
-                                              GroupHeaderStyle="background-color:var(--mud-palette-background-gray)"
-                                              GroupFooterClass="mb-4">
-                                        <ColGroup>
-                                            <col style="width:10%;" />
-                                            <col style="width:50%;" />
-                                            <col style="width:20%;" />
-                                            <col style="width:20%;" />
-                                        </ColGroup>
-                                        <HeaderContent>
-                                            <MudTh></MudTh>
-                                            <MudTh>Name</MudTh>
-                                            <MudTh>Needs Service</MudTh>
-                                            <MudTh class="text-end">Amount</MudTh>
-                                        </HeaderContent>
-                                        <GroupHeaderTemplate Context="headerContext">
-                                            <MudTh colspan="4">@GetGroupName(headerContext)</MudTh>
-                                        </GroupHeaderTemplate>
-                                        <RowTemplate Context="rowContext">
-                                            <MudTd>
-                                                <MudIconButton Icon="@((rowContext.ShowDetails == true) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="@(() => ShowElement(rowContext))" />
-                                            </MudTd>
-                                            <MudTd>
-                                                <MudText Typo="Typo.body1">@rowContext.Name</MudText>
-                                            </MudTd>
-                                            <MudTd>
-                                                <MudCheckBox T="bool" Value="rowContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
-                                            </MudTd>
-                                            <MudTd class="text-end">
-                                                <MudText Typo="Typo.body1">@rowContext.Count</MudText>
-                                            </MudTd>
-                                        </RowTemplate>
-                                        <ChildRowContent Context="childContext">
-                                            @if (childContext.ShowDetails) {
-                                                <MudTd colspan="4">
-                                                    <MudGrid>
-                                                        <MudItem xs="3">
-                                                            <MudText Typo="Typo.caption">Measurement Type</MudText>
-                                                            <MudText Typo="Typo.body1">@childContext.ElementMeasurementOptions?.DisplayText</MudText>
-                                                        </MudItem>
-                                                        <MudItem xs="3">
-                                                            <MudText Typo="Typo.caption">Last Replaced</MudText>
-                                                            <MudText Typo="Typo.body1">@childContext.LastServiced?.ToString("MM/dd/yyyy")</MudText>
-                                                        </MudItem>
-                                                        <MudItem xs="3">
-                                                            <MudText Typo="Typo.caption">Useful Life</MudText>
-                                                            <MudText Typo="Typo.body1">@childContext.ElementUsefulLifeOptions?.DisplayText</MudText>
-                                                        </MudItem>
-                                                        <MudItem xs="3">
-                                                            <MudText Typo="Typo.caption">Remaining Life</MudText>
-                                                            <MudText Typo="Typo.body1">@childContext.ElementRemainingLifeOptions?.DisplayText</MudText>
-                                                        </MudItem>
-                                                    </MudGrid>
+                            @if (reserveStudy.ReserveStudyElements.Any()) {
+                                <MudCard Elevation="25">
+                                    <MudCardContent Class="py-6">
+                                        <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyElements"
+                                                  GroupBy="@_groupDefinition"
+                                                  GroupHeaderStyle="background-color:var(--mud-palette-background-gray)"
+                                                  GroupFooterClass="mb-4">
+                                            <ColGroup>
+                                                <col style="width:10%;" />
+                                                <col style="width:50%;" />
+                                                <col style="width:20%;" />
+                                                <col style="width:20%;" />
+                                            </ColGroup>
+                                            <HeaderContent>
+                                                <MudTh></MudTh>
+                                                <MudTh>Name</MudTh>
+                                                <MudTh>Needs Service</MudTh>
+                                                <MudTh class="text-end">Amount</MudTh>
+                                            </HeaderContent>
+                                            <GroupHeaderTemplate Context="headerContext">
+                                                <MudTh colspan="4">@GetGroupName(headerContext)</MudTh>
+                                            </GroupHeaderTemplate>
+                                            <RowTemplate Context="rowContext">
+                                                <MudTd>
+                                                    <MudIconButton Icon="@((rowContext.ShowDetails == true) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="@(() => ShowElement(rowContext))" />
                                                 </MudTd>
-                                            }
-                                        </ChildRowContent>
-                                        <GroupFooterTemplate Context="footerContext">
-                                            <MudTh colspan="4">Total: @footerContext.Items.Count()</MudTh>
-                                        </GroupFooterTemplate>
-                                    </MudTable>
-                                </MudCardContent>
-                            </MudCard>
+                                                <MudTd>
+                                                    <MudText Typo="Typo.body1">@rowContext.Name</MudText>
+                                                </MudTd>
+                                                <MudTd>
+                                                    <MudCheckBox T="bool" Value="rowContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                                                </MudTd>
+                                                <MudTd class="text-end">
+                                                    <MudText Typo="Typo.body1">@rowContext.Count</MudText>
+                                                </MudTd>
+                                            </RowTemplate>
+                                            <ChildRowContent Context="childContext">
+                                                @if (childContext.ShowDetails) {
+                                                    <MudTd colspan="4">
+                                                        <MudGrid>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption">Measurement Type</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementMeasurementOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption">Last Replaced</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.LastServiced?.ToString("MM/dd/yyyy")</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption">Useful Life</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementUsefulLifeOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <MudText Typo="Typo.caption">Remaining Life</MudText>
+                                                                <MudText Typo="Typo.body1">@childContext.ElementRemainingLifeOptions?.DisplayText</MudText>
+                                                            </MudItem>
+                                                        </MudGrid>
+                                                    </MudTd>
+                                                }
+                                            </ChildRowContent>
+                                            <GroupFooterTemplate Context="footerContext">
+                                                <MudTh colspan="4">Total: @footerContext.Items.Count()</MudTh>
+                                            </GroupFooterTemplate>
+                                        </MudTable>
+                                    </MudCardContent>
+                                </MudCard>
+                            }
+                            else {
+                                <MudText Typo="Typo.body1" Class="mt-4">No elements available.</MudText>
+                            }
                         </MudTabPanel>
                         <!-- Service Contacts Tab -->
                         <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone">
@@ -322,9 +331,18 @@
     }
 
     private string GetUpdateLink() => $"/ReserveStudies/Update/{reserveStudy?.Id}";
-    private void SendRequestLink() {
-        // Implement logic to send request link
-        Snackbar.Add("Request link sent successfully!", Severity.Success);
+    private async Task SendRequestLink() {
+        try {
+            var subject = $"Reserve Study Request for {reserveStudy?.Community?.Name}";
+            var additionalMessage = $"A reserve study request has been shared with you. You can view the details online or contact the assigned specialist for more information.";
+
+            await EmailService.SendReserveStudyToContactsAsync(reserveStudy, subject, additionalMessage);
+
+            Snackbar.Add("Request link sent successfully!", Severity.Success);
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error sending email: {ex.Message}", Severity.Error);
+        }
     }
 
     private void ShowElement(IReserveStudyElement element) {

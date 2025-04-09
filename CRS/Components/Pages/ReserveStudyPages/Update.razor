@@ -1,6 +1,6 @@
 ﻿@page "/ReserveStudies/Update/{Id:guid}"
 @using CRS.Components.Layout
-@using CRS.Components.Pages.ReserveStudyPages.Dialog
+@using CRS.Components.Pages.ReserveStudyPages.Dialogs
 @using CRS.Data
 @using CRS.Services
 @using Microsoft.AspNetCore.Identity
@@ -164,7 +164,7 @@
                                         <MudMenu Icon="@Icons.Material.Filled.Add" Color="Color.Success" Label="Add Element" Variant="Variant.Outlined">
                                             <MudMenuItem OnClick="OpenAddBuildingElementDialog">Add Building Element</MudMenuItem>
                                             <MudMenuItem OnClick="OpenAddCommonElementDialog">Add Common Element</MudMenuItem>
-                                            <MudMenuItem OnClick="AddAdditionalElement">Add Additional Element</MudMenuItem>
+                                            <MudMenuItem OnClick="OpenAddAdditionalElementDialog">Add Additional Element</MudMenuItem>
                                         </MudMenu>
                                     </CardHeaderActions>
                                 </MudCardHeader>
@@ -354,7 +354,6 @@
 
             elementsWithServiceContact = reserveStudy.ReserveStudyElements.Where(e => e.NeedsService).ToList();
 
-
             InitializeEditContext();
             messageStore = new(editContext);
             applicationUsers = await context.Users.ToListAsync();
@@ -386,21 +385,7 @@
     private void ShowElement(IReserveStudyElement element) {
         element.ShowDetails = !element.ShowDetails;
     }
-    // private void ShowBuildingElement(int id)
-    // {
-    //     ReserveStudyBuildingElement element = reserveStudy.ReserveStudyBuildingElements.First(f => f.BuildingElementId == id);
-    //     element.ShowDetails = !element.ShowDetails;
-    // }
-    // private void ShowCommonElement(int id)
-    // {
-    //     ReserveStudyCommonElement element = reserveStudy.ReserveStudyCommonElements.First(f => f.CommonElementId == id);
-    //     element.ShowDetails = !element.ShowDetails;
-    // }
-    // private void ShowAdditionalElement(int id)
-    // {
-    //     ReserveStudyAdditionalElement element = reserveStudy.ReserveStudyAdditionalElements.First(f => f.Id == id);
-    //     element.ShowDetails = !element.ShowDetails;
-    // }
+
     private TableGroupDefinition<IReserveStudyElement> _groupDefinition = new() {
             GroupName = "Element Type",
             Indentation = false,
@@ -411,15 +396,19 @@
 
     private async Task SaveChanges() {
         try {
-            context.Update(reserveStudy);
+            // Since we're tracking all entities, just save changes
             await context.SaveChangesAsync();
 
             Snackbar.Add("Changes saved successfully!", Severity.Success);
             NavigationManager.NavigateTo($"/ReserveStudies/Details/{reserveStudy.Id}");
         }
+        catch (DbUpdateException ex) {
+            // Handle database-specific errors
+            var innerException = ex.InnerException?.Message ?? ex.Message;
+            Snackbar.Add($"Database error: {innerException}", Severity.Error);
+        }
         catch (Exception ex) {
             Snackbar.Add($"Error saving changes: {ex.Message}", Severity.Error);
-            Snackbar.Add($"Error saving changes: {ex.InnerException?.Message}", Severity.Error);
         }
     }
 
@@ -448,104 +437,128 @@
 
     private async Task OpenAddBuildingElementDialog() {
         // Get building elements that aren't already associated with this study
-        var unusedElements = availableBuildingElements
-            .Where(be => !reserveStudy.ReserveStudyBuildingElements
-                .Any(rsbe => rsbe.BuildingElementId == be.Id))
-            .ToList();
-
+        var unusedElements = availableBuildingElements.Where(be => !reserveStudy.ReserveStudyBuildingElements.Any(rsbe => rsbe.BuildingElementId == be.Id)).ToList();
         if (!unusedElements.Any()) {
             Snackbar.Add("All building elements have already been added", Severity.Info);
             return;
         }
-
         var parameters = new DialogParameters { ["elements"] = unusedElements };
+
         var dialog = await DialogService.ShowAsync<SelectBuildingElementDialog>("Add Building Element", parameters);
         var result = await dialog.Result;
 
         if (!result.Canceled && result.Data is BuildingElement selectedElement) {
+            // Create the service contact - don't add to context yet
+            var serviceContact = new ServiceContact();
+
             reserveStudy.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
             var newElement = new ReserveStudyBuildingElement {
-                    BuildingElementId = selectedElement.Id,
                     ReserveStudyId = reserveStudy.Id,
+                    BuildingElementId = selectedElement.Id,
                     BuildingElement = selectedElement,
-                    ServiceContact = new ServiceContact()
+                    ServiceContact = serviceContact
                 };
+
+            // Add to tracking context but don't save yet
+            context.ServiceContacts.Add(serviceContact);
             reserveStudy.ReserveStudyBuildingElements.Add(newElement);
 
-            // Refresh the elements list for the UI
+            // Update the UI immediately
             StateHasChanged();
+
+            // If needed, update service contacts list
+            if (selectedElement.NeedsService) {
+                elementsWithServiceContact = reserveStudy.ReserveStudyElements.Where(e => e.NeedsService).ToList();
+            }
         }
     }
 
     private async Task OpenAddCommonElementDialog() {
         // Get common elements that aren't already associated with this study
-        var unusedElements = availableCommonElements
-            .Where(ce => !reserveStudy.ReserveStudyCommonElements
-                .Any(rsce => rsce.CommonElementId == ce.Id))
-            .ToList();
-
+        var unusedElements = availableCommonElements.Where(ce => !reserveStudy.ReserveStudyCommonElements.Any(rsce => rsce.CommonElementId == ce.Id)).ToList();
         if (!unusedElements.Any()) {
             Snackbar.Add("All common elements have already been added", Severity.Info);
             return;
         }
-
         var parameters = new DialogParameters { ["elements"] = unusedElements };
+
         var dialog = await DialogService.ShowAsync<SelectCommonElementDialog>("Add Common Element", parameters);
         var result = await dialog.Result;
 
         if (!result.Canceled && result.Data is CommonElement selectedElement) {
+            // Create the service contact - don't add to context yet
+            var serviceContact = new ServiceContact();
+
             reserveStudy.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
             var newElement = new ReserveStudyCommonElement {
-                    CommonElementId = selectedElement.Id,
                     ReserveStudyId = reserveStudy.Id,
+                    CommonElementId = selectedElement.Id,
                     CommonElement = selectedElement,
-                    ServiceContact = new ServiceContact()
+                    ServiceContact = serviceContact
                 };
+
+            // Add to tracking context but don't save yet
+            context.ServiceContacts.Add(serviceContact);
             reserveStudy.ReserveStudyCommonElements.Add(newElement);
 
-            // Refresh the elements list for the UI
+            // Update the UI immediately
             StateHasChanged();
+
+            // If needed, update service contacts list
+            if (selectedElement.NeedsService) {
+                elementsWithServiceContact = reserveStudy.ReserveStudyElements.Where(e => e.NeedsService).ToList();
+            }
         }
     }
 
-    private async Task AddAdditionalElement() {
-        var dialog = await DialogService.ShowAsync<AddAdditionalElementDialog>("Add Custom Element");
+    private async Task OpenAddAdditionalElementDialog() {
+        var dialog = await DialogService.ShowAsync<AddAdditionalElementDialog>("Add Additional Element");
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is ReserveStudyAdditionalElement newElement) {
-            reserveStudy.ReserveStudyAdditionalElements ??= new List<ReserveStudyAdditionalElement>();
-            newElement.ReserveStudyId = reserveStudy.Id;
-            reserveStudy.ReserveStudyAdditionalElements.Add(newElement);
+        if (!result.Canceled && result.Data is ReserveStudyAdditionalElement selectedElement) {
+            // Create the service contact - don't add to context yet
+            var serviceContact = selectedElement.ServiceContact;
 
-            // Update the service contacts list if needed
-            if (newElement.NeedsService) {
+            reserveStudy.ReserveStudyAdditionalElements ??= new List<ReserveStudyAdditionalElement>();
+            var newElement = new ReserveStudyAdditionalElement {
+                    ReserveStudyId = reserveStudy.Id,
+                    Name = selectedElement.Name,
+                    Count = selectedElement.Count,
+                    NeedsService = selectedElement.NeedsService,
+                    ServiceContact = serviceContact
+                };
+
+            // Add to tracking context but don't save yet
+            context.ServiceContacts.Add(serviceContact);
+            context.ReserveStudyAdditionalElements.Add(newElement);
+            //reserveStudy.ReserveStudyAdditionalElements.Add(newElement);
+
+            // Update the UI immediately
+            StateHasChanged();
+
+            // If needed, update service contacts list
+            if (selectedElement.NeedsService) {
                 elementsWithServiceContact = reserveStudy.ReserveStudyElements.Where(e => e.NeedsService).ToList();
             }
-
-            // Refresh the UI
-            StateHasChanged();
         }
     }
 
     private void RemoveElement(IReserveStudyElement element) {
         switch (element.ElementType) {
             case ElementTypeEnum.Building:
-                var buildingElement = reserveStudy.ReserveStudyBuildingElements
-                    .FirstOrDefault(e => e == element);
+                var buildingElement = reserveStudy.ReserveStudyBuildingElements.FirstOrDefault(e => e == element);
                 if (buildingElement != null)
                     reserveStudy.ReserveStudyBuildingElements.Remove(buildingElement);
                 break;
 
             case ElementTypeEnum.Common:
-                var commonElement = reserveStudy.ReserveStudyCommonElements
-                    .FirstOrDefault(e => e == element);
+                var commonElement = reserveStudy.ReserveStudyCommonElements.FirstOrDefault(e => e == element);
                 if (commonElement != null)
                     reserveStudy.ReserveStudyCommonElements.Remove(commonElement);
                 break;
 
             case ElementTypeEnum.Additional:
-                var additionalElement = reserveStudy.ReserveStudyAdditionalElements
-                    .FirstOrDefault(e => e == element);
+                var additionalElement = reserveStudy.ReserveStudyAdditionalElements.FirstOrDefault(e => e == element);
                 if (additionalElement != null)
                     reserveStudy.ReserveStudyAdditionalElements.Remove(additionalElement);
                 break;

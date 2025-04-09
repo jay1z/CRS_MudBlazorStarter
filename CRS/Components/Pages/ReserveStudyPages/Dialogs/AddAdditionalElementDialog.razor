@@ -12,19 +12,16 @@
                         <MudTextField @bind-Value="newElement.Name" Label="Element Name" Required="true" Variant="Variant.Outlined" For="@(() => newElement.Name)" />
                     </MudItem>
                     <MudItem xs="12">
-                        <MudCheckBox T="bool" @bind-Checked="newElement.NeedsService" Label="Requires Service Contact" Color="Color.Primary" />
+                        <MudCheckBox T="bool" @bind-Value="newElement.NeedsService" Label="Requires Service Contact" Color="Color.Primary" />
                     </MudItem>
                     <MudItem xs="12">
                         <MudNumericField @bind-Value="newElement.Count" Label="Quantity" Min="0" Variant="Variant.Outlined" />
                     </MudItem>
-                    <MudItem xs="12">
+                    @* <MudItem xs="12">
                         <MudDatePicker @bind-Date="newElement.LastServiced" Label="Last Serviced Date" Variant="Variant.Outlined" />
-                    </MudItem>
+                    </MudItem> *@
                 </MudGrid>
-                <MudButton ButtonType="ButtonType.Submit"
-                           Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           Class="mt-4">Add Element</MudButton>
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mt-4">Add Element</MudButton>
             </EditForm>
         </MudContainer>
     </DialogContent>
@@ -38,8 +35,9 @@
 
     private ReserveStudyAdditionalElement newElement = new() {
             Name = "",
-            Count = 1,
-            ServiceContact = new ServiceContact()
+            Count = 0,
+            NeedsService = false,
+            ServiceContact = new ServiceContact(),
         };
 
     private void Cancel() => MudDialog.Cancel();

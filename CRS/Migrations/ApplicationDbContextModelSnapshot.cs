@@ -209,6 +209,9 @@ namespace CRS.Migrations
                     b.Property<bool>("NeedsService")
                         .HasColumnType("bit");
 
+                    b.Property<int>("ZOrder")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.ToTable("BuildingElements", "crs");
@@ -393,6 +396,9 @@ namespace CRS.Migrations
 
                     b.Property<bool>("NeedsService")
                         .HasColumnType("bit");
+
+                    b.Property<int>("ZOrder")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -775,11 +781,20 @@ namespace CRS.Migrations
                     b.Property<bool>("IsComplete")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("LastModified")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("PointOfContactType")
                         .HasColumnType("int");
 
                     b.Property<Guid?>("PropertyManagerId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<Guid?>("SpecialistUserId")
                         .HasColumnType("uniqueidentifier");

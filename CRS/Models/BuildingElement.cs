@@ -8,5 +8,7 @@ namespace CRS.Models {
         public bool NeedsService { get; set; }
         [DataType(DataType.Date)] public DateTime? LastServiced { get; set; }
         public bool IsActive { get; set; }
+        public int ZOrder { get; set; }
+
     }
 }

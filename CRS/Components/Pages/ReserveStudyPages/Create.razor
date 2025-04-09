@@ -1,4 +1,6 @@
 ﻿@page "/ReserveStudies/Create"
+@attribute [Authorize]
+
 @using CRS.Components.Layout
 @using CRS.Components.Pages.ReserveStudyPages.Steps
 @using CRS.Data
@@ -9,6 +11,7 @@
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
 @implements IAsyncDisposable
+@inject ILogger<Home> Logger
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserStateService UserState
 @inject NavigationManager NavigationManager
@@ -27,7 +30,9 @@ else {
     <MudContainer MaxWidth="MaxWidth.Medium">
         <MudCard Elevation="25">
             <MudCardContent>
-                <MudStepper @bind-ActiveStep="activeStep" Linear="true" CenterLabels="true" CompletedStepColor="Color.Success" CurrentStepColor="Color.Primary" Class="mb-4" @ref="stepper">
+                <MudStepper @bind-ActiveStep="activeStep" Linear="true" CenterLabels="true"
+                            CompletedStepColor="Color.Success" CurrentStepColor="Color.Primary"
+                            Class="mb-4" @ref="stepper">
                     <ChildContent>
                         @foreach (var step in steps) {
                             <MudStep Title="@step.Title"
@@ -44,7 +49,8 @@ else {
                         @if (!_completed) {
                             <MudGrid Justify="Justify.SpaceBetween" Class="mt-4">
                                 <MudItem>
-                                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Disabled="activeStep <= 0" OnClick="PreviousStep">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                                               Disabled="activeStep <= 0" OnClick="PreviousStep">
                                         <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-2" />
                                         Back
                                     </MudButton>
@@ -57,7 +63,8 @@ else {
                                         </MudButton>
                                     }
                                     else if (AcceptTerms) {
-                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitForm" Disabled="isSubmitting || !IsFormValid()">
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                                   OnClick="SubmitForm" Disabled="isSubmitting || !IsFormValid()">
                                             @if (isSubmitting) {
                                                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                                                 <span>Submitting...</span>
@@ -65,6 +72,13 @@ else {
                                             else {
                                                 <span>Submit</span>
                                             }
+                                        </MudButton>
+                                    }
+                                    else {
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="true">
+                                            <MudTooltip Text="You must accept the terms to proceed">
+                                                Submit
+                                            </MudTooltip>
                                         </MudButton>
                                     }
                                 </MudItem>
@@ -85,7 +99,7 @@ else {
 
     private ApplicationDbContext? context;
     private ReserveStudy? Model { get; set; }
-    private Dictionary<int, bool> stepValidationState = new();
+    private readonly Dictionary<int, bool> stepValidationState = new();
 
     private MudStepper? stepper;
     private bool isLoading = true;
@@ -104,9 +118,9 @@ else {
 
     protected override async Task OnInitializedAsync() {
         try {
-            //await UserState.InitializeAsync();
+            await UserState.InitializeAsync();
             if (!UserState.ClaimsPrincipal.Identity?.IsAuthenticated ?? true) {
-                NavigationManager.NavigateTo("/login");
+                NavigationManager.NavigateTo("/login", true);
                 return;
             }
 
@@ -115,7 +129,7 @@ else {
             context = await DbFactory.CreateDbContextAsync();
         }
         catch (Exception ex) {
-            Snackbar.Add($"Error initializing: {ex.Message}", Severity.Error);
+            LogAndDisplayError("Error initializing", ex);
         }
         finally {
             isLoading = false;
@@ -123,8 +137,7 @@ else {
     }
 
     private void InitializeSteps() {
-        steps = new List<StepDefinition>
-                                        {
+        steps = new List<StepDefinition> {
             new(0, "Community Information", @<Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated" OnExistingCommunityChanged="@((bool isExisting) => isExistingCommunity = isExisting)" />),
             new(1, "Property Manager", @<Step2 @ref="step2" Model="Model" StepValidated="OnStepValidated" />),
             new(2, "Property Elements", @<Step3 @ref="step3" Model="Model" StepValidated="OnStepValidated" />),
@@ -135,30 +148,29 @@ else {
     private void InitializeModel() {
         Model = new ReserveStudy {
                 ApplicationUserId = GetCurrentUserId(UserState.ClaimsPrincipal),
-                Community = new Community() {
+                Community = new Community {
                     Name = "Community",
-                    Addresses = new List<Address>() {
-                            new Address() {
-                                Street = "123 Main St",
-                                City = "Anytown",
-                                State = "CA",
-                                Zip = "12345"
-                            }
-                        }
+                    Addresses = new List<Address> {
+                    new Address {
+                        Street = "123 Main St",
+                        City = "Anytown",
+                        State = "CA",
+                        Zip = "12345"
+                    }
+                }
                 },
-                Contact = new Contact() {
-                    FirstName = "Peter",
-                    LastName = "Zurowski",
-                    Email = "peter@zurowski.com",
-                    Phone = "123-456-7890",
-                    Extension = "123",
-                },
-                PropertyManager = new PropertyManager() {
+                Contact = new Contact {
                     FirstName = "Jeff",
                     LastName = "Ripple",
-                    CompanyName = "Ripple Property Management",
                     Email = "jeff@ripple.com",
-                    Phone = "123-456-7891"
+                    Phone = "216-555-1234"
+                },
+                PropertyManager = new PropertyManager {
+                    FirstName = "Peter",
+                    LastName = "Zurowski",
+                    CompanyName = "Zurowski Management",
+                    Email = "peter@management.com",
+                    Phone = "216-555-4321"
                 },
                 ReserveStudyAdditionalElements = new List<ReserveStudyAdditionalElement>(),
                 IsActive = true
@@ -180,7 +192,7 @@ else {
             }
         }
         catch (Exception ex) {
-            Snackbar.Add($"Error validating step: {ex.Message}", Severity.Error);
+            LogAndDisplayError("Error validating step", ex);
         }
     }
 
@@ -221,24 +233,10 @@ else {
 
         isSubmitting = true;
         try {
-            // Create a new context for the submission
+            // Create a new context for the submission to avoid tracking conflicts
             await using var submitContext = await DbFactory.CreateDbContextAsync();
 
-            if (isExistingCommunity && Model?.Community?.Id != null) {
-                // For existing community, just set the reference without trying to attach
-                Model.CommunityId = Model.Community.Id;
-                // Detach the Community from the Model to prevent tracking conflicts
-                Model.Community = null;
-            }
-            else {
-                // For new community, ensure it's tracked as a new entity
-                if (Model?.Community != null) {
-                    Model.Community.Id = Guid.Empty; // Ensure new ID is generated
-                    foreach (var address in Model.Community.Addresses ?? Enumerable.Empty<Address>()) {
-                        address.Id = Guid.Empty; // Ensure new IDs for addresses
-                    }
-                }
-            }
+            PrepareModelForSubmission();
 
             // Add the reserve study
             submitContext.ReserveStudies.Add(Model!);
@@ -249,13 +247,35 @@ else {
             await stepper!.NextStepAsync();
         }
         catch (Exception ex) {
-            Snackbar.Add($"Error submitting form: {ex.Message}", Severity.Error);
-            if (ex.InnerException != null) {
-                Snackbar.Add($"Additional details: {ex.InnerException.Message}", Severity.Error);
-            }
+            LogAndDisplayError("Error submitting form", ex);
         }
         finally {
             isSubmitting = false;
+        }
+    }
+
+    private void PrepareModelForSubmission() {
+        if (isExistingCommunity && Model?.Community?.Id != null) {
+            // For existing community, just set the reference without trying to attach
+            Model.CommunityId = Model.Community.Id;
+            // Detach the Community from the Model to prevent tracking conflicts
+            Model.Community = null;
+        }
+        else if (Model?.Community != null) {
+            // For new community, ensure it's tracked as a new entity
+            Model.Community.Id = Guid.Empty; // Ensure new ID is generated
+            foreach (var address in Model.Community.Addresses ?? Enumerable.Empty<Address>()) {
+                address.Id = Guid.Empty; // Ensure new IDs for addresses
+            }
+        }
+    }
+
+    private void LogAndDisplayError(string message, Exception ex) {
+        Logger.LogError($"{message}: {ex}");
+        Snackbar.Add($"{message}: {ex.Message}", Severity.Error);
+
+        if (ex.InnerException != null) {
+            Snackbar.Add($"Additional details: {ex.InnerException.Message}", Severity.Error);
         }
     }
 

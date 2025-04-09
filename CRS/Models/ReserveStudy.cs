@@ -69,6 +69,12 @@ namespace CRS.Models {
         [DataType(DataType.DateTime)]
         public DateTime? DateApproved { get; set; }
 
+        // Add this property for optimistic concurrency control
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+
+        public DateTime? LastModified { get; set; }
+
         public enum PointOfContactTypeEnum {
             Contact = 0,
             PropertyManager = 1

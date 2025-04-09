@@ -14,61 +14,61 @@
         <MudText Typo="Typo.h6" Class="px-4">My Application</MudText>
         <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Secondary Text</MudText>
         <MudDivider Class="my-2" />
-        <MudNavLink Href="/Shortcuts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AppShortcut" IconColor="Color.Primary">Shortcuts</MudNavLink>
+        <MudNavLink Href="/Shortcuts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AppShortcut" IconColor="Color.Primary">Shortcuts</MudNavLink>
     </MudNavMenu>
 
     <AuthorizeView Context="authContext">
         <NotAuthorized>
-            <MudNavLink Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">Register</MudNavLink>
-            <MudNavLink Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">Login</MudNavLink>
+            <MudNavLink Href="Account/Register" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Person">Register</MudNavLink>
+            <MudNavLink Href="Account/Login" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Password">Login</MudNavLink>
         </NotAuthorized>
 
         <Authorized>
             <!-- Common Links for All Authenticated Users -->
-            <MudNavLink Href="/Dashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary">Dashboard</MudNavLink>
+            <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary">Dashboard</MudNavLink>
 
             <!-- User Role Specific Links -->
             <AuthorizeView Roles="User">
                 <MudNavGroup Title="Reserve Studies" Expanded="true">
-                    <MudNavLink Href="/ReserveStudies/Create" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary">Create New Study</MudNavLink>
-                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">My Requests</MudNavLink>
+                    <MudNavLink Href="/ReserveStudies/Create" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary">Create New Study</MudNavLink>
+                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">My Requests</MudNavLink>
                 </MudNavGroup>
 
-                <MudNavLink Href="/Communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">My Communities</MudNavLink>
+                <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">My Communities</MudNavLink>
             </AuthorizeView>
 
             <!-- Admin Role Specific Links -->
             <AuthorizeView Roles="Admin">
                 <MudNavGroup Title="Administration" Expanded="true">
-                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">All Requests</MudNavLink>
-                    <MudNavLink Href="/Communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">Communities</MudNavLink>
-                    <MudNavLink Href="/Calendar" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary">Calendar</MudNavLink>
-                    <MudNavLink Href="/Contacts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary">Contacts</MudNavLink>
-                    <MudNavLink Href="/Users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.PeopleAlt" IconColor="Color.Primary">Users</MudNavLink>
+                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">All Requests</MudNavLink>
+                    <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">Communities</MudNavLink>
+                    <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary">Calendar</MudNavLink>
+                    <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary">Contacts</MudNavLink>
+                    <MudNavLink Href="/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt" IconColor="Color.Primary">Users</MudNavLink>
                 </MudNavGroup>
             </AuthorizeView>
 
             <!-- Specialist Role Specific Links -->
             <AuthorizeView Roles="Specialist">
                 <MudNavGroup Title="Specialist Tools" Expanded="true">
-                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">Assigned Studies</MudNavLink>
-                    <MudNavLink Href="/Communities" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">Communities</MudNavLink>
-                    <MudNavLink Href="/Calendar" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary">Calendar</MudNavLink>
-                    <MudNavLink Href="/Contacts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary">Contacts</MudNavLink>
+                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">Assigned Studies</MudNavLink>
+                    <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">Communities</MudNavLink>
+                    <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary">Calendar</MudNavLink>
+                    <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary">Contacts</MudNavLink>
                 </MudNavGroup>
             </AuthorizeView>
 
             <!-- Common Support Section for All Authenticated Users -->
             <MudDivider Class="my-2" />
             <MudNavGroup Title="Support" Expanded="false">
-                <MudNavLink Href="/Help" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Help" IconColor="Color.Primary">Help Center</MudNavLink>
-                <MudNavLink Href="/Contact" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ContactSupport" IconColor="Color.Primary">Contact</MudNavLink>
-                <MudNavLink Href="/Faqs" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.QuestionAnswer" IconColor="Color.Primary">FAQs</MudNavLink>
+                <MudNavLink Href="/Help" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Help" IconColor="Color.Primary">Help Center</MudNavLink>
+                <MudNavLink Href="/Contact" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ContactSupport" IconColor="Color.Primary">Contact</MudNavLink>
+                <MudNavLink Href="/Faqs" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.QuestionAnswer" IconColor="Color.Primary">FAQs</MudNavLink>
             </MudNavGroup>
 
             <!-- User Profile Section -->
             <MudDivider Class="my-2" />
-            <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix">
+            <MudNavLink Href="Account/Manage" Match="NavLinkMatch.All">
                 @if (UserState.CurrentUser != null) {
                     <MudText Typo="Typo.body2">
                         <MudAvatar Color="Color.Primary" Size="Size.Small">@UserState.CurrentUser.Initials</MudAvatar>

@@ -62,7 +62,7 @@
                     </MudListItem>
                 }
             </MudList>
-            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="AddAdditionalElement">
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="AddAdditionalElement">
                 <MudIcon Icon="@Icons.Material.Filled.Add" />
                 Add Additional Element
             </MudButton>
@@ -87,7 +87,7 @@
     protected override async Task OnInitializedAsync() {
         context = await DbFactory.CreateDbContextAsync();
 
-        buildingElements = await context.BuildingElements.ToListAsync();
+        buildingElements = await context.BuildingElements.OrderBy(be => be.ZOrder).ToListAsync();
         commonElements = await context.CommonElements.ToListAsync();
 
         // Initialize selections based on Model

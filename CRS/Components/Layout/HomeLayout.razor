@@ -17,7 +17,8 @@
                 <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
                     <MudText Typo="Typo.body1" Class="pa-4">@context.User.Identity?.Name</MudText>
                     <MudDivider />
-                    <MudMenuItem OnClick="@(() => NavigationManager.NavigateTo("/Account/Manage"))">Profile</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Dashboard"))">Dashboard</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Account/Manage"))">Profile</MudMenuItem>
                 </MudMenu>
             </Authorized>
             <NotAuthorized>

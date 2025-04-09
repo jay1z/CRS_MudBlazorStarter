@@ -73,7 +73,9 @@
                                             <TemplateColumn CellClass="d-flex justify-end">
                                                 <CellTemplate>
                                                     <MudStack Row>
-                                                        <MudButton Size="@Size.Small" Variant="@Variant.Filled" Color="@Color.Primary">View</MudButton>
+                                                        <MudButton Href="@($"ReserveStudies/Details/{context.Item.Id}")" Size="Size.Small" Variant="Variant.Filled">
+                                                            View
+                                                        </MudButton>
                                                     </MudStack>
                                                 </CellTemplate>
                                             </TemplateColumn>

@@ -1,0 +1,51 @@
+﻿@using CRS.Models
+@namespace CRS.Components.Dialogs
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="GroupName" Label="Group Name" Required="true" RequiredError="Group name is required"
+                      Immediate="true" Validation="@(new Func<string, string>(ValidateGroupName))" />
+
+        <MudTextField @bind-Value="GroupDescription" Label="Description" Lines="3" Class="mt-3" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(string.IsNullOrWhiteSpace(GroupName))">
+            @(IsEdit ? "Update" : "Create")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string GroupName { get; set; } = string.Empty;
+    [Parameter] public string GroupDescription { get; set; } = string.Empty;
+    [Parameter] public bool IsEdit { get; set; } = false;
+
+    private string ValidateGroupName(string name) {
+        if (string.IsNullOrWhiteSpace(name))
+            return "Group name is required";
+
+        if (name.Length < 2)
+            return "Group name must be at least 2 characters";
+
+        return null;
+    }
+
+    private void Submit() {
+        var result = new ContactGroupResult {
+                Name = GroupName.Trim(),
+                Description = GroupDescription?.Trim()
+            };
+
+        MudDialog.Close(DialogResult.Ok(result));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class ContactGroupResult {
+        public string Name { get; set; }
+        public string Description { get; set; }
+    }
+}

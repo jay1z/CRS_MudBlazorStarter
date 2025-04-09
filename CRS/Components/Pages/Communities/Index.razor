@@ -22,7 +22,7 @@
         </MudPaper>
     }
     else if (communities == null || !communities.Any()) {
-        <MudAlert Severity="Severity.Info">
+        <MudAlert Severity="Severity.Warning">
             <MudText Typo="Typo.body1">No communities found.</MudText>
         </MudAlert>
     }
@@ -44,11 +44,23 @@
                         <MudTh>
                             <MudTableSortLabel T="Community" SortBy="@(x => x.Name)">Name</MudTableSortLabel>
                         </MudTh>
+                        <MudTh>City</MudTh>
+                        <MudTh>State</MudTh>
+                        <MudTh>Zip</MudTh>
                         <MudTh></MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Name">
                             <MudText Typo="Typo.h5" Class="fw-bold">@context.Name</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="City">
+                            @context.Addresses?.FirstOrDefault()?.City
+                        </MudTd>
+                        <MudTd DataLabel="State">
+                            @context.Addresses?.FirstOrDefault()?.State
+                        </MudTd>
+                        <MudTd DataLabel="Zip">
+                            @context.Addresses?.FirstOrDefault()?.Zip
                         </MudTd>
                         <MudTd>
                             <MudButton Href="@($"Communities/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
@@ -70,17 +82,24 @@
         </MudCard>
     }
 </MudContainer>
+
 @code {
     private List<ReserveStudy> reserveStudies;
-    private List<Community> communities = new();
+    private List<Community> communities;
     private bool isLoading = true;
     private string searchString = "";
 
-    protected override async Task OnInitializedAsync() {
+    protected override async Task OnInitializedAsync() { }
+
+    protected override async Task OnParametersSetAsync() {
+        await LoadData();
+    }
+
+    private async Task LoadData() {
         try {
             isLoading = true;
 
-            //await UserState.InitializeAsync();
+            await UserState.InitializeAsync();
             if (UserState.ClaimsPrincipal.Identity is not null && UserState.ClaimsPrincipal.Identity.IsAuthenticated) {
                 LoadCommunities();
             }
@@ -88,10 +107,10 @@
                 Snackbar.Add("User not authenticated.", Severity.Warning);
                 return;
             }
-
         }
         catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            communities = new List<Community>();
         }
         finally {
             isLoading = false;
@@ -100,28 +119,24 @@
 
     private void LoadCommunities() {
         try {
-
             using var context = DbFactory.CreateDbContext();
             var query = context.ReserveStudies
                 .AsNoTracking()
-                .Include(rs => rs.Community)
+                .Include(rs => rs.Community).ThenInclude(rs => rs.Addresses)
                 .AsSplitQuery();
 
-            if (UserState.UserRoles != null && UserState.UserRoles.Contains("Admin")) {
+            if (UserState.UserRoles != null) {
                 reserveStudies = UserState.UserRoles.Contains("Admin")
-                    ? query.ToList()
-                    : UserState.UserRoles.Contains("Specialist")
-                        ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList()
-                        : UserState.UserRoles.Contains("User")
-                            ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList()
-                            : new List<ReserveStudy>();
+                    ? query.ToList() : UserState.UserRoles.Contains("Specialist")
+                        ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList() : UserState.UserRoles.Contains("User")
+                            ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList() : new List<ReserveStudy>();
             }
             else {
                 Snackbar.Add("Unable to determine user permissions. Please log out and log back in.", Severity.Warning);
             }
 
             // Extract unique communities from the filtered ReserveStudies
-            communities = reserveStudies.Where(rs => rs.Community != null).Select(rs => rs.Community).DistinctBy(c => c.Id).ToList();
+            communities = reserveStudies.Where(rs => rs.Community != null).Select(rs => rs.Community).DistinctBy(c => c.Id).ToList()!;
         }
         catch (DbUpdateConcurrencyException ex) {
             Snackbar.Add("Data has been modified by another user. Please refresh.", Severity.Warning);
@@ -130,11 +145,11 @@
         catch (Exception ex) {
             Snackbar.Add($"Database error: {ex.Message}", Severity.Error);
             reserveStudies = new List<ReserveStudy>();
+            communities = new List<Community>();
         }
     }
 
     private IEnumerable<Community> FilteredCommunities => communities.Where(community => FilterFunc(community, searchString));
-
     private bool FilterFunc(Community community, string searchString) {
         if (string.IsNullOrWhiteSpace(searchString)) {
             return true;

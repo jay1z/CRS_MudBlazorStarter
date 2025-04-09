@@ -1,0 +1,38 @@
+﻿@using CRS.Models
+@namespace CRS.Components.Dialogs
+
+<MudDialog>
+    <DialogContent>
+        <MudText>Select a contact to add to this group:</MudText>
+
+        @if (!Contacts.Any()) {
+            <MudAlert Severity="Severity.Info" Class="mt-3">No contacts available to add to this group.</MudAlert>
+        }
+        else {
+            <MudSelect T="Guid" Label="Contact" @bind-Value="selectedContactId" Class="mt-3"
+                       AnchorOrigin="Origin.BottomCenter">
+                @foreach (var contact in Contacts) {
+                    <MudSelectItem Value="@contact.Id">@contact.FullName</MudSelectItem>
+                }
+            </MudSelect>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(selectedContactId == Guid.Empty || !Contacts.Any())">
+            Add to Group
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public List<Contact> Contacts { get; set; } = new();
+    [Parameter] public Guid GroupId { get; set; }
+
+    private Guid selectedContactId = Guid.Empty;
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(selectedContactId));
+    private void Cancel() => MudDialog.Cancel();
+}

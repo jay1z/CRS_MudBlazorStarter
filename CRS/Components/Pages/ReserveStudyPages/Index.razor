@@ -1,4 +1,6 @@
 ﻿@page "/ReserveStudies"
+@attribute [Authorize]
+
 @using CRS.Data
 @using CRS.Services
 @using Microsoft.EntityFrameworkCore
@@ -20,7 +22,7 @@
         </MudPaper>
     }
     else if (reserveStudies == null || !reserveStudies.Any()) {
-        <MudAlert Severity="Severity.Info">
+        <MudAlert Severity="Severity.Warning">
             <MudText Typo="Typo.body1">No reserve studies found.</MudText>
         </MudAlert>
     }
@@ -50,6 +52,7 @@
                         <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact.Email)">EMAIL</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact.Phone)">PHONE</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Specialist.FullName)">SPECIALIST</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.DateCreated)">CREATED</MudTableSortLabel></MudTh>
                         <MudTh></MudTh>
                     </HeaderContent>
                     <RowTemplate>
@@ -72,6 +75,10 @@
                         <MudTd DataLabel="Specialist">
                             <MudText Typo="Typo.body1">@context.Specialist?.FullName</MudText>
                             <MudText Typo="Typo.caption">@context.Specialist?.Email</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Created">
+                            <MudText Typo="Typo.body1">@context.DateCreated?.ToShortDateString()</MudText>
+                            <MudText Typo="Typo.caption">@context.DateCreated?.ToShortTimeString()</MudText>
                         </MudTd>
                         <MudTd>
                             <MudButton Href="@($"ReserveStudies/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
@@ -99,7 +106,13 @@
     private bool isLoading = true;
     private string searchString = "";
 
-    protected override async Task OnInitializedAsync() {
+    protected override async Task OnInitializedAsync() { }
+
+    protected override async Task OnParametersSetAsync() {
+        await LoadData();
+    }
+
+    private async Task LoadData() {
         try {
             isLoading = true;
 
@@ -110,33 +123,6 @@
             else {
                 Snackbar.Add("User not authenticated.", Severity.Warning);
             }
-        }
-        catch (OperationCanceledException) {
-            Snackbar.Add("Operation cancelled.", Severity.Warning);
-        }
-        catch (Exception ex) {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-            reserveStudies = new List<ReserveStudy>();
-        }
-        finally {
-            isLoading = false;
-        }
-    }
-
-    private async Task LoadData() {
-        try {
-            isLoading = true;
-
-             await UserState.InitializeAsync();
-            if (UserState.ClaimsPrincipal.Identity is not null && UserState.ClaimsPrincipal.Identity.IsAuthenticated) {
-                LoadReserveStudies();
-            }
-            else {
-                Snackbar.Add("User not authenticated.", Severity.Warning);
-            }
-        }
-        catch (OperationCanceledException) {
-            Snackbar.Add("Operation cancelled.", Severity.Warning);
         }
         catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
@@ -159,14 +145,11 @@
                 .Include(rs => rs.User)
                 .AsSplitQuery();
 
-            if (UserState.UserRoles != null && UserState.UserRoles.Contains("Admin")) {
+            if (UserState.UserRoles != null) {
                 reserveStudies = UserState.UserRoles.Contains("Admin")
-                    ? query.ToList()
-                    : UserState.UserRoles.Contains("Specialist")
-                        ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList()
-                        : UserState.UserRoles.Contains("User")
-                            ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList()
-                            : new List<ReserveStudy>();
+                    ? query.ToList() : UserState.UserRoles.Contains("Specialist")
+                        ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList() : UserState.UserRoles.Contains("User")
+                            ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList() : new List<ReserveStudy>();
             }
             else {
                 Snackbar.Add("Unable to determine user permissions. Please log out and log back in.", Severity.Warning);
@@ -182,10 +165,6 @@
         }
     }
 
-    protected override async Task OnParametersSetAsync() {
-        await LoadData();
-    }
-
     private IEnumerable<ReserveStudy> FilteredStudies => reserveStudies.Where(study => FilterFunc(study, searchString));
     private bool FilterFunc(ReserveStudy study, string searchString) {
         if (string.IsNullOrWhiteSpace(searchString)) {
@@ -199,9 +178,5 @@
                study.Specialist?.FullName?.ToLower().Contains(searchString) == true;
     }
 
-    public void Dispose() {
-        // _cts.Cancel();
-        // _cts.Dispose();
-        // _semaphore.Dispose();
-    }
+    public void Dispose() { }
 }

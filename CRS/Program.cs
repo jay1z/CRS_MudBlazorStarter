@@ -2,9 +2,13 @@
 using CRS.Components.Account;
 using CRS.Data;
 using CRS.Helpers;
+using CRS.Models;
 using CRS.Services;
+using CRS.Services.Email;
 
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -28,8 +32,6 @@ app.Run();
 void ConfigureLogging(WebApplicationBuilder builder) {
     var dashboardConnectionString = builder.Configuration.GetConnectionString("DashboardConnection") ??
         throw new InvalidOperationException("Connection string 'DashboardConnection' not found.");
-
-    //Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 
     builder.Host.UseSerilog((context, loggerConfiguration) => {
         loggerConfiguration
@@ -55,6 +57,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<UserStateService>();
     builder.Services.AddMudServices();
 
+    // Register DbRetryService
+    builder.Services.AddScoped<DbRetryService>();
+
     // Blazor services
     builder.Services.AddRazorComponents(options =>
         options.DetailedErrors = builder.Environment.IsDevelopment())
@@ -70,7 +75,17 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IPasswordHelper, PasswordHelper>();
     builder.Services.AddSingleton<ThemeService>();
     builder.Services.AddScoped<INavigationService, NavigationService>();
+    builder.Services.AddScoped<IContactService, ContactService>();
+    builder.Services.AddScoped<IReserveStudyService, ReserveStudyService>();
+    builder.Services.AddScoped<IEmailService, EmailService>();
 
+    // Add memory cache service
+    builder.Services.AddMemoryCache();
+
+    // Register the renderer
+    builder.Services.AddScoped<HtmlRenderer>();
+    builder.Services.AddScoped<IRazorComponentRenderer, RazorComponentRenderer>();
+    
     // Authentication configuration
     builder.Services.AddAuthentication(options => {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
@@ -162,7 +177,7 @@ async Task SeedDatabase(WebApplication app) {
     using (var scope = app.Services.CreateScope()) {
         try {
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            await dbContext.Database.MigrateAsync();
+            dbContext.Database.Migrate();
             var services = scope.ServiceProvider;
             await SeedManager.SeedRolesAsync(services);
 
@@ -170,9 +185,8 @@ async Task SeedDatabase(WebApplication app) {
             if (app.Environment.IsDevelopment()) {
                 await SeedManager.SeedTestUsersAsync(services);
             }
-            else {
-                await SeedManager.SeedAdminUserAsync(services);
-            }
+            await SeedManager.SeedAdminUserAsync(services);
+
         }
         catch (Exception ex) {
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();

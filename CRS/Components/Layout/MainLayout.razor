@@ -9,6 +9,7 @@
 @inject IHostEnvironment HostEnvironment
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
 @inject ThemeService ThemeService
 
 @* <MudThemeProvider @ref="@provider" @bind-IsDarkMode="@useDarkMode" Theme="_themeManager.Theme" /> *@
@@ -31,17 +32,19 @@
             }
         </AuthorizeView>
         <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-            <MudMenuItem Href="/Account/Manage">Profile</MudMenuItem>
-            <MudMenuItem Href="/Settings">Settings</MudMenuItem>
-            <MudDivider />
+            <MudMenuItem Href="/Account/Manage" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary">Profile</MudMenuItem>
+            <MudMenuItem Href="/Settings" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Primary">Settings</MudMenuItem>
+            @* <MudDivider />
             <MudMenuItem>
+                <MudButton StartIcon="@Icons.Material.Filled.Logout" ButtonType="ButtonType.Submit">Logout</MudButton>
                 <form action="Account/Logout" method="post" style="width: 100%">
                     <AntiforgeryToken />
-                    <button type="submit" style="background: none; border: none; color: inherit; width: 100%; text-align: left; cursor: pointer">
-                        Logout
+                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                    <button type="submit" class="mud-nav-link mud-ripple">
+                        <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Error" Class="mr-3"></MudIcon> Logout
                     </button>
                 </form>
-            </MudMenuItem>
+            </MudMenuItem> *@
         </MudMenu>
     </MudAppBar>
     @* <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="_themeManager.DrawerClipMode" Elevation="_themeManager.DrawerElevation"> *@
@@ -71,17 +74,26 @@
 </div>
 
 @code {
+    private string? currentUrl;
 
     // private MudThemeProvider provider;
     // private bool useDarkMode;
     private bool _drawerOpen = true;
 
     protected override void OnInitialized() {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+
         ThemeService.OnThemeChanged += StateHasChanged;
         ThemeService.SetTheme(new Default().Theme!);
 
         // _themeManager.Theme = CrispyThemeSunsetSerenade.Theme;
         // StateHasChanged();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
     }
 
     // protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -115,6 +127,7 @@
     // }
 
     public void Dispose() {
+        NavigationManager.LocationChanged -= OnLocationChanged;
         ThemeService.OnThemeChanged -= StateHasChanged;
     }
 }
