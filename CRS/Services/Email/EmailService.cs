@@ -1,7 +1,10 @@
-﻿using CRS.Models;
+﻿using CRS.Data;
+using CRS.Models;
 using CRS.Models.Emails;
 
 using MailKit.Security;
+
+using Microsoft.EntityFrameworkCore;
 
 using MimeKit;
 
@@ -10,11 +13,13 @@ namespace CRS.Services.Email {
         private readonly IConfiguration _configuration;
         private readonly ILogger<EmailService> _logger;
         private readonly IRazorComponentRenderer _componentRenderer;
+        private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
 
-        public EmailService(IConfiguration configuration, ILogger<EmailService> logger, IRazorComponentRenderer componentRenderer) {
+        public EmailService(IConfiguration configuration, ILogger<EmailService> logger, IRazorComponentRenderer componentRenderer, IDbContextFactory<ApplicationDbContext> dbFactory) {
             _configuration = configuration;
             _logger = logger;
             _componentRenderer = componentRenderer;
+            _dbFactory = dbFactory;
         }
 
         public async Task SendEmailAsync(string to, string subject, string htmlMessage) {
@@ -102,5 +107,26 @@ namespace CRS.Services.Email {
                 await SendReserveStudyEmailAsync(reserveStudy, recipient, subject, additionalMessage);
             }
         }
+
+        public async Task SendAccessTokenEmailAsync(Guid requestId, string contactEmail) {
+            var reserveStudyService = new ReserveStudyService(_dbFactory, this);
+            var token = await reserveStudyService.GenerateAccessTokenAsync(requestId);
+
+            // Construct the access URL
+            var accessUrl = $"https://yourdomain.com/access/{token}";
+
+            // Create the email content
+            var subject = "Access to Reserve Study";
+            var body = $@"
+        <p>Hello,</p>
+        <p>You have been granted access to a reserve study. Please use the link below to view it:</p>
+        <p><a href='{accessUrl}'>{accessUrl}</a></p>
+        <p>This link will expire in 7 days.</p>
+        <p>Thank you.</p>";
+
+            // Send the email
+            await SendEmailAsync(contactEmail, subject, body);
+        }
+
     }
 }

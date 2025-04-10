@@ -1,7 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+using CRS.Data;
 
 namespace CRS.Models {
     public class Contact : BaseModel, IContact {
+        [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
+        public ApplicationUser? User { get; set; }
+
         [Display(Name = "First Name")]
         public string? FirstName { get; set; }
 

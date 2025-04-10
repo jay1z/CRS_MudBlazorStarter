@@ -75,8 +75,11 @@
                     <!-- Actions Card -->
                     <MudCard Elevation="0" Outlined="true" Class="mb-4">
                         <MudCardContent>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@GetUpdateLink()">Update Request</MudButton>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendRequestLink">Send Request Link</MudButton>
+                            <MudStack>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@GetUpdateLink()">Update Request</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendRequestLink">Send Request Link</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendAccessTokenLink">Send Access Token Link</MudButton>
+                            </MudStack>
                         </MudCardContent>
                     </MudCard>
 
@@ -337,6 +340,20 @@
             var additionalMessage = $"A reserve study request has been shared with you. You can view the details online or contact the assigned specialist for more information.";
 
             await EmailService.SendReserveStudyToContactsAsync(reserveStudy, subject, additionalMessage);
+
+            Snackbar.Add("Request link sent successfully!", Severity.Success);
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error sending email: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SendAccessTokenLink() {
+        try {
+            var subject = $"Access Token for Reserve Study";
+            var additionalMessage = $"A reserve study request has been shared with you. You can view the details online or contact the assigned specialist for more information.";
+
+            await EmailService.SendAccessTokenEmailAsync(reserveStudy.Id, "emailme@jasonzurowski.com");
 
             Snackbar.Add("Request link sent successfully!", Severity.Success);
         }

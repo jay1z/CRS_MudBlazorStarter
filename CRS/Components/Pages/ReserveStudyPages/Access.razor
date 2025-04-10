@@ -1,0 +1,165 @@
+﻿@page "/access/{Token}"
+@using CRS.Services
+@using MudBlazor
+@inject IReserveStudyService ReserveStudyService
+@inject NavigationManager NavigationManager
+
+<MudContainer Class="mt-4 px-4">
+    @if (loading) {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <MudText>Loading reserve study...</MudText>
+    }
+    else if (reserveStudy != null) {
+        <MudCard Elevation="3" Class="mb-4">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h4">Reserve Study Summary</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    @if (reserveStudy.IsApproved) {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small">Approved</MudChip>
+                    }
+                    else {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">In Progress</MudChip>
+                    }
+                </CardHeaderActions>
+            </MudCardHeader>
+
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-4" Elevation="0">
+                            <MudText Typo="Typo.h6" Class="mb-2">Community Information</MudText>
+                            <MudList T="string" Dense="true">
+                                <MudListItem>
+                                    <MudText><b>Community:</b> @reserveStudy.Community?.Name</MudText>
+                                </MudListItem>
+                                <MudListItem>
+                                    <MudText><b>Created:</b> @(reserveStudy.DateCreated?.ToString("MMM dd, yyyy") ?? "N/A")</MudText>
+                                </MudListItem>
+                                <MudListItem>
+                                    <MudText><b>Last Modified:</b> @(reserveStudy.LastModified?.ToString("MMM dd, yyyy") ?? "N/A")</MudText>
+                                </MudListItem>
+                                @if (reserveStudy.DateApproved.HasValue) {
+                                    <MudListItem>
+                                        <MudText><b>Approved On:</b> @reserveStudy.DateApproved?.ToString("MMM dd, yyyy")</MudText>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudPaper Class="pa-4" Elevation="0">
+                            <MudText Typo="Typo.h6" Class="mb-2">Point of Contact</MudText>
+                            @if (reserveStudy.PointOfContact != null) {
+                                <MudList T="string" Dense="true">
+                                    <MudListItem>
+                                        <MudText><b>Name:</b> @reserveStudy.PointOfContact.FullName</MudText>
+                                    </MudListItem>
+                                    @if (!string.IsNullOrEmpty(reserveStudy.PointOfContact.CompanyName)) {
+                                        <MudListItem>
+                                            <MudText><b>Company:</b> @reserveStudy.PointOfContact.CompanyName</MudText>
+                                        </MudListItem>
+                                    }
+                                    @if (!string.IsNullOrEmpty(reserveStudy.PointOfContact.Email)) {
+                                        <MudListItem>
+                                            <MudText><b>Email:</b> @reserveStudy.PointOfContact.Email</MudText>
+                                        </MudListItem>
+                                    }
+                                    @if (!string.IsNullOrEmpty(reserveStudy.PointOfContact.Phone)) {
+                                        <MudListItem>
+                                            <MudText><b>Phone:</b> @reserveStudy.PointOfContact.Phone</MudText>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            }
+                            else {
+                                <MudText>No point of contact information available</MudText>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider Class="my-4" />
+
+                <MudText Typo="Typo.h6" Class="mb-2">Inventory Summary</MudText>
+                <MudSimpleTable Hover="true" Dense="true" Class="mt-2">
+                    <thead>
+                        <tr>
+                            <th>Element Type</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Building Elements</td>
+                            <td>@(reserveStudy.ReserveStudyBuildingElements?.Count ?? 0)</td>
+                        </tr>
+                        <tr>
+                            <td>Common Elements</td>
+                            <td>@(reserveStudy.ReserveStudyCommonElements?.Count ?? 0)</td>
+                        </tr>
+                        <tr>
+                            <td>Additional Elements</td>
+                            <td>@(reserveStudy.ReserveStudyAdditionalElements?.Count ?? 0)</td>
+                        </tr>
+                        <tr>
+                            <td><b>Total Elements</b></td>
+                            <td><b>@(GetTotalElementCount())</b></td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+            </MudCardContent>
+
+            <MudCardActions>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseReport" Class="ml-auto">
+                    Close Report
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+
+        @if (reserveStudy.Specialist != null) {
+            <MudAlert Severity="Severity.Info" Class="mt-4">
+                For detailed information about this reserve study, please contact the specialist:
+                <strong>@reserveStudy.Specialist.FullName</strong>
+            </MudAlert>
+        }
+    }
+    else {
+        <MudAlert Severity="Severity.Error">
+            The requested reserve study could not be found or the access link has expired.
+        </MudAlert>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public string Token { get; set; }
+    private ReserveStudy? reserveStudy;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync() {
+        try {
+            loading = true;
+            reserveStudy = await ReserveStudyService.GetStudyByTokenAsync(Token);
+            if (reserveStudy == null) {
+                NavigationManager.NavigateTo("/error");
+            }
+        }
+        finally {
+            loading = false;
+        }
+    }
+
+    private int GetTotalElementCount() {
+        int buildingCount = reserveStudy?.ReserveStudyBuildingElements?.Count ?? 0;
+        int commonCount = reserveStudy?.ReserveStudyCommonElements?.Count ?? 0;
+        int additionalCount = reserveStudy?.ReserveStudyAdditionalElements?.Count ?? 0;
+
+        return buildingCount + commonCount + additionalCount;
+    }
+
+    private void CloseReport() {
+        NavigationManager.NavigateTo("/");
+    }
+}

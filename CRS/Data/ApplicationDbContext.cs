@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Reflection.Emit;
+using System.Security.Claims;
 
 using CRS.Models;
 
@@ -38,6 +39,11 @@ namespace CRS.Data {
         }
 
         private void ConfigureEntities(ModelBuilder builder) {
+            builder.Entity<AccessToken>(entity => {
+                entity.HasIndex(at => at.Token).IsUnique();
+                entity.Property(at => at.Expiration).IsRequired();
+            });
+
             builder.Entity<ReserveStudyBuildingElement>()
                 .HasKey(rsbe => new { rsbe.ReserveStudyId, rsbe.BuildingElementId });
 
@@ -108,6 +114,7 @@ namespace CRS.Data {
         }
 
         #region DbSet Properties
+        public DbSet<AccessToken> AccessTokens { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<BuildingElement> BuildingElements { get; set; }

@@ -1,10 +1,13 @@
 ﻿using CRS.Data;
 using CRS.Models;
+using CRS.Services.Email;
 
 using Microsoft.EntityFrameworkCore;
 
 using MudBlazor;
 using MudBlazor.Charts;
+
+using Polly;
 
 using System.Globalization;
 
@@ -13,9 +16,11 @@ using static CRS.Components.Pages.Dashboard.Index;
 namespace CRS.Services {
     public class ReserveStudyService : IReserveStudyService {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
+        private readonly IEmailService _emailService;
 
-        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory) {
+        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IEmailService emailService) {
             _dbFactory = dbFactory;
+            _emailService = emailService;
         }
 
         public async Task<List<ReserveStudy>> GetAllReserveStudiesAsync() {
@@ -31,6 +36,37 @@ namespace CRS.Services {
                 .AsSplitQuery()
                 .ToListAsync();
         }
+
+        public async Task<ReserveStudy?> GetStudyByTokenAsync(string tokenStr) {
+            if (!Guid.TryParse(tokenStr, out var token)) {
+                return null;
+            }
+
+            // First validate the token and get the associated request ID
+            var requestId = await ValidateAccessTokenAsync(token);
+            if (requestId == null) {
+                return null;
+            }
+
+            using var context = await _dbFactory.CreateDbContextAsync();
+
+            // Fetch the reserve study with the request ID
+            return await context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.Community)
+                .Include(rs => rs.Contact)
+                .Include(rs => rs.PropertyManager)
+                .Include(rs => rs.Specialist)
+                .Include(rs => rs.User)
+                .Include(rs => rs.ReserveStudyBuildingElements!).ThenInclude(be => be.BuildingElement)
+                .Include(rs => rs.ReserveStudyBuildingElements!).ThenInclude(be => be.ServiceContact)
+                .Include(rs => rs.ReserveStudyCommonElements!).ThenInclude(be => be.CommonElement)
+                .Include(rs => rs.ReserveStudyCommonElements!).ThenInclude(be => be.ServiceContact)
+                .Include(rs => rs.ReserveStudyAdditionalElements!).ThenInclude(be => be.ServiceContact)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(rs => rs.Id == requestId && rs.IsActive);
+        }
+
 
         public async Task<List<ReserveStudy>> GetAssignedReserveStudiesAsync(Guid userId) {
             //if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var specialistId)) {
@@ -227,6 +263,42 @@ namespace CRS.Services {
                     Math.Round(random.NextDouble() * 3000 + 200, 0)
                 ))
                 .ToList();
+        }
+
+        public async Task<Guid> GenerateAccessTokenAsync(Guid requestId) {
+            using var context = await _dbFactory.CreateDbContextAsync();
+
+            var token = Guid.CreateVersion7();
+
+            var accessToken = new AccessToken {
+                Token = token,
+                Expiration = DateTime.UtcNow.AddDays(7), // Token valid for 7 days
+                RequestId = requestId
+            };
+
+            context.AccessTokens.Add(accessToken);
+            await context.SaveChangesAsync();
+
+            return token;
+        }
+
+        public async Task<Guid?> ValidateAccessTokenAsync(Guid token) {
+            using var context = await _dbFactory.CreateDbContextAsync();
+
+            var accessToken = await context.AccessTokens
+                .FirstOrDefaultAsync(t => t.Token == token && t.Expiration > DateTime.UtcNow);
+
+            return accessToken?.RequestId;
+        }
+
+        public async Task RevokeAccessTokenAsync(Guid token) {
+            using var context = await _dbFactory.CreateDbContextAsync();
+
+            var accessToken = await context.AccessTokens.FirstOrDefaultAsync(t => t.Token == token);
+            if (accessToken != null) {
+                context.AccessTokens.Remove(accessToken);
+                await context.SaveChangesAsync();
+            }
         }
     }
 }

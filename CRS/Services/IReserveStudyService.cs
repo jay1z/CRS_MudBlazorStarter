@@ -1,9 +1,13 @@
-﻿using MudBlazor;
+﻿using CRS.Models;
+
+using MudBlazor;
+
 using static CRS.Components.Pages.Dashboard.Index;
 
-namespace CRS.Models {
+namespace CRS.Services {
     public interface IReserveStudyService {
         Task<List<ReserveStudy>> GetAllReserveStudiesAsync();
+        Task<ReserveStudy?> GetStudyByTokenAsync(string tokenStr);
         Task<List<ReserveStudy>> GetAssignedReserveStudiesAsync(Guid userId);
         Task<List<ReserveStudy>> GetOwnedReserveStudiesAsync(Guid userId);
         Task<DashboardData> GetDashboardDataAsync(Guid reserveStudyId);

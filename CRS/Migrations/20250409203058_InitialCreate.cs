@@ -15,6 +15,24 @@ namespace CRS.Migrations
                 name: "crs");
 
             migrationBuilder.CreateTable(
+                name: "AccessTokens",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Token = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Expiration = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AccessTokens", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 schema: "crs",
                 columns: table => new
@@ -175,27 +193,6 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Contacts",
-                schema: "crs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CompanyName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Contacts", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "ElementMeasurementOptions",
                 schema: "crs",
                 columns: table => new
@@ -265,27 +262,6 @@ namespace CRS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Notifications", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "PropertyManagers",
-                schema: "crs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CompanyName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PropertyManagers", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -480,6 +456,34 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Contacts",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CompanyName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Contacts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Contacts_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalSchema: "crs",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Profiles",
                 schema: "crs",
                 columns: table => new
@@ -510,6 +514,34 @@ namespace CRS.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PropertyManagers",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CompanyName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PropertyManagers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PropertyManagers_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalSchema: "crs",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -567,6 +599,37 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ContactXContactGroups",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ContactGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ContactXContactGroups", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ContactXContactGroups_ContactGroups_ContactGroupId",
+                        column: x => x.ContactGroupId,
+                        principalSchema: "crs",
+                        principalTable: "ContactGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ContactXContactGroups_Contacts_ContactId",
+                        column: x => x.ContactId,
+                        principalSchema: "crs",
+                        principalTable: "Contacts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ReserveStudies",
                 schema: "crs",
                 columns: table => new
@@ -621,37 +684,6 @@ namespace CRS.Migrations
                         principalSchema: "crs",
                         principalTable: "PropertyManagers",
                         principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ContactXContactGroups",
-                schema: "crs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ContactGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ContactXContactGroups", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ContactXContactGroups_ContactGroups_ContactGroupId",
-                        column: x => x.ContactGroupId,
-                        principalSchema: "crs",
-                        principalTable: "ContactGroups",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ContactXContactGroups_Contacts_ContactId",
-                        column: x => x.ContactId,
-                        principalSchema: "crs",
-                        principalTable: "Contacts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -831,6 +863,13 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_AccessTokens_Token",
+                schema: "crs",
+                table: "AccessTokens",
+                column: "Token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Addresses_CommunityId",
                 schema: "crs",
                 table: "Addresses",
@@ -895,6 +934,12 @@ namespace CRS.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Contacts_ApplicationUserId",
+                schema: "crs",
+                table: "Contacts",
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ContactXContactGroups_ContactGroupId",
                 schema: "crs",
                 table: "ContactXContactGroups",
@@ -910,6 +955,12 @@ namespace CRS.Migrations
                 name: "IX_Profiles_ApplicationUserId",
                 schema: "crs",
                 table: "Profiles",
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PropertyManagers_ApplicationUserId",
+                schema: "crs",
+                table: "PropertyManagers",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
@@ -1043,6 +1094,10 @@ namespace CRS.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "AccessTokens",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
                 name: "Addresses",
                 schema: "crs");
 
@@ -1139,10 +1194,6 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers",
-                schema: "crs");
-
-            migrationBuilder.DropTable(
                 name: "Communities",
                 schema: "crs");
 
@@ -1152,6 +1203,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "PropertyManagers",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUsers",
                 schema: "crs");
         }
     }

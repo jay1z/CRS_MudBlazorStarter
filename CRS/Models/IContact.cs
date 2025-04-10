@@ -1,5 +1,11 @@
-﻿namespace CRS.Models {
+﻿using CRS.Data;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace CRS.Models {
     public interface IContact {
+        [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
+        public ApplicationUser? User { get; set; }
+
         string? FirstName { get; set; }
         string? LastName { get; set; }
         string? CompanyName { get; set; }

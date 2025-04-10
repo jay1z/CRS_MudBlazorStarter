@@ -6,6 +6,8 @@ namespace CRS.Services.Email {
         Task SendEmailAsync(string to, string subject, string htmlMessage, List<EmailAttachment> attachments);
         Task SendReserveStudyEmailAsync(ReserveStudy reserveStudy, string to, string subject, string additionalMessage = "");
         Task SendReserveStudyToContactsAsync(ReserveStudy reserveStudy, string subject, string additionalMessage = "");
+        Task SendAccessTokenEmailAsync(Guid requestId, string contactEmail);
+
     }
 
     public class EmailAttachment {

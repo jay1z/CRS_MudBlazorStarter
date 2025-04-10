@@ -13,11 +13,23 @@ namespace CRS.Services {
 
         #region Contact Methods
         public async Task<List<Contact>> GetUserContactsAsync(string userId) {
-            return await _context.Contacts.Where(c => !c.DateDeleted.HasValue).ToListAsync();
+            //if (Guid.TryParse(userId, out Guid userGuid)) {
+            return await _context.Contacts
+                //.Where(c => c.Id == userGuid && !c.DateDeleted.HasValue)
+                .Where(c => !c.DateDeleted.HasValue)
+                //.DistinctBy(c => new { c.Email })
+                .ToListAsync();
+            //}
+
+            //return new List<Contact>();
         }
 
         public async Task<List<ServiceContact>> GetServiceContactsAsync() {
-            return await _context.ServiceContacts.Where(c => !c.DateDeleted.HasValue).ToListAsync();
+            //return await _context.ServiceContacts.Where(c => !c.DateDeleted.HasValue).DistinctBy(c => new { c.Email }).ToListAsync();
+            return await _context.ServiceContacts
+                .Where(c => !c.DateDeleted.HasValue)
+                //.DistinctBy(c => c.Email)
+                .ToListAsync();
         }
 
         public async Task<Contact> GetContactByIdAsync(Guid contactId) {
@@ -124,7 +136,7 @@ namespace CRS.Services {
             // Make sure ApplicationUserId is set correctly
             //if (group.ApplicationUserId == Guid.Empty && !string.IsNullOrEmpty(group.UserId)) {
             //    if (Guid.TryParse(group.UserId, out Guid userGuid)) {
-                    //group.ApplicationUserId = userGuid;
+            //group.ApplicationUserId = userGuid;
             //    }
             //}
 
