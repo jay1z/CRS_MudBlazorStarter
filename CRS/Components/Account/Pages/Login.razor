@@ -10,7 +10,6 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
-@inject INavigationService NavigationService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Log in</PageTitle>
@@ -85,11 +84,6 @@
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded) {
             Logger.LogInformation("User logged in.");
-
-            //NavigationService Start
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            await NavigationService.NavigateToHomePageByRole(authState.User);
-            //NavigationService End
 
             RedirectManager.RedirectTo(ReturnUrl);
         }

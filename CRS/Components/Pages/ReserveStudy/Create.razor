@@ -1,21 +1,23 @@
 ﻿@page "/ReserveStudies/Create"
 @attribute [Authorize]
 
+@using System.Security.Claims
 @using CRS.Components.Layout
 @using CRS.Components.Pages.ReserveStudyPages.Steps
 @using CRS.Data
 @using CRS.Models
 @using CRS.Services
+@using CRS.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
-@using System.Security.Claims
 @implements IAsyncDisposable
 @inject ILogger<Home> Logger
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserStateService UserState
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IReserveStudyService ReserveStudyService
 
 <PageTitle>Create Reserve Study</PageTitle>
 
@@ -233,14 +235,9 @@ else {
 
         isSubmitting = true;
         try {
-            // Create a new context for the submission to avoid tracking conflicts
-            await using var submitContext = await DbFactory.CreateDbContextAsync();
-
             PrepareModelForSubmission();
 
-            // Add the reserve study
-            submitContext.ReserveStudies.Add(Model!);
-            await submitContext.SaveChangesAsync();
+            await ReserveStudyService.CreateReserveStudyAsync(Model!);
 
             Snackbar.Add("Reserve Study submitted successfully!", Severity.Success);
             _completed = true;

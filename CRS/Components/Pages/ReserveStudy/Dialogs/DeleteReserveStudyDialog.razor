@@ -1,0 +1,51 @@
+﻿@namespace CRS.Components.Pages.ReserveStudy.Dialogs
+@using CRS.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer>           
+            @if (Study?.Community != null)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mb-4">
+                    You are about to delete the reserve study for <strong>@Study.Community.Name</strong>.
+                </MudAlert>
+            }
+            
+            <MudText>
+                This action cannot be undone. All data associated with this reserve study will be marked as deleted.
+            </MudText>
+            
+            <MudPaper Elevation="0" Class="pa-4 mt-4" Style="background-color: var(--mud-palette-background-grey)">
+                <MudText><strong>Study Details:</strong></MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem>
+                        <MudText><strong>Community:</strong> @Study?.Community?.Name</MudText>
+                    </MudListItem>
+                    <MudListItem>
+                        <MudText><strong>Contact:</strong> @Study?.PointOfContact?.FullName</MudText>
+                    </MudListItem>
+                    <MudListItem>
+                        <MudText><strong>Created:</strong> @Study?.DateCreated?.ToShortDateString()</MudText>
+                    </MudListItem>
+                </MudList>
+            </MudPaper>
+            
+            <MudCheckBox T="bool" @bind-Value="confirmed" Label="I understand that this action cannot be undone" Class="mt-4" />
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Outlined" Color="Color.Default">Cancel</MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Error" Disabled="!confirmed">Delete Study</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public ReserveStudy Study { get; set; } = null!;
+    
+    private bool confirmed = false;
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    private void Cancel() => MudDialog.Cancel();
+}

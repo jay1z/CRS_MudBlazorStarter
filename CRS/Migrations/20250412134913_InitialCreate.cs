@@ -183,6 +183,8 @@ namespace CRS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
@@ -582,6 +584,7 @@ namespace CRS.Migrations
                     City = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     State = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Zip = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsMailingAddress = table.Column<bool>(type: "bit", nullable: false),
                     CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),

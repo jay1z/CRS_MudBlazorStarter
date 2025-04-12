@@ -1,0 +1,103 @@
+﻿@using CRS.Models.Emails
+@model ReserveStudyEmail
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserve Study Details</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #2c3e50; margin-bottom: 20px;">Reserve Study Details</h1>
+
+        <!-- View Online Button -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <p style="margin-top: 15px; text-align: center;">
+                <a href="@(string.IsNullOrEmpty(Model.BaseUrl) ? "/" : Model.BaseUrl)/ReserveStudies/Details/@(Model.ReserveStudy?.Id)" style="display: inline-block; padding: 8px 15px; background-color: #f8f9fa; color: #3498db; text-decoration: none; border: 1px solid #3498db; border-radius: 4px; font-weight: bold;">Access your Reserve Study online</a>
+            </p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Community:</span> @(Model.ReserveStudy?.Community?.Name ?? "Community")</div>
+            <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Request ID:</span> @(Model.ReserveStudy?.Id ?? Guid.Empty)</div>
+            <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Date Created:</span> @(Model.ReserveStudy?.DateCreated?.ToString("MM/dd/yyyy") ?? "N/A")</div>
+            @if (Model.ReserveStudy?.DateApproved != null) {
+                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Date Approved:</span> @(Model.ReserveStudy?.DateApproved?.ToString("MM/dd/yyyy") ?? "N/A")</div>
+            }
+            @if (Model.ReserveStudy?.LastModified != null) {
+                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Last Modified:</span> @(Model.ReserveStudy?.LastModified?.ToString("MM/dd/yyyy") ?? "N/A")</div>
+            }
+            <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Status:</span> @(Model.ReserveStudy?.IsComplete == true ? "Complete" : "In Progress")</div>
+        </div>
+
+        <!-- Point of Contact Information -->
+        @if (Model.ReserveStudy?.PointOfContact != null) {
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #2c3e50; margin-top: 15px;">Point of Contact</h3>
+                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Name:</span> @(Model.ReserveStudy?.PointOfContact?.FullName ?? "N/A")</div>
+                @if (!string.IsNullOrEmpty(Model.ReserveStudy?.PointOfContact?.Email)) {
+                    <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Email:</span> <a href="mailto:@Model.ReserveStudy.PointOfContact.Email" style="color: #3498db; text-decoration: underline;">@Model.ReserveStudy.PointOfContact.Email</a></div>
+                }
+                @if (!string.IsNullOrEmpty(Model.ReserveStudy?.PointOfContact?.Phone)) {
+                    <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Phone:</span> @Model.ReserveStudy.PointOfContact.Phone</div>
+                }
+            </div>
+        }
+
+        <!-- Specialist Information -->
+        @if (Model.ReserveStudy?.Specialist != null) {
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #2c3e50; margin-top: 15px;">Assigned Specialist</h3>
+                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Name:</span> @(Model.ReserveStudy?.Specialist?.FullName ?? "N/A")</div>
+                @if (!string.IsNullOrEmpty(Model.ReserveStudy?.Specialist?.Email)) {
+                    <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Email:</span> <a href="mailto:@Model.ReserveStudy.Specialist.Email" style="color: #3498db; text-decoration: underline;">@Model.ReserveStudy.Specialist.Email</a></div>
+                }
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.AdditionalMessage)) {
+            <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0;">@Model.AdditionalMessage</div>
+        }
+
+        @{
+            var elementsWithServiceNeeded = Model.ReserveStudy.ReserveStudyElements
+            .Where(e => e.NeedsService)
+            .ToList();
+
+            if (elementsWithServiceNeeded.Any()) {
+                <h3 style="color: #2c3e50; margin-top: 15px;">Elements Needing Service:</h3>
+                <ul style="padding-left: 20px;">
+                    @foreach (var element in elementsWithServiceNeeded) {
+                        <li style="margin-bottom: 8px;">
+                            <strong>@element.Name</strong>
+                            @if (element.ServiceContact != null) {
+                                <span> - Contact: @element.ServiceContact.CompanyName (@element.ServiceContact.FullName)</span>
+                                if (!string.IsNullOrEmpty(element.ServiceContact.Email)) {
+                                    <span> - <a href="mailto:@element.ServiceContact.Email" style="color: #3498db; text-decoration: underline;">@element.ServiceContact.Email</a></span>
+                                }
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        }
+
+        <!-- Summary Counts -->
+        <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+            <h3 style="color: #2c3e50; margin-top: 0;">Summary</h3>
+            <div style="margin-bottom: 5px;"><span style="font-weight: bold;">Building Elements:</span> @(Model.ReserveStudy?.ReserveStudyBuildingElements?.Count ?? 0)</div>
+            <div style="margin-bottom: 5px;"><span style="font-weight: bold;">Common Elements:</span> @(Model.ReserveStudy?.ReserveStudyCommonElements?.Count ?? 0)</div>
+            <div style="margin-bottom: 5px;"><span style="font-weight: bold;">Additional Elements:</span> @(Model.ReserveStudy?.ReserveStudyAdditionalElements?.Count ?? 0)</div>
+            <div style="margin-bottom: 5px;"><span style="font-weight: bold;">Elements Needing Service:</span> @elementsWithServiceNeeded.Count</div>
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #555;">Please contact us if you have any questions or need further information.</p>
+            <p style="margin-top: 15px; text-align: center;">
+                <a href="@(string.IsNullOrEmpty(Model.BaseUrl) ? "/" : Model.BaseUrl)/ReserveStudies/Details/@(Model.ReserveStudy?.Id)" style="display: inline-block; padding: 8px 15px; background-color: #f8f9fa; color: #3498db; text-decoration: none; border: 1px solid #3498db; border-radius: 4px; font-weight: bold;">Access your Reserve Study online</a>
+            </p>
+            <p style="color: #777; font-size: 12px; margin-top: 15px; text-align: center;">This email was generated on @DateTime.Now.ToString("MMMM d, yyyy") at @DateTime.Now.ToString("h:mm tt")</p>
+        </div>
+    </div>
+</body>
+</html>

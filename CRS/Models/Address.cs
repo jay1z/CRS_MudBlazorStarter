@@ -10,6 +10,8 @@ namespace CRS.Models {
 
         [DataType(DataType.PostalCode)] public string? Zip { get; set; }
 
+        public bool IsMailingAddress { get; set; }
+
         public string FullAddress {
             get {
                 return $"{Street}, {City}, {State} {Zip}";

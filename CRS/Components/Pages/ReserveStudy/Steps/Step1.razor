@@ -51,6 +51,11 @@
                               Immediate="true" />
             </MudItem>
 
+            <!-- PHYSICAL ADDRESS SECTION -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.h6" Class="mb-2 mt-2">Physical Address</MudText>
+            </MudItem>
+
             <!-- Street Address -->
             <MudItem xs="12">
                 <MudTextField @bind-Value="Model.Community.Addresses[0].Street"
@@ -97,6 +102,72 @@
                     </MudItem>
                 </MudGrid>
             </MudItem>
+
+            <!-- Mailing Address Checkbox -->
+            <MudItem xs="12" Class="mt-4">
+                <MudCheckBox @bind-Value="usePhysicalAsMailingAddress"
+                             Label="Use physical address as mailing address"
+                             Color="Color.Primary"
+                             CheckedChanged="OnMailingAddressCheckChanged" />
+            </MudItem>
+
+            <!-- MAILING ADDRESS SECTION - displays only when checkbox is unchecked -->
+            @if (!usePhysicalAsMailingAddress) {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6" Class="mb-2 mt-2">Mailing Address</MudText>
+                </MudItem>
+
+                <!-- Street Address -->
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="mailingAddress.Street"
+                                  Label="Street Address"
+                                  Required="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.TwoTone.EditRoad"
+                                  Immediate="true" />
+                </MudItem>
+
+                <!-- State, City, Zip -->
+                <MudItem xs="12">
+                    <MudGrid>
+                        <!-- State -->
+                        <MudItem xs="12" sm="4">
+                            <MudSelect @bind-Value="mailingAddress.State"
+                                       Label="State"
+                                       Required="true"
+                                       Immediate="true">
+                                @foreach (var state in States) {
+                                    <MudSelectItem Value="@state">@state</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- City -->
+                        <MudItem xs="12" sm="5">
+                            <MudTextField @bind-Value="mailingAddress.City"
+                                          Label="City"
+                                          Required="true"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.TwoTone.LocationOn"
+                                          Immediate="true" />
+                        </MudItem>
+
+                        <!-- Zip Code -->
+                        <MudItem xs="12" sm="3">
+                            <MudTextField @bind-Value="mailingAddress.Zip"
+                                          Label="Zip Code"
+                                          Required="true"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.TwoTone.Mail"
+                                          Immediate="true" />
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+            }
+
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="Model.Community.AnnualMeetingDate" Label="Annual Meeting Date" Placeholder="Select annual meeting date (if known)" Variant="Variant.Outlined" />
+            </MudItem>
         }
     </MudGrid>
 </MudForm>
@@ -112,6 +183,8 @@
     private bool useExistingCommunity;
     private Community selectedCommunity;
     private List<Community> existingCommunities = new();
+    private bool usePhysicalAsMailingAddress = true; // Default to using physical as mailing address
+    private Address mailingAddress = new Address { IsMailingAddress = true };
 
     private List<string> States = new() {
         "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
@@ -150,27 +223,64 @@
         useExistingCommunity = useExisting;
         if (!useExisting) {
             selectedCommunity = null;
-            Model.Community = new Community {
-                    Addresses = new List<Address> { new Address() }
-                };
+            Model.Community = new Community { };
+            // Reset mailing address options
+            usePhysicalAsMailingAddress = true;
+            mailingAddress = new Address { IsMailingAddress = true };
         }
         await OnExistingCommunityChanged.InvokeAsync(IsExistingCommunity());
     }
 
     private async Task OnExistingCommunitySelected() {
         if (selectedCommunity != null) {
-            //Model.CommunityId = selectedCommunity.Id;
             Model.Community = selectedCommunity;
         }
     }
 
+    private void OnMailingAddressCheckChanged(bool isChecked) {
+        usePhysicalAsMailingAddress = isChecked;
+
+        if (isChecked) {
+            // If using physical as mailing, remove any separate mailing address
+            Model.Community.Addresses = Model.Community.Addresses
+                .Where(a => !a.IsMailingAddress)
+                .ToList();
+
+            // Mark first address as mailing address too
+            if (Model.Community.Addresses.Any()) {
+                Model.Community.Addresses[0].IsMailingAddress = true;
+            }
+        }
+        else {
+            // If not using physical as mailing, add mailing address to collection
+            // and mark physical address as not a mailing address
+            if (Model.Community.Addresses.Any()) {
+                Model.Community.Addresses[0].IsMailingAddress = false;
+            }
+
+            // Add mailing address if it doesn't exist
+            if (!Model.Community.Addresses.Any(a => a.IsMailingAddress)) {
+                Model.Community.Addresses.Add(mailingAddress);
+            }
+        }
+    }
+
     public bool IsExistingCommunity() {
-        return useExistingCommunity; // && selectedCommunity != null;
+        return useExistingCommunity;
     }
 
     public async Task<bool> ValidateAsync() {
         await form.Validate();
         bool valid = form.IsValid;
+
+        // Update the addresses collection before validating
+        if (!useExistingCommunity && !usePhysicalAsMailingAddress) {
+            // Make sure the mailing address is in the collection
+            if (!Model.Community.Addresses.Any(a => a.IsMailingAddress)) {
+                Model.Community.Addresses.Add(mailingAddress);
+            }
+        }
+
         await StepValidated.InvokeAsync(valid);
         return valid;
     }

@@ -1,16 +1,19 @@
 ﻿@page "/ReserveStudies"
 @attribute [Authorize]
 
+@using CRS.Components.Pages.ReserveStudy.Dialogs
 @using CRS.Data
 @using CRS.Services
-@using Microsoft.EntityFrameworkCore
+@using CRS.Services.Interfaces
 @using Microsoft.AspNetCore.Identity
-@using System.Security.Claims
+@using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
 @inject UserStateService UserState
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ISnackbar Snackbar
+@inject IReserveStudyService ReserveStudyService
+@inject IDialogService DialogService
 
 <PageTitle>Active Studies</PageTitle>
 
@@ -27,11 +30,12 @@
         </MudAlert>
     }
     else {
-        <MudCard Outlined="true">
+        <MudCard Elevation="0" Outlined="false">
             <MudCardHeader>
                 <MudGrid>
                     <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.h6" Class="mt-1">@reserveStudies.Count Active Studies</MudText>
+                        <MudText Typo="Typo.h5" Class="mb-4">My Requests</MudText>
+                        <MudText Typo="Typo.h6" Color=Color.Primary Class="mt-1">@reserveStudies.Count Active Studies</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" Class="d-flex justify-end align-center gap-2">
                         <MudTextField @bind-Value="searchString" Placeholder="Search..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Class="mt-0" />
@@ -53,7 +57,7 @@
                         <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact.Phone)">PHONE</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Specialist.FullName)">SPECIALIST</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.DateCreated)">CREATED</MudTableSortLabel></MudTh>
-                        <MudTh></MudTh>
+                        <MudTh>ACTIONS</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Community">
@@ -67,23 +71,28 @@
                             <MudLink Href="@($"mailto:{context.PointOfContact?.Email}")">@context.PointOfContact?.Email</MudLink>
                         </MudTd>
                         <MudTd DataLabel="Phone">
-                            <MudText Typo="Typo.body1">@context.PointOfContact?.Phone</MudText>
+                            <MudText Typo="Typo.body1">@context.PointOfContact?.Phone
                             @if (!string.IsNullOrEmpty(context.PointOfContact?.Extension)) {
-                                <MudText Typo="Typo.caption">ext. @context.PointOfContact?.Extension</MudText>
+                                <MudText Typo="Typo.caption">@($" x{context.PointOfContact?.Extension}")</MudText>
                             }
+                            </MudText>
                         </MudTd>
                         <MudTd DataLabel="Specialist">
                             <MudText Typo="Typo.body1">@context.Specialist?.FullName</MudText>
                             <MudText Typo="Typo.caption">@context.Specialist?.Email</MudText>
                         </MudTd>
                         <MudTd DataLabel="Created">
-                            <MudText Typo="Typo.body1">@context.DateCreated?.ToShortDateString()</MudText>
-                            <MudText Typo="Typo.caption">@context.DateCreated?.ToShortTimeString()</MudText>
+                            <MudText Typo="Typo.body1">@($"{context.DateCreated?.ToShortDateString()} {context.DateCreated?.ToShortTimeString()}")</MudText>
                         </MudTd>
                         <MudTd>
-                            <MudButton Href="@($"ReserveStudies/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
-                                View
-                            </MudButton>
+                            <MudStack Row>
+                                <MudButton Href="@($"ReserveStudies/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
+                                    View
+                                </MudButton>
+                                <MudButton OnClick="@(() => OpenDeleteDialog(context))" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
+                                    Delete
+                                </MudButton>
+                            </MudStack>
                         </MudTd>
                     </RowTemplate>
                     <LoadingContent>
@@ -106,8 +115,6 @@
     private bool isLoading = true;
     private string searchString = "";
 
-    protected override async Task OnInitializedAsync() { }
-
     protected override async Task OnParametersSetAsync() {
         await LoadData();
     }
@@ -118,7 +125,7 @@
 
             await UserState.InitializeAsync();
             if (UserState.ClaimsPrincipal.Identity is not null && UserState.ClaimsPrincipal.Identity.IsAuthenticated) {
-                LoadReserveStudies();
+                await LoadReserveStudies();
             }
             else {
                 Snackbar.Add("User not authenticated.", Severity.Warning);
@@ -133,34 +140,29 @@
         }
     }
 
-    private void LoadReserveStudies() {
+    private async Task LoadReserveStudies() {
         try {
-            using var context = DbFactory.CreateDbContext();
-            var query = context.ReserveStudies
-                .AsNoTracking()
-                .Include(rs => rs.Community)
-                .Include(rs => rs.Contact)
-                .Include(rs => rs.PropertyManager)
-                .Include(rs => rs.Specialist)
-                .Include(rs => rs.User)
-                .AsSplitQuery();
-
+            await UserState.InitializeAsync();
             if (UserState.UserRoles != null) {
-                reserveStudies = UserState.UserRoles.Contains("Admin")
-                    ? query.ToList() : UserState.UserRoles.Contains("Specialist")
-                        ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList() : UserState.UserRoles.Contains("User")
-                            ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList() : new List<ReserveStudy>();
+                if (UserState.UserRoles.Contains("Admin")) {
+                    reserveStudies = await ReserveStudyService.GetAllReserveStudiesAsync();
+                }
+                else if (UserState.UserRoles.Contains("Specialist")) {
+                    reserveStudies = await ReserveStudyService.GetAssignedReserveStudiesAsync(UserState.CurrentUser.Id);
+                }
+                else if (UserState.UserRoles.Contains("User")) {
+                    reserveStudies = await ReserveStudyService.GetOwnedReserveStudiesAsync(UserState.CurrentUser.Id);
+                }
+                else {
+                    reserveStudies = new List<ReserveStudy>();
+                }
             }
             else {
                 Snackbar.Add("Unable to determine user permissions. Please log out and log back in.", Severity.Warning);
             }
         }
-        catch (DbUpdateConcurrencyException ex) {
-            Snackbar.Add("Data has been modified by another user. Please refresh.", Severity.Warning);
-            throw;
-        }
         catch (Exception ex) {
-            Snackbar.Add($"Database error: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
             reserveStudies = new List<ReserveStudy>();
         }
     }
@@ -178,5 +180,34 @@
                study.Specialist?.FullName?.ToLower().Contains(searchString) == true;
     }
 
-    public void Dispose() { }
+    private async Task OpenDeleteDialog(ReserveStudy study) {
+        var parameters = new DialogParameters {
+            { "Study", study }
+        };
+
+        var dialog = await DialogService.ShowAsync<DeleteReserveStudyDialog>("Delete Reserve Study", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled) {
+            await DeleteReserveStudy(study);
+        }
+    }
+
+    private async Task DeleteReserveStudy(ReserveStudy study) {
+        try {
+            isLoading = true;
+            await ReserveStudyService.DeleteReserveStudyAsync(study.Id);
+
+            // Remove the deleted study from the list
+            reserveStudies.Remove(study);
+
+            Snackbar.Add($"Reserve study for {study.Community?.Name} was successfully deleted.", Severity.Success);
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error deleting reserve study: {ex.Message}", Severity.Error);
+        }
+        finally {
+            isLoading = false;
+        }
+    }
 }

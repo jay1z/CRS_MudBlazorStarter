@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-CRS-a1ce27b7-9e6d-45f2-8a8b-a84a52cf90db</UserSecretsId>
+    <AddRazorSupportForMvc>True</AddRazorSupportForMvc>
   </PropertyGroup>
 
 
@@ -12,7 +13,6 @@
     <PackageReference Include="Coravel" Version="6.0.2" />
     <PackageReference Include="Coravel.Mailer" Version="7.1.0" />
     <PackageReference Include="Heron.MudCalendar" Version="3.0.0" />
-    <PackageReference Include="MailKit" Version="4.11.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid.EntityFrameworkAdapter" Version="9.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.*" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.*" />

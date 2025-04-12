@@ -2,12 +2,18 @@
 @attribute [Authorize]
 
 @using CRS.Data
+@using CRS.EventsAndListeners
+@using CRS.Models.Emails
 @using CRS.Services
 @using CRS.Services.Email
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.EntityFrameworkCore
+@using CRS.Services.Interfaces
+@using Coravel.Events.Interfaces
+@using Coravel.Mailer.Mail
+@using Coravel.Mailer.Mail.Interfaces
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserStateService UserState
@@ -15,7 +21,9 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IEmailService EmailService
+@inject IReserveStudyService ReserveStudyService
+@inject IMailer _mailer
+@inject IDispatcher _dispatcher
 
 <PageTitle>Reserve Study Details</PageTitle>
 
@@ -303,22 +311,22 @@
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
 
-                .Include(rs => rs.ReserveStudyBuildingElements!).ThenInclude(be => be.BuildingElement)
-                .Include(rs => rs.ReserveStudyBuildingElements!).ThenInclude(be => be.ElementMeasurementOptions)
-                .Include(rs => rs.ReserveStudyBuildingElements!).ThenInclude(be => be.ElementUsefulLifeOptions)
-                .Include(rs => rs.ReserveStudyBuildingElements!).ThenInclude(be => be.ElementRemainingLifeOptions)
-                .Include(rs => rs.ReserveStudyBuildingElements!).ThenInclude(be => be.ServiceContact)
+                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.BuildingElement)
+                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.ElementMeasurementOptions)
+                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.ElementUsefulLifeOptions)
+                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.ElementRemainingLifeOptions)
+                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.ServiceContact)
 
-                .Include(rs => rs.ReserveStudyCommonElements!).ThenInclude(be => be.CommonElement)
-                .Include(rs => rs.ReserveStudyCommonElements!).ThenInclude(be => be.ElementMeasurementOptions)
-                .Include(rs => rs.ReserveStudyCommonElements!).ThenInclude(be => be.ElementUsefulLifeOptions)
-                .Include(rs => rs.ReserveStudyCommonElements!).ThenInclude(be => be.ElementRemainingLifeOptions)
-                .Include(rs => rs.ReserveStudyCommonElements!).ThenInclude(be => be.ServiceContact)
+                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.CommonElement)
+                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.ElementMeasurementOptions)
+                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.ElementUsefulLifeOptions)
+                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.ElementRemainingLifeOptions)
+                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.ServiceContact)
 
-                .Include(rs => rs.ReserveStudyAdditionalElements!).ThenInclude(be => be.ElementMeasurementOptions)
-                .Include(rs => rs.ReserveStudyAdditionalElements!).ThenInclude(be => be.ElementUsefulLifeOptions)
-                .Include(rs => rs.ReserveStudyAdditionalElements!).ThenInclude(be => be.ElementRemainingLifeOptions)
-                .Include(rs => rs.ReserveStudyAdditionalElements!).ThenInclude(be => be.ServiceContact)
+                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.ElementMeasurementOptions)
+                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.ElementUsefulLifeOptions)
+                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.ElementRemainingLifeOptions)
+                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.ServiceContact)
 
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(rs => rs.Id == Id);
@@ -336,10 +344,8 @@
     private string GetUpdateLink() => $"/ReserveStudies/Update/{reserveStudy?.Id}";
     private async Task SendRequestLink() {
         try {
-            var subject = $"Reserve Study Request for {reserveStudy?.Community?.Name}";
-            var additionalMessage = $"A reserve study request has been shared with you. You can view the details online or contact the assigned specialist for more information.";
-
-            await EmailService.SendReserveStudyToContactsAsync(reserveStudy, subject, additionalMessage);
+            var createdEvent = new ReserveStudyCreatedEvent(reserveStudy);
+            await _dispatcher.Broadcast<ReserveStudyCreatedEvent>(createdEvent);
 
             Snackbar.Add("Request link sent successfully!", Severity.Success);
         }
@@ -353,7 +359,7 @@
             var subject = $"Access Token for Reserve Study";
             var additionalMessage = $"A reserve study request has been shared with you. You can view the details online or contact the assigned specialist for more information.";
 
-            await EmailService.SendAccessTokenEmailAsync(reserveStudy.Id, "emailme@jasonzurowski.com");
+            //await EmailService.SendAccessTokenEmailAsync(reserveStudy.Id, "emailme@jasonzurowski.com");
 
             Snackbar.Add("Request link sent successfully!", Severity.Success);
         }

@@ -1,6 +1,6 @@
 ﻿using CRS.Models;
 
-namespace CRS.Services {
+namespace CRS.Services.Interfaces {
     public interface IContactService {
         // Contact Methods
         Task<List<Contact>> GetUserContactsAsync(string userId);

@@ -154,6 +154,9 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsMailingAddress")
+                        .HasColumnType("bit");
+
                     b.Property<string>("State")
                         .HasColumnType("nvarchar(max)");
 
@@ -443,6 +446,9 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("AnnualMeetingDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
 
@@ -451,6 +457,9 @@ namespace CRS.Migrations
 
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");

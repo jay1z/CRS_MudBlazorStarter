@@ -7,6 +7,15 @@ namespace CRS.Models {
             Id = Guid.CreateVersion7();
             DateCreated = DateTime.Now;
         }
+        public BaseModel(Guid id) {
+            Id = id;
+            DateCreated = DateTime.Now;
+        }
+        public BaseModel(Guid id, DateTime dateCreated) {
+            Id = id;
+            DateCreated = dateCreated;
+        }
+
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }

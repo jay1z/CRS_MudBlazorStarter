@@ -1,11 +1,12 @@
 ﻿@page "/Contacts"
 @attribute [Authorize]
 
+@using System.Security.Claims
+@using CRS.Components.Dialogs
 @using CRS.Models
 @using CRS.Services
-@using CRS.Components.Dialogs
+@using CRS.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IContactService ContactService
 @inject IDialogService DialogService

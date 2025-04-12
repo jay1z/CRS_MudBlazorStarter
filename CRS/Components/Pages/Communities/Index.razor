@@ -1,16 +1,20 @@
 ﻿@page "/Communities"
 @attribute [Authorize]
 
+@using CRS.Components.Pages.ReserveStudy.Dialogs
 @using CRS.Data
 @using CRS.Services
-@using Microsoft.EntityFrameworkCore
+@using CRS.Services.Interfaces
 @using Microsoft.AspNetCore.Identity
-@using System.Security.Claims
+@using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
 @inject UserStateService UserState
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ISnackbar Snackbar
+@inject IReserveStudyService ReserveStudyService
+@inject ICommunityService CommunityService
+@inject IDialogService DialogService
 
 <PageTitle>Communities</PageTitle>
 
@@ -27,11 +31,12 @@
         </MudAlert>
     }
     else {
-        <MudCard Outlined="true">
+        <MudCard Elevation="0" Outlined="false">
             <MudCardHeader>
                 <MudGrid>
                     <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.h6" Class="mt-1">@communities.Count Active Communities</MudText>
+                        <MudText Typo="Typo.h5" Class="mb-4">My Communities</MudText>
+                        <MudText Typo="Typo.h6" Color=Color.Primary Class="mt-1">@communities.Count Active Communities</MudText>
                     </MudItem>
                     <MudItem xs="12" sm="6" Class="d-flex justify-end align-center gap-2">
                         <MudTextField @bind-Value="searchString" Placeholder="Search..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Class="mt-0" />
@@ -41,17 +46,19 @@
             <MudCardContent>
                 <MudTable Items="@(FilteredCommunities)" Dense="true" Hover="true" Elevation="0" Loading="@isLoading" SortLabel="Sort by" Filter="@(community => FilterFunc(community, searchString))">
                     <HeaderContent>
-                        <MudTh>
-                            <MudTableSortLabel T="Community" SortBy="@(x => x.Name)">Name</MudTableSortLabel>
-                        </MudTh>
-                        <MudTh>City</MudTh>
-                        <MudTh>State</MudTh>
-                        <MudTh>Zip</MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Name)">NAME</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.Street)">STREET</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.City)">CITY</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.State)">STATE</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.Zip)">ZIP</MudTableSortLabel></MudTh>
                         <MudTh></MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Name">
                             <MudText Typo="Typo.h5" Class="fw-bold">@context.Name</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Street">
+                            @context.Addresses?.FirstOrDefault()?.Street
                         </MudTd>
                         <MudTd DataLabel="City">
                             @context.Addresses?.FirstOrDefault()?.City
@@ -65,6 +72,9 @@
                         <MudTd>
                             <MudButton Href="@($"Communities/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
                                 View
+                            </MudButton>
+                            <MudButton OnClick="@(() => OpenDeleteDialog(context))" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
+                                Delete
                             </MudButton>
                         </MudTd>
                     </RowTemplate>
@@ -88,8 +98,6 @@
     private List<Community> communities;
     private bool isLoading = true;
     private string searchString = "";
-
-    protected override async Task OnInitializedAsync() { }
 
     protected override async Task OnParametersSetAsync() {
         await LoadData();
@@ -123,6 +131,7 @@
             var query = context.ReserveStudies
                 .AsNoTracking()
                 .Include(rs => rs.Community).ThenInclude(rs => rs.Addresses)
+                .Where(rs => rs.IsActive)
                 .AsSplitQuery();
 
             if (UserState.UserRoles != null) {
@@ -136,7 +145,10 @@
             }
 
             // Extract unique communities from the filtered ReserveStudies
-            communities = reserveStudies.Where(rs => rs.Community != null).Select(rs => rs.Community).DistinctBy(c => c.Id).ToList()!;
+            communities = reserveStudies
+                .Where(rs => rs.Community != null)
+                .Select(rs => rs.Community)
+                .DistinctBy(c => c.Id).ToList()!;
         }
         catch (DbUpdateConcurrencyException ex) {
             Snackbar.Add("Data has been modified by another user. Please refresh.", Severity.Warning);
@@ -162,4 +174,36 @@
                 address.State?.ToLower().Contains(searchString) == true ||
                 address.Zip?.ToLower().Contains(searchString) == true) == true;
     }
+
+    private async Task OpenDeleteDialog(Community community) {
+        var parameters = new DialogParameters {
+            { "Community", community }
+        };
+
+        var dialog = await DialogService.ShowAsync<DeleteCommunityDialog>("Delete Community", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled) {
+            await DeleteCommunity(community);
+        }
+    }
+
+    private async Task DeleteCommunity(Community community) {
+        try {
+            isLoading = true;
+            await CommunityService.DeleteCommunityAsync(community.Id);
+
+            // Remove the deleted community from the list
+            communities.Remove(community);
+
+            Snackbar.Add($"Community {community?.Name} was successfully deleted.", Severity.Success);
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error deleting community: {ex.Message}", Severity.Error);
+        }
+        finally {
+            isLoading = false;
+        }
+    }
+
 }

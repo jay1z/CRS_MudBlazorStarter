@@ -1,11 +1,14 @@
-﻿using CRS.Components;
+﻿using Coravel;
+using Coravel.Events.Interfaces;
+
+using CRS.Components;
 using CRS.Components.Account;
 using CRS.Data;
-using CRS.Helpers;
+using CRS.EventsAndListeners;
 using CRS.Services;
 using CRS.Services.Email;
+using CRS.Services.Interfaces;
 
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
@@ -25,6 +28,10 @@ ConfigureServices(builder);
 
 var app = builder.Build();
 await ConfigurePipeline(app);
+
+var provider = app.Services;
+IEventRegistration registration = provider.ConfigureEvents();
+registration.Register<ReserveStudyCreatedEvent>().Subscribe<ReserveStudyCreatedListener>();
 
 app.Run();
 
@@ -70,13 +77,20 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IdentityRedirectManager>();
     builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
-    // Application services
-    builder.Services.AddScoped<IPasswordHelper, PasswordHelper>();
+    // Theming services
     builder.Services.AddSingleton<ThemeService>();
-    builder.Services.AddScoped<INavigationService, NavigationService>();
+
+    // Application services
+    builder.Services.AddScoped<ICalendarService, CalendarService>();
+    builder.Services.AddScoped<ICommunityService, CommunityService>();
     builder.Services.AddScoped<IContactService, ContactService>();
+    builder.Services.AddScoped<IDashboardService, DashboardService>();
     builder.Services.AddScoped<IReserveStudyService, ReserveStudyService>();
-    builder.Services.AddScoped<IEmailService, EmailService>();
+
+    // Register Coravel
+    builder.Services.AddMailer(builder.Configuration);
+    builder.Services.AddScoped<ReserveStudyCreatedListener>();
+    builder.Services.AddEvents();
 
     // Add memory cache service
     builder.Services.AddMemoryCache();
@@ -84,7 +98,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Register the renderer
     builder.Services.AddScoped<HtmlRenderer>();
     builder.Services.AddScoped<IRazorComponentRenderer, RazorComponentRenderer>();
-    
+
     // Authentication configuration
     builder.Services.AddAuthentication(options => {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;

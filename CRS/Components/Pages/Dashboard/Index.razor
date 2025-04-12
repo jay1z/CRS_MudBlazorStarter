@@ -1,11 +1,13 @@
 ﻿@page "/Dashboard"
 @attribute [Authorize]
 
-@using CRS.Services
 @using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
 @implements IDisposable
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
+@inject IDashboardService DashboardService
 @inject IReserveStudyService ReserveStudyService
 
 <PageTitle>Dashboard</PageTitle>
@@ -239,7 +241,6 @@
     private List<ChartSeries> percentileData = new();
 
     protected override async Task OnInitializedAsync() {
-        await UserState.InitializeAsync();
         await LoadReserveStudiesAsync();
 
         // Set up periodic refresh
@@ -253,6 +254,8 @@
     private async Task LoadReserveStudiesAsync() {
         try {
             _isLoading = true;
+
+            await UserState.InitializeAsync();
 
             // Get user ID from UserState
             var userId = UserState.CurrentUser.Id;
@@ -291,6 +294,8 @@
 
     private async Task LoadDashboardDataAsync() {
         try {
+            await UserState.InitializeAsync();
+
             if (string.IsNullOrEmpty(_selectedReserveStudy)) {
                 _isLoading = false;
                 return;
@@ -304,7 +309,7 @@
             }
 
             // Load chart data
-            var dashboardData = await ReserveStudyService.GetDashboardDataAsync(studyId);
+            var dashboardData = await DashboardService.GetDashboardDataAsync(studyId);
 
             // Update all dashboard components with real data
             _chartLabels = dashboardData.FundAllocationLabels;

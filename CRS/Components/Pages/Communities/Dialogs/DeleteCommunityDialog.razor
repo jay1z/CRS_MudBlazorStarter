@@ -1,0 +1,50 @@
+﻿@namespace CRS.Components.Pages.ReserveStudy.Dialogs
+@using CRS.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer>
+            @if (Community != null) {
+                <MudAlert Severity="Severity.Warning" Class="mb-4">
+                    You are about to delete the community <strong>@Community.Name</strong>.
+                </MudAlert>
+            }
+
+            <MudText>
+                This action cannot be undone. All data associated with this community will be marked as deleted.
+            </MudText>
+
+            <MudPaper Elevation="0" Class="pa-4 mt-4" Style="background-color: var(--mud-palette-background-grey)">
+                <MudText><strong>Community Details:</strong></MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem>
+                        <MudText><strong>Community:</strong> @Community?.Name</MudText>
+                    </MudListItem>
+                    <MudListItem>
+                        <MudText><strong>Address:</strong> @Community?.Addresses?.FirstOrDefault()?.FullAddress</MudText>
+                    </MudListItem>
+                    <MudListItem>
+                        <MudText><strong>Created:</strong> @Community?.DateCreated?.ToShortDateString()</MudText>
+                    </MudListItem>
+                </MudList>
+            </MudPaper>
+
+            <MudCheckBox T="bool" @bind-Value="confirmed" Label="I understand that this action cannot be undone" Class="mt-4" />
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Outlined" Color="Color.Default">Cancel</MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Error" Disabled="!confirmed">Delete Study</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public Community Community { get; set; } = null!;
+
+    private bool confirmed = false;
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    private void Cancel() => MudDialog.Cancel();
+}

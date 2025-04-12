@@ -3,10 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 using CRS.Data;
 
-using CRS.Services;
-
-using static CRS.Services.HashingService;
-
 namespace CRS.Models {
     public class ReserveStudy : BaseModel {
         [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
