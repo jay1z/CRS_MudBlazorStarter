@@ -249,6 +249,29 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "KanbanTasks",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    DueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AssigneeId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    AssigneeName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_KanbanTasks", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Notifications",
                 schema: "crs",
                 columns: table => new
@@ -1134,6 +1157,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "ContactXContactGroups",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "KanbanTasks",
                 schema: "crs");
 
             migrationBuilder.DropTable(

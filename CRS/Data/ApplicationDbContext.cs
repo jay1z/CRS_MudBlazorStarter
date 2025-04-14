@@ -127,6 +127,7 @@ namespace CRS.Data {
         public DbSet<ElementMeasurementOptions> ElementMeasurementOptions { get; set; }
         public DbSet<ElementRemainingLifeOptions> ElementRemainingLifeOptions { get; set; }
         public DbSet<ElementUsefulLifeOptions> ElementUsefulLifeOptions { get; set; }
+        public DbSet<KanbanTask> KanbanTasks { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Profile> Profiles { get; set; }
         public DbSet<PropertyManager> PropertyManagers { get; set; }

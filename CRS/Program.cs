@@ -86,6 +86,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IContactService, ContactService>();
     builder.Services.AddScoped<IDashboardService, DashboardService>();
     builder.Services.AddScoped<IReserveStudyService, ReserveStudyService>();
+    builder.Services.AddScoped<IKanbanService, KanbanService>();
 
     // Register Coravel
     builder.Services.AddMailer(builder.Configuration);

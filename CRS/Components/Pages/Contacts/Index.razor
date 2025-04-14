@@ -1,458 +1,304 @@
 ﻿@page "/Contacts"
-@attribute [Authorize]
-
-@using System.Security.Claims
-@using CRS.Components.Dialogs
+@using CRS.Data
 @using CRS.Models
 @using CRS.Services
 @using CRS.Services.Interfaces
-@using Microsoft.AspNetCore.Components.Authorization
-@inject AuthenticationStateProvider AuthStateProvider
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IContactService ContactService
-@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Contacts</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h3" Class="mb-4">Contacts</MudText>
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+        <!-- Regular Contacts Tab -->
+        <MudTabPanel Text="Contacts" Icon="@Icons.Material.Filled.ContactPhone">
+            <MudPaper Elevation="0" Class="pa-4">
+                <MudGrid>
+                    <MudItem xs="8">
+                        <MudText Typo="Typo.h4">Contacts</MudText>
+                    </MudItem>
+                    <MudItem xs="4" Class="d-flex justify-end">
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   Href="/Contacts/Create">
+                            Add Contact
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
 
-    @if (isLoading) {
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-    }
-    else {
-        <MudGrid>
-            <!-- Left Sidebar for Contact Groups -->
-            <MudItem xs="12" sm="4" md="3">
-                <MudPaper Elevation="2" Class="pa-3 mud-height-full">
-                    <div class="d-flex align-center justify-space-between mb-4">
-                        <MudText Typo="Typo.h6">Contact Groups</MudText>
-                        <MudTooltip Text="Add New Group">
-                            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Primary" Size="Size.Small" OnClick="AddNewGroup" />
-                        </MudTooltip>
-                    </div>
-
-                    <MudTextField @bind-Value="searchGroupText" Placeholder="Search groups..."
-                                  Immediate="true" Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Search"
-                                  IconSize="Size.Small" Class="mb-3" />
-
-                    <MudList Dense T="string" SelectedValue="selectedGroup" SelectedValueChanged="OnGroupSelected" Class="overflow-y-auto" Style="max-height: 400px;">
-                        <MudListItem Value="@("all")" Icon="@Icons.Material.Filled.ContactPage" Text="All Contacts" />
-                        <MudListItem Value="@("service")" Icon="@Icons.Material.Filled.Build" Text="Service Contacts" />
-
-                        <MudDivider Class="my-2" />
-
-                        @if (filteredGroups.Any()) {
-                            foreach (var group in filteredGroups) {
-                                <MudListItem Value="@group.Id.ToString()" Class="d-flex align-center"
-                                             Icon="@Icons.Material.Filled.Group">
-                                    <div class="d-flex align-center justify-space-between flex-grow-1">
-                                        <div class="d-flex flex-column">
-                                            <MudText>@group.Name</MudText>
-                                            @if (showGroupDescriptions && !string.IsNullOrEmpty(group.Description)) {
-                                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                                    @(group.Description.Length > 30 ? $"{group.Description.Substring(0, 27)}..." : group.Description)
-                                                </MudText>
-                                            }
-                                        </div>
-                                        <div>
-                                            <MudTooltip Text="Edit Group">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => EditGroup(group.Id))" />
-                                            </MudTooltip>
-                                            <MudTooltip Text="Delete Group">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteGroup(group.Id))" />
-                                            </MudTooltip>
-                                        </div>
-                                    </div>
-                                </MudListItem>
-                            }
-                        }
-                        else if (!string.IsNullOrEmpty(searchGroupText)) {
-                            <MudText Align="Align.Center" Class="py-3 mud-text-secondary">
-                                No groups matching "@searchGroupText"
-                            </MudText>
-                        }
-                        else if (!contactGroups.Any()) {
-                            <MudAlert Severity="Severity.Info" Class="my-2">
-                                You don't have any contact groups yet.
-                            </MudAlert>
-                        }
-                    </MudList>
-
-                    <div class="d-flex justify-center mt-3">
-                        <MudSwitch T="bool" @bind-Checked="showGroupDescriptions" Color="Color.Secondary" Size="Size.Small" Label="Show descriptions" />
-                    </div>
-                </MudPaper>
-            </MudItem>
-
-            <!-- Right Side Content -->
-            <MudItem xs="12" sm="8" md="9">
-                @if (selectedGroup == "all") {
-                    <!-- Personal Contacts Section -->
-                    <MudText Typo="Typo.h5" Class="mb-2">My Contacts</MudText>
-                    <MudPaper Elevation="2" Class="pa-4 mb-4">
-                        @if (userContacts.Any(uc => !string.IsNullOrEmpty(uc.FirstName) || !string.IsNullOrEmpty(uc.LastName))) {
-                            <MudList T="Contact" Clickable="true">
-                                @foreach (var contact in userContacts.Where(sc => !string.IsNullOrEmpty(sc.Email)).DistinctBy(sc => sc.Email)) {
-                                    <MudListItem @onclick="() => ViewContactDetails(contact.Id)">
-                                        <MudAvatar Color="Color.Secondary" Class="mr-3">@GetInitials(contact.FullName)</MudAvatar>
-                                        <div>
-                                            <MudText Typo="Typo.body1">@contact.FullName</MudText>
-                                            @if (!string.IsNullOrEmpty(contact.CompanyName)) {
-                                                <MudText Typo="Typo.body2">@contact.CompanyName</MudText>
-                                            }
-                                            <MudText Typo="Typo.caption">@contact.Email</MudText>
-                                        </div>
-                                        <MudSpacer />
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => EditContact(contact.Id))" />
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteContact(contact.Id))" />
-                                    </MudListItem>
-                                }
-                            </MudList>
-                        }
-                        else {
-                            <MudAlert Severity="Severity.Info">You don't have any personal contacts yet.</MudAlert>
-                        }
-                        <MudButton Color="Color.Primary" Variant="Variant.Filled"
-                                   EndIcon="@Icons.Material.Filled.Add" Class="mt-3"
-                                   OnClick="AddNewContact">Add New Contact</MudButton>
-                    </MudPaper>
-
-                    <!-- Service Contacts Section -->
-                    <MudText Typo="Typo.h5" Class="mb-2">Service Contacts</MudText>
-                    <MudPaper Elevation="2" Class="pa-4">
-                        @if (serviceContacts.Any(c => !string.IsNullOrEmpty(c.FirstName) || !string.IsNullOrEmpty(c.LastName))) {
-                            <MudList T="ServiceContact" Clickable="true">
-                                @foreach (var contact in serviceContacts.Where(sc => !string.IsNullOrEmpty(sc.Email)).DistinctBy(sc => sc.Email)) {
-                                    <MudListItem @onclick="() => ViewServiceContactDetails(contact.Id)">
-                                        <MudAvatar Color="Color.Tertiary" Class="mr-3">@GetInitials(contact.FullName)</MudAvatar>
-                                        <div>
-                                            <MudText Typo="Typo.body1">@contact.FullName</MudText>
-                                            @if (!string.IsNullOrEmpty(contact.CompanyName)) {
-                                                <MudText Typo="Typo.body2">@contact.CompanyName</MudText>
-                                            }
-                                            <MudText Typo="Typo.caption">@contact.Email</MudText>
-                                        </div>
-                                        <!-- Edit and Delete buttons removed -->
-                                    </MudListItem>
-                                }
-                            </MudList>
-                        }
-                        else {
-                            <MudAlert Severity="Severity.Info">No service contacts available.</MudAlert>
-                        }
-
-                        <MudText Typo="Typo.caption" Class="mt-3 d-block">
-                            Service contacts can only be managed through elements.
-                        </MudText>
-                    </MudPaper>
-                }
-                else if (selectedGroup == "service") {
-                    <!-- Only Service Contacts -->
-                    <MudText Typo="Typo.h5" Class="mb-2">Service Contacts</MudText>
-                    <MudPaper Elevation="2" Class="pa-4">
-                        @if (serviceContacts.Any(c => !string.IsNullOrEmpty(c.FirstName) || !string.IsNullOrEmpty(c.LastName))) {
-                            <MudList T="ServiceContact" Clickable="true">
-                                @foreach (var contact in serviceContacts.Where(sc => !string.IsNullOrEmpty(sc.Email)).DistinctBy(sc => sc.Email)) {
-                                    <MudListItem @onclick="() => ViewServiceContactDetails(contact.Id)">
-                                        <MudAvatar Color="Color.Tertiary" Class="mr-3">@GetInitials(contact.FullName)</MudAvatar>
-                                        <div>
-                                            <MudText Typo="Typo.body1">@contact.FullName</MudText>
-                                            @if (!string.IsNullOrEmpty(contact.CompanyName)) {
-                                                <MudText Typo="Typo.body2">@contact.CompanyName</MudText>
-                                            }
-                                            <MudText Typo="Typo.caption">@contact.Email</MudText>
-                                        </div>
-                                        <MudSpacer />
-                                    </MudListItem>
-                                }
-                            </MudList>
-                        }
-                        else {
-                            <MudAlert Severity="Severity.Info">No service contacts available.</MudAlert>
-                        }
-
-                        <MudText Typo="Typo.caption" Class="mt-3 d-block">
-                            Service contacts can only be managed through elements.
-                        </MudText>
-                    </MudPaper>
+                @if (isLoadingContacts) {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
                 }
                 else {
-                    <!-- Group-specific contacts -->
-                    <MudText Typo="Typo.h5" Class="mb-2">
-                        @(contactGroups.FirstOrDefault(g => g.Id.ToString() == selectedGroup)?.Name ?? "Group Contacts")
-                    </MudText>
-                    <MudPaper Elevation="2" Class="pa-4">
-                        @if (groupContacts.Any(c => !string.IsNullOrEmpty(c.FirstName) || !string.IsNullOrEmpty(c.LastName))) {
-                            <MudList T="Contact" Clickable="true">
-                                @foreach (var contact in groupContacts.Where(c => !string.IsNullOrEmpty(c.FirstName) || !string.IsNullOrEmpty(c.LastName))) {
-                                    <MudListItem @onclick="() => ViewContactDetails(contact.Id)">
-                                        <MudAvatar Color="Color.Secondary" Class="mr-3">@GetInitials(contact.FullName)</MudAvatar>
-                                        <div>
-                                            <MudText Typo="Typo.body1">@contact.FullName</MudText>
-                                            @if (!string.IsNullOrEmpty(contact.CompanyName)) {
-                                                <MudText Typo="Typo.body2">@contact.CompanyName</MudText>
-                                            }
-                                            <MudText Typo="Typo.caption">@contact.Email</MudText>
-                                        </div>
-                                        <MudSpacer />
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => EditContact(contact.Id))" />
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteContact(contact.Id))" />
-                                        <MudIconButton Icon="@Icons.Material.Filled.RemoveCircle" Color="Color.Warning" OnClick="@(() => RemoveContactFromGroup(contact.Id))" />
-                                    </MudListItem>
-                                }
-                            </MudList>
-                        }
-                        else {
-                            <MudAlert Severity="Severity.Info">This group doesn't have any contacts yet.</MudAlert>
-                        }
-                        <div class="d-flex mt-3">
-                            <MudButton Color="Color.Primary" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Add" Class="mr-2" OnClick="AddContactToGroup">Add Contact to Group</MudButton>
-                            <MudButton Color="Color.Secondary" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Edit" OnClick="@(() => EditGroup(Guid.Parse(selectedGroup)))">Edit Group</MudButton>
-                        </div>
-                    </MudPaper>
+                    <MudTextField @bind-Value="contactsSearchString"
+                                  Placeholder="Search contacts..."
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  IconSize="Size.Medium"
+                                  Class="mt-3 mb-2" />
+
+                    @if (!contacts.Any()) {
+                        <MudAlert Severity="Severity.Info" Class="mt-3">No contacts found.</MudAlert>
+                    }
+                    else {
+                        <MudTable Items="@filteredContacts" Dense="true" Hover="true" Bordered="false" Striped="true"
+                                  Class="mt-3" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Email</MudTh>
+                                <MudTh>Phone</MudTh>
+                                <MudTh Style="width: 120px">Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Name">
+                                    <MudLink Href="@($"/Contacts/Details/{context.Id}")">
+                                        @context.FirstName @context.LastName
+                                    </MudLink>
+                                </MudTd>
+                                <MudTd DataLabel="Email">
+                                    @if (!string.IsNullOrEmpty(context.Email)) {
+                                        <MudLink Href="@($"mailto:{context.Email}")">@context.Email</MudLink>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Phone">
+                                    @if (!string.IsNullOrEmpty(context.Phone)) {
+                                        <span>@context.Phone @(!string.IsNullOrEmpty(context.Extension) ? $" ext. {context.Extension}" : "")</span>
+                                    }
+                                </MudTd>
+                                <MudTd>
+                                    <div class="d-flex gap-2">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                       Size="Size.Small"
+                                                       Color="Color.Primary"
+                                                       Href="@($"/Contacts/Details/{context.Id}")"
+                                                       Title="View Details" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                       Size="Size.Small"
+                                                       Color="Color.Default"
+                                                       Href="@($"/Contacts/Edit/{context.Id}")"
+                                                       Title="Edit Contact" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                       Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => ConfirmDelete(context))"
+                                                       Title="Delete Contact" />
+                                    </div>
+                                </MudTd>
+                            </RowTemplate>
+                            <PagerContent>
+                                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+                            </PagerContent>
+                        </MudTable>
+                    }
                 }
-            </MudItem>
-        </MudGrid>
-    }
+            </MudPaper>
+        </MudTabPanel>
+
+        <!-- Service Contacts Tab -->
+        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.HomeRepairService">
+            <MudPaper Elevation="0" Class="pa-4">
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.h4">Service Contacts</MudText>
+                        <MudText Typo="Typo.caption" Class="mt-1">
+                            Service contacts are used for elements in reserve studies and can only be managed through those elements.
+                        </MudText>
+                    </MudItem>
+                </MudGrid>
+
+                @if (isLoadingServiceContacts) {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+                }
+                else {
+                    <MudTextField @bind-Value="serviceContactsSearchString"
+                                  Placeholder="Search service contacts..."
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  IconSize="Size.Medium"
+                                  Class="mt-3 mb-2" />
+
+                    @if (!serviceContacts.Any()) {
+                        <MudAlert Severity="Severity.Info" Class="mt-3">No service contacts found.</MudAlert>
+                    }
+                    else {
+                        <MudTable Items="@filteredServiceContacts" Dense="true" Hover="true" Bordered="false" Striped="true"
+                                  Class="mt-3" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Company</MudTh>
+                                <MudTh>Email</MudTh>
+                                <MudTh>Phone</MudTh>
+                                <MudTh Style="width: 80px">Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Name">
+                                    @context.FirstName @context.LastName
+                                </MudTd>
+                                <MudTd DataLabel="Company">
+                                    @context.CompanyName
+                                </MudTd>
+                                <MudTd DataLabel="Email">
+                                    @if (!string.IsNullOrEmpty(context.Email)) {
+                                        <MudLink Href="@($"mailto:{context.Email}")">@context.Email</MudLink>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Phone">
+                                    @if (!string.IsNullOrEmpty(context.Phone)) {
+                                        <span>@context.Phone @(!string.IsNullOrEmpty(context.Extension) ? $" ext. {context.Extension}" : "")</span>
+                                    }
+                                </MudTd>
+                                <MudTd>
+                                    <div class="d-flex gap-2">
+                                        <MudTooltip Text="View Elements">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Assignment"
+                                                           Size="Size.Small"
+                                                           Color="Color.Info"
+                                                           OnClick="@(() => ViewServiceContactElements(context.Id))"
+                                                           Title="View Elements" />
+                                        </MudTooltip>
+                                    </div>
+                                </MudTd>
+                            </RowTemplate>
+                            <PagerContent>
+                                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+                            </PagerContent>
+                        </MudTable>
+                    }
+                }
+            </MudPaper>
+        </MudTabPanel>
+    </MudTabs>
 </MudContainer>
 
 @code {
-    private bool isLoading = true;
-    private List<Contact> userContacts = new();
+    // Regular contacts
+    private List<Contact> contacts = new();
+    private bool isLoadingContacts = true;
+    private string contactsSearchString = "";
+
+    // Service contacts
     private List<ServiceContact> serviceContacts = new();
-    private List<ContactGroup> contactGroups = new();
-    private List<Contact> groupContacts = new();
-    private string userId;
-    private string selectedGroup = "all";
-    private string searchGroupText = string.Empty;
-    private bool showGroupDescriptions = false;
+    private bool isLoadingServiceContacts = true;
+    private string serviceContactsSearchString = "";
+
+    // Filtered collections
+    private IEnumerable<Contact> filteredContacts => contacts
+        .Where(c =>
+            string.IsNullOrWhiteSpace(contactsSearchString) ||
+            (c.FirstName?.Contains(contactsSearchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.LastName?.Contains(contactsSearchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.Email?.Contains(contactsSearchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.CompanyName?.Contains(contactsSearchString, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
+
+    private IEnumerable<ServiceContact> filteredServiceContacts => serviceContacts
+        .Where(c =>
+            string.IsNullOrWhiteSpace(serviceContactsSearchString) ||
+            (c.FirstName?.Contains(serviceContactsSearchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.LastName?.Contains(serviceContactsSearchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.Email?.Contains(serviceContactsSearchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.CompanyName?.Contains(serviceContactsSearchString, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
 
     protected override async Task OnInitializedAsync() {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        try {
+            // Start both loading operations
+            var contactsTask = LoadContacts();
+            var serviceContactsTask = LoadServiceContacts();
 
-        if (user.Identity.IsAuthenticated) {
-            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            await LoadContacts();
-            await LoadContactGroups();
+            // Wait for both to complete
+            await Task.WhenAll(contactsTask, serviceContactsTask);
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading contacts: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task LoadContacts() {
-        isLoading = true;
         try {
-            userContacts = await ContactService.GetUserContactsAsync(userId);
+            await using var context = await DbFactory.CreateDbContextAsync();
+
+            contacts = await context.Contacts
+                .AsNoTracking()
+                .Where(c => !c.DateDeleted.HasValue)
+                .OrderBy(c => c.LastName)
+                .ThenBy(c => c.FirstName)
+                .AsSplitQuery()
+                .ToListAsync();
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading contacts: {ex.Message}", Severity.Error);
+        }
+        finally {
+            isLoadingContacts = false;
+        }
+    }
+
+    private async Task LoadServiceContacts() {
+        try {
             serviceContacts = await ContactService.GetServiceContactsAsync();
         }
         catch (Exception ex) {
-            // Error handling
-            Console.WriteLine($"Error loading contacts: {ex.Message}");
+            Snackbar.Add($"Error loading service contacts: {ex.Message}", Severity.Error);
         }
         finally {
-            isLoading = false;
+            isLoadingServiceContacts = false;
         }
     }
 
-    private async Task LoadContactGroups() {
+    private async Task ConfirmDelete(Contact contact) {
+        // var parameters = new DialogParameters
+        //     {
+        //     { "ContentText", $"Are you sure you want to delete contact '{contact.FirstName} {contact.LastName}'? This action cannot be undone." },
+        //     { "ButtonText", "Delete" },
+        //     { "Color", Color.Error }
+        // };
+
+        // var dialog = await DialogService.ShowAsync<MudBlazor.Dialog>("Confirm Delete", parameters);
+        // var result = await dialog.Result;
+
+        // if (!result.Canceled) {
+        //     await DeleteContact(contact);
+        // }
+    }
+
+    private async Task DeleteContact(Contact contact) {
         try {
-            contactGroups = await ContactService.GetContactGroupsAsync(userId);
-        }
-        catch (Exception ex) {
-            Console.WriteLine($"Error loading contact groups: {ex.Message}");
-        }
-    }
+            await using var context = await DbFactory.CreateDbContextAsync();
 
-    private async Task LoadGroupContacts(Guid groupId) {
-        try {
-            groupContacts = await ContactService.GetContactsByGroupIdAsync(groupId);
-        }
-        catch (Exception ex) {
-            Console.WriteLine($"Error loading group contacts: {ex.Message}");
-        }
-    }
+            var dbContact = await context.Contacts.FindAsync(contact.Id);
+            if (dbContact != null) {
+                // Soft delete
+                dbContact.DateDeleted = DateTime.UtcNow;
+                await context.SaveChangesAsync();
 
-    private async Task OnGroupSelected(string value) {
-        selectedGroup = value;
+                // Remove from local list
+                contacts.RemoveAll(c => c.Id == contact.Id);
 
-        if (value != "all" && value != "service") {
-            // Load contacts for the selected group
-            await LoadGroupContacts(Guid.Parse(value));
-        }
-    }
-
-    private string GetInitials(string name) {
-        if (string.IsNullOrWhiteSpace(name))
-            return "?";
-
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 1)
-            return parts[0][0].ToString().ToUpper();
-
-        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
-    }
-
-    private void ViewContactDetails(Guid contactId) {
-        // Navigate to contact details page
-    }
-
-    private void ViewServiceContactDetails(Guid contactId) {
-        // Navigate to a read-only view of service contact details
-        // This could be implemented to show elements using this service contact
-    }
-
-    private void EditContact(Guid contactId) {
-        // Navigate to edit contact page or show edit dialog
-    }
-
-    private async Task DeleteContact(Guid contactId) {
-        // Show confirmation dialog and delete if confirmed
-        var parameters = new DialogParameters
-                                                        {
-            { "ContentText", "Are you sure you want to delete this contact? This action cannot be undone." },
-            { "ButtonText", "Delete" },
-            { "Color", Color.Error }
-        };
-
-        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Confirm Deletion", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled) {
-            await ContactService.DeleteContactAsync(contactId);
-            await LoadContacts();
-            Snackbar.Add("Contact deleted successfully", Severity.Success);
-        }
-    }
-
-    private async Task DeleteGroup(Guid groupId) {
-        var parameters = new DialogParameters
-                                                        {
-            { "ContentText", "Are you sure you want to delete this contact group? This will NOT delete the contacts in the group." },
-            { "ButtonText", "Delete" },
-            { "Color", Color.Error }
-        };
-
-        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Confirm Deletion", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled) {
-            await ContactService.DeleteContactGroupAsync(groupId);
-            await LoadContactGroups();
-
-            if (selectedGroup == groupId.ToString()) {
-                selectedGroup = "all";
+                Snackbar.Add("Contact deleted successfully", Severity.Success);
+                StateHasChanged();
             }
-
-            Snackbar.Add("Contact group deleted successfully", Severity.Success);
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error deleting contact: {ex.Message}", Severity.Error);
         }
     }
 
-    private async Task AddNewGroup() {
-        var parameters = new DialogParameters {
-        { "GroupName", "" },
-        { "GroupDescription", "" },
-        { "IsEdit", false }
-    };
+    private async Task ViewServiceContactElements(Guid serviceContactId) {
+        // // This dialog would show the elements associated with this service contact
+        // var parameters = new DialogParameters
+        //     {
+        //     { "ServiceContactId", serviceContactId }
+        // };
 
-        var dialog = await DialogService.ShowAsync<ContactGroupDialog>("Add New Group", parameters);
-        var result = await dialog.Result;
+        // var dialog = await DialogService.ShowAsync<MudBlazor.Dialog>("Elements Using This Service Contact", parameters);
+        // await dialog.Result;
 
-        if (!result.Canceled && result.Data is ContactGroupDialog.ContactGroupResult groupResult) {
-            var newGroup = new ContactGroup {
-                    Name = groupResult.Name,
-                    Description = groupResult.Description,
-                    ApplicationUserId = Guid.Parse(userId)
-                };
-
-            await ContactService.CreateContactGroupAsync(newGroup);
-            await LoadContactGroups();
-            Snackbar.Add("Contact group created successfully", Severity.Success);
-        }
+        // // No need to handle the result since this is just a view dialog
     }
-
-    private async Task EditGroup(Guid groupId) {
-        var group = contactGroups.FirstOrDefault(g => g.Id == groupId);
-        if (group == null) return;
-
-        var parameters = new DialogParameters {
-        { "GroupName", group.Name },
-        { "GroupDescription", group.Description ?? "" },
-        { "IsEdit", true }
-    };
-
-        var dialog = await DialogService.ShowAsync<ContactGroupDialog>("Edit Group", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data is ContactGroupDialog.ContactGroupResult groupResult) {
-            group.Name = groupResult.Name;
-            group.Description = groupResult.Description;
-            await ContactService.UpdateContactGroupAsync(group);
-            await LoadContactGroups();
-            Snackbar.Add("Contact group updated successfully", Severity.Success);
-        }
-    }
-
-    private void AddNewContact() {
-        // Navigate to add contact page or show add dialog
-    }
-
-    private async Task AddContactToGroup() {
-        if (selectedGroup == "all" || selectedGroup == "service") return;
-
-        var groupId = Guid.Parse(selectedGroup);
-
-        // Get contacts not in this group
-        var availableContacts = userContacts
-            .Where(c => !groupContacts.Any(gc => gc.Id == c.Id))
-            .Where(c => !string.IsNullOrEmpty(c.FirstName) || !string.IsNullOrEmpty(c.LastName))
-            .ToList();
-
-        if (!availableContacts.Any()) {
-            Snackbar.Add("No more contacts available to add to this group", Severity.Warning);
-            return;
-        }
-
-        var parameters = new DialogParameters {
-        { "Contacts", availableContacts },
-        { "GroupId", groupId }
-    };
-
-        var dialog = await DialogService.ShowAsync<AddContactToGroupDialog>("Add Contact to Group", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data is Guid contactId) {
-            await ContactService.AddContactToGroupAsync(contactId, groupId);
-            await LoadGroupContacts(groupId);
-            Snackbar.Add("Contact added to group successfully", Severity.Success);
-        }
-    }
-
-    private async Task RemoveContactFromGroup(Guid contactId) {
-        if (selectedGroup == "all" || selectedGroup == "service") return;
-
-        var groupId = Guid.Parse(selectedGroup);
-
-        var parameters = new DialogParameters
-                                                        {
-            { "ContentText", "Are you sure you want to remove this contact from the group? The contact will not be deleted." },
-            { "ButtonText", "Remove" },
-            { "Color", Color.Warning }
-        };
-
-        var dialog = await DialogService.ShowAsync<ConfirmationDialog>("Confirm Removal", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled) {
-            await ContactService.RemoveContactFromGroupAsync(contactId, groupId);
-            await LoadGroupContacts(groupId);
-            Snackbar.Add("Contact removed from group successfully", Severity.Success);
-        }
-    }
-
-    // Add this property to filter groups
-    private List<ContactGroup> filteredGroups => string.IsNullOrWhiteSpace(searchGroupText)
-        ? contactGroups
-        : contactGroups.Where(g => g.Name.Contains(searchGroupText, StringComparison.OrdinalIgnoreCase) ||
-                                (!string.IsNullOrEmpty(g.Description) &&
-                                 g.Description.Contains(searchGroupText, StringComparison.OrdinalIgnoreCase)))
-                      .ToList();
 }

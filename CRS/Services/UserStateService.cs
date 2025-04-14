@@ -14,6 +14,7 @@ namespace CRS.Services {
         Task InitializeAsync();
         event Action? OnChange;
         Task RefreshStateAsync();
+        Task<List<ApplicationUser>> GetUsersByRoleAsync(string roleName);
     }
 
     public class UserStateService : IUserStateService {
@@ -80,6 +81,23 @@ namespace CRS.Services {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "Error updating authentication state");
+            }
+        }
+
+        public async Task<List<ApplicationUser>> GetUsersByRoleAsync(string roleName) {
+            try {
+                if (string.IsNullOrEmpty(roleName)) {
+                    _logger.LogWarning("GetUsersByRoleAsync called with null or empty role name");
+                    return new List<ApplicationUser>();
+                }
+
+                var usersInRole = await _userManager.GetUsersInRoleAsync(roleName);
+                _logger.LogInformation($"Found {usersInRole.Count} users in role {roleName}");
+                return usersInRole.ToList();
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, $"Error retrieving users in role {roleName}");
+                return new List<ApplicationUser>();
             }
         }
 

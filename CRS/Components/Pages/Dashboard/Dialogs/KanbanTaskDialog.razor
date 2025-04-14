@@ -1,0 +1,153 @@
+﻿@using CRS.Data
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+@inject IKanbanService KanbanService
+@inject IUserStateService UserState
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(Task?.Id == Guid.Empty ? "New Task" : "Edit Task")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" Model="@Task">
+            <MudTextField T="string" @bind-Value="Task.Title"
+                          Label="Title" Required="true"
+                          For="@(() => Task.Title)"
+                          Immediate="true"
+                          Validation="@(new Func<string, string>(ValidateTitle))" />
+
+            <MudTextField T="string" @bind-Value="Task.Description"
+                          Label="Description"
+                          For="@(() => Task.Description)"
+                          Lines="3"
+                          Class="mt-3" />
+
+            <MudSelect T="KanbanStatus" @bind-Value="Task.Status"
+                       Label="Status" Required="true"
+                       Class="mt-3">
+                @foreach (var status in Enum.GetValues(typeof(KanbanStatus)).Cast<KanbanStatus>()) {
+                    <MudSelectItem Value="@status">@GetStatusDisplayName(status)</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="Priority" @bind-Value="Task.Priority"
+                       Label="Priority" Required="true"
+                       Class="mt-3">
+                @foreach (var priority in Enum.GetValues(typeof(Priority)).Cast<Priority>()) {
+                    <MudSelectItem Value="@priority">@priority</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudDatePicker @bind-Date="Task.DueDate"
+                           Label="Due Date"
+                           Class="mt-3" />
+
+            <!-- Replace the text field with a Select dropdown -->
+            <MudSelect T="Guid?" @bind-Value="Task.AssigneeId" Label="Assignee (Specialist)" Class="mt-3" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Outlined" @* @onchange="OnAssigneeChanged" *@>
+                <MudSelectItem Value="@((Guid?)null)">Not Assigned</MudSelectItem>
+                @if (specialists != null) {
+                    @foreach (var specialist in specialists) {
+                        <MudSelectItem Value="@specialist.Id">@specialist.FullName</MudSelectItem>
+                    }
+                }
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Default">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public KanbanTask Task { get; set; } = new() { Id = Guid.Empty, Title = "", Status = KanbanStatus.Todo, Priority = Priority.Medium };
+    [Parameter] public Guid ReserveStudyId { get; set; }
+
+    private MudForm form;
+    private List<ApplicationUser> specialists = new();
+
+    protected override async Task OnInitializedAsync() {
+        await LoadSpecialists();
+
+        // If we're editing and have an AssigneeId but no name, try to set the name from the specialist list
+        if (Task.Id != Guid.Empty && Task.AssigneeId.HasValue && string.IsNullOrEmpty(Task.AssigneeName)) {
+            var assignee = specialists.FirstOrDefault(s => s.Id == Task.AssigneeId);
+            if (assignee != null) {
+                Task.AssigneeName = assignee.FullName;
+            }
+        }
+    }
+
+    private async Task LoadSpecialists() {
+        try {
+            specialists = await UserState.GetUsersByRoleAsync("Specialist");
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading specialists: {ex.Message}", Severity.Error);
+            specialists = new List<ApplicationUser>();
+        }
+    }
+
+    private void OnAssigneeChanged(MudSelect<Guid?> select) {
+        if (Task.AssigneeId.HasValue) {
+            var specialist = specialists.FirstOrDefault(s => s.Id == Task.AssigneeId);
+            Task.AssigneeName = specialist?.FullName ?? string.Empty;
+        }
+        else {
+            Task.AssigneeName = string.Empty;
+        }
+    }
+
+    private string GetStatusDisplayName(KanbanStatus status) {
+        return status switch {
+            KanbanStatus.Todo => "To Do",
+            KanbanStatus.InProgress => "In Progress",
+            KanbanStatus.Review => "Review",
+            KanbanStatus.Done => "Done",
+            _ => status.ToString()
+        };
+    }
+
+    private string ValidateTitle(string title) {
+        if (string.IsNullOrWhiteSpace(title))
+            return "Title is required";
+
+        if (title.Length < 3)
+            return "Title must be at least 3 characters";
+
+        return null;
+    }
+
+    private async Task Submit() {
+        await form.Validate();
+
+        if (form.IsValid) {
+            try {
+                // Ensure the reserve study ID is set
+                Task.ReserveStudyId = ReserveStudyId;
+
+                KanbanTask result;
+
+                if (Task.Id == Guid.Empty) {
+                    // Create new task
+                    result = await KanbanService.CreateTaskAsync(Task);
+                }
+                else {
+                    // Update existing task
+                    result = await KanbanService.UpdateTaskAsync(Task);
+                }
+
+                MudDialog.Close(DialogResult.Ok(result));
+            }
+            catch (Exception ex) {
+                Snackbar.Add($"Error saving task: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

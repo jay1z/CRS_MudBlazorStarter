@@ -1,0 +1,246 @@
+﻿@page "/Contacts/Details/{Id:guid}"
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IContactService ContactService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Contact Details</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @if (isLoading) {
+        <MudPaper Elevation="0" Class="pa-8">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.h5" Class="mt-4">Loading contact details...</MudText>
+        </MudPaper>
+    }
+    else if (contact == null) {
+        <MudPaper Elevation="0" Class="pa-8">
+            <MudText Typo="Typo.h5">Contact not found</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateBack" Class="mt-4">
+                Go Back
+            </MudButton>
+        </MudPaper>
+    }
+    else {
+        <MudGrid>
+            <!-- Left Column - Contact Details -->
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="3" Class="mb-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h5">Contact Information</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default"
+                                           Href="@($"/Contacts/Edit/{contact.Id}")" />
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6">@contact.FirstName @contact.LastName</MudText>
+                        <MudList T="string" Dense="true" DisablePadding="true">
+                            @if (!string.IsNullOrEmpty(contact.Email)) {
+                                <MudListItem>
+                                    <MudLink Href="@($"mailto:{contact.Email}")">
+                                        <div class="d-flex gap-2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" />
+                                            <MudText>@contact.Email</MudText>
+                                        </div>
+                                    </MudLink>
+                                </MudListItem>
+                            }
+
+                            @if (!string.IsNullOrEmpty(contact.Phone)) {
+                                <MudListItem>
+                                    <div class="d-flex gap-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" />
+                                        <MudText>@contact.Phone @(!string.IsNullOrEmpty(contact.Extension) ? $" ext. {contact.Extension}" : "")</MudText>
+                                    </div>
+                                </MudListItem>
+                            }
+
+                            <MudListItem>
+                                <div class="d-flex gap-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                    <MudText>Created: @(contact.DateCreated?.ToString("MM/dd/yyyy") ?? "N/A")</MudText>
+                                </div>
+                            </MudListItem>
+                        </MudList>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Right Column - Reserve Studies -->
+            <MudItem xs="12" md="8">
+                <MudCard Elevation="0" Outlined="true">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h5">Reserve Studies</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (!reserveStudies.Any()) {
+                            <MudAlert Severity="Severity.Info" Class="my-2">No reserve studies found for this contact.</MudAlert>
+                        }
+                        else {
+                            <MudExpansionPanels>
+                                @foreach (var study in reserveStudies) {
+                                    <MudExpansionPanel>
+                                        <TitleContent>
+                                            <div class="d-flex align-center gap-4">
+                                                <MudText>
+                                                    @(study.Community?.Name ?? "Unnamed Community")
+                                                    <MudChip T="string" Size="Size.Small" Color="@(study.IsComplete ? Color.Success : Color.Warning)">
+                                                        @(study.IsComplete ? "Complete" : "In Progress")
+                                                    </MudChip>
+                                                </MudText>
+                                                <MudText Typo="Typo.caption">Created: @study.DateCreated?.ToString("MM/dd/yyyy")</MudText>
+                                            </div>
+                                        </TitleContent>
+                                        <ChildContent>
+                                            <MudCard Elevation="0" Outlined="false" Class="mb-4">
+                                                <MudCardContent>
+                                                    <MudGrid>
+                                                        <MudItem xs="12">
+                                                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="@($"/ReserveStudies/Details/{study.Id}")">
+                                                                View Full Details
+                                                            </MudButton>
+                                                        </MudItem>
+                                                    </MudGrid>
+
+                                                    <!-- Elements Summary -->
+                                                    <MudDivider Class="my-4" />
+                                                    <MudText Typo="Typo.h6" Class="mb-2">Elements</MudText>
+
+                                                    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-3">
+                                                        <MudTabPanel Text="Building Elements">
+                                                            @if (study.ReserveStudyBuildingElements?.Any() != true) {
+                                                                <MudText>No building elements for this study.</MudText>
+                                                            }
+                                                            else {
+                                                                <MudTable Items="@study.ReserveStudyBuildingElements" Dense="true" Hover="true" Elevation="0">
+                                                                    <HeaderContent>
+                                                                        <MudTh>Name</MudTh>
+                                                                        <MudTh>Quantity</MudTh>
+                                                                        <MudTh>Requires Service Contact</MudTh>
+                                                                    </HeaderContent>
+                                                                    <RowTemplate>
+                                                                        <MudTd>@context.BuildingElement?.Name</MudTd>
+                                                                        <MudTd>@context.Count</MudTd>
+                                                                        <MudTd>
+                                                                            <MudCheckBox T="bool" ReadOnly="true" Checked="@context.NeedsService" Color="Color.Success" Size="Size.Small" />
+                                                                        </MudTd>
+                                                                    </RowTemplate>
+                                                                </MudTable>
+                                                            }
+                                                        </MudTabPanel>
+                                                        <MudTabPanel Text="Common Elements">
+                                                            @if (study.ReserveStudyCommonElements?.Any() != true) {
+                                                                <MudText>No common elements for this study.</MudText>
+                                                            }
+                                                            else {
+                                                                <MudTable Items="@study.ReserveStudyCommonElements" Dense="true" Hover="true" Elevation="0">
+                                                                    <HeaderContent>
+                                                                        <MudTh>Name</MudTh>
+                                                                        <MudTh>Quantity</MudTh>
+                                                                        <MudTh>Requires Service Contact</MudTh>
+                                                                    </HeaderContent>
+                                                                    <RowTemplate>
+                                                                        <MudTd>@context.CommonElement?.Name</MudTd>
+                                                                        <MudTd>@context.Count</MudTd>
+                                                                        <MudTd>
+                                                                            <MudCheckBox T="bool" ReadOnly="true" Checked="@context.NeedsService" Color="Color.Success" Size="Size.Small" />
+                                                                        </MudTd>
+                                                                    </RowTemplate>
+                                                                </MudTable>
+                                                            }
+                                                        </MudTabPanel>
+                                                        <MudTabPanel Text="Additional Elements">
+                                                            @if (study.ReserveStudyAdditionalElements?.Any() != true) {
+                                                                <MudText>No additional elements for this study.</MudText>
+                                                            }
+                                                            else {
+                                                                <MudTable Items="@study.ReserveStudyAdditionalElements" Dense="true" Hover="true" Elevation="0">
+                                                                    <HeaderContent>
+                                                                        <MudTh>Name</MudTh>
+                                                                        <MudTh>Quantity</MudTh>
+                                                                        <MudTh>Requires Service Contact</MudTh>
+                                                                    </HeaderContent>
+                                                                    <RowTemplate>
+                                                                        <MudTd>@context.Name</MudTd>
+                                                                        <MudTd>@context.Count</MudTd>
+                                                                        <MudTd>
+                                                                            <MudCheckBox T="bool" ReadOnly="true" Checked="@context.NeedsService" Color="Color.Success" Size="Size.Small" />
+                                                                        </MudTd>
+                                                                    </RowTemplate>
+                                                                </MudTable>
+                                                            }
+                                                        </MudTabPanel>
+                                                    </MudTabs>
+                                                </MudCardContent>
+                                            </MudCard>
+                                        </ChildContent>
+                                    </MudExpansionPanel>
+                                }
+                            </MudExpansionPanels>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private Contact contact;
+    private List<ReserveStudy> reserveStudies = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync() {
+        try {
+            await LoadContactAndReserveStudies();
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading contact data: {ex.Message}", Severity.Error);
+        }
+        finally {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadContactAndReserveStudies() {
+        await using var context = await DbFactory.CreateDbContextAsync();
+
+        // Get the contact and associated reserve studies
+        contact = await context.Contacts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == Id && !c.DateDeleted.HasValue);
+
+        if (contact != null) {
+            // Get reserve studies related to this contact with all required includes
+            reserveStudies = await context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.Community)
+                .Include(rs => rs.ReserveStudyBuildingElements)
+                    .ThenInclude(be => be.BuildingElement)
+                .Include(rs => rs.ReserveStudyCommonElements)
+                    .ThenInclude(ce => ce.CommonElement)
+                .Include(rs => rs.ReserveStudyAdditionalElements)
+                .Where(rs => rs.ContactId == Id)
+                .OrderByDescending(rs => rs.DateCreated)
+                .AsSplitQuery()
+                .ToListAsync();
+        }
+    }
+
+    private void NavigateBack() {
+        NavigationManager.NavigateTo("/Contacts");
+    }
+}

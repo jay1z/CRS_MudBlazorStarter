@@ -1,6 +1,9 @@
 ﻿@page "/Dashboard"
 @attribute [Authorize]
 
+@using CRS.Components.Dialogs
+@using CRS.Components.Pages.Dashboard.Dialogs
+@using CRS.Data
 @using CRS.Models
 @using CRS.Services
 @using CRS.Services.Interfaces
@@ -9,6 +12,8 @@
 @inject ISnackbar Snackbar
 @inject IDashboardService DashboardService
 @inject IReserveStudyService ReserveStudyService
+@inject IKanbanService KanbanService
+@inject IDialogService DialogService
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -40,175 +45,113 @@
                     </MudItem>
 
                     @if (!string.IsNullOrEmpty(_selectedReserveStudy)) {
-                        <MudItem xs="12" md="4">
-                            <MudCard Elevation="2" Class="h-100">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Reserve Fund Allocation (7 days)</MudText>
-                                    </CardHeaderContent>
-                                </MudCardHeader>
-                                <MudCardContent>
-                                    @if (_chartData.Length > 0) {
-                                        <MudChart ChartType="ChartType.Donut" InputLabels="@_chartLabels" InputData="@_chartData" Width="200px" Height="200px" />
-                                    }
-                                    else {
-                                        <MudText>No data available</MudText>
-                                    }
-                                </MudCardContent>
-                            </MudCard>
+                        <!-- Study Status Information -->
+                        <MudItem xs="12" Class="mb-3">
+                            <MudPaper Elevation="0" Class="pa-3 d-flex align-center">
+                                <MudIcon Icon="@GetStudyStatusIcon()" Color="@GetStudyStatusColor()" Class="mr-3" />
+                                <div class="flex-grow-1">
+                                    <MudText Typo="Typo.subtitle1">Study Status: @GetStudyStatusText()</MudText>
+                                    <MudText Typo="Typo.caption">@GetStudyStatusDescription()</MudText>
+                                </div>
+                                @if (_shouldShowGenerateTasksButton) {
+                                    <MudButton Color="Color.Primary"
+                                               Variant="Variant.Filled"
+                                               OnClick="GenerateTasksForCurrentStudy"
+                                               StartIcon="@Icons.Material.Filled.Autorenew"
+                                               Disabled="_isTaskGenerating">
+                                        Generate Tasks
+                                    </MudButton>
+                                }
+                            </MudPaper>
                         </MudItem>
 
-                        <MudItem xs="12" md="4">
-                            <MudCard Elevation="2" Class="h-100">
+                        <!-- Kanban Board Section -->
+                        <MudItem xs="12">
+                            <MudCard Elevation="2" Class="mb-6">
                                 <MudCardHeader>
                                     <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Fund Allocations</MudText>
-                                    </CardHeaderContent>
-                                </MudCardHeader>
-                                <MudCardContent>
-                                    <MudTable Dense="true" Items="@fundAllocations" Hover="true" Elevation="0">
-                                        <HeaderContent>
-                                            <MudTh>Category</MudTh>
-                                            <MudTh Style="text-align: right">Amount</MudTh>
-                                        </HeaderContent>
-                                        <RowTemplate>
-                                            <MudTd>@context.Category</MudTd>
-                                            <MudTd Style="text-align: right">@context.Amount.ToString("C0")</MudTd>
-                                        </RowTemplate>
-                                    </MudTable>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
-
-                        <MudItem xs="12" md="4">
-                            <MudCard Elevation="2" Class="h-100">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Recent Expenditures</MudText>
+                                        <MudText Typo="Typo.h6">Task Board</MudText>
                                     </CardHeaderContent>
                                     <CardHeaderActions>
-                                        <MudTooltip Text="Refresh data">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Default" OnClick="RefreshData" />
+                                        <MudTooltip Text="Refresh Tasks">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Default" OnClick="RefreshKanbanTasks" />
                                         </MudTooltip>
                                     </CardHeaderActions>
                                 </MudCardHeader>
-                                <MudCardContent>
-                                    <MudTable Dense="true" Items="@recentExpenditures" Hover="true" Elevation="0">
-                                        <HeaderContent>
-                                            <MudTh>Date</MudTh>
-                                            <MudTh>Category</MudTh>
-                                            <MudTh Style="text-align: right">Amount</MudTh>
-                                        </HeaderContent>
-                                        <RowTemplate>
-                                            <MudTd>@context.Date</MudTd>
-                                            <MudTd>@context.Category</MudTd>
-                                            <MudTd Style="text-align: right">@context.Amount.ToString("C0")</MudTd>
-                                        </RowTemplate>
-                                        <PagerContent>
-                                            <MudTablePager HideRowsPerPage="true" HidePageNumber="true" />
-                                        </PagerContent>
-                                    </MudTable>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
+                                <MudCardContent Style="padding-bottom: 16px; overflow: auto;">
+                                    <MudText Class="mb-4">
+                                        Tasks are automatically generated based on reserve study status and can only be @(_canEditTasks ? "edited or " : "")moved between statuses.
+                                    </MudText>
 
-                        <MudItem xs="12" md="8">
-                            <MudCard Elevation="2">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Average Monthly Expenditure</MudText>
-                                    </CardHeaderContent>
-                                    <CardHeaderActions>
-                                        <MudMenu Icon="@Icons.Material.Filled.FilterList" Color="Color.Default" TransformOrigin="Origin.BottomRight">
-                                            <MudMenuItem>Last 6 Months</MudMenuItem>
-                                            <MudMenuItem>Last Year</MudMenuItem>
-                                            <MudMenuItem>All Time</MudMenuItem>
-                                        </MudMenu>
-                                    </CardHeaderActions>
-                                </MudCardHeader>
-                                <MudCardContent>
-                                    <MudChart ChartType="ChartType.Line" ChartSeries="@avgExpData" XAxisLabels="@avgExpLabels" Height="300" />
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
+                                    @if (IsStudyCompleted()) {
+                                        <MudAlert Severity="Severity.Success" Class="mb-4">This reserve study is marked as complete. Tasks are in read-only mode.</MudAlert>
+                                    }
 
-                        <MudItem xs="12" md="4">
-                            <MudCard Elevation="2" Class="h-100">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Reserve Study Locations</MudText>
-                                    </CardHeaderContent>
-                                </MudCardHeader>
-                                <MudCardContent>
-                                    <MudPaper Elevation="0" Class="d-flex justify-center">
-                                        <MudImage Src="https://placehold.co/450x200" Alt="World Map" Class="rounded" />
-                                    </MudPaper>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
+                                    @if (kanbanTasks.Count == 0) {
+                                        <MudAlert Severity="Severity.Info" Class="mb-4">
+                                            No tasks are currently available for this reserve study.
+                                            @if (_shouldShowGenerateTasksButton) {
+                                                <MudButton Class="ml-4" Variant="Variant.Text" Color="Color.Primary" OnClick="GenerateTasksForCurrentStudy">Generate Tasks</MudButton>
+                                            }
+                                        </MudAlert>
+                                    }
 
-                        <MudItem xs="12" md="4">
-                            <MudCard Elevation="2" Class="h-100">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Highest Expenditure Categories</MudText>
-                                    </CardHeaderContent>
-                                </MudCardHeader>
-                                <MudCardContent>
-                                    <MudList T="ExpenditureCategory" Dense="true">
-                                        @foreach (var category in highestExpenditureCategories) {
-                                            <MudListItem Icon="@Icons.Material.Filled.AttachMoney">
-                                                <div class="d-flex justify-space-between align-center width-100">
-                                                    <span>@category.Category</span>
-                                                    <span class="ml-auto">@category.Amount.ToString("C0")</span>
+                                    <MudDropContainer T="KanbanTask" @ref="_dropContainer" Items="@kanbanTasks"
+                                                      ItemsSelector="@((task, statusId) => task.Status.ToString() == statusId)"
+                                                      ItemDropped="TaskUpdated"
+                                                      Class="d-flex flex-row"
+                                                      Disabled="@(!CanMoveTasks())">
+                                        <ChildContent>
+                                            @foreach (var status in Enum.GetValues(typeof(KanbanStatus)).Cast<KanbanStatus>()) {
+                                                <MudPaper Elevation="0" Width="300px" MinHeight="400px"
+                                                          Class="pa-4 ma-4 d-flex flex-column mud-background-gray rounded-lg">
+                                                    <MudToolBar Gutters="false">
+                                                        <MudText Typo="Typo.subtitle1"><b>@GetStatusDisplayName(status)</b></MudText>
+                                                        <MudSpacer />
+                                                        <MudText Typo="Typo.caption" Color="Color.Primary">
+                                                            @(kanbanTasks.Count(t => t.Status == status)) tasks
+                                                        </MudText>
+                                                    </MudToolBar>
+                                                    <MudDropZone T="KanbanTask" Identifier="@status.ToString()" Class="mud-height-full" />
+                                                </MudPaper>
+                                            }
+                                        </ChildContent>
+                                        <ItemRenderer>
+                                            <MudPaper Elevation="2" Class="pa-4 ma-2 rounded-lg kanban-task">
+                                                <div class="d-flex justify-space-between align-center">
+                                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@context.Title</MudText>
+                                                    @if (_canEditTasks) {
+                                                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                                                            <MudMenuItem OnClick="() => EditTask(context)">Edit</MudMenuItem>
+                                                            @if (_canDeleteTasks) {
+                                                                <MudMenuItem OnClick="() => DeleteTask(context)">Delete</MudMenuItem>
+                                                            }
+                                                        </MudMenu>
+                                                    }
                                                 </div>
-                                            </MudListItem>
-                                        }
-                                    </MudList>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
 
-                        <MudItem xs="12" md="8">
-                            <MudCard Elevation="2">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Expenditure Percentile 95</MudText>
-                                    </CardHeaderContent>
-                                </MudCardHeader>
-                                <MudCardContent>
-                                    <MudChart ChartType="ChartType.Bar" ChartSeries="@percentileData" XAxisLabels="@percentileLabels" Height="300" />
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
+                                                @if (!string.IsNullOrEmpty(context.Description)) {
+                                                    <MudText Typo="Typo.body2" Class="mt-2 text-truncate">@context.Description</MudText>
+                                                }
 
-                        <MudItem xs="12" md="8">
-                            <MudCard Elevation="2">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Grouped Expenditure by Category</MudText>
-                                    </CardHeaderContent>
-                                </MudCardHeader>
-                                <MudCardContent>
-                                    <MudPaper Elevation="0" Class="d-flex justify-center">
-                                        <MudImage Src="https://placehold.co/1000x400" Alt="Heatmap" Class="rounded" />
-                                    </MudPaper>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
+                                                <div class="d-flex justify-space-between align-center mt-2">
+                                                    <MudChip T="Priority" Size="Size.Small" Color="@GetPriorityColor(context.Priority)">
+                                                        @context.Priority
+                                                    </MudChip>
+                                                    @if (context.DueDate.HasValue) {
+                                                        <MudText Typo="Typo.caption">Due: @context.DueDate.Value.ToString("MMM dd")</MudText>
+                                                    }
+                                                </div>
 
-                        <MudItem xs="12" md="4">
-                            <MudCard Elevation="2" Class="h-100">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Total Expenditures</MudText>
-                                    </CardHeaderContent>
-                                </MudCardHeader>
-                                <MudCardContent>
-                                    <div class="d-flex flex-column align-center">
-                                        <MudText Typo="Typo.h3">896</MudText>
-                                        <MudText Typo="Typo.body2" Color="Color.Success">+12.5% from last month</MudText>
-                                    </div>
+                                                @if (!string.IsNullOrEmpty(context.AssigneeName)) {
+                                                    <div class="d-flex align-center mt-2">
+                                                        <MudAvatar Size="Size.Small" Class="mr-2" Color="Color.Secondary">@GetInitials(context.AssigneeName)</MudAvatar>
+                                                        <MudText Typo="Typo.caption">@context.AssigneeName</MudText>
+                                                    </div>
+                                                }
+                                            </MudPaper>
+                                        </ItemRenderer>
+                                    </MudDropContainer>
                                 </MudCardContent>
                             </MudCard>
                         </MudItem>
@@ -221,56 +164,54 @@
 
 @code {
     private bool _isLoading = true;
+    private bool _isTaskGenerating = false;
     private string _selectedReserveStudy = "";
     private List<ReserveStudy> _reserveStudies = new();
     private Timer? _refreshTimer;
+    private ReserveStudy? _currentStudy;
 
-    // Chart data
-    private string[] _chartLabels = { };
-    private double[] _chartData = { };
-
-    private string[] avgExpLabels = { };
-    private List<ChartSeries> avgExpData = new();
-
-    // Tables data
-    private List<FundAllocation> fundAllocations = new();
-    private List<Expenditure> recentExpenditures = new();
-    private List<ExpenditureCategory> highestExpenditureCategories = new();
-
-    private string[] percentileLabels = { };
-    private List<ChartSeries> percentileData = new();
+    // Kanban related properties
+    private List<ApplicationUser> specialists = new();
+    private MudDropContainer<KanbanTask> _dropContainer;
+    private List<KanbanTask> kanbanTasks = new();
+    private bool _shouldShowGenerateTasksButton;
+    private bool _canEditTasks;
+    private bool _canDeleteTasks;
 
     protected override async Task OnInitializedAsync() {
         await LoadReserveStudiesAsync();
+        await LoadSpecialistsAsync();
 
         // Set up periodic refresh
         _refreshTimer = new Timer(async _ => {
-            await InvokeAsync(async () => {
-                await RefreshData();
-            });
+            await InvokeAsync(RefreshData);
         }, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    private async Task LoadSpecialistsAsync() {
+        try {
+            await UserState.InitializeAsync();
+            specialists = await UserState.GetUsersByRoleAsync("Specialist");
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading specialists: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task LoadReserveStudiesAsync() {
         try {
             _isLoading = true;
-
             await UserState.InitializeAsync();
-
-            // Get user ID from UserState
             var userId = UserState.CurrentUser.Id;
 
             // Fetch studies based on role
             if (UserState.IsInRole("Admin")) {
-                // Admins can see all studies
                 _reserveStudies = await ReserveStudyService.GetAllReserveStudiesAsync();
             }
             else if (UserState.IsInRole("Specialist")) {
-                // Specialists can only see studies they're assigned to
                 _reserveStudies = await ReserveStudyService.GetAssignedReserveStudiesAsync(userId);
             }
             else {
-                // Regular users can only see studies they own
                 _reserveStudies = await ReserveStudyService.GetOwnedReserveStudiesAsync(userId);
             }
 
@@ -294,8 +235,6 @@
 
     private async Task LoadDashboardDataAsync() {
         try {
-            await UserState.InitializeAsync();
-
             if (string.IsNullOrEmpty(_selectedReserveStudy)) {
                 _isLoading = false;
                 return;
@@ -303,27 +242,18 @@
 
             _isLoading = true;
 
-            // Parse the selected reserve study ID
             if (!Guid.TryParse(_selectedReserveStudy, out var studyId)) {
                 throw new Exception("Invalid reserve study ID");
             }
 
-            // Load chart data
-            var dashboardData = await DashboardService.GetDashboardDataAsync(studyId);
+            // Find the current study
+            _currentStudy = _reserveStudies.FirstOrDefault(s => s.Id == studyId);
 
-            // Update all dashboard components with real data
-            _chartLabels = dashboardData.FundAllocationLabels;
-            _chartData = dashboardData.FundAllocationData;
-
-            avgExpLabels = dashboardData.MonthlyLabels;
-            avgExpData = dashboardData.MonthlyExpenditureSeries;
-
-            fundAllocations = dashboardData.FundAllocations;
-            recentExpenditures = dashboardData.RecentExpenditures;
-            highestExpenditureCategories = dashboardData.HighestExpenditureCategories;
-
-            percentileLabels = dashboardData.PercentileLabels;
-            percentileData = dashboardData.PercentileData;
+            // Load Kanban tasks for the selected reserve study
+            await LoadKanbanTasksAsync(studyId);
+            _shouldShowGenerateTasksButton = await ShouldShowGenerateTasksButton();
+            _canEditTasks = await CanEditTasks();
+            _canDeleteTasks = await CanDeleteTasks();
 
             _isLoading = false;
         }
@@ -333,22 +263,363 @@
         }
     }
 
+    private async Task LoadKanbanTasksAsync(Guid studyId) {
+        try {
+            kanbanTasks = await KanbanService.GetTasksForReserveStudyAsync(studyId);
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
+        }
+    }
+
     private async Task OnReserveStudyChanged(string value) {
         _selectedReserveStudy = value;
         await LoadDashboardDataAsync();
     }
 
     private async Task RefreshData() {
+        if (!string.IsNullOrEmpty(_selectedReserveStudy) && Guid.TryParse(_selectedReserveStudy, out var studyId)) {
+            await LoadKanbanTasksAsync(studyId);
+        }
         await LoadReserveStudiesAsync();
         Snackbar.Add("Dashboard data refreshed", Severity.Success);
+    }
+
+    // Task generation methods
+    private async Task<bool> ShouldShowGenerateTasksButton() {
+        // Show the generate tasks button if:
+        // 1. Current study exists
+        // 2. Study is not completed
+        // 3. User has appropriate permissions (Admin or Specialist)
+        await UserState.InitializeAsync();
+        return _currentStudy != null &&
+               !_currentStudy.IsComplete &&
+               (UserState.IsInRole("Admin") || UserState.IsInRole("Specialist"));
+    }
+
+    private async Task<List<KanbanTask>> GenerateTasksBasedOnStudyStatus(Guid studyId) {
+        var newTasks = new List<KanbanTask>();
+        var existingTasks = await KanbanService.GetTasksForReserveStudyAsync(studyId);
+
+        // Get the current study for detailed information
+        var study = await ReserveStudyService.GetReserveStudyByIdAsync(studyId);
+        if (study == null) {
+            throw new Exception("Reserve study not found");
+        }
+
+        // Get a specialist to assign tasks to (if available)
+        ApplicationUser? specialist = null;
+        if (study.SpecialistUserId.HasValue) {
+            specialist = specialists.FirstOrDefault(s => s.Id == study.SpecialistUserId.Value);
+        }
+        else if (specialists.Any()) {
+            specialist = specialists.First(); // Assign to first specialist if none specifically assigned
+        }
+
+        // Define standard tasks based on study status
+        var tasksToGenerate = new List<(string Title, string Description, KanbanStatus Status, Priority Priority, int DueDays)>();
+
+        // Common tasks needed for any study
+        tasksToGenerate.Add(("Initial Study Review", "Review all submitted documents and property information", KanbanStatus.Todo, Priority.High, 7));
+
+        // Add tasks based on study status
+        if (!study.IsApproved) {
+            // Tasks for studies in progress
+            tasksToGenerate.Add(("Site Inspection", "Visit the property to inspect all components", KanbanStatus.Todo, Priority.High, 14));
+            tasksToGenerate.Add(("Financial Analysis", "Analyze current reserve fund and anticipated expenditures", KanbanStatus.Todo, Priority.Medium, 21));
+
+            // Generate element-specific tasks based on study elements
+            if (study.ReserveStudyBuildingElements?.Any() == true) {
+                tasksToGenerate.Add(("Building Elements Assessment",
+                    $"Evaluate condition of {study.ReserveStudyBuildingElements.Count} building elements",
+                    KanbanStatus.Todo, Priority.Medium, 10));
+            }
+
+            if (study.ReserveStudyCommonElements?.Any() == true) {
+                tasksToGenerate.Add(("Common Elements Assessment",
+                    $"Evaluate condition of {study.ReserveStudyCommonElements.Count} common elements",
+                    KanbanStatus.Todo, Priority.Medium, 12));
+            }
+
+            // Check for elements that need service
+            var elementsNeedingService = study.ReserveStudyElements?.Where(e => e.NeedsService).ToList();
+            if (elementsNeedingService?.Any() == true) {
+                tasksToGenerate.Add(("Service Request Follow-up",
+                    $"Follow up on {elementsNeedingService.Count()} elements needing service",
+                    KanbanStatus.Todo, Priority.High, 5));
+            }
+        }
+        else if (study.IsApproved && !study.IsComplete) {
+            // Tasks for approved but not completed studies
+            tasksToGenerate.Add(("Prepare Final Report", "Compile all findings into final reserve study report", KanbanStatus.Todo, Priority.Critical, 7));
+            tasksToGenerate.Add(("Client Review Meeting", "Schedule meeting to review findings with client", KanbanStatus.Todo, Priority.High, 14));
+        }
+
+        // Check for community-specific tasks
+        if (study.Community != null) {
+            tasksToGenerate.Add(($"Review {study.Community.Name} Specific Requirements",
+                "Check for any special requirements or local regulations",
+                KanbanStatus.Todo, Priority.Medium, 5));
+        }
+
+        // Create tasks that don't already exist
+        foreach (var taskDefinition in tasksToGenerate) {
+            // Check if this task already exists
+            bool taskExists = existingTasks.Any(t =>
+                t.Title == taskDefinition.Title &&
+                t.Description == taskDefinition.Description &&
+                !t.DateDeleted.HasValue); // Ensure we're not counting deleted tasks
+
+            if (!taskExists) {
+                newTasks.Add(new KanbanTask {
+                        Title = taskDefinition.Title,
+                        Description = taskDefinition.Description,
+                        Status = taskDefinition.Status,
+                        Priority = taskDefinition.Priority,
+                        DueDate = DateTime.Now.AddDays(taskDefinition.DueDays),
+                        AssigneeId = specialist?.Id,
+                        AssigneeName = specialist?.FullName,
+                        ReserveStudyId = studyId
+                    });
+            }
+        }
+
+        return newTasks;
+    }
+
+    private async Task GenerateTasksForCurrentStudy() {
+        if (_currentStudy == null || !Guid.TryParse(_selectedReserveStudy, out var studyId)) {
+            Snackbar.Add("No valid reserve study selected", Severity.Warning);
+            return;
+        }
+
+        try {
+            _isTaskGenerating = true;
+            var tasksToCreate = await GenerateTasksBasedOnStudyStatus(studyId);
+
+            if (tasksToCreate.Count == 0) {
+                Snackbar.Add("All required tasks already exist for this study", Severity.Info);
+                return;
+            }
+
+            // Create tasks one by one
+            foreach (var task in tasksToCreate) {
+                await KanbanService.CreateTaskAsync(task);
+            }
+
+            // Refresh the kanban board
+            await LoadKanbanTasksAsync(studyId);
+            _dropContainer?.Refresh();
+
+            Snackbar.Add($"Successfully generated {tasksToCreate.Count} new tasks for this study", Severity.Success);
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error generating tasks: {ex.Message}", Severity.Error);
+        }
+        finally {
+            _isTaskGenerating = false;
+        }
+    }
+
+    // Study status-related methods
+    private bool IsStudyApproved() => _currentStudy?.IsApproved ?? false;
+    private bool IsStudyCompleted() => _currentStudy?.IsComplete ?? false;
+
+    private string GetStudyStatusText() {
+        if (_currentStudy == null) return "Unknown";
+
+        if (_currentStudy.IsComplete) return "Completed";
+        if (_currentStudy.IsApproved) return "Approved";
+        return "In Progress";
+    }
+
+    private string GetStudyStatusDescription() {
+        if (_currentStudy == null) return "";
+
+        if (_currentStudy.IsComplete) {
+            return $"This study was completed on {_currentStudy.LastModified?.ToString("MM/dd/yyyy") ?? "N/A"}";
+        }
+
+        if (_currentStudy.IsApproved) {
+            return $"This study was approved on {_currentStudy.DateApproved?.ToString("MM/dd/yyyy") ?? "N/A"}";
+        }
+
+        return "This study is currently in progress. Tasks can be managed.";
+    }
+
+    private string GetStudyStatusIcon() {
+        if (_currentStudy == null) return Icons.Material.Filled.Help;
+
+        if (_currentStudy.IsComplete) return Icons.Material.Filled.CheckCircle;
+        if (_currentStudy.IsApproved) return Icons.Material.Filled.ThumbUp;
+        return Icons.Material.Filled.Build;
+    }
+
+    private Color GetStudyStatusColor() {
+        if (_currentStudy == null) return Color.Default;
+
+        if (_currentStudy.IsComplete) return Color.Success;
+        if (_currentStudy.IsApproved) return Color.Info;
+        return Color.Primary;
+    }
+
+    // Task permissions based on study status
+    private async Task<bool> CanEditTasks() {
+        if (_currentStudy == null) return false;
+        if (_currentStudy.IsComplete) return false;
+        await UserState.InitializeAsync();
+        return UserState.IsInRole("Admin") || UserState.IsInRole("Specialist");
+    }
+
+    private bool CanMoveTasks() {
+        if (_currentStudy == null) return false;
+        if (_currentStudy.IsComplete) return false;
+        return true;
+    }
+
+    private async Task<bool> CanDeleteTasks() {
+        if (_currentStudy == null) return false;
+        if (_currentStudy.IsComplete) return false;
+        await UserState.InitializeAsync();
+        return UserState.IsInRole("Admin");
+    }
+
+    private string GetStatusDisplayName(KanbanStatus status) {
+        return status switch {
+            KanbanStatus.Todo => "To Do",
+            KanbanStatus.InProgress => "In Progress",
+            KanbanStatus.Review => "Review",
+            KanbanStatus.Done => "Done",
+            _ => status.ToString()
+        };
+    }
+
+    private Color GetPriorityColor(Priority priority) {
+        return priority switch {
+            Priority.Low => Color.Success,
+            Priority.Medium => Color.Info,
+            Priority.High => Color.Warning,
+            Priority.Critical => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetInitials(string name) {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+    }
+
+    private async Task TaskUpdated(MudItemDropInfo<KanbanTask> dropInfo) {
+        if (dropInfo.Item == null || !CanMoveTasks()) return;
+
+        try {
+            var task = dropInfo.Item;
+            var targetStatus = Enum.Parse<KanbanStatus>(dropInfo.DropzoneIdentifier);
+
+            if (task.Status != targetStatus) {
+                task.Status = targetStatus;
+                await KanbanService.UpdateTaskStatusAsync(task.Id, targetStatus);
+
+                // Update the local list to reflect the change
+                var index = kanbanTasks.FindIndex(t => t.Id == task.Id);
+                if (index >= 0) {
+                    kanbanTasks[index] = task;
+                }
+
+                Snackbar.Add($"Task moved to {GetStatusDisplayName(targetStatus)}", Severity.Success);
+            }
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error updating task: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task EditTask(KanbanTask task) {
+        if (!_canEditTasks) {
+            Snackbar.Add("You don't have permission to edit tasks for this reserve study", Severity.Warning);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_selectedReserveStudy) || !Guid.TryParse(_selectedReserveStudy, out var studyId)) {
+            Snackbar.Add("Please select a valid reserve study first", Severity.Warning);
+            return;
+        }
+
+        // Create a clone of the task to avoid modifying the original directly
+        var taskToEdit = new KanbanTask {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                Status = task.Status,
+                Priority = task.Priority,
+                DueDate = task.DueDate,
+                AssigneeId = task.AssigneeId,
+                AssigneeName = task.AssigneeName,
+                ReserveStudyId = task.ReserveStudyId
+            };
+
+        var parameters = new DialogParameters {
+                ["Task"] = taskToEdit,
+                ["ReserveStudyId"] = studyId
+            };
+
+        var dialog = await DialogService.ShowAsync<KanbanTaskDialog>("Edit Task", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is KanbanTask updatedTask) {
+            // Find and replace the task in the local list
+            var index = kanbanTasks.FindIndex(t => t.Id == updatedTask.Id);
+            if (index >= 0) {
+                kanbanTasks[index] = updatedTask;
+                _dropContainer?.Refresh();
+                await InvokeAsync(StateHasChanged);
+            }
+
+            Snackbar.Add("Task updated successfully", Severity.Success);
+        }
+    }
+
+    private async Task DeleteTask(KanbanTask task) {
+        if (!_canDeleteTasks) {
+            Snackbar.Add("You don't have permission to delete tasks", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters {
+            { "ContentText", $"Are you sure you want to delete the task '{task.Title}'?" },
+            { "ButtonText", "Delete" },
+            { "Color", Color.Error }
+        };
+
+        var dialog = await DialogService.ShowAsync<KanbanConfirmationDialog>("Delete Task", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled) {
+            try {
+                await KanbanService.DeleteTaskAsync(task.Id);
+                kanbanTasks.Remove(task);
+                Snackbar.Add("Task deleted successfully", Severity.Success);
+                StateHasChanged();
+            }
+            catch (Exception ex) {
+                Snackbar.Add($"Error deleting task: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task RefreshKanbanTasks() {
+        if (!string.IsNullOrEmpty(_selectedReserveStudy) && Guid.TryParse(_selectedReserveStudy, out var studyId)) {
+            await LoadKanbanTasksAsync(studyId);
+            _dropContainer?.Refresh();
+            Snackbar.Add("Tasks refreshed", Severity.Success);
+        }
     }
 
     public void Dispose() {
         _refreshTimer?.Dispose();
     }
-
-    // Data models
-    public record FundAllocation(string Category, double Amount);
-    public record Expenditure(string Date, string Category, double Amount);
-    public record ExpenditureCategory(string Category, double Amount);
 }

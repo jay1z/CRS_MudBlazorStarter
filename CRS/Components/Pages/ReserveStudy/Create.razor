@@ -260,7 +260,7 @@ else {
         }
         else if (Model?.Community != null) {
             // For new community, ensure it's tracked as a new entity
-            Model.Community.Id = Guid.Empty; // Ensure new ID is generated
+            Model.Community.Id = Guid.CreateVersion7(); // Ensure new ID is generated
             foreach (var address in Model.Community.Addresses ?? Enumerable.Empty<Address>()) {
                 address.Id = Guid.Empty; // Ensure new IDs for addresses
             }

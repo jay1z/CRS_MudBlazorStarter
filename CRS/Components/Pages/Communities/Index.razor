@@ -7,7 +7,6 @@
 @using CRS.Services.Interfaces
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
-@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
 @inject UserStateService UserState
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -44,13 +43,14 @@
                 </MudGrid>
             </MudCardHeader>
             <MudCardContent>
-                <MudTable Items="@(FilteredCommunities)" Dense="true" Hover="true" Elevation="0" Loading="@isLoading" SortLabel="Sort by" Filter="@(community => FilterFunc(community, searchString))">
+                <MudTable Items="@(FilteredCommunities)" Dense="true" Hover="true" Elevation="0" Loading="@isLoading" SortLabel="Sort by">
                     <HeaderContent>
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Name)">NAME</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.Street)">STREET</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.City)">CITY</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.State)">STATE</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.Zip)">ZIP</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.DateCreated)">Created</MudTableSortLabel></MudTh>
                         <MudTh></MudTh>
                     </HeaderContent>
                     <RowTemplate>
@@ -68,6 +68,9 @@
                         </MudTd>
                         <MudTd DataLabel="Zip">
                             @context.Addresses?.FirstOrDefault()?.Zip
+                        </MudTd>
+                        <MudTd DataLabel="Created">
+                            @context.DateCreated.ToString()
                         </MudTd>
                         <MudTd>
                             <MudButton Href="@($"Communities/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
@@ -94,7 +97,6 @@
 </MudContainer>
 
 @code {
-    private List<ReserveStudy> reserveStudies;
     private List<Community> communities;
     private bool isLoading = true;
     private string searchString = "";
@@ -109,7 +111,7 @@
 
             await UserState.InitializeAsync();
             if (UserState.ClaimsPrincipal.Identity is not null && UserState.ClaimsPrincipal.Identity.IsAuthenticated) {
-                LoadCommunities();
+                await LoadCommunitiesAsync();
             }
             else {
                 Snackbar.Add("User not authenticated.", Severity.Warning);
@@ -125,55 +127,25 @@
         }
     }
 
-    private void LoadCommunities() {
+    private async Task LoadCommunitiesAsync() {
         try {
-            using var context = DbFactory.CreateDbContext();
-            var query = context.ReserveStudies
-                .AsNoTracking()
-                .Include(rs => rs.Community).ThenInclude(rs => rs.Addresses)
-                .Where(rs => rs.IsActive)
-                .AsSplitQuery();
-
-            if (UserState.UserRoles != null) {
-                reserveStudies = UserState.UserRoles.Contains("Admin")
-                    ? query.ToList() : UserState.UserRoles.Contains("Specialist")
-                        ? query.Where(rs => rs.SpecialistUserId == UserState.CurrentUser.Id).ToList() : UserState.UserRoles.Contains("User")
-                            ? query.Where(rs => rs.ApplicationUserId == UserState.CurrentUser.Id).ToList() : new List<ReserveStudy>();
-            }
-            else {
-                Snackbar.Add("Unable to determine user permissions. Please log out and log back in.", Severity.Warning);
-            }
-
-            // Extract unique communities from the filtered ReserveStudies
-            communities = reserveStudies
-                .Where(rs => rs.Community != null)
-                .Select(rs => rs.Community)
-                .DistinctBy(c => c.Id).ToList()!;
+            // Get communities using the service
+            communities = await CommunityService.GetUserCommunitiesAsync(
+                UserState.CurrentUser,
+                UserState.UserRoles
+            );
         }
-        catch (DbUpdateConcurrencyException ex) {
+        catch (DbUpdateConcurrencyException) {
             Snackbar.Add("Data has been modified by another user. Please refresh.", Severity.Warning);
-            throw;
         }
         catch (Exception ex) {
             Snackbar.Add($"Database error: {ex.Message}", Severity.Error);
-            reserveStudies = new List<ReserveStudy>();
             communities = new List<Community>();
         }
     }
 
-    private IEnumerable<Community> FilteredCommunities => communities.Where(community => FilterFunc(community, searchString));
-    private bool FilterFunc(Community community, string searchString) {
-        if (string.IsNullOrWhiteSpace(searchString)) {
-            return true;
-        }
-
-        searchString = searchString.Trim().ToLower();
-        return community.Name?.ToLower().Contains(searchString) == true ||
-            community.Addresses?.Any(address => address.Street?.ToLower().Contains(searchString) == true ||
-                address.City?.ToLower().Contains(searchString) == true ||
-                address.State?.ToLower().Contains(searchString) == true ||
-                address.Zip?.ToLower().Contains(searchString) == true) == true;
-    }
+    private IEnumerable<Community> FilteredCommunities =>
+        CommunityService.FilterCommunities(communities, searchString);
 
     private async Task OpenDeleteDialog(Community community) {
         var parameters = new DialogParameters {
@@ -205,5 +177,4 @@
             isLoading = false;
         }
     }
-
 }
