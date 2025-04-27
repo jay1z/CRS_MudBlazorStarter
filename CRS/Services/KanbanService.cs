@@ -7,9 +7,11 @@ using Microsoft.EntityFrameworkCore;
 namespace CRS.Services {
     public class KanbanService : IKanbanService {
         private readonly ApplicationDbContext _context;
+        private readonly ISignalRService _signalRService;
 
-        public KanbanService(ApplicationDbContext context) {
+        public KanbanService(ApplicationDbContext context, ISignalRService signalRService) {
             _context = context;
+            _signalRService = signalRService;
         }
 
         public async Task<List<KanbanTask>> GetTasksForReserveStudyAsync(Guid reserveStudyId) {
@@ -24,6 +26,11 @@ namespace CRS.Services {
             task.DateCreated = DateTime.UtcNow;
             _context.KanbanTasks.Add(task);
             await _context.SaveChangesAsync();
+
+            // Use the SignalRService instead of direct hub access
+            if (task.ReserveStudyId.HasValue)
+                await _signalRService.NotifyTaskUpdated(task.ReserveStudyId.Value);
+
             return task;
         }
 
@@ -44,6 +51,10 @@ namespace CRS.Services {
             existingTask.DateModified = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            if (existingTask.ReserveStudyId.HasValue)
+                await _signalRService.NotifyTaskModified(existingTask.ReserveStudyId.Value, existingTask);
+
             return existingTask;
         }
 
@@ -52,9 +63,15 @@ namespace CRS.Services {
             if (task == null)
                 throw new KeyNotFoundException($"Task with ID {taskId} not found");
 
+            // Get the study ID for notification before deleting
+            var studyId = task.ReserveStudyId;
+
             // Soft delete
             task.DateDeleted = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+
+            if (studyId.HasValue)
+                await _signalRService.NotifyTaskModified(studyId.Value, task);
         }
 
         public async Task UpdateTaskStatusAsync(Guid taskId, KanbanStatus newStatus) {
@@ -65,6 +82,28 @@ namespace CRS.Services {
             task.Status = newStatus;
             task.DateModified = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+
+            if (task.ReserveStudyId.HasValue)
+                await _signalRService.NotifyTaskModified(task.ReserveStudyId.Value, task);
+        }
+
+        public async Task UpdateTaskAssignmentAsync(Guid taskId, Guid? assigneeId, string? assigneeName, KanbanStatus? newStatus = null) {
+            var task = await _context.KanbanTasks.FindAsync(taskId);
+            if (task == null)
+                throw new KeyNotFoundException($"Task with ID {taskId} not found");
+
+            task.AssigneeId = assigneeId;
+            task.AssigneeName = assigneeName;
+
+            if (newStatus.HasValue) {
+                task.Status = newStatus.Value;
+            }
+
+            task.DateModified = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            if (task.ReserveStudyId.HasValue)
+                await _signalRService.NotifyTaskModified(task.ReserveStudyId.Value, task);
         }
     }
 }

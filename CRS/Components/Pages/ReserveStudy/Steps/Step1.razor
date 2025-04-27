@@ -231,7 +231,7 @@
         await OnExistingCommunityChanged.InvokeAsync(IsExistingCommunity());
     }
 
-    private async Task OnExistingCommunitySelected() {
+    private void OnExistingCommunitySelected() {
         if (selectedCommunity != null) {
             Model.Community = selectedCommunity;
         }

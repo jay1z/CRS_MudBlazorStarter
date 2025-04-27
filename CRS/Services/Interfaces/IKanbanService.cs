@@ -7,5 +7,7 @@ namespace CRS.Services.Interfaces {
         Task<KanbanTask> UpdateTaskAsync(KanbanTask task);
         Task DeleteTaskAsync(Guid taskId);
         Task UpdateTaskStatusAsync(Guid taskId, KanbanStatus newStatus);
+        Task UpdateTaskAssignmentAsync(Guid taskId, Guid? assigneeId, string? assigneeName, KanbanStatus? newStatus = null);
+
     }
 }

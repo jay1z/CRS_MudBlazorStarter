@@ -5,6 +5,7 @@ using CRS.Components;
 using CRS.Components.Account;
 using CRS.Data;
 using CRS.EventsAndListeners;
+using CRS.Hubs;
 using CRS.Services;
 using CRS.Services.Email;
 using CRS.Services.Interfaces;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.CodeAnalysis.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -62,6 +64,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<UserStateService>();
     builder.Services.AddMudServices();
+    builder.Services.AddSignalR();
 
     // Register DbRetryService
     builder.Services.AddScoped<DbRetryService>();
@@ -86,7 +89,8 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IContactService, ContactService>();
     builder.Services.AddScoped<IDashboardService, DashboardService>();
     builder.Services.AddScoped<IReserveStudyService, ReserveStudyService>();
-    builder.Services.AddScoped<IKanbanService, KanbanService>();
+    builder.Services.AddScoped<ISignalRService, SignalRService>();
+    builder.Services.AddScoped<IKanbanService, KanbanService>(); // Must go after SignalRService
 
     // Register Coravel
     builder.Services.AddMailer(builder.Configuration);
@@ -182,7 +186,9 @@ async Task ConfigurePipeline(WebApplication app) {
 
     // Map endpoints
     app.MapStaticAssets();
+    app.MapHub<KanbanHub>("/kanbanhub");
     app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+    //app.MapBlazorHub();
     app.MapAdditionalIdentityEndpoints();
 }
 
