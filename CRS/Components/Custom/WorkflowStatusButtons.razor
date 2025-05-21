@@ -1,0 +1,89 @@
+﻿@* A reusable component for workflow status buttons *@
+@using CRS.Models
+
+@foreach (var status in StatusList)
+{
+    <MudButton Variant="Variant.Filled" 
+              Color="@GetButtonColor(status)"
+              OnClick="@(() => HandleStatusClick(status))" 
+              FullWidth="true" 
+              Size="Size.Small"
+              Disabled="@IsDisabled(status.Status)">
+        @status.Text
+    </MudButton>
+}
+
+@code {
+    [Parameter]
+    public List<StatusButtonInfo> StatusList { get; set; } = new();
+
+    [Parameter]
+    public ReserveStudy.WorkflowStatus? CurrentStatus { get; set; }
+
+    [Parameter]
+    public EventCallback<StatusChangeEventArgs> OnStatusChange { get; set; }
+
+    private async Task HandleStatusClick(StatusButtonInfo status)
+    {
+        var args = new StatusChangeEventArgs
+        {
+            Status = status.Status,
+            HasCustomAction = status.HasCustomAction,
+            CustomAction = status.CustomAction ?? (_ => Task.CompletedTask)
+        };
+        
+        await OnStatusChange.InvokeAsync(args);
+    }
+
+    private Color GetButtonColor(StatusButtonInfo status)
+    {
+        // If special color is set, use it
+        if (status.SpecialColor.HasValue)
+            return status.SpecialColor.Value;
+            
+        // Current status gets highlighted
+        if (CurrentStatus == status.Status)
+            return Color.Primary;
+            
+        return Color.Default;
+    }
+
+    private bool IsDisabled(ReserveStudy.WorkflowStatus status)
+    {
+        // Special cases that shouldn't be disabled
+        if (status == ReserveStudy.WorkflowStatus.RequestCancelled || 
+            status == ReserveStudy.WorkflowStatus.RequestArchived)
+            return false;
+            
+        // Can't go backward in workflow
+        return CurrentStatus > status;
+    }
+
+    // Class to hold status button information - moved from Details.razor
+    public class StatusButtonInfo
+    {
+        public ReserveStudy.WorkflowStatus Status { get; set; }
+        public string Text { get; set; }
+        public bool HasCustomAction { get; set; }
+        public Func<Guid, Task>? CustomAction { get; set; }
+        public Color? SpecialColor { get; set; }
+
+        public StatusButtonInfo(ReserveStudy.WorkflowStatus status, string text, bool hasCustomAction, 
+            Func<Guid, Task>? customAction = null, Color? specialColor = null)
+        {
+            Status = status;
+            Text = text;
+            HasCustomAction = hasCustomAction;
+            CustomAction = customAction;
+            SpecialColor = specialColor;
+        }
+    }
+
+    // Event args for status changes - moved from Details.razor
+    public class StatusChangeEventArgs
+    {
+        public ReserveStudy.WorkflowStatus Status { get; set; }
+        public bool HasCustomAction { get; set; }
+        public Func<Guid, Task> CustomAction { get; set; } = _ => Task.CompletedTask;
+    }
+}

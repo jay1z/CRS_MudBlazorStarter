@@ -1,0 +1,921 @@
+﻿@page "/ReserveStudies/{Id:guid}/Details"
+@attribute [Authorize]
+
+@using CRS.Components.Custom
+@using CRS.Data
+@using CRS.EventsAndListeners
+@using CRS.Models.Emails
+@using CRS.Services
+@using CRS.Services.Email
+@using CRS.Services.Interfaces
+@using Coravel.Events.Interfaces
+@using Coravel.Mailer.Mail
+@using Coravel.Mailer.Mail.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using static CRS.Components.Custom.WorkflowStatusButtons
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserStateService UserState
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IReserveStudyService ReserveStudyService
+@inject IReserveStudyWorkflowService WorkflowService
+@inject IMailer _mailer
+@inject IDispatcher _dispatcher
+
+<PageTitle>Reserve Study Details</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    @if (isLoading) {
+        <MudPaper Elevation="0" Class="pa-8">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.h5" Class="mt-4">Loading Reserve Study...</MudText>
+        </MudPaper>
+    } else if (reserveStudy == null) {
+        NavigationManager.NavigateTo("/ReserveStudies/notfound");
+    } else {
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+            <MudText Typo="Typo.h4">@reserveStudy.Community?.Name</MudText>
+            <MudGrid>
+                <!-- Aside Column -->
+                <MudItem xs="12" lg="4">
+                    <!-- Details Card -->
+                    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6">Request ID</MudText>
+                            <MudText Typo="Typo.body2">@reserveStudy.Id</MudText>
+                            <MudDivider Class="my-2" />
+                            <MudText Typo="Typo.h6">Created</MudText>
+                            <MudText Typo="Typo.body2">@reserveStudy.DateCreated?.ToString("MM/dd/yyyy")</MudText>
+                        </MudCardContent>
+                    </MudCard>
+
+                    <!-- Community Card -->
+                    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@reserveStudy?.Community?.Name</MudText>
+                                <MudText Typo="Typo.body1">@reserveStudy?.Community?.Addresses[0].FullAddress</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/Communities/Details/{@reserveStudy?.Community?.Id}")">View Community</MudButton>
+                        </MudCardContent>
+                    </MudCard>
+
+                    <!-- Specialist Card -->
+                    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">Reserve Specialist</MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText Typo="Typo.body1">@reserveStudy.Specialist?.FullName</MudText>
+                            <MudLink Href="@($"mailto:{reserveStudy.Specialist?.Email}")">@(reserveStudy.Specialist?.Email ?? "Not Assigned")</MudLink>
+                        </MudCardContent>
+                    </MudCard>
+
+                    <!-- Actions Card -->
+                    <MudCard Elevation="0" Outlined="true" Class="mb-4">
+                        <MudCardHeader>
+                            <MudText Typo="Typo.h6">Actions</MudText>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudStack>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@GetUpdateLink()">Update Request</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendRequestLink">Send Request Link</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendAccessTokenLink">Send Access Token Link</MudButton>
+
+                                <MudDivider Class="my-2" />
+                                <MudText Typo="Typo.subtitle1">Test Workflow Status Transitions</MudText>
+
+                                <MudGrid>
+                                    <!-- Status buttons using the new component -->
+                                    <MudItem xs="6">
+                                        <WorkflowStatusButtons CurrentStatus="@reserveStudy?.Status" StatusList="@firstColumnStatuses" OnStatusChange="@HandleStatusChange" />
+                                    </MudItem>
+                                    <MudItem xs="6">
+                                        <WorkflowStatusButtons CurrentStatus="@reserveStudy?.Status" StatusList="@secondColumnStatuses" OnStatusChange="@HandleStatusChange" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+
+                    @if (reserveStudy.DateCreated.HasValue && (DateTime.Now - reserveStudy.DateCreated.Value).TotalDays > 30 && !reserveStudy.IsComplete) {
+                        <MudAlert Severity="Severity.Warning" Elevation="25">
+                            <MudText Typo="Typo.h6" Class="text-gray-900 fw-bold">Attention!</MudText>
+                            <MudText Typo="Typo.body2" Class="text-gray-700">
+                                This request has been pending for more than
+                                <MudText Color="Color.Primary" Typo="Typo.body2" Class="fw-bold">@((DateTime.Now - reserveStudy.DateCreated.Value).TotalDays.ToString("N0")) days</MudText>
+                            </MudText>
+                        </MudAlert>
+                    }
+                </MudItem>
+
+                <!-- Main Column -->
+                <MudItem xs="12" lg="8">
+                    <MudTabs Elevation="0" Outlined="true" Color="Color.Primary" ActivePanelIndex="activeTabIndex" OnActivePanelIndexChange="HandleTabChange">
+                        <!-- Workflow Status Tab -->
+                        <MudTabPanel Text="Workflow Status" Icon="@Icons.Material.Filled.DoubleArrow">
+                            <MudCard Class="mb-4">
+                                <MudCardHeader>
+                                    <MudText Typo="Typo.h6">Workflow Status</MudText>
+                                </MudCardHeader>
+                                <MudCardContent>
+                                    <MudTimeline TimelineAlign="TimelineAlign.Start">
+                                        @foreach (var timelineItem in timelineItems) {
+                                            <TimelineStatusItem Status="@timelineItem.Status"
+                                                                DateValue="@timelineItem.DateValue"
+                                                                Title="@timelineItem.Title"
+                                                                Actor="@timelineItem.Actor"
+                                                                IsAlignEnd="@timelineItem.IsAlignEnd"
+                                                                IsHidden="@timelineItem.IsHidden"
+                                                                ReserveStudy="@reserveStudy" />
+                                        }
+                                    </MudTimeline>
+
+                                    @if (reserveStudy?.Proposal != null) {
+                                        <MudCard Class="mb-4">
+                                            <MudCardHeader>
+                                                <MudText Typo="Typo.h6">Proposal</MudText>
+                                            </MudCardHeader>
+                                            <MudCardContent>
+                                                <MudGrid>
+                                                    <MudItem xs="12" md="6">
+                                                        <LabeledField Label="Proposal Scope" Value="@reserveStudy.Proposal.ProposalScope" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" md="6">
+                                                        @{
+                                                            var estimatedCostFormatted = $"${reserveStudy.Proposal.EstimatedCost.ToString("N2")}";
+                                                        }
+                                                        <LabeledField Label="Estimated Cost" Value="@estimatedCostFormatted" />
+                                                    </MudItem>
+                                                    @if (!string.IsNullOrEmpty(reserveStudy.Proposal.Comments)) {
+                                                        <MudItem xs="12">
+                                                            <LabeledField Label="Comments" Value="@reserveStudy.Proposal.Comments" />
+                                                        </MudItem>
+                                                    }
+                                                </MudGrid>
+                                            </MudCardContent>
+                                        </MudCard>
+                                    }
+
+                                    @if (reserveStudy?.FinancialInfo != null) {
+                                        <MudCard Class="mb-4">
+                                            <MudCardHeader>
+                                                <MudText Typo="Typo.h6">Financial Information</MudText>
+                                            </MudCardHeader>
+                                            <MudCardContent>
+                                                <MudGrid>
+                                                    <MudItem xs="12" md="6">
+                                                        @{
+                                                            var reserveBalanceFormatted = $"${reserveStudy.FinancialInfo.CurrentReserveFundBalance.ToString("N2")}";
+                                                        }
+                                                        <LabeledField Label="Current Reserve Fund Balance" Value="@reserveBalanceFormatted" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" md="6">
+                                                        @{
+                                                            var annualContributionFormatted = $"${reserveStudy.FinancialInfo.AnnualContribution.ToString("N2")}";
+                                                        }
+                                                        <LabeledField Label="Annual Contribution" Value="@annualContributionFormatted" />
+                                                    </MudItem>
+                                                    @if (reserveStudy.FinancialInfo.ProjectedAnnualExpenses.HasValue) {
+                                                        <MudItem xs="12" md="6">
+                                                            @{
+                                                                var projectedExpensesFormatted = $"${reserveStudy.FinancialInfo.ProjectedAnnualExpenses.Value.ToString("N2")}";
+                                                            }
+                                                            <LabeledField Label="Projected Annual Expenses" Value="@projectedExpensesFormatted" />
+                                                        </MudItem>
+                                                    }
+                                                    <MudItem xs="12" md="6">
+                                                        <LabeledField Label="Fiscal Year Start" Value="@System.Globalization.DateTimeFormatInfo.CurrentInfo.GetMonthName(reserveStudy.FinancialInfo.FiscalYearStartMonth)" />
+                                                    </MudItem>
+                                                    @if (!string.IsNullOrEmpty(reserveStudy.FinancialInfo.Comments)) {
+                                                        <MudItem xs="12">
+                                                            <LabeledField Label="Comments" Value="@reserveStudy.FinancialInfo.Comments" />
+                                                        </MudItem>
+                                                    }
+                                                </MudGrid>
+                                            </MudCardContent>
+                                        </MudCard>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudTabPanel>
+                        <!-- Information Tab -->
+                        <MudTabPanel Text="Information" Icon="@Icons.Material.Filled.Info">
+                            <MudCard Elevation="25">
+                                <MudCardContent Class="py-6">
+                                    <MudGrid>
+                                        <!-- Contact Information -->
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.h6" Color="Color.Primary">Contact</MudText>
+                                        </MudItem>
+                                        <MudItem xs="4">
+                                            <LabeledField Label="Name" Value="@reserveStudy.Contact?.FullNameInverted" />
+                                        </MudItem>
+                                        <MudItem xs="4">
+                                            <LabeledField Label="Phone" Value="@reserveStudy.Contact?.Phone" />
+                                            <MudText Typo="Typo.caption">@reserveStudy.Contact?.Extension</MudText>
+                                        </MudItem>
+                                        <MudItem xs="4">
+                                            <MudText Typo="Typo.caption">Email</MudText>
+                                            <MudFlexBreak />
+                                            <MudLink Href="@($"mailto:{reserveStudy.Contact?.Email}")" Typo="Typo.body1">
+                                                @reserveStudy.Contact?.Email
+                                            </MudLink>
+                                        </MudItem>
+                                        <!-- Property Manager Information -->
+                                        @if (reserveStudy.PropertyManager != null) {
+                                            <MudItem xs="12" Class="mt-4">
+                                                <MudText Typo="Typo.h6" Color="Color.Primary">Management Company</MudText>
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <LabeledField Label="Company Name" Value="@reserveStudy.PropertyManager.CompanyName" />
+                                            </MudItem>
+                                            <MudItem xs="4">
+                                                <LabeledField Label="Property Manager" Value="@reserveStudy.PropertyManager.FullNameInverted" />
+                                            </MudItem>
+                                            <MudItem xs="4">
+                                                <LabeledField Label="Phone" Value="@reserveStudy.PropertyManager.Phone" />
+                                                <MudText Typo="Typo.caption">@reserveStudy.PropertyManager?.Extension</MudText>
+                                            </MudItem>
+                                            <MudItem xs="4">
+                                                <MudText Typo="Typo.caption">Email</MudText>
+                                                <MudFlexBreak />
+                                                <MudLink Href="@($"mailto:{reserveStudy.PropertyManager?.Email}")" Typo="Typo.body1">
+                                                    @reserveStudy.PropertyManager?.Email
+                                                </MudLink>
+                                            </MudItem>
+                                        }
+                                    </MudGrid>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudTabPanel>
+                        <!-- Elements Tab -->
+                        <MudTabPanel Text="Elements" Icon="@Icons.Material.Filled.List" OnClick="@(() => LoadElementsDataIfNeeded())">
+                            @if (isElementsLoading) {
+                                <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-4" />
+                            } else if (elementsLoaded && reserveStudy.ReserveStudyElements.Any()) {
+                                <MudCard Elevation="25">
+                                    <MudCardContent Class="py-6">
+                                        <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyElements"
+                                                  GroupBy="@_groupDefinition"
+                                                  GroupHeaderStyle="background-color:var(--mud-palette-background-gray)"
+                                                  GroupFooterClass="mb-4">
+                                            <ColGroup>
+                                                <col style="width:10%;" />
+                                                <col style="width:50%;" />
+                                                <col style="width:20%;" />
+                                                <col style="width:20%;" />
+                                            </ColGroup>
+                                            <HeaderContent>
+                                                <MudTh></MudTh>
+                                                <MudTh>Name</MudTh>
+                                                <MudTh>Requires Service Contact</MudTh>
+                                                <MudTh class="text-end">Amount</MudTh>
+                                            </HeaderContent>
+                                            <GroupHeaderTemplate Context="headerContext">
+                                                <MudTh colspan="4">@GetGroupName(headerContext)</MudTh>
+                                            </GroupHeaderTemplate>
+                                            <RowTemplate Context="rowContext">
+                                                <MudTd>
+                                                    <MudIconButton Icon="@((rowContext.ShowDetails == true) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" OnClick="@(() => ShowElement(rowContext))" />
+                                                </MudTd>
+                                                <MudTd>
+                                                    <MudText Typo="Typo.body1">@rowContext.Name</MudText>
+                                                </MudTd>
+                                                <MudTd>
+                                                    <MudCheckBox T="bool" Value="rowContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                                                </MudTd>
+                                                <MudTd class="text-end">
+                                                    <MudText Typo="Typo.body1">@rowContext.Count</MudText>
+                                                </MudTd>
+                                            </RowTemplate>
+                                            <ChildRowContent Context="childContext">
+                                                @if (childContext.ShowDetails) {
+                                                    <MudTd colspan="4">
+                                                        <MudGrid>
+                                                            <MudItem xs="3">
+                                                                <LabeledField Label="Measurement Type" Value="@childContext.ElementMeasurementOptions?.DisplayText" />
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <LabeledField Label="Last Replaced" Value="@(childContext.LastServiced?.ToString("MM/dd/yyyy") ?? "N/A")" />
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <LabeledField Label="Useful Life" Value="@childContext.ElementUsefulLifeOptions?.DisplayText" />
+                                                            </MudItem>
+                                                            <MudItem xs="3">
+                                                                <LabeledField Label="Remaining Life" Value="@childContext.ElementRemainingLifeOptions?.DisplayText" />
+                                                            </MudItem>
+                                                        </MudGrid>
+                                                    </MudTd>
+                                                }
+                                            </ChildRowContent>
+                                            <GroupFooterTemplate Context="footerContext">
+                                                <MudTh colspan="4">Total: @footerContext.Items.Count()</MudTh>
+                                            </GroupFooterTemplate>
+                                        </MudTable>
+                                    </MudCardContent>
+                                </MudCard>
+                            } else if (elementsLoaded) {
+                                <MudText Typo="Typo.body1" Class="mt-4">No elements available.</MudText>
+                            }
+                        </MudTabPanel>
+                        <!-- Service Contacts Tab -->
+                        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone" OnClick="@(() => LoadServiceContactsIfNeeded())">
+                            @if (isContactsLoading) {
+                                <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-4" />
+                            } else if (serviceContactsLoaded && elementsWithServiceContact.Any()) {
+                                <MudExpansionPanels>
+                                    @foreach (var element in elementsWithServiceContact) {
+                                        <MudExpansionPanel>
+                                            <TitleContent>
+                                                <div class="d-flex">
+                                                    @if (element.ServiceContact?.Phone == null || element.ServiceContact?.Email == null) {
+                                                        <MudIcon Color="Color.Warning" Icon="@MaterialSymbols.Outlined.Warning"></MudIcon>
+                                                    }
+                                                    <MudText>@element.Name</MudText>
+                                                </div>
+                                            </TitleContent>
+                                            <ChildContent>
+                                                <MudGrid>
+                                                    <MudItem xs="12">
+                                                        <LabeledField Label="Company Name" Value="@element.ServiceContact?.CompanyName" CustomClass="border-b-2 border-solid mud-border-primary" />
+                                                    </MudItem>
+                                                    <MudItem xs="12">
+                                                        <LabeledField Label="Point Of Contact" Value="@element.ServiceContact?.FullNameInverted" CustomClass="border-b-2 border-solid mud-border-primary" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6">
+                                                        <LabeledField Label="Phone" Value="@element.ServiceContact?.Phone" CustomClass="border-b-2 border-solid mud-border-primary" />
+                                                    </MudItem>
+                                                    <MudItem xs="12" sm="6">
+                                                        <LabeledField Label="Extension" Value="@element.ServiceContact?.Extension" CustomClass="border-b-2 border-solid mud-border-primary" />
+                                                    </MudItem>
+                                                    <MudItem xs="12">
+                                                        <MudLink Href="@($"mailto:{element.ServiceContact?.Email}")">
+                                                            @element.ServiceContact?.Email
+                                                        </MudLink>
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </ChildContent>
+                                        </MudExpansionPanel>
+                                    }
+                                </MudExpansionPanels>
+                            } else if (serviceContactsLoaded) {
+                                <MudText Typo="Typo.body1" Class="mt-4">No service contacts available.</MudText>
+                            }
+                        </MudTabPanel>
+                    </MudTabs>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    }
+</MudContainer>
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private ReserveStudy? reserveStudy;
+    private bool isLoading = true;
+    private bool isElementsLoading = false;
+    private bool isContactsLoading = false;
+    private bool elementsLoaded = false;
+    private bool serviceContactsLoaded = false;
+    private List<IReserveStudyElement> elementsWithServiceContact = new();
+    private int activeTabIndex = 0;
+
+    // Dictionary for special status colors
+    private readonly Dictionary<ReserveStudy.WorkflowStatus, Color> _specialStatusColors = new()
+    {
+        { ReserveStudy.WorkflowStatus.RequestCancelled, Color.Error },
+        { ReserveStudy.WorkflowStatus.RequestArchived, Color.Info }
+    };
+
+    // Fix 2: Move status button configurations to OnInitialized to avoid field initializer errors
+    private List<StatusButtonInfo> firstColumnStatuses = new();
+    private List<StatusButtonInfo> secondColumnStatuses = new();
+
+    // Timeline items data
+    private readonly List<TimelineItemInfo> timelineItems = new();
+
+    protected override async Task OnInitializedAsync() {
+        // Fix 2: Initialize button configurations here instead of in field initializers
+        InitializeStatusButtons();
+
+        await LoadInitialData();
+        InitializeTimelineItems();
+    }
+
+    private void InitializeStatusButtons() {
+        // First column status buttons
+        firstColumnStatuses = new List<StatusButtonInfo>
+        {
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.RequestCreated, "Request Created", false),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalCreated, "Proposal Created", false),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalReviewed, "Proposal Reviewed", false),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalApproved, "Proposal Approved", true, (id) => ApproveProposalAsync(id)),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalSent, "Proposal Sent", true, (id) => SendProposalAsync(id)),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalAccepted, "Proposal Accepted", false),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.FinancialInfoRequested, "Financial Info Requested", true, (id) => RequestFinancialInfoAsync(id))
+        };
+
+        // Second column status buttons
+        secondColumnStatuses = new List<StatusButtonInfo>
+        {
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.FinancialInfoCreated, "Financial Info Created", true, (id) => SubmitFinancialInfoAsync(id)),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.FinancialInfoSubmitted, "Financial Info Submitted", true, (id) => SubmitFinancialInfoAsync(id)),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.FinancialInfoReviewed, "Financial Info Reviewed", true, (id) => ReviewFinancialInfoAsync(id)),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ReportInProcess, "Processing", false),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.RequestCompleted, "Completed", true, (id) => CompleteReserveStudyAsync(id), Color.Success),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.RequestCancelled, "Cancelled", false, specialColor: Color.Error),
+            new StatusButtonInfo(ReserveStudy.WorkflowStatus.RequestArchived, "Archived", false)
+        };
+    }
+
+    private void InitializeTimelineItems() {
+        timelineItems.Clear();
+
+        // Add all timeline items in order
+        timelineItems.AddRange(new[] {
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.RequestCreated,
+                DateValue = reserveStudy?.DateCreated,
+                Title = "Request Created",
+                IsAlignEnd = true
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.ProposalCreated,
+                DateValue = reserveStudy?.Proposal?.DateSent,
+                Title = "Proposal Sent",
+                Actor = reserveStudy?.Specialist?.FullName,
+                IsAlignEnd = true
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.ProposalReviewed,
+                DateValue = reserveStudy?.Status >= ReserveStudy.WorkflowStatus.ProposalReviewed ?
+                    reserveStudy?.DateModified : null,
+                Title = "Proposal Reviewed",
+                IsAlignEnd = true
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.ProposalApproved,
+                DateValue = reserveStudy?.Proposal?.DateApproved,
+                Title = "Proposal Approved",
+                Actor = reserveStudy?.Proposal?.ApprovedBy,
+                IsAlignEnd = true
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.FinancialInfoRequested,
+                DateValue = reserveStudy?.Status >= ReserveStudy.WorkflowStatus.FinancialInfoRequested ?
+                    reserveStudy?.FinancialInfo?.DateCreated : null,
+                Title = "Financial Info Requested",
+                Actor = reserveStudy?.Specialist?.FullName,
+                IsAlignEnd = true
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.FinancialInfoSubmitted,
+                DateValue = reserveStudy?.FinancialInfo?.DateSubmitted,
+                Title = "Financial Info Submitted",
+                Actor = reserveStudy?.PointOfContact?.FullName,
+                IsAlignEnd = true
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.FinancialInfoReviewed,
+                DateValue = reserveStudy?.FinancialInfo?.DateReviewed,
+                Title = "Financial Info Reviewed",
+                Actor = reserveStudy?.Specialist?.FullName,
+                IsAlignEnd = true
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.ReportInProcess,
+                DateValue = reserveStudy?.Status >= ReserveStudy.WorkflowStatus.ReportInProcess ?
+                    reserveStudy?.DateModified : null,
+                Title = "Study In Progress",
+                Actor = reserveStudy?.Specialist?.FullName,
+                IsAlignEnd = true
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.RequestCompleted,
+                DateValue = reserveStudy?.Status == ReserveStudy.WorkflowStatus.RequestCompleted ?
+                    reserveStudy?.DateModified : null,
+                Title = "Study Complete",
+                Actor = reserveStudy?.Specialist?.FullName,
+                IsAlignEnd = true
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.RequestArchived,
+                DateValue = reserveStudy?.Status == ReserveStudy.WorkflowStatus.RequestArchived ?
+                    reserveStudy?.DateModified : null,
+                Title = "Study Archived",
+                IsAlignEnd = false,
+                IsHidden = reserveStudy?.Status != ReserveStudy.WorkflowStatus.RequestArchived
+            },
+            new TimelineItemInfo {
+                Status = ReserveStudy.WorkflowStatus.RequestCancelled,
+                DateValue = reserveStudy?.Status == ReserveStudy.WorkflowStatus.RequestCancelled ?
+                    reserveStudy?.DateModified : null,
+                Title = "Study Cancelled",
+                IsAlignEnd = false,
+                IsHidden = reserveStudy?.Status != ReserveStudy.WorkflowStatus.RequestCancelled
+            }
+        });
+    }
+
+    private async Task LoadInitialData() {
+        try {
+            isLoading = true;
+            await UserState.InitializeAsync();
+
+            using var context = await DbFactory.CreateDbContextAsync();
+            // Only load core data initially - reduced includes
+            reserveStudy = await context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.Community).ThenInclude(c => c.Addresses)
+                .Include(rs => rs.Contact)
+                .Include(rs => rs.PropertyManager)
+                .Include(rs => rs.Specialist)
+                .Include(rs => rs.Proposal)
+                .Include(rs => rs.FinancialInfo)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(rs => rs.Id == Id);
+
+            // Do not load elements data yet - wait for tab selection
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadElementsDataIfNeeded() {
+        if (elementsLoaded || isElementsLoading || reserveStudy == null)
+            return;
+
+        try {
+            isElementsLoading = true;
+
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            // Load each type of element separately with their relationships
+            var buildingElements = await context.ReserveStudyBuildingElements
+                .AsNoTracking()
+                .Where(be => be.ReserveStudyId == Id)
+                .Include(be => be.BuildingElement)
+                .Include(be => be.ElementMeasurementOptions)
+                .Include(be => be.ElementUsefulLifeOptions)
+                .Include(be => be.ElementRemainingLifeOptions)
+                .ToListAsync();
+
+            var commonElements = await context.ReserveStudyCommonElements
+                .AsNoTracking()
+                .Where(ce => ce.ReserveStudyId == Id)
+                .Include(ce => ce.CommonElement)
+                .Include(ce => ce.ElementMeasurementOptions)
+                .Include(ce => ce.ElementUsefulLifeOptions)
+                .Include(ce => ce.ElementRemainingLifeOptions)
+                .ToListAsync();
+
+            var additionalElements = await context.ReserveStudyAdditionalElements
+                .AsNoTracking()
+                .Where(ae => ae.ReserveStudyId == Id)
+                .Include(ae => ae.ElementMeasurementOptions)
+                .Include(ae => ae.ElementUsefulLifeOptions)
+                .Include(ae => ae.ElementRemainingLifeOptions)
+                .ToListAsync();
+
+            if (reserveStudy != null) {
+                // Assign loaded data
+                reserveStudy.ReserveStudyBuildingElements = buildingElements;
+                reserveStudy.ReserveStudyCommonElements = commonElements;
+                reserveStudy.ReserveStudyAdditionalElements = additionalElements;
+            }
+
+            elementsLoaded = true;
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading elements data: {ex.Message}", Severity.Error);
+        } finally {
+            isElementsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadServiceContactsIfNeeded() {
+        if (serviceContactsLoaded || isContactsLoading || reserveStudy == null)
+            return;
+
+        try {
+            isContactsLoading = true;
+
+            // First load elements data if not already loaded
+            if (!elementsLoaded) {
+                await LoadElementsDataIfNeeded();
+            }
+
+            // Now load service contacts
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            // Load building elements with service contacts - moved the NeedsService filter to client side
+            var buildingElementContacts = await context.ReserveStudyBuildingElements
+                .AsNoTracking()
+                .Where(be => be.ReserveStudyId == Id)
+                .Include(be => be.ServiceContact)
+                .ToListAsync();
+
+            // Load common elements with service contacts - moved the NeedsService filter to client side
+            var commonElementContacts = await context.ReserveStudyCommonElements
+                .AsNoTracking()
+                .Where(ce => ce.ReserveStudyId == Id)
+                .Include(ce => ce.ServiceContact)
+                .ToListAsync();
+
+            // Load additional elements with service contacts - moved the NeedsService filter to client side
+            var additionalElementContacts = await context.ReserveStudyAdditionalElements
+                .AsNoTracking()
+                .Where(ae => ae.ReserveStudyId == Id)
+                .Include(ae => ae.ServiceContact)
+                .ToListAsync();
+
+            // Find matching elements in the loaded elements and update their service contacts
+            // Only process elements that need service - apply the filter on the client side
+            foreach (var element in buildingElementContacts.Where(e => e.NeedsService)) {
+                var match = reserveStudy.ReserveStudyBuildingElements?.FirstOrDefault(e => e.Id == element.Id);
+                if (match != null) {
+                    match.ServiceContact = element.ServiceContact;
+                }
+            }
+
+            foreach (var element in commonElementContacts.Where(e => e.NeedsService)) {
+                var match = reserveStudy.ReserveStudyCommonElements?.FirstOrDefault(e => e.Id == element.Id);
+                if (match != null) {
+                    match.ServiceContact = element.ServiceContact;
+                }
+            }
+
+            foreach (var element in additionalElementContacts.Where(e => e.NeedsService)) {
+                var match = reserveStudy.ReserveStudyAdditionalElements?.FirstOrDefault(e => e.Id == element.Id);
+                if (match != null) {
+                    match.ServiceContact = element.ServiceContact;
+                }
+            }
+
+            // Update the list of elements with service contacts
+            elementsWithServiceContact = reserveStudy.ReserveStudyElements.Where(e => e.NeedsService).ToList();
+
+            serviceContactsLoaded = true;
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading service contacts: {ex.Message}", Severity.Error);
+        } finally {
+            isContactsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetUpdateLink() => $"/ReserveStudies/Update/{reserveStudy?.Id}";
+
+    private void HandleTabChange(int index) {
+        activeTabIndex = index;
+
+        // Load data based on selected tab
+        switch (index) {
+            case 2: // Elements tab
+                _ = LoadElementsDataIfNeeded();
+                break;
+            case 3: // Service Contacts tab
+                _ = LoadServiceContactsIfNeeded();
+                break;
+        }
+    }
+
+    private async Task HandleStatusChange(StatusChangeEventArgs args) {
+        if (args.HasCustomAction) {
+            await args.CustomAction(Id);
+        } else {
+            await SetStatusAsync(args.Status);
+        }
+    }
+
+    private async Task SendRequestLink() {
+        await ExecuteActionAsync(
+            async () => {
+                var createdEvent = new ReserveStudyCreatedEvent(reserveStudy);
+                await _dispatcher.Broadcast<ReserveStudyCreatedEvent>(createdEvent);
+                return true;
+            },
+            "Request link sent successfully!",
+            "Failed to send request link"
+        );
+    }
+
+    private async Task SendAccessTokenLink() {
+        await ExecuteActionAsync(
+            async () => {
+                // Email logic would go here
+                return true;
+            },
+            "Request link sent successfully!",
+            "Failed to send access token link"
+        );
+    }
+
+    private void ShowElement(IReserveStudyElement element) {
+        element.ShowDetails = !element.ShowDetails;
+    }
+
+    private TableGroupDefinition<IReserveStudyElement> _groupDefinition = new() {
+        GroupName = "Element Type",
+        Indentation = false,
+        Expandable = false,
+        Selector = (element) => element.ElementType
+    };
+
+    private string GetGroupName(TableGroupData<object, IReserveStudyElement> headerContext) => $"{headerContext.GroupName}: {headerContext.Key}";
+
+    private Color GetTimelineColor(ReserveStudy.WorkflowStatus status) {
+        // Use the dictionary for special statuses
+        if (_specialStatusColors.TryGetValue(status, out var color))
+            return color;
+
+        // If this status is the current status, highlight it
+        if (reserveStudy?.Status == status)
+            return Color.Warning;
+        // If this status has been completed (current status is beyond this one)
+        else if (reserveStudy?.Status > status)
+            return Color.Success;
+        // If this status hasn't been reached yet
+        else
+            return Color.Default;
+    }
+
+    // Generic action execution method with error handling
+    private async Task<bool> ExecuteActionAsync(Func<Task<bool>> action, string successMessage, string failureMessage) {
+        try {
+            var result = await action();
+            if (result) {
+                Snackbar.Add(successMessage, Severity.Success);
+                return true;
+            } else {
+                Snackbar.Add(failureMessage, Severity.Error);
+                return false;
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            return false;
+        }
+    }
+
+    // Status change methods that use the generic execution method
+    private async Task ApproveProposalAsync(Guid studyId) {
+        if (reserveStudy?.Proposal == null) return;
+
+        var success = await ExecuteActionAsync(
+            async () => {
+                var currentUser = "User Name"; // Replace with actual user name
+                return await WorkflowService.ApproveProposalAsync(reserveStudy.Proposal.Id, currentUser);
+            },
+            "Proposal approved successfully",
+            "Failed to approve proposal"
+        );
+
+        if (success) await LoadInitialData();
+    }
+
+    private async Task RequestFinancialInfoAsync(Guid studyId) {
+        var success = await ExecuteActionAsync(
+            async () => await WorkflowService.RequestFinancialInfoAsync(studyId),
+            "Financial information requested successfully",
+            "Failed to request financial information"
+        );
+
+        if (success) await LoadInitialData();
+    }
+
+    private async Task ReviewFinancialInfoAsync(Guid studyId) {
+        if (reserveStudy?.FinancialInfo == null) return;
+
+        var success = await ExecuteActionAsync(
+            async () => {
+                var currentUser = "User Name"; // Replace with actual user name
+                return await WorkflowService.ReviewFinancialInfoAsync(reserveStudy.FinancialInfo.Id, currentUser);
+            },
+            "Financial information reviewed successfully",
+            "Failed to review financial information"
+        );
+
+        if (success) await LoadInitialData();
+    }
+
+    private async Task CompleteReserveStudyAsync(Guid studyId) {
+        var success = await ExecuteActionAsync(
+            async () => await WorkflowService.CompleteReserveStudyAsync(studyId),
+            "Reserve study completed successfully",
+            "Failed to complete reserve study"
+        );
+
+        if (success) await LoadInitialData();
+    }
+
+    private async Task SetStatusAsync(ReserveStudy.WorkflowStatus status) {
+        try {
+            if (reserveStudy == null) return;
+
+            using var context = await DbFactory.CreateDbContextAsync();
+            var study = await context.ReserveStudies.FindAsync(Id);
+
+            if (study != null) {
+                study.Status = status;
+                study.DateModified = DateTime.Now;
+
+                await context.SaveChangesAsync();
+                Snackbar.Add($"Status updated to {status}", Severity.Success);
+                await LoadInitialData(); // Reload data
+                InitializeTimelineItems(); // Refresh timeline items
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SendProposalAsync(Guid studyId) {
+        if (reserveStudy == null) return;
+
+        try {
+            // Check if proposal exists, create one if not
+            if (reserveStudy.Proposal == null) {
+                // Create a sample proposal
+                var proposal = new Models.Proposal {
+                    ReserveStudyId = reserveStudy.Id,
+                    ProposalScope = "Test Scope",
+                    EstimatedCost = 5000.00m,
+                    Comments = "Test proposal created automatically",
+                    DateSent = DateTime.Now
+                };
+
+                var result = await WorkflowService.SendProposalAsync(Id, proposal);
+                if (result) {
+                    Snackbar.Add("Proposal sent successfully", Severity.Success);
+                    await LoadInitialData(); // Reload data
+                    InitializeTimelineItems(); // Refresh timeline items
+                } else {
+                    Snackbar.Add("Failed to send proposal", Severity.Error);
+                }
+            } else {
+                // If proposal exists, just update the status
+                await SetStatusAsync(ReserveStudy.WorkflowStatus.ProposalSent);
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SubmitFinancialInfoAsync(Guid studyId) {
+        if (reserveStudy == null) return;
+
+        try {
+            if (reserveStudy.FinancialInfo == null) {
+                // Create sample financial info
+                var financialInfo = new Models.FinancialInfo {
+                    ReserveStudyId = reserveStudy.Id,
+                    CurrentReserveFundBalance = 50000.00m,
+                    AnnualContribution = 10000.00m,
+                    ProjectedAnnualExpenses = 12000.00m,
+                    FiscalYearStartMonth = 1, // January
+                    Comments = "Test financial info created automatically",
+                    DateSubmitted = DateTime.Now
+                };
+
+                var result = await WorkflowService.SubmitFinancialInfoAsync(Id, financialInfo);
+                if (result) {
+                    Snackbar.Add("Financial information submitted successfully", Severity.Success);
+                    await LoadInitialData(); // Reload data
+                    InitializeTimelineItems(); // Refresh timeline items
+                } else {
+                    Snackbar.Add("Failed to submit financial information", Severity.Error);
+                }
+            } else {
+                // If financial info already exists, just update the status
+                await SetStatusAsync(ReserveStudy.WorkflowStatus.FinancialInfoSubmitted);
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // Class to hold timeline item information
+    private class TimelineItemInfo {
+        public ReserveStudy.WorkflowStatus Status { get; set; }
+        public DateTime? DateValue { get; set; }
+        public string? Title { get; set; }
+        public string? Actor { get; set; }
+        public bool IsAlignEnd { get; set; } = true;
+        public bool IsHidden { get; set; } = false;
+    }
+}

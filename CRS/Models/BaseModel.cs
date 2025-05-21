@@ -23,5 +23,10 @@ namespace CRS.Models {
         [DataType(DataType.DateTime)] public DateTime? DateCreated { get; set; }
         [DataType(DataType.DateTime)] public DateTime? DateModified { get; set; }
         [DataType(DataType.DateTime)] public DateTime? DateDeleted { get; set; }
+
+        // Add this property for optimistic concurrency control
+        [Timestamp]
+        public byte[] RowVersion { get; set; }
+
     }
 }

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250413151406_InitialCreate")]
+    [Migration("20250501203549_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -125,6 +125,12 @@ namespace CRS.Migrations
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<Guid>("Token")
                         .HasColumnType("uniqueidentifier");
 
@@ -159,6 +165,12 @@ namespace CRS.Migrations
 
                     b.Property<bool>("IsMailingAddress")
                         .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("State")
                         .HasColumnType("nvarchar(max)");
@@ -209,6 +221,12 @@ namespace CRS.Migrations
                     b.Property<string>("RecordId")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("TableName")
                         .HasColumnType("nvarchar(max)");
 
@@ -246,6 +264,12 @@ namespace CRS.Migrations
 
                     b.Property<bool>("NeedsService")
                         .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("ZOrder")
                         .HasColumnType("int");
@@ -393,6 +417,12 @@ namespace CRS.Migrations
                     b.Property<string>("Location")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<Guid?>("SpecialistUserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -435,6 +465,12 @@ namespace CRS.Migrations
                     b.Property<bool>("NeedsService")
                         .HasColumnType("bit");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<int>("ZOrder")
                         .HasColumnType("int");
 
@@ -466,6 +502,12 @@ namespace CRS.Migrations
 
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.HasKey("Id");
 
@@ -508,6 +550,12 @@ namespace CRS.Migrations
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
@@ -540,6 +588,12 @@ namespace CRS.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
@@ -568,6 +622,12 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ContactGroupId");
@@ -595,6 +655,12 @@ namespace CRS.Migrations
                     b.Property<string>("DisplayText")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Unit")
                         .IsRequired()
@@ -627,6 +693,12 @@ namespace CRS.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -658,6 +730,12 @@ namespace CRS.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -668,6 +746,67 @@ namespace CRS.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ElementUsefulLifeOptions", "crs");
+                });
+
+            modelBuilder.Entity("CRS.Models.FinancialInfo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AnnualContribution")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Comments")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("CurrentReserveFundBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateReviewed")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateSubmitted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FinancialDocumentUrls")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("FiscalYearStartMonth")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsComplete")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("ProjectedAnnualExpenses")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.ToTable("FinancialInfos", "crs");
                 });
 
             modelBuilder.Entity("CRS.Models.KanbanTask", b =>
@@ -703,6 +842,12 @@ namespace CRS.Migrations
                     b.Property<Guid?>("ReserveStudyId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -733,6 +878,12 @@ namespace CRS.Migrations
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -784,6 +935,12 @@ namespace CRS.Migrations
 
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("State")
                         .HasColumnType("nvarchar(max)");
@@ -837,11 +994,73 @@ namespace CRS.Migrations
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
 
                     b.ToTable("PropertyManagers", "crs");
+                });
+
+            modelBuilder.Entity("CRS.Models.Proposal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Comments")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateApproved")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateSent")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("EstimatedCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("ProposalDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProposalScope")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.ToTable("Proposals", "crs");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>
@@ -871,6 +1090,9 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("FinancialInfoId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -889,6 +1111,9 @@ namespace CRS.Migrations
                     b.Property<Guid?>("PropertyManagerId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("ProposalId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -898,6 +1123,9 @@ namespace CRS.Migrations
                     b.Property<Guid?>("SpecialistUserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
@@ -906,7 +1134,11 @@ namespace CRS.Migrations
 
                     b.HasIndex("ContactId");
 
+                    b.HasIndex("FinancialInfoId");
+
                     b.HasIndex("PropertyManagerId");
+
+                    b.HasIndex("ProposalId");
 
                     b.HasIndex("SpecialistUserId");
 
@@ -952,6 +1184,12 @@ namespace CRS.Migrations
 
                     b.Property<Guid?>("ReserveStudyId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<Guid?>("ServiceContactId")
                         .HasColumnType("uniqueidentifier");
@@ -1007,6 +1245,12 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<Guid?>("ServiceContactId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1061,6 +1305,12 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<Guid?>("ServiceContactId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1112,6 +1362,12 @@ namespace CRS.Migrations
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.ToTable("ServiceContacts", "crs");
@@ -1146,6 +1402,12 @@ namespace CRS.Migrations
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -1348,6 +1610,17 @@ namespace CRS.Migrations
                     b.Navigation("ContactGroup");
                 });
 
+            modelBuilder.Entity("CRS.Models.FinancialInfo", b =>
+                {
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReserveStudy");
+                });
+
             modelBuilder.Entity("CRS.Models.Profile", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", "User")
@@ -1368,6 +1641,17 @@ namespace CRS.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CRS.Models.Proposal", b =>
+                {
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReserveStudy");
+                });
+
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", "User")
@@ -1382,9 +1666,17 @@ namespace CRS.Migrations
                         .WithMany()
                         .HasForeignKey("ContactId");
 
+                    b.HasOne("CRS.Models.FinancialInfo", "FinancialInfo")
+                        .WithMany()
+                        .HasForeignKey("FinancialInfoId");
+
                     b.HasOne("CRS.Models.PropertyManager", "PropertyManager")
                         .WithMany()
                         .HasForeignKey("PropertyManagerId");
+
+                    b.HasOne("CRS.Models.Proposal", "Proposal")
+                        .WithMany()
+                        .HasForeignKey("ProposalId");
 
                     b.HasOne("CRS.Data.ApplicationUser", "Specialist")
                         .WithMany()
@@ -1394,7 +1686,11 @@ namespace CRS.Migrations
 
                     b.Navigation("Contact");
 
+                    b.Navigation("FinancialInfo");
+
                     b.Navigation("PropertyManager");
+
+                    b.Navigation("Proposal");
 
                     b.Navigation("Specialist");
 

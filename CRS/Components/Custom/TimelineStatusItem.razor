@@ -1,0 +1,65 @@
+﻿@* A reusable timeline item component for workflow status displays *@
+
+<MudTimelineItem TimelineAlign="@(IsAlignEnd ? TimelineAlign.End : TimelineAlign.Start)" 
+                 Color="@GetItemColor()" 
+                 Hidden="@IsHidden">
+    <ItemOpposite>
+        @if (DateValue.HasValue) {
+            <MudText Color="@GetItemColor()" Typo="Typo.body1">
+                @DateValue.Value.ToLocalTime().ToString("g")
+            </MudText>
+        }
+    </ItemOpposite>
+    <ItemContent>
+        <MudPaper Elevation="0">
+            <MudText Color="@GetItemColor()" Typo="Typo.body1">@Title</MudText>
+            @if (!string.IsNullOrEmpty(Actor)) {
+                <MudText Typo="Typo.body2">@Actor</MudText>
+            }
+        </MudPaper>
+    </ItemContent>
+</MudTimelineItem>
+
+@code {
+    [Parameter]
+    public ReserveStudy.WorkflowStatus Status { get; set; }
+
+    [Parameter]
+    public DateTime? DateValue { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? Actor { get; set; }
+
+    [Parameter]
+    public bool IsAlignEnd { get; set; } = true;
+
+    [Parameter]
+    public bool IsHidden { get; set; } = false;
+
+    [Parameter]
+    public ReserveStudy? ReserveStudy { get; set; }
+
+    private Color GetItemColor()
+    {
+        // Special cases for declined/cancelled statuses
+        if (Status == ReserveStudy.WorkflowStatus.RequestCancelled) {
+            return Color.Error;
+        }
+
+        // If this status is the current status, highlight it
+        if (ReserveStudy?.Status == Status) {
+            return Color.Warning;
+        }
+        // If this status has been completed (current status is beyond this one)
+        else if (ReserveStudy?.Status > Status) {
+            return Color.Success;
+        }
+        // If this status hasn't been reached yet
+        else {
+            return Color.Default;
+        }
+    }
+}

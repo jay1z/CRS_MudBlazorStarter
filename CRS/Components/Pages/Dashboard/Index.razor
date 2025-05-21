@@ -109,6 +109,12 @@
                                         </MudText>
                                     </MudText>
 
+                                    @if (_selectedReserveStudy == "all") {
+                                        <MudAlert Severity="Severity.Info" Class="mb-4">
+                                            When viewing all studies, tasks cannot be moved. Select a specific study to enable task management.
+                                        </MudAlert>
+                                    }
+
                                     @if (IsStudyCompleted()) {
                                         <MudAlert Severity="Severity.Success" Class="mb-4">This reserve study is marked as complete. Tasks are in read-only mode.</MudAlert>
                                     }
@@ -178,7 +184,7 @@
                                         <!-- Kanban with Swimlanes -->
                                         <div class="kanban-container">
                                             @foreach (var specialist in GetFilteredSwimlanes()) {
-                                                <MudExpansionPanel @key="specialist.AssigneeId" IsExpandable="true" Dense="true" Class="mb-2 swimlane-panel">
+                                                <MudExpansionPanel @key="specialist.AssigneeId" IsExpandable="true" Expanded=true Dense="true" Class="mb-2 swimlane-panel">
                                                     <TitleContent>
                                                         <div class="d-flex align-center justify-space-between width-100 pr-4">
                                                             <div class="d-flex align-center">
@@ -209,7 +215,7 @@
                                                         </div>
                                                     </TitleContent>
                                                     <ChildContent>
-                                                        <MudDropContainer T="KanbanTask" @ref="specialist.DropContainer" Items="@GetFilteredTasksForSwimlane(specialist.AssigneeId)" ItemsSelector="@((task, identifier) => GetDropzoneIdentifier(task) == identifier)" ItemDropped="@(dropInfo => TaskUpdated(dropInfo, specialist.AssigneeId))" Class="d-flex flex-row swimlane-row" Disabled="@(!CanMoveTasks())">
+                                                        <MudDropContainer T="KanbanTask" @ref="specialist.DropContainer" Items="@GetFilteredTasksForSwimlane(specialist.AssigneeId)" ItemsSelector="@((task, identifier) => GetDropzoneIdentifier(task) == identifier)" ItemDropped="@(dropInfo => TaskUpdated(dropInfo, specialist.AssigneeId))" Class="d-flex flex-row swimlane-row">
                                                             <ChildContent>
                                                                 @foreach (var status in Enum.GetValues(typeof(KanbanStatus)).Cast<KanbanStatus>()) {
                                                                     <div class="status-column">
@@ -218,7 +224,7 @@
                                                                 }
                                                             </ChildContent>
                                                             <ItemRenderer>
-                                                                <MudPaper Elevation="2" Class="@($"pa-3 ma-2 rounded-lg kanban-task {GetTaskClass(context)}")">
+                                                                <MudPaper Elevation="2" Class="@($"pa-3 ma-2 rounded-lg kanban-task {GetTaskClass(context)} {(_selectedReserveStudy == "all" ? "non-draggable" : "")}")" Disabled="@(!CanMoveTasks())">
                                                                     <div class="d-flex justify-space-between align-center">
                                                                         <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@context.Title</MudText>
                                                                         @if (_canEditTasks) {
@@ -237,7 +243,14 @@
 
                                                                     @if (_selectedReserveStudy == "all" && context.ReserveStudyId.HasValue) {
                                                                         <MudChip T="string" Size="Size.Small" Color="Color.Dark" Class="mt-2">
-                                                                            @GetStudyDisplayName(context.ReserveStudyId?)
+                                                                            @if (context.ReserveStudyId.HasValue)
+                                                                            {
+                                                                                @GetStudyDisplayNameSync(context.ReserveStudyId.Value)
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <span>Unknown Study</span>
+                                                                            }
                                                                         </MudChip>
                                                                     }
 
@@ -345,6 +358,12 @@
     .critical-task {
     border-left: 3px solid #f44336;
     }
+
+    .non-draggable {
+    cursor: default !important;
+    opacity: 0.9;
+    }
+
 </style>
 
 @code {
@@ -373,6 +392,9 @@
     private int _swimlaneHeight = 250;
     private bool _showKanbanSettings = false;
 
+    private Dictionary<Guid, string> _studyNameCache = new();
+    private const int MaxCacheSize = 200;
+
     // Keep track of drop containers for each swimlane
     private class SwimlaneInfo {
         public Guid? AssigneeId { get; set; }
@@ -387,8 +409,8 @@
 
     protected override async Task OnInitializedAsync() {
         try {
-            await LoadReserveStudiesAsync();
             await LoadSpecialistsAsync();
+            await LoadReserveStudiesAsync();
 
             // Set up periodic refresh as a fallback (every 5 minutes)
             _refreshTimer = new Timer(async _ => {
@@ -414,6 +436,19 @@
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (firstRender) {
             await UpdateSwimlaneHeight(_swimlaneHeight);
+        }
+
+        // Check for any missing study names and load them
+        var tasksToLoad = new List<Task>();
+        foreach (var task in kanbanTasks.Where(t => t.ReserveStudyId.HasValue))        {
+            if (!_studyNameCache.ContainsKey(task.ReserveStudyId.Value))            {
+                tasksToLoad.Add(GetStudyDisplayName(task.ReserveStudyId.Value));
+            }
+        }
+    
+        if (tasksToLoad.Any())        {
+            await Task.WhenAll(tasksToLoad);
+            StateHasChanged();
         }
     }
 
@@ -461,6 +496,7 @@
 
             // Filter for active studies only
             _reserveStudies = _reserveStudies.Where(s => s.IsActive).OrderBy(s => s.DateCreated).ToList();
+            PreloadStudyNameCache();
 
             // Set default selection if we have studies
             if (_reserveStudies.Count > 0) {
@@ -571,6 +607,7 @@
 
         try {
             _isRefreshing = true;
+            ClearStudyCache();
 
             if (!string.IsNullOrEmpty(_selectedReserveStudy) && Guid.TryParse(_selectedReserveStudy, out var studyId)) {
                 // Load tasks for the current study
@@ -760,27 +797,83 @@
         };
     }
 
-    // Format study name for display
+    // For the async method that looks up by ID
     private async Task<string> GetStudyDisplayName(Guid studyId) {
-        var study = await ReserveStudyService.GetReserveStudyByIdAsync(studyId);
-        if (study == null) {
-            throw new Exception("Reserve study not found");
+        // Check cache first
+        if (_studyNameCache.TryGetValue(studyId, out var cachedName)) {
+            return cachedName;
         }
-
-        return GetStudyDisplayName(study);
+    
+        try {
+            var study = await ReserveStudyService.GetReserveStudyByIdAsync(studyId);
+            if (study == null) {
+                return "Unknown Study";
+            }
+        
+            var result = GetStudyDisplayName(study);
+            _studyNameCache[studyId] = result; // Cache the result
+            return result;
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error loading study: {ex.Message}", Severity.Error);
+            return "Error Loading Study";
+        }
     }
 
+    // For the synchronous method that takes a study object
     private string GetStudyDisplayName(ReserveStudy study) {
+        // Cache the result for this study ID for future lookups
+        var result = string.Empty;
+
         if (study.Community?.Name != null && study.DateCreated.HasValue) {
-            return $"{study.Community.Name} - {study.DateCreated.Value.ToShortDateString()}";
+            result = $"{study.Community.Name} - {study.DateCreated.Value.ToShortDateString()}";
         }
         else if (study.Community?.Name != null) {
-            return study.Community.Name;
+            result = study.Community.Name;
         }
         else if (study.DateCreated.HasValue) {
-            return $"Study {study.Id} - {study.DateCreated.Value.ToShortDateString()}";
+            result = $"Study {study.Id} - {study.DateCreated.Value.ToShortDateString()}";
         }
-        return $"Study {study.Id}";
+        else {
+            result = $"Study {study.Id}";
+        }
+
+        // Cache the result 
+        _studyNameCache[study.Id] = result;
+        return result;
+    }
+
+    private string GetStudyDisplayNameSync(Guid studyId) {
+        // Check cache first - this will be synchronous
+        if (_studyNameCache.TryGetValue(studyId, out var cachedName)) {
+            return cachedName;
+        }
+    
+        // Return a placeholder while loading
+        return "Loading...";
+    }
+
+    private void PreloadStudyNameCache() {
+        foreach (var study in _reserveStudies) {
+            _studyNameCache[study.Id] = GetStudyDisplayName(study);
+        }
+    }
+
+    private void AddToCache(Guid id, string name) {
+        // Implement basic cache size management
+        if (_studyNameCache.Count >= MaxCacheSize) {
+            // Remove 20% of entries when cache gets full
+            var keysToRemove = _studyNameCache.Keys.Take(_studyNameCache.Count / 5).ToList();
+            foreach (var key in keysToRemove) {
+                _studyNameCache.Remove(key);
+            }
+        }
+    
+        _studyNameCache[id] = name;
+    }
+
+    private void ClearStudyCache() {
+        _studyNameCache.Clear();
     }
 
     // Task generation methods
@@ -970,6 +1063,7 @@
     }
 
     private bool CanMoveTasks() {
+        if (_selectedReserveStudy == "all") return false;
         if (_currentStudy == null) return false;
         if (_currentStudy.IsComplete) return false;
         return true;

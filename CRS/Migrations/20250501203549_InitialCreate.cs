@@ -25,7 +25,8 @@ namespace CRS.Migrations
                     RequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -90,7 +91,8 @@ namespace CRS.Migrations
                     ZOrder = table.Column<int>(type: "int", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -149,7 +151,8 @@ namespace CRS.Migrations
                     IsIgnored = table.Column<bool>(type: "bit", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -169,7 +172,8 @@ namespace CRS.Migrations
                     ZOrder = table.Column<int>(type: "int", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -187,7 +191,8 @@ namespace CRS.Migrations
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -205,7 +210,8 @@ namespace CRS.Migrations
                     ZOrder = table.Column<int>(type: "int", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -223,7 +229,8 @@ namespace CRS.Migrations
                     ZOrder = table.Column<int>(type: "int", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -241,7 +248,8 @@ namespace CRS.Migrations
                     ZOrder = table.Column<int>(type: "int", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -264,7 +272,8 @@ namespace CRS.Migrations
                     ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -282,7 +291,8 @@ namespace CRS.Migrations
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -303,7 +313,8 @@ namespace CRS.Migrations
                     Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -442,7 +453,8 @@ namespace CRS.Migrations
                     NewValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -466,7 +478,8 @@ namespace CRS.Migrations
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -495,7 +508,8 @@ namespace CRS.Migrations
                     Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -527,7 +541,8 @@ namespace CRS.Migrations
                     Zip = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -556,7 +571,8 @@ namespace CRS.Migrations
                     Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -583,7 +599,8 @@ namespace CRS.Migrations
                     Context = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -611,7 +628,8 @@ namespace CRS.Migrations
                     CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -634,7 +652,8 @@ namespace CRS.Migrations
                     ContactGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -656,6 +675,58 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "FinancialInfos",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CurrentReserveFundBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    AnnualContribution = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ProjectedAnnualExpenses = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    FiscalYearStartMonth = table.Column<int>(type: "int", nullable: false),
+                    FinancialDocumentUrls = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateSubmitted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateReviewed = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReviewedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsComplete = table.Column<bool>(type: "bit", nullable: false),
+                    Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FinancialInfos", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Proposals",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProposalScope = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    EstimatedCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ProposalDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DateSent = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ApprovedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
+                    Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Proposals", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ReserveStudies",
                 schema: "crs",
                 columns: table => new
@@ -667,15 +738,18 @@ namespace CRS.Migrations
                     PointOfContactType = table.Column<int>(type: "int", nullable: false),
                     ContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     PropertyManagerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    FinancialInfoId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsApproved = table.Column<bool>(type: "bit", nullable: false),
                     IsComplete = table.Column<bool>(type: "bit", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
                     DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
                     LastModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -705,10 +779,22 @@ namespace CRS.Migrations
                         principalTable: "Contacts",
                         principalColumn: "Id");
                     table.ForeignKey(
+                        name: "FK_ReserveStudies_FinancialInfos_FinancialInfoId",
+                        column: x => x.FinancialInfoId,
+                        principalSchema: "crs",
+                        principalTable: "FinancialInfos",
+                        principalColumn: "Id");
+                    table.ForeignKey(
                         name: "FK_ReserveStudies_PropertyManagers_PropertyManagerId",
                         column: x => x.PropertyManagerId,
                         principalSchema: "crs",
                         principalTable: "PropertyManagers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ReserveStudies_Proposals_ProposalId",
+                        column: x => x.ProposalId,
+                        principalSchema: "crs",
+                        principalTable: "Proposals",
                         principalColumn: "Id");
                 });
 
@@ -729,7 +815,8 @@ namespace CRS.Migrations
                     ElementUsefulLifeOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -782,7 +869,8 @@ namespace CRS.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -843,7 +931,8 @@ namespace CRS.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -978,6 +1067,12 @@ namespace CRS.Migrations
                 column: "ContactId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_FinancialInfos_ReserveStudyId",
+                schema: "crs",
+                table: "FinancialInfos",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Profiles_ApplicationUserId",
                 schema: "crs",
                 table: "Profiles",
@@ -988,6 +1083,12 @@ namespace CRS.Migrations
                 schema: "crs",
                 table: "PropertyManagers",
                 column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Proposals_ReserveStudyId",
+                schema: "crs",
+                table: "Proposals",
+                column: "ReserveStudyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_ApplicationUserId",
@@ -1008,10 +1109,22 @@ namespace CRS.Migrations
                 column: "ContactId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudies_FinancialInfoId",
+                schema: "crs",
+                table: "ReserveStudies",
+                column: "FinancialInfoId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_PropertyManagerId",
                 schema: "crs",
                 table: "ReserveStudies",
                 column: "PropertyManagerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudies_ProposalId",
+                schema: "crs",
+                table: "ReserveStudies",
+                column: "ProposalId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_SpecialistUserId",
@@ -1114,11 +1227,71 @@ namespace CRS.Migrations
                 schema: "crs",
                 table: "Settings",
                 column: "ApplicationUserId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_FinancialInfos_ReserveStudies_ReserveStudyId",
+                schema: "crs",
+                table: "FinancialInfos",
+                column: "ReserveStudyId",
+                principalSchema: "crs",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Proposals_ReserveStudies_ReserveStudyId",
+                schema: "crs",
+                table: "Proposals",
+                column: "ReserveStudyId",
+                principalSchema: "crs",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_ReserveStudies_Communities_CommunityId",
+                schema: "crs",
+                table: "ReserveStudies");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_Contacts_AspNetUsers_ApplicationUserId",
+                schema: "crs",
+                table: "Contacts");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_PropertyManagers_AspNetUsers_ApplicationUserId",
+                schema: "crs",
+                table: "PropertyManagers");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_ReserveStudies_AspNetUsers_ApplicationUserId",
+                schema: "crs",
+                table: "ReserveStudies");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_ReserveStudies_AspNetUsers_SpecialistUserId",
+                schema: "crs",
+                table: "ReserveStudies");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_ReserveStudies_Contacts_ContactId",
+                schema: "crs",
+                table: "ReserveStudies");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_FinancialInfos_ReserveStudies_ReserveStudyId",
+                schema: "crs",
+                table: "FinancialInfos");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_Proposals_ReserveStudies_ReserveStudyId",
+                schema: "crs",
+                table: "Proposals");
+
             migrationBuilder.DropTable(
                 name: "AccessTokens",
                 schema: "crs");
@@ -1216,10 +1389,6 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
-                name: "ReserveStudies",
-                schema: "crs");
-
-            migrationBuilder.DropTable(
                 name: "ServiceContacts",
                 schema: "crs");
 
@@ -1228,7 +1397,19 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
+                name: "AspNetUsers",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
                 name: "Contacts",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "ReserveStudies",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "FinancialInfos",
                 schema: "crs");
 
             migrationBuilder.DropTable(
@@ -1236,7 +1417,7 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers",
+                name: "Proposals",
                 schema: "crs");
         }
     }

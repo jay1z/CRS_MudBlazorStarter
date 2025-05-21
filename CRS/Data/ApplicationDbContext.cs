@@ -127,14 +127,16 @@ namespace CRS.Data {
         public DbSet<ElementMeasurementOptions> ElementMeasurementOptions { get; set; }
         public DbSet<ElementRemainingLifeOptions> ElementRemainingLifeOptions { get; set; }
         public DbSet<ElementUsefulLifeOptions> ElementUsefulLifeOptions { get; set; }
+        public DbSet<FinancialInfo> FinancialInfos { get; set; }
         public DbSet<KanbanTask> KanbanTasks { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Profile> Profiles { get; set; }
         public DbSet<PropertyManager> PropertyManagers { get; set; }
+        public DbSet<Proposal> Proposals { get; set; }
+        public DbSet<ReserveStudy> ReserveStudies { get; set; }
         public DbSet<ReserveStudyAdditionalElement> ReserveStudyAdditionalElements { get; set; }
         public DbSet<ReserveStudyBuildingElement> ReserveStudyBuildingElements { get; set; }
         public DbSet<ReserveStudyCommonElement> ReserveStudyCommonElements { get; set; }
-        public DbSet<ReserveStudy> ReserveStudies { get; set; }
         public DbSet<ServiceContact> ServiceContacts { get; set; }
         public DbSet<Settings> Settings { get; set; }
         #endregion

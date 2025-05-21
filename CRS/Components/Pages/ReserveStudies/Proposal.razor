@@ -1,0 +1,324 @@
+@page "/ReserveStudies/{studyId:guid}/Proposal"
+@attribute [Authorize]
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserStateService UserState
+@inject IReserveStudyWorkflowService WorkflowService
+@inject IReserveStudyService ReserveStudyService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Reserve Study Proposal</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @if (isLoading) {
+        <MudPaper Elevation="0" Class="pa-8">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.h5" Class="mt-4">Loading Reserve Study...</MudText>
+        </MudPaper>
+    } else if (reserveStudy == null) {
+        <MudAlert Severity="Severity.Error">Reserve study not found</MudAlert>
+    } else {
+        <MudCard Elevation="3" Class="mb-6">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h4">Create Proposal</MudText>
+                    <MudText Typo="Typo.subtitle1" Color="Color.Primary">@reserveStudy.Community?.Name</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudTooltip Text="Return to Study Details">
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudy/{reserveStudy.Id}/Details")" />
+                    </MudTooltip>
+                </CardHeaderActions>
+            </MudCardHeader>
+
+            <MudCardContent>
+                <EditForm Model="@proposal" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+
+                    <MudPaper Elevation="0" Class="pa-4 mud-theme-primary" Style="background-color: var(--mud-palette-primary-lighten);">
+                        <MudText Typo="Typo.h6">Proposal Information</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-4">
+                            This proposal will be sent to the point of contact for review and approval.
+                        </MudText>
+                    </MudPaper>
+
+                    <MudGrid Class="mt-4">
+                        <MudItem xs="12" md="6">
+                            <MudDatePicker Label="Proposal Date" @bind-Date="proposal.ProposalDate" Variant="Variant.Outlined" Editable="true" Required="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField Label="Estimated Cost ($)" @bind-Value="proposal.EstimatedCost" Format="N2" Variant="Variant.Outlined" Min="0" Required="true" />
+                            <ValidationMessage For="@(() => proposal.EstimatedCost)" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudTextField Label="Proposal Scope"
+                                          @bind-Value="proposal.ProposalScope"
+                                          Required="true"
+                                          Variant="Variant.Outlined"
+                                          Lines="3" />
+                            <ValidationMessage For="@(() => proposal.ProposalScope)" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-6" />
+
+                    <MudText Typo="Typo.h6" Class="mb-3">Reserve Study Services</MudText>
+
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudCheckBox T="bool" @bind-Checked="@proposal.IncludeLevel1Services"
+                                         Label="Level I: Full Service - Includes site inspection and financial analysis"
+                                         Color="Color.Primary" Class="mb-2" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudCheckBox T="bool" @bind-Checked="@proposal.IncludeLevel2Services"
+                                         Label="Level II: Update with Site Visit - Includes site inspection and update of previous reserve study"
+                                         Color="Color.Primary" Class="mb-2" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudCheckBox T="bool" @bind-Checked="@proposal.IncludeLevel3Services"
+                                         Label="Level III: Update without Site Visit - Update of previous reserve study without new inspection"
+                                         Color="Color.Primary" Class="mb-4" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-6" />
+
+                    <MudText Typo="Typo.h6" Class="mb-3">Delivery Timeframe</MudText>
+
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudRadioGroup T="string" @bind-SelectedOption="@proposal.DeliveryTimeframe">
+                                <MudRadio Value="@("Standard")" Color="Color.Primary">Standard (4-6 weeks)</MudRadio>
+                                <MudRadio Value="@("Expedited")" Color="Color.Primary">Expedited (2-3 weeks, additional fee applies)</MudRadio>
+                                <MudRadio Value="@("Rush")" Color="Color.Primary">Rush (7-10 days, premium fee applies)</MudRadio>
+                            </MudRadioGroup>
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-6" />
+
+                    <MudText Typo="Typo.h6" Class="mb-3">Additional Services</MudText>
+
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudCheckBox @bind-Value="@proposal.IncludePrepaymentDiscount"
+                                         Label="Prepayment Discount (5%)"
+                                         Color="Color.Secondary" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudCheckBox @bind-Value="@proposal.IncludeDigitalDelivery"
+                                         Label="Digital Delivery Only"
+                                         Color="Color.Secondary" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudCheckBox @bind-Value="@proposal.IncludeComponentInventory"
+                                         Label="Detailed Component Inventory"
+                                         Color="Color.Secondary" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudCheckBox @bind-Value="@proposal.IncludeFundingPlans"
+                                         Label="Alternative Funding Plans"
+                                         Color="Color.Secondary" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-6" />
+
+                    <MudText Typo="Typo.h6" Class="mb-3">Terms and Comments</MudText>
+
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField T="string"
+                                          Label="Payment Terms"
+                                          @bind-Value="proposal.PaymentTerms"
+                                          Variant="Variant.Outlined"
+                                          Lines="2"
+                                          Placeholder="e.g., 50% due upon acceptance, 50% due upon completion" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField T="string"
+                                          Label="Additional Comments"
+                                          @bind-Value="proposal.Comments"
+                                          Variant="Variant.Outlined"
+                                          Lines="4"
+                                          Placeholder="Any additional information or clarifications about the proposal" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-6" />
+
+                    <MudItem xs="12" Class="d-flex justify-end">
+                        <MudButton ButtonType="ButtonType.Button"
+                                   Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   Class="mr-2"
+                                   OnClick="@(() => Navigation.NavigateTo($"/ReserveStudy/Details/{studyId}"))">
+                            Cancel
+                        </MudButton>
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Disabled="@isSaving">
+                            @if (isSaving) {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Sending...</span>
+                            } else {
+                                <span>Send Proposal</span>
+                            }
+                        </MudButton>
+                    </MudItem>
+                </EditForm>
+            </MudCardContent>
+        </MudCard>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid studyId { get; set; }
+
+    private ReserveStudy? reserveStudy;
+    private ProposalViewModel proposal = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync() {
+        await LoadReserveStudy();
+    }
+
+    private async Task LoadReserveStudy() {
+        isLoading = true;
+        try {
+            await UserState.InitializeAsync();
+
+            using var context = await DbFactory.CreateDbContextAsync();
+            reserveStudy = await context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.Community)
+                .Include(rs => rs.Contact)
+                .Include(rs => rs.PropertyManager)
+                .Include(rs => rs.Specialist)
+                .FirstOrDefaultAsync(rs => rs.Id == studyId);
+
+            if (reserveStudy != null) {
+                // Pre-populate proposal with default values
+                proposal.ReserveStudyId = studyId;
+                proposal.ProposalDate = DateTime.Now;
+                proposal.DeliveryTimeframe = "Standard";
+                proposal.IncludeDigitalDelivery = true;
+                proposal.PaymentTerms = "50% due upon acceptance, remainder due upon completion of the study";
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit() {
+        isSaving = true;
+        try {
+            // Map from view model to entity model
+            var proposalEntity = new Models.Proposal {
+                ReserveStudyId = proposal.ReserveStudyId,
+                ProposalDate = proposal.ProposalDate.GetValueOrDefault(),
+                ProposalScope = proposal.ProposalScope,
+                EstimatedCost = proposal.EstimatedCost,
+                Comments = BuildCommentsString()
+            };
+
+            var result = await WorkflowService.SendProposalAsync(studyId, proposalEntity);
+            if (result) {
+                Snackbar.Add("Proposal sent successfully", Severity.Success);
+                Navigation.NavigateTo($"/ReserveStudy/Details/{studyId}");
+            } else {
+                Snackbar.Add("Failed to send proposal", Severity.Error);
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        } finally {
+            isSaving = false;
+        }
+    }
+
+    private string BuildCommentsString() {
+        var commentsList = new List<string>();
+
+        // Add selected services
+        var selectedServices = new List<string>();
+        if (proposal.IncludeLevel1Services) selectedServices.Add("Level I: Full Service");
+        if (proposal.IncludeLevel2Services) selectedServices.Add("Level II: Update with Site Visit");
+        if (proposal.IncludeLevel3Services) selectedServices.Add("Level III: Update without Site Visit");
+
+        if (selectedServices.Any())
+            commentsList.Add($"Selected Services: {string.Join(", ", selectedServices)}");
+
+        // Add delivery timeframe
+        commentsList.Add($"Delivery Timeframe: {proposal.DeliveryTimeframe}");
+
+        // Add additional services
+        var additionalServices = new List<string>();
+        if (proposal.IncludePrepaymentDiscount) additionalServices.Add("Prepayment Discount (5%)");
+        if (proposal.IncludeDigitalDelivery) additionalServices.Add("Digital Delivery Only");
+        if (proposal.IncludeComponentInventory) additionalServices.Add("Detailed Component Inventory");
+        if (proposal.IncludeFundingPlans) additionalServices.Add("Alternative Funding Plans");
+
+        if (additionalServices.Any())
+            commentsList.Add($"Additional Services: {string.Join(", ", additionalServices)}");
+
+        // Add payment terms
+        if (!string.IsNullOrEmpty(proposal.PaymentTerms))
+            commentsList.Add($"Payment Terms: {proposal.PaymentTerms}");
+
+        // Add comments
+        if (!string.IsNullOrEmpty(proposal.Comments))
+            commentsList.Add($"Additional Comments: {proposal.Comments}");
+
+        return string.Join("\n\n", commentsList);
+    }
+
+    public class ProposalViewModel {
+        public Guid ReserveStudyId { get; set; }
+
+        [Required(ErrorMessage = "Proposal date is required")]
+        public DateTime? ProposalDate { get; set; }
+
+        [Required(ErrorMessage = "Proposal scope is required")]
+        public string ProposalScope { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Estimated cost is required")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Estimated cost must be greater than 0")]
+        public decimal EstimatedCost { get; set; }
+
+        // Service level options
+        public bool IncludeLevel1Services { get; set; }
+        public bool IncludeLevel2Services { get; set; }
+        public bool IncludeLevel3Services { get; set; }
+
+        // Delivery timeframe
+        public string DeliveryTimeframe { get; set; } = "Standard";
+
+        // Additional services
+        public bool IncludePrepaymentDiscount { get; set; }
+        public bool IncludeDigitalDelivery { get; set; }
+        public bool IncludeComponentInventory { get; set; }
+        public bool IncludeFundingPlans { get; set; }
+
+        // Terms and comments
+        public string? PaymentTerms { get; set; }
+        public string? Comments { get; set; }
+    }
+}

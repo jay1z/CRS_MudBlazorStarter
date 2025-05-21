@@ -86,7 +86,7 @@
                         </MudTd>
                         <MudTd>
                             <MudStack Row>
-                                <MudButton Href="@($"ReserveStudies/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
+                                <MudButton Href="@($"ReserveStudies/{context.Id}/Details")" Size="Size.Small" Variant="Variant.Filled">
                                     View
                                 </MudButton>
                                 <MudButton OnClick="@(() => OpenDeleteDialog(context))" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">

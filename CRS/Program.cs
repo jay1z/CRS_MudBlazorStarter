@@ -89,6 +89,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IContactService, ContactService>();
     builder.Services.AddScoped<IDashboardService, DashboardService>();
     builder.Services.AddScoped<IReserveStudyService, ReserveStudyService>();
+    builder.Services.AddScoped<IReserveStudyWorkflowService, ReserveStudyWorkflowService>();
     builder.Services.AddScoped<ISignalRService, SignalRService>();
     builder.Services.AddScoped<IKanbanService, KanbanService>(); // Must go after SignalRService
 

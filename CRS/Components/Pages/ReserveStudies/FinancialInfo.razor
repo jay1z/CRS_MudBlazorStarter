@@ -1,0 +1,184 @@
+@page "/ReserveStudies/{studyId:guid}/FinancialInfo"
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+
+@attribute [Authorize]
+@inject IReserveStudyWorkflowService WorkflowService
+@inject IReserveStudyService ReserveStudyService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudContainer Class="mt-6">
+    <MudCard Elevation="4">
+        <MudCardHeader>
+            <MudText Typo="Typo.h5">Reserve Study Financial Information</MudText>
+        </MudCardHeader>
+        
+        @if (isLoading)
+        {
+            <MudCardContent>
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText>Loading...</MudText>
+            </MudCardContent>
+        }
+        else if (reserveStudy == null)
+        {
+            <MudCardContent>
+                <MudAlert Severity="Severity.Error">Reserve study not found</MudAlert>
+            </MudCardContent>
+        }
+        else
+        {
+            <MudCardContent>
+                <MudText Class="mb-4">
+                    Financial Information for <strong>@reserveStudy.Community?.Name</strong>
+                </MudText>
+                
+                <EditForm Model="@financialInfo" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField Label="Current Reserve Fund Balance ($)" 
+                                       @bind-Value="financialInfo.CurrentReserveFundBalance"
+                                       Required="true"
+                                       Format="F2"
+                                       Variant="Variant.Outlined" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="6">
+                            <MudNumericField Label="Annual Contribution ($)" 
+                                       @bind-Value="financialInfo.AnnualContribution"
+                                       Required="true"
+                                       Format="F2"
+                                       Variant="Variant.Outlined" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="6">
+                            <MudNumericField Label="Projected Annual Expenses ($)" 
+                                       @bind-Value="financialInfo.ProjectedAnnualExpenses"
+                                       Format="F2"
+                                       Variant="Variant.Outlined" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="int" Label="Fiscal Year Start Month" 
+                                      @bind-Value="financialInfo.FiscalYearStartMonth"
+                                      Variant="Variant.Outlined">
+                                <MudSelectItem Value="1">January</MudSelectItem>
+                                <MudSelectItem Value="2">February</MudSelectItem>
+                                <MudSelectItem Value="3">March</MudSelectItem>
+                                <MudSelectItem Value="4">April</MudSelectItem>
+                                <MudSelectItem Value="5">May</MudSelectItem>
+                                <MudSelectItem Value="6">June</MudSelectItem>
+                                <MudSelectItem Value="7">July</MudSelectItem>
+                                <MudSelectItem Value="8">August</MudSelectItem>
+                                <MudSelectItem Value="9">September</MudSelectItem>
+                                <MudSelectItem Value="10">October</MudSelectItem>
+                                <MudSelectItem Value="11">November</MudSelectItem>
+                                <MudSelectItem Value="12">December</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField Label="Financial Document URLs (one per line)" 
+                                         @bind-Value="financialInfo.FinancialDocumentUrls"
+                                         Variant="Variant.Outlined"
+                                         Lines="3" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField Label="Comments" 
+                                         @bind-Value="financialInfo.Comments"
+                                         Variant="Variant.Outlined"
+                                         Lines="3" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" Class="d-flex justify-end">
+                            <MudButton Variant="Variant.Filled" 
+                                     Color="Color.Primary" 
+                                     ButtonType="ButtonType.Submit"
+                                     Disabled="isSaving">
+                                @if (isSaving)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Submitting</MudText>
+                                }
+                                else
+                                {
+                                    <MudText>Submit Financial Information</MudText>
+                                }
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </EditForm>
+            </MudCardContent>
+        }
+    </MudCard>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid studyId { get; set; }
+    
+    private bool isLoading = true;
+    private bool isSaving = false;
+    
+    private ReserveStudy? reserveStudy;
+    private Models.FinancialInfo financialInfo = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReserveStudy();
+    }
+    
+    private async Task LoadReserveStudy()
+    {
+        isLoading = true;
+        try
+        {
+            reserveStudy = await ReserveStudyService.GetReserveStudyByIdAsync(studyId);
+            if (reserveStudy != null)
+            {
+                // Pre-populate financial info if needed
+                financialInfo.ReserveStudyId = studyId;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private async Task HandleValidSubmit()
+    {
+        isSaving = true;
+        try
+        {
+            var result = await WorkflowService.SubmitFinancialInfoAsync(studyId, financialInfo);
+            if (result)
+            {
+                Snackbar.Add("Financial information submitted successfully", Severity.Success);
+                Navigation.NavigateTo($"/reservestudies/{studyId}");
+            }
+            else
+            {
+                Snackbar.Add("Failed to submit financial information", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}
