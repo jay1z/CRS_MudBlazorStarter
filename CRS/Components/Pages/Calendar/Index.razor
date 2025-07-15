@@ -41,7 +41,7 @@
 
             <MudItem xs="12">
                 <MudPaper Elevation="0">
-                    <MudCalendar @ref="calendar" Outlined="true" CurrentDay="@currentDate" Items="@events" ItemClicked="@OnEventClick" CellClicked="@OnDayClick">
+                    <MudCalendar @ref="calendar" Outlined="true" CurrentDay="@currentDate" Items="@events" @* ItemClicked="@OnEventClick" *@ CellClicked="@OnDayClick">
                         <CellTemplate>
                             <div style="width: 100%; height: 100%; border: 2px solid @GetColor(((CustomItem)context).Color)">
                                 <div style="background-color: @GetColor(((CustomItem)context).Color)">
@@ -60,7 +60,7 @@
 </MudContainer>
 
 @code {
-    private MudCalendar calendar;
+    private MudCalendar<CustomItem> calendar;
     private DateTime currentDate = DateTime.Now;
     private List<CustomItem> events = new();
     // Dictionary to store user information for quick lookup

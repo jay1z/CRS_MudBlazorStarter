@@ -4,6 +4,7 @@ namespace CRS.Data {
     public class ApplicationUser : IdentityUser<Guid> {
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
+        public string? Title { get; set; }
         public IList<string>? Roles { get; set; }
         public StatusEnum Status { get; set; } = StatusEnum.Active;
 

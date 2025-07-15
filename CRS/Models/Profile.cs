@@ -5,13 +5,13 @@ using CRS.Data;
 
 namespace CRS.Models {
     public class Profile : BaseModel {
-        public ApplicationUser User { get; set; }
+        public required ApplicationUser User { get; set; }
         [ForeignKey(nameof(ApplicationUser))] public Guid ApplicationUserId { get; set; }
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
-        [DataType(DataType.EmailAddress)] public string? Email { get; set; }
-        [DataType(DataType.PhoneNumber)] public string? Phone { get; set; }
-        public string? Extension { get; set; }
+        //public string? FirstName { get; set; }
+        //public string? LastName { get; set; }
+        //[DataType(DataType.EmailAddress)] public string? Email { get; set; }
+        //[DataType(DataType.PhoneNumber)] public string? Phone { get; set; }
+        //public string? Extension { get; set; }
         [DataType(DataType.Text)] public string? Notes { get; set; }
 
         public string? Street { get; set; }
@@ -26,12 +26,12 @@ namespace CRS.Models {
         }
         public string FullName {
             get {
-                return $"{FirstName} {LastName}";
+                return $"{User.FirstName} {User.LastName}";
             }
         }
         public string FullNameInverted {
             get {
-                return $"{LastName}, {FirstName}";
+                return $"{User.LastName}, {User.FirstName}";
             }
         }
     }

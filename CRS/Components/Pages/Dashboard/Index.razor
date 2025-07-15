@@ -12,10 +12,9 @@
 @inject ISnackbar Snackbar
 @inject IDashboardService DashboardService
 @inject IReserveStudyService ReserveStudyService
-@inject IKanbanService KanbanService
-@inject IDialogService DialogService
-@inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -25,8 +24,7 @@
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
             <MudText Typo="Typo.h5" Class="mt-4">Loading Dashboard...</MudText>
         </MudPaper>
-    }
-    else {
+    } else {
         <MudCard Elevation="0" Outlined="false">
             <MudCardHeader>
                 <CardHeaderContent>
@@ -52,8 +50,7 @@
                                     </MudSelectItem>
                                 }
                             </MudSelect>
-                        }
-                        else {
+                        } else {
                             <MudAlert Severity="Severity.Info" Class="mb-4">No reserve studies available for your account.</MudAlert>
                         }
                     </MudItem>
@@ -75,205 +72,85 @@
                                     }
                                 </MudPaper>
                             </MudItem>
-                        }
-                        else {
+                        } else {
                             <MudItem xs="12" Class="mb-3">
                                 <MudPaper Elevation="0" Class="pa-3 d-flex align-center">
                                     <MudIcon Icon="@Icons.Material.Filled.ViewList" Color="Color.Info" Class="mr-3" />
                                     <div class="flex-grow-1">
                                         <MudText Typo="Typo.subtitle1">Viewing All Reserve Studies</MudText>
-                                        <MudText Typo="Typo.caption">Tasks from all active reserve studies are displayed below</MudText>
+                                        <MudText Typo="Typo.caption">Select a specific study to view detailed progress</MudText>
                                     </div>
                                 </MudPaper>
                             </MudItem>
                         }
 
-                        <!-- Kanban Board Section -->
+                        <!-- Workflow Status Chart Section -->
                         <MudItem xs="12">
-                            <MudCard Elevation="2" Class="mb-6">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">Task Board</MudText>
-                                    </CardHeaderContent>
-                                    <CardHeaderActions>
-                                        <MudTooltip Text="Refresh Tasks">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Default" OnClick="RefreshKanbanTasks" Disabled="_isRefreshing" />
-                                        </MudTooltip>
-                                    </CardHeaderActions>
-                                </MudCardHeader>
-                                <MudCardContent Style="padding-bottom: 16px; overflow: auto;">
-                                    <MudText Class="mb-4">
-                                        Tasks are automatically generated based on reserve study status and can only be @(_canEditTasks ? "edited or " : "")moved between statuses.
-                                        <MudText Typo="Typo.caption" Class="d-block mt-1 mud-text-secondary">
-                                            Click the refresh button to see updates made by other users.
-                                        </MudText>
-                                    </MudText>
+                            @if (_selectedReserveStudy == "all") {
+                                <MudAlert Severity="Severity.Info" Class="mb-4">
+                                    Please select a specific reserve study to view its timeline chart.
+                                </MudAlert>
+                            } else if (_currentStudy != null) {
+                                <WorkflowStatusChart ReserveStudy="_currentStudy" ChartId="@($"chart-{_currentStudy.Id}")" />
+                            }
+                        </MudItem>
 
-                                    @if (_selectedReserveStudy == "all") {
-                                        <MudAlert Severity="Severity.Info" Class="mb-4">
-                                            When viewing all studies, tasks cannot be moved. Select a specific study to enable task management.
-                                        </MudAlert>
-                                    }
-
-                                    @if (IsStudyCompleted()) {
-                                        <MudAlert Severity="Severity.Success" Class="mb-4">This reserve study is marked as complete. Tasks are in read-only mode.</MudAlert>
-                                    }
-
-                                    @if (kanbanTasks.Count == 0) {
-                                        <MudAlert Severity="Severity.Info" Class="mb-4">
-                                            No tasks are currently available for this reserve study.
-                                            @if (_shouldShowGenerateTasksButton) {
-                                                <MudButton Class="ml-4" Variant="Variant.Text" Color="Color.Primary" OnClick="GenerateTasksForCurrentStudy">Generate Tasks</MudButton>
-                                            }
-                                        </MudAlert>
-                                    }
-                                    else {
-                                        <div class="d-flex justify-content-between align-center mb-4">
-                                            <MudText Typo="Typo.h6">Specialists</MudText>
-                                            <div>
-                                                @if (kanbanTasks.Any()) {
-                                                    <MudButton Variant="Variant.Text" OnClick="@(() => _kanbanFilter = !_kanbanFilter)" StartIcon="@(_kanbanFilter ? Icons.Material.Filled.FilterAlt : Icons.Material.Filled.FilterAltOff)" Color="Color.Secondary" Size="Size.Small" Class="ml-4">
-                                                        @(_kanbanFilter ? "Filter On" : "Filter Off")
-                                                    </MudButton>
-                                                }
-                                            </div>
-                                        </div>
-
-                                        @if (_kanbanFilter) {
-                                            <MudGrid Class="mb-3">
-                                                <MudItem xs="12" md="4">
-                                                    <MudSelect T="string" Label="Filter by Status" Value="@_statusFilter" ValueChanged="@(value => FilterChanged("status", value))" Clearable="true" AdornmentIcon="@Icons.Material.Filled.FilterList">
-                                                        @foreach (var status in Enum.GetValues(typeof(KanbanStatus)).Cast<KanbanStatus>()) {
-                                                            <MudSelectItem Value="@status.ToString()">@GetStatusDisplayName(status)</MudSelectItem>
-                                                        }
-                                                    </MudSelect>
-                                                </MudItem>
-                                                <MudItem xs="12" md="4">
-                                                    <MudSelect T="string" Label="Filter by Priority" Value="@_priorityFilter" ValueChanged="@(value => FilterChanged("priority", value))" Clearable="true" AdornmentIcon="@Icons.Material.Filled.FilterList">
-                                                        @foreach (var priority in Enum.GetValues(typeof(Priority)).Cast<Priority>()) {
-                                                            <MudSelectItem Value="@priority.ToString()">@priority.ToString()</MudSelectItem>
-                                                        }
-                                                    </MudSelect>
-                                                </MudItem>
-                                                <MudItem xs="12" md="4">
-                                                    <MudSelect T="string" Label="Filter by Assignee" Value="@_assigneeFilter" ValueChanged="@(value => FilterChanged("assignee", value))" Clearable="true" AdornmentIcon="@Icons.Material.Filled.FilterList">
-                                                        <MudSelectItem Value="@("all")">Show All Swimlanes</MudSelectItem>
-                                                        <MudSelectItem Value="@("unassigned")">Unassigned</MudSelectItem>
-                                                        @foreach (var specialist in specialists) {
-                                                            <MudSelectItem Value="@specialist.Id.ToString()">@specialist.FullName</MudSelectItem>
-                                                        }
-                                                    </MudSelect>
-                                                </MudItem>
-                                            </MudGrid>
-                                        }
-
-                                        <!-- Column Headers -->
-                                        <div class="d-flex flex-row kanban-header mb-2">
-                                            <div class="assignee-column">
-                                            </div>
-                                            @foreach (var status in Enum.GetValues(typeof(KanbanStatus)).Cast<KanbanStatus>()) {
-                                                <div class="status-column">
-                                                    <MudText Typo="Typo.subtitle1" Class="text-center">
-                                                        <b>@GetStatusDisplayName(status)</b>
-                                                        <MudBadge Content="@GetStatusCount(status)" Color="GetStatusColor(status)" Overlap="true" Bordered="true" Class="ml-2" />
-                                                    </MudText>
-                                                </div>
-                                            }
-                                        </div>
-
-                                        <!-- Kanban with Swimlanes -->
-                                        <div class="kanban-container">
-                                            @foreach (var specialist in GetFilteredSwimlanes()) {
-                                                <MudExpansionPanel @key="specialist.AssigneeId" IsExpandable="true" Expanded=true Dense="true" Class="mb-2 swimlane-panel">
-                                                    <TitleContent>
-                                                        <div class="d-flex align-center justify-space-between width-100 pr-4">
-                                                            <div class="d-flex align-center">
-                                                                @if (!string.IsNullOrEmpty(specialist.AssigneeName)) {
-                                                                    <MudAvatar Size="Size.Small" Class="mr-2" Color="Color.Secondary">@GetInitials(specialist.AssigneeName)</MudAvatar>
-                                                                    <MudText>@specialist.AssigneeName</MudText>
-                                                                }
-                                                                else {
-                                                                    <MudAvatar Size="Size.Small" Class="mr-2" Color="Color.Default">?</MudAvatar>
-                                                                    <MudText>Unassigned</MudText>
-                                                                }
-                                                            </div>
-                                                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                                                @GetFilteredTasksForSwimlane(specialist.AssigneeId).Count tasks
-                                                            </MudText>
-                                                            @* <MudTooltip Text="Board Settings">
-                                                                <MudIconButton Icon="@Icons.Material.Filled.Settings" Color="Color.Default" OnClick="@(() => _showKanbanSettings = !_showKanbanSettings)" />
-                                                            </MudTooltip>
-
-                                                            @if (_showKanbanSettings) {
-                                                                <MudPaper Class="pa-3 mb-3">
-                                                                    <MudText Typo="Typo.subtitle1">Board Settings</MudText>
-                                                                    <MudSlider Min="100" Max="500" Step="50" Value="_swimlaneHeight" ValueChanged="@((value) => UpdateSwimlaneHeight(value))" Color="Color.Secondary" Class="mt-2">
-                                                                        Swimlane Height: @_swimlaneHeight px
-                                                                    </MudSlider>
-                                                                </MudPaper>
-                                                            } *@
-                                                        </div>
-                                                    </TitleContent>
-                                                    <ChildContent>
-                                                        <MudDropContainer T="KanbanTask" @ref="specialist.DropContainer" Items="@GetFilteredTasksForSwimlane(specialist.AssigneeId)" ItemsSelector="@((task, identifier) => GetDropzoneIdentifier(task) == identifier)" ItemDropped="@(dropInfo => TaskUpdated(dropInfo, specialist.AssigneeId))" Class="d-flex flex-row swimlane-row">
-                                                            <ChildContent>
-                                                                @foreach (var status in Enum.GetValues(typeof(KanbanStatus)).Cast<KanbanStatus>()) {
-                                                                    <div class="status-column">
-                                                                        <MudDropZone T="KanbanTask" Identifier="@GetDropzoneIdentifier(status, specialist.AssigneeId)" Class="@($"status-dropzone {GetDropZoneClass(status)}")" />
-                                                                    </div>
-                                                                }
-                                                            </ChildContent>
-                                                            <ItemRenderer>
-                                                                <MudPaper Elevation="2" Class="@($"pa-3 ma-2 rounded-lg kanban-task {GetTaskClass(context)} {(_selectedReserveStudy == "all" ? "non-draggable" : "")}")" Disabled="@(!CanMoveTasks())">
-                                                                    <div class="d-flex justify-space-between align-center">
-                                                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">@context.Title</MudText>
-                                                                        @if (_canEditTasks) {
-                                                                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                                                                                <MudMenuItem OnClick="() => EditTask(context)">Edit</MudMenuItem>
-                                                                                @if (_canDeleteTasks) {
-                                                                                    <MudMenuItem OnClick="() => DeleteTask(context)">Delete</MudMenuItem>
-                                                                                }
-                                                                            </MudMenu>
-                                                                        }
-                                                                    </div>
-
-                                                                    @if (!string.IsNullOrEmpty(context.Description)) {
-                                                                        <MudText Typo="Typo.body2" Class="mt-2 text-truncate">@context.Description</MudText>
-                                                                    }
-
-                                                                    @if (_selectedReserveStudy == "all" && context.ReserveStudyId.HasValue) {
-                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Dark" Class="mt-2">
-                                                                            @if (context.ReserveStudyId.HasValue)
-                                                                            {
-                                                                                @GetStudyDisplayNameSync(context.ReserveStudyId.Value)
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                <span>Unknown Study</span>
-                                                                            }
-                                                                        </MudChip>
-                                                                    }
-
-                                                                    <div class="d-flex justify-space-between align-center mt-2">
-                                                                        <MudChip T="Priority" Size="Size.Small" Color="@GetPriorityColor(context.Priority)">
-                                                                            @context.Priority
-                                                                        </MudChip>
-                                                                        @if (context.DueDate.HasValue) {
-                                                                            <MudText Typo="Typo.caption" Class="@GetDueDateClass(context.DueDate.Value)">
-                                                                                Due: @context.DueDate.Value.ToString("MMM dd")
-                                                                            </MudText>
-                                                                        }
-                                                                    </div>
-                                                                </MudPaper>
-                                                            </ItemRenderer>
-                                                        </MudDropContainer>
-                                                    </ChildContent>
-                                                </MudExpansionPanel>
-                                            }
-                                        </div>
-                                    }
-                                </MudCardContent>
-                            </MudCard>
+                        <!-- Task Summary Cards -->
+                        <MudItem xs="12">
+                            <MudGrid>
+                                <MudItem xs="12" md="6" lg="3">
+                                    <MudCard Elevation="2">
+                                        <MudCardHeader>
+                                            <CardHeaderAvatar>
+                                                <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Error" />
+                                            </CardHeaderAvatar>
+                                            <CardHeaderContent>
+                                                <MudText Typo="Typo.body1">Tasks To Do</MudText>
+                                                <MudText Typo="Typo.h5">@(_currentStudy != null ? GetTaskCountByStatus(KanbanStatus.Todo) : 0)</MudText>
+                                            </CardHeaderContent>
+                                        </MudCardHeader>
+                                    </MudCard>
+                                </MudItem>
+                                <MudItem xs="12" md="6" lg="3">
+                                    <MudCard Elevation="2">
+                                        <MudCardHeader>
+                                            <CardHeaderAvatar>
+                                                <MudIcon Icon="@Icons.Material.Filled.Autorenew" Color="Color.Warning" />
+                                            </CardHeaderAvatar>
+                                            <CardHeaderContent>
+                                                <MudText Typo="Typo.body1">In Progress</MudText>
+                                                <MudText Typo="Typo.h5">@(_currentStudy != null ? GetTaskCountByStatus(KanbanStatus.InProgress) : 0)</MudText>
+                                            </CardHeaderContent>
+                                        </MudCardHeader>
+                                    </MudCard>
+                                </MudItem>
+                                <MudItem xs="12" md="6" lg="3">
+                                    <MudCard Elevation="2">
+                                        <MudCardHeader>
+                                            <CardHeaderAvatar>
+                                                <MudIcon Icon="@Icons.Material.Filled.RateReview" Color="Color.Info" />
+                                            </CardHeaderAvatar>
+                                            <CardHeaderContent>
+                                                <MudText Typo="Typo.body1">In Review</MudText>
+                                                <MudText Typo="Typo.h5">@(_currentStudy != null ? GetTaskCountByStatus(KanbanStatus.Review) : 0)</MudText>
+                                            </CardHeaderContent>
+                                        </MudCardHeader>
+                                    </MudCard>
+                                </MudItem>
+                                <MudItem xs="12" md="6" lg="3">
+                                    <MudCard Elevation="2">
+                                        <MudCardHeader>
+                                            <CardHeaderAvatar>
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                                            </CardHeaderAvatar>
+                                            <CardHeaderContent>
+                                                <MudText Typo="Typo.body1">Completed</MudText>
+                                                <MudText Typo="Typo.h5">@(_currentStudy != null ? GetTaskCountByStatus(KanbanStatus.Done) : 0)</MudText>
+                                            </CardHeaderContent>
+                                        </MudCardHeader>
+                                    </MudCard>
+                                </MudItem>
+                            </MudGrid>
                         </MudItem>
                     }
                 </MudGrid>
@@ -281,90 +158,6 @@
         </MudCard>
     }
 </MudContainer>
-
-<style>
-    .kanban-container {
-    overflow-x: auto;
-    }
-
-    .kanban-header {
-    min-width: 1200px;
-    }
-
-    .assignee-column {
-    min-width: 200px;
-    flex: 0 0 200px;
-    }
-
-    .status-column {
-    min-width: 250px;
-    flex: 1 1 250px;
-    }
-
-    .swimlane-row {
-    min-width: 1000px;
-    min-height: 280px; /* Ensure consistent height */
-    display: flex; /* Ensure flex layout works properly */
-    }
-
-    .status-dropzone {
-    min-height: var(--swimlane-height, 250px);
-    height: auto;
-    border: 1px dashed rgba(0,0,0,0.12);
-    border-radius: 4px;
-    margin: 4px;
-    padding: 8px;
-    overflow-y: auto;
-    }
-
-    .kanban-task {
-    cursor: move;
-    margin-bottom: 8px !important;
-    }
-
-    .swimlane-panel {
-    width: 100%;
-    }
-
-    .todo-zone {
-    background-color: rgba(0, 0, 0, 0.02);
-    }
-
-    .done-zone {
-    background-color: rgba(0, 255, 0, 0.05);
-    }
-
-    .review-zone {
-    background-color: rgba(0, 0, 255, 0.05);
-    }
-
-    .inprogress-zone {
-    background-color: rgba(255, 165, 0, 0.05);
-    }
-
-    .task-overdue {
-    color: #f44336;
-    font-weight: bold;
-    }
-
-    .task-duesoon {
-    color: #ff9800;
-    }
-
-    .recent-task {
-    border-left: 3px solid #2196f3;
-    }
-
-    .critical-task {
-    border-left: 3px solid #f44336;
-    }
-
-    .non-draggable {
-    cursor: default !important;
-    opacity: 0.9;
-    }
-
-</style>
 
 @code {
     private bool _isLoading = true;
@@ -374,106 +167,28 @@
     private Timer? _refreshTimer;
     private ReserveStudy? _currentStudy;
     private bool _isRefreshing = false;
-
-    // Kanban related properties
-    private List<ApplicationUser> specialists = new();
-    private List<KanbanTask> kanbanTasks = new();
     private bool _shouldShowGenerateTasksButton;
-    private bool _canEditTasks;
-    private bool _canDeleteTasks;
-    private HashSet<Guid?> _expandedSwimlanes = new();
 
-    // Filtering properties
-    private bool _kanbanFilter = false;
-    private string? _statusFilter = null;
-    private string? _priorityFilter = null;
-    private string? _assigneeFilter = null;
-
-    private int _swimlaneHeight = 250;
-    private bool _showKanbanSettings = false;
-
+    // Simplified task tracking for status counts
+    private List<KanbanTask> kanbanTasks = new();
     private Dictionary<Guid, string> _studyNameCache = new();
     private const int MaxCacheSize = 200;
 
-    // Keep track of drop containers for each swimlane
-    private class SwimlaneInfo {
-        public Guid? AssigneeId { get; set; }
-        public string? AssigneeName { get; set; }
-        public MudDropContainer<KanbanTask>? DropContainer { get; set; }
-
-        public SwimlaneInfo(Guid? assigneeId, string? assigneeName) {
-            AssigneeId = assigneeId;
-            AssigneeName = assigneeName;
-        }
-    }
-
     protected override async Task OnInitializedAsync() {
         try {
-            await LoadSpecialistsAsync();
             await LoadReserveStudiesAsync();
 
             // Set up periodic refresh as a fallback (every 5 minutes)
             _refreshTimer = new Timer(async _ => {
                 try {
                     await InvokeAsync(async () => await RefreshData(showNotification: false));
-                }
-                catch (Exception ex) {
+                } catch (Exception ex) {
                     Console.WriteLine($"Error in refresh timer: {ex}");
                 }
             }, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             Console.WriteLine($"Error in OnInitializedAsync: {ex}");
             Snackbar.Add($"Error initializing dashboard: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task UpdateSwimlaneHeight(int height) {
-        _swimlaneHeight = height;
-        await JSRuntime.InvokeVoidAsync("eval", $@"document.documentElement.style.setProperty('--swimlane-height', '{height}px');");
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender) {
-        if (firstRender) {
-            await UpdateSwimlaneHeight(_swimlaneHeight);
-        }
-
-        // Check for any missing study names and load them
-        var tasksToLoad = new List<Task>();
-        foreach (var task in kanbanTasks.Where(t => t.ReserveStudyId.HasValue))        {
-            if (!_studyNameCache.ContainsKey(task.ReserveStudyId.Value))            {
-                tasksToLoad.Add(GetStudyDisplayName(task.ReserveStudyId.Value));
-            }
-        }
-    
-        if (tasksToLoad.Any())        {
-            await Task.WhenAll(tasksToLoad);
-            StateHasChanged();
-        }
-    }
-
-    private async Task RefreshSwimlanesAfterTaskChange() {
-        // Refresh the MudDropContainer instances for all affected swimlanes
-        var swimlanes = GetSwimlanes();
-        foreach (var swimlane in swimlanes) {
-            if (swimlane.DropContainer != null) {
-                // Ensure we're on the UI thread when updating the container
-                await InvokeAsync(() => {
-                    swimlane.DropContainer.Refresh();
-                });
-            }
-        }
-        // StateHasChanged also needs to be on the UI thread, but InvokeAsync does this for us
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task LoadSpecialistsAsync() {
-        try {
-            await UserState.InitializeAsync();
-            specialists = await UserState.GetUsersByRoleAsync("Specialist");
-        }
-        catch (Exception ex) {
-            Snackbar.Add($"Error loading specialists: {ex.Message}", Severity.Error);
         }
     }
 
@@ -486,11 +201,9 @@
             // Fetch studies based on role
             if (UserState.IsInRole("Admin")) {
                 _reserveStudies = await ReserveStudyService.GetAllReserveStudiesAsync();
-            }
-            else if (UserState.IsInRole("Specialist")) {
+            } else if (UserState.IsInRole("Specialist")) {
                 _reserveStudies = await ReserveStudyService.GetAssignedReserveStudiesAsync(userId);
-            }
-            else {
+            } else {
                 _reserveStudies = await ReserveStudyService.GetOwnedReserveStudiesAsync(userId);
             }
 
@@ -502,12 +215,10 @@
             if (_reserveStudies.Count > 0) {
                 _selectedReserveStudy = _reserveStudies[0].Id.ToString();
                 await LoadDashboardDataAsync();
-            }
-            else {
+            } else {
                 _isLoading = false;
             }
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             _isLoading = false;
             Snackbar.Add($"Error loading reserve studies: {ex.Message}", Severity.Error);
         }
@@ -529,74 +240,26 @@
             // Find the current study
             _currentStudy = _reserveStudies.FirstOrDefault(s => s.Id == studyId);
 
-            // Load Kanban tasks for the selected reserve study
-            await LoadKanbanTasksAsync(studyId);
-            _shouldShowGenerateTasksButton = await ShouldShowGenerateTasksButton();
-            _canEditTasks = await CanEditTasks();
-            _canDeleteTasks = await CanDeleteTasks();
+            // Load task data to update the summary cards
+            //await LoadKanbanTasksAsync(studyId);
+            //_shouldShowGenerateTasksButton = await ShouldShowGenerateTasksButton();
 
             _isLoading = false;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             _isLoading = false;
             Snackbar.Add($"Error loading dashboard data: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task LoadAllReserveStudiesDataAsync() {
-        try {
-            _isLoading = true;
-
-            // Get all tasks from all active studies
-            var tasks = new List<KanbanTask>();
-
-            foreach (var study in _reserveStudies) {
-                var studyTasks = await KanbanService.GetTasksForReserveStudyAsync(study.Id);
-                tasks.AddRange(studyTasks);
-            }
-
-            // Assign to kanban tasks
-            kanbanTasks = tasks;
-
-            // Use null for currentStudy when showing all studies
-            _currentStudy = null;
-
-            // Check permissions for tasks
-            _shouldShowGenerateTasksButton = false; // Can't generate tasks for "all studies" view
-            _canEditTasks = await CanEditTasks();
-            _canDeleteTasks = await CanDeleteTasks();
-
-            _isLoading = false;
-        }
-        catch (Exception ex) {
-            _isLoading = false;
-            Snackbar.Add($"Error loading all studies data: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task LoadKanbanTasksAsync(Guid studyId) {
-        try {
-            kanbanTasks = await KanbanService.GetTasksForReserveStudyAsync(studyId);
-        }
-        catch (Exception ex) {
-            Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
         }
     }
 
     private async Task OnReserveStudyChanged(string value) {
         _selectedReserveStudy = value;
 
-        // Reset filters when changing studies
-        _statusFilter = null;
-        _priorityFilter = null;
-        _assigneeFilter = null;
-
-
         if (value == "all") {
             // Special case for "All Reserve Studies" option
-            await LoadAllReserveStudiesDataAsync();
-        }
-        else {
+            _currentStudy = null;
+            kanbanTasks.Clear();
+            _isLoading = false;
+        } else {
             await LoadDashboardDataAsync();
         }
     }
@@ -610,247 +273,55 @@
             ClearStudyCache();
 
             if (!string.IsNullOrEmpty(_selectedReserveStudy) && Guid.TryParse(_selectedReserveStudy, out var studyId)) {
-                // Load tasks for the current study
-                await LoadKanbanTasksAsync(studyId);
-
-                // Update permissions in case user role changed
-                _shouldShowGenerateTasksButton = await ShouldShowGenerateTasksButton();
-                _canEditTasks = await CanEditTasks();
-                _canDeleteTasks = await CanDeleteTasks();
-
-                // Force UI refresh
-                await ForceReinitializeKanbanBoard();
+                // Reload the current study to refresh the chart data
+                await LoadDashboardDataAsync();
             }
 
             if (showNotification) {
                 Snackbar.Add("Dashboard data refreshed", Severity.Success);
             }
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             if (showNotification) {
                 Snackbar.Add($"Error refreshing data: {ex.Message}", Severity.Error);
             }
-        }
-        finally {
+        } finally {
             _isRefreshing = false;
         }
     }
 
-    // Get all swimlanes (specialists + unassigned)
-    private List<SwimlaneInfo> GetSwimlanes() {
-        var result = new List<SwimlaneInfo>();
+    //private async Task LoadKanbanTasksAsync(Guid studyId) {
+    //    try {
+    //        if (DashboardService.KanbanService != null)
+    //            kanbanTasks = await DashboardService.KanbanService.GetTasksForReserveStudyAsync(studyId);
+    //        else
+    //            kanbanTasks = new List<KanbanTask>();
+    //    } catch (Exception ex) {
+    //        Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
+    //        kanbanTasks = new List<KanbanTask>();
+    //    }
+    //}
 
-        // Add all specialists who have tasks assigned to them
-        var specialistsWithTasks = kanbanTasks
-            .Where(t => t.AssigneeId.HasValue)
-            .Select(t => (t.AssigneeId, t.AssigneeName))
-            .Distinct()
-            .ToList();
-
-        // Add all available specialists (even those without tasks)
-        foreach (var specialist in specialists) {
-            if (!specialistsWithTasks.Any(s => s.AssigneeId == specialist.Id)) {
-                result.Add(new SwimlaneInfo(specialist.Id, specialist.FullName));
-            }
-        }
-
-        // Add specialists with tasks
-        foreach (var (assigneeId, assigneeName) in specialistsWithTasks) {
-            result.Add(new SwimlaneInfo(assigneeId, assigneeName));
-        }
-
-        // Add the "Unassigned" swimlane at the end
-        result.Add(new SwimlaneInfo(null, null));
-
-        return result;
+    private int GetTaskCountByStatus(KanbanStatus status) {
+        return kanbanTasks.Count(t => t.Status == status && !t.DateDeleted.HasValue);
     }
 
-    // Get filtered swimlanes based on current filters
-    private List<SwimlaneInfo> GetFilteredSwimlanes() {
-        var allSwimlanes = GetSwimlanes();
-
-        // If assignee filter is active, only show matching swimlane
-        if (!string.IsNullOrEmpty(_assigneeFilter)) {
-            // Special case: "all" shows all swimlanes
-            if (_assigneeFilter == "all") {
-                return allSwimlanes;
-            }
-            else if (_assigneeFilter == "unassigned") {
-                return allSwimlanes.Where(s => s.AssigneeId == null).ToList();
-            }
-            else if (Guid.TryParse(_assigneeFilter, out var assigneeId)) {
-                return allSwimlanes.Where(s => s.AssigneeId == assigneeId).ToList();
-            }
-        }
-
-        // Only show swimlanes that have tasks after all filters
-        return allSwimlanes.Where(s => GetFilteredTasksForSwimlane(s.AssigneeId).Count > 0).ToList();
-    }
-
-    // Get tasks for a specific swimlane
-    private List<KanbanTask> GetTasksForSwimlane(Guid? assigneeId) {
-        return kanbanTasks.Where(t =>
-            (assigneeId == null && t.AssigneeId == null) ||
-            (assigneeId != null && t.AssigneeId == assigneeId)
-        ).ToList();
-    }
-
-    private string GetTaskTooltip(KanbanTask task) {
-        if (_selectedReserveStudy == "all" && task.ReserveStudyId.HasValue) {
-            var study = _reserveStudies.FirstOrDefault(s => s.Id == task.ReserveStudyId.Value);
-            if (study != null) {
-                return $"From: {GetStudyDisplayName(study)}";
-            }
-        }
-        return string.Empty;
-    }
-
-    // Get filtered tasks for a specific swimlane
-    private List<KanbanTask> GetFilteredTasksForSwimlane(Guid? assigneeId) {
-        var tasks = GetTasksForSwimlane(assigneeId);
-
-        // Apply status filter
-        if (!string.IsNullOrEmpty(_statusFilter) && Enum.TryParse<KanbanStatus>(_statusFilter, out var status)) {
-            tasks = tasks.Where(t => t.Status == status).ToList();
-        }
-
-        // Apply priority filter
-        if (!string.IsNullOrEmpty(_priorityFilter) && Enum.TryParse<Priority>(_priorityFilter, out var priority)) {
-            tasks = tasks.Where(t => t.Priority == priority).ToList();
-        }
-
-        return tasks;
-    }
-
-    // Handler for filter changes
-    private void FilterChanged(string filterType, string? value) {
-        switch (filterType) {
-            case "status":
-                _statusFilter = value;
-                break;
-            case "priority":
-                _priorityFilter = value;
-                break;
-            case "assignee":
-                _assigneeFilter = value;
-                break;
-        }
-
-        StateHasChanged();
-    }
-
-    // Get count of tasks with a specific status
-    private int GetStatusCount(KanbanStatus status) {
-        return kanbanTasks.Count(t => t.Status == status);
-    }
-
-    // Generate a unique identifier for a dropzone
-    private string GetDropzoneIdentifier(KanbanStatus status, Guid? assigneeId) {
-        return $"{status}|{assigneeId?.ToString() ?? "unassigned"}";
-    }
-
-    // Get the dropzone identifier for a task
-    private string GetDropzoneIdentifier(KanbanTask task) {
-        return $"{task.Status}|{task.AssigneeId?.ToString() ?? "unassigned"}";
-    }
-
-    // Check if a swimlane should be expanded
-    private bool IsSwimLaneExpanded(Guid? assigneeId) {
-        var key = assigneeId ?? Guid.Empty;
-        return _expandedSwimlanes.Contains(key);
-    }
-
-    // Get CSS class for drop zones
-    private string GetDropZoneClass(KanbanStatus status) {
-        return status switch {
-            KanbanStatus.Todo => "todo-zone",
-            KanbanStatus.InProgress => "inprogress-zone",
-            KanbanStatus.Review => "review-zone",
-            KanbanStatus.Done => "done-zone",
-            _ => string.Empty
-        };
-    }
-
-    // Get CSS class for due dates
-    private string GetDueDateClass(DateTime dueDate) {
-        var daysUntilDue = (dueDate.Date - DateTime.Now.Date).TotalDays;
-        if (daysUntilDue < 0) return "task-overdue";
-        if (daysUntilDue <= 3) return "task-duesoon";
-        return string.Empty;
-    }
-
-    // Get CSS class for tasks
-    private string GetTaskClass(KanbanTask task) {
-        if (task.Priority == Priority.Critical) return "critical-task";
-        if (task.DateCreated.HasValue && (DateTime.Now - task.DateCreated.Value).TotalDays <= 1) return "recent-task";
-        return string.Empty;
-    }
-
-    // Get color for status column header badges
-    private Color GetStatusColor(KanbanStatus status) {
-        return status switch {
-            KanbanStatus.Todo => Color.Default,
-            KanbanStatus.InProgress => Color.Warning,
-            KanbanStatus.Review => Color.Info,
-            KanbanStatus.Done => Color.Success,
-            _ => Color.Default
-        };
-    }
-
-    // For the async method that looks up by ID
-    private async Task<string> GetStudyDisplayName(Guid studyId) {
-        // Check cache first
-        if (_studyNameCache.TryGetValue(studyId, out var cachedName)) {
-            return cachedName;
-        }
-    
-        try {
-            var study = await ReserveStudyService.GetReserveStudyByIdAsync(studyId);
-            if (study == null) {
-                return "Unknown Study";
-            }
-        
-            var result = GetStudyDisplayName(study);
-            _studyNameCache[studyId] = result; // Cache the result
-            return result;
-        }
-        catch (Exception ex) {
-            Snackbar.Add($"Error loading study: {ex.Message}", Severity.Error);
-            return "Error Loading Study";
-        }
-    }
-
-    // For the synchronous method that takes a study object
     private string GetStudyDisplayName(ReserveStudy study) {
         // Cache the result for this study ID for future lookups
         var result = string.Empty;
 
         if (study.Community?.Name != null && study.DateCreated.HasValue) {
             result = $"{study.Community.Name} - {study.DateCreated.Value.ToShortDateString()}";
-        }
-        else if (study.Community?.Name != null) {
+        } else if (study.Community?.Name != null) {
             result = study.Community.Name;
-        }
-        else if (study.DateCreated.HasValue) {
+        } else if (study.DateCreated.HasValue) {
             result = $"Study {study.Id} - {study.DateCreated.Value.ToShortDateString()}";
-        }
-        else {
+        } else {
             result = $"Study {study.Id}";
         }
 
-        // Cache the result 
+        // Cache the result
         _studyNameCache[study.Id] = result;
         return result;
-    }
-
-    private string GetStudyDisplayNameSync(Guid studyId) {
-        // Check cache first - this will be synchronous
-        if (_studyNameCache.TryGetValue(studyId, out var cachedName)) {
-            return cachedName;
-        }
-    
-        // Return a placeholder while loading
-        return "Loading...";
     }
 
     private void PreloadStudyNameCache() {
@@ -859,24 +330,10 @@
         }
     }
 
-    private void AddToCache(Guid id, string name) {
-        // Implement basic cache size management
-        if (_studyNameCache.Count >= MaxCacheSize) {
-            // Remove 20% of entries when cache gets full
-            var keysToRemove = _studyNameCache.Keys.Take(_studyNameCache.Count / 5).ToList();
-            foreach (var key in keysToRemove) {
-                _studyNameCache.Remove(key);
-            }
-        }
-    
-        _studyNameCache[id] = name;
-    }
-
     private void ClearStudyCache() {
         _studyNameCache.Clear();
     }
 
-    // Task generation methods
     private async Task<bool> ShouldShowGenerateTasksButton() {
         // Show the generate tasks button if:
         // 1. Current study exists
@@ -888,96 +345,6 @@
                (UserState.IsInRole("Admin") || UserState.IsInRole("Specialist"));
     }
 
-    private async Task<List<KanbanTask>> GenerateTasksBasedOnStudyStatus(Guid studyId) {
-        var newTasks = new List<KanbanTask>();
-        var existingTasks = await KanbanService.GetTasksForReserveStudyAsync(studyId);
-
-        // Get the current study for detailed information
-        var study = await ReserveStudyService.GetReserveStudyByIdAsync(studyId);
-        if (study == null) {
-            throw new Exception("Reserve study not found");
-        }
-
-        // Get a specialist to assign tasks to (if available)
-        ApplicationUser? specialist = null;
-        if (study.SpecialistUserId.HasValue) {
-            specialist = specialists.FirstOrDefault(s => s.Id == study.SpecialistUserId.Value);
-        }
-        else if (specialists.Any()) {
-            specialist = specialists.First(); // Assign to first specialist if none specifically assigned
-        }
-
-        // Define standard tasks based on study status
-        var tasksToGenerate = new List<(string Title, string Description, KanbanStatus Status, Priority Priority, int DueDays)>();
-
-        // Common tasks needed for any study
-        tasksToGenerate.Add(("Initial Study Review", "Review all submitted documents and property information", KanbanStatus.Todo, Priority.High, 7));
-
-        // Add tasks based on study status
-        if (!study.IsApproved) {
-            // Tasks for studies in progress
-            tasksToGenerate.Add(("Site Inspection", "Visit the property to inspect all components", KanbanStatus.Todo, Priority.High, 14));
-            tasksToGenerate.Add(("Financial Analysis", "Analyze current reserve fund and anticipated expenditures", KanbanStatus.Todo, Priority.Medium, 21));
-
-            // Generate element-specific tasks based on study elements
-            if (study.ReserveStudyBuildingElements?.Any() == true) {
-                tasksToGenerate.Add(("Building Elements Assessment",
-                    $"Evaluate condition of {study.ReserveStudyBuildingElements.Count} building elements",
-                    KanbanStatus.Todo, Priority.Medium, 10));
-            }
-
-            if (study.ReserveStudyCommonElements?.Any() == true) {
-                tasksToGenerate.Add(("Common Elements Assessment",
-                    $"Evaluate condition of {study.ReserveStudyCommonElements.Count} common elements",
-                    KanbanStatus.Todo, Priority.Medium, 12));
-            }
-
-            // Check for elements that need service
-            var elementsNeedingService = study.ReserveStudyElements?.Where(e => e.NeedsService).ToList();
-            if (elementsNeedingService?.Any() == true) {
-                tasksToGenerate.Add(("Service Request Follow-up",
-                    $"Follow up on {elementsNeedingService.Count()} elements needing service",
-                    KanbanStatus.Todo, Priority.High, 5));
-            }
-        }
-        else if (study.IsApproved && !study.IsComplete) {
-            // Tasks for approved but not completed studies
-            tasksToGenerate.Add(("Prepare Final Report", "Compile all findings into final reserve study report", KanbanStatus.Todo, Priority.Critical, 7));
-            tasksToGenerate.Add(("Client Review Meeting", "Schedule meeting to review findings with client", KanbanStatus.Todo, Priority.High, 14));
-        }
-
-        // Check for community-specific tasks
-        if (study.Community != null) {
-            tasksToGenerate.Add(($"Review {study.Community.Name} Specific Requirements",
-                "Check for any special requirements or local regulations",
-                KanbanStatus.Todo, Priority.Medium, 5));
-        }
-
-        // Create tasks that don't already exist
-        foreach (var taskDefinition in tasksToGenerate) {
-            // Check if this task already exists
-            bool taskExists = existingTasks.Any(t =>
-                t.Title == taskDefinition.Title &&
-                t.Description == taskDefinition.Description &&
-                !t.DateDeleted.HasValue); // Ensure we're not counting deleted tasks
-
-            if (!taskExists) {
-                newTasks.Add(new KanbanTask {
-                        Title = taskDefinition.Title,
-                        Description = taskDefinition.Description,
-                        Status = taskDefinition.Status,
-                        Priority = taskDefinition.Priority,
-                        DueDate = DateTime.Now.AddDays(taskDefinition.DueDays),
-                        AssigneeId = specialist?.Id,
-                        AssigneeName = specialist?.FullName,
-                        ReserveStudyId = studyId
-                    });
-            }
-        }
-
-        return newTasks;
-    }
-
     private async Task GenerateTasksForCurrentStudy() {
         if (_currentStudy == null || !Guid.TryParse(_selectedReserveStudy, out var studyId)) {
             Snackbar.Add("No valid reserve study selected", Severity.Warning);
@@ -986,36 +353,29 @@
 
         try {
             _isTaskGenerating = true;
-            var tasksToCreate = await GenerateTasksBasedOnStudyStatus(studyId);
+            var tasksToCreate = await DashboardService.GenerateTasksBasedOnStudyStatusAsync(studyId);
 
             if (tasksToCreate.Count == 0) {
                 Snackbar.Add("All required tasks already exist for this study", Severity.Info);
                 return;
             }
 
-            // Create tasks one by one
-            foreach (var task in tasksToCreate) {
-                await KanbanService.CreateTaskAsync(task);
-            }
+            // Create tasks using the DashboardService
+            await DashboardService.CreateTasksForStudyAsync(tasksToCreate);
 
-            // Refresh the kanban board
-            await LoadKanbanTasksAsync(studyId);
-            await ForceReinitializeKanbanBoard();
+            // Refresh the task data
+            //await LoadKanbanTasksAsync(studyId);
+            //StateHasChanged();
 
             Snackbar.Add($"Successfully generated {tasksToCreate.Count} new tasks for this study", Severity.Success);
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             Snackbar.Add($"Error generating tasks: {ex.Message}", Severity.Error);
-        }
-        finally {
+        } finally {
             _isTaskGenerating = false;
         }
     }
 
     // Study status-related methods
-    private bool IsStudyApproved() => _currentStudy?.IsApproved ?? false;
-    private bool IsStudyCompleted() => _currentStudy?.IsComplete ?? false;
-
     private string GetStudyStatusText() {
         if (_currentStudy == null) return "Unknown";
 
@@ -1035,7 +395,7 @@
             return $"This study was approved on {_currentStudy.DateApproved?.ToString("MM/dd/yyyy") ?? "N/A"}";
         }
 
-        return "This study is currently in progress. Tasks can be managed.";
+        return "This study is currently in progress.";
     }
 
     private string GetStudyStatusIcon() {
@@ -1054,304 +414,10 @@
         return Color.Primary;
     }
 
-    // Task permissions based on study status
-    private async Task<bool> CanEditTasks() {
-        if (_currentStudy == null) return false;
-        if (_currentStudy.IsComplete) return false;
-        await UserState.InitializeAsync();
-        return UserState.IsInRole("Admin") || UserState.IsInRole("Specialist");
-    }
-
-    private bool CanMoveTasks() {
-        if (_selectedReserveStudy == "all") return false;
-        if (_currentStudy == null) return false;
-        if (_currentStudy.IsComplete) return false;
-        return true;
-    }
-
-    private async Task<bool> CanDeleteTasks() {
-        if (_currentStudy == null) return false;
-        if (_currentStudy.IsComplete) return false;
-        await UserState.InitializeAsync();
-        return UserState.IsInRole("Admin");
-    }
-
-    private string GetStatusDisplayName(KanbanStatus status) {
-        return status switch {
-            KanbanStatus.Todo => "To Do",
-            KanbanStatus.InProgress => "In Progress",
-            KanbanStatus.Review => "Review",
-            KanbanStatus.Done => "Done",
-            _ => status.ToString()
-        };
-    }
-
-    private Color GetPriorityColor(Priority priority) {
-        return priority switch {
-            Priority.Low => Color.Success,
-            Priority.Medium => Color.Info,
-            Priority.High => Color.Warning,
-            Priority.Critical => Color.Error,
-            _ => Color.Default
-        };
-    }
-
-    private string GetInitials(string name) {
-        if (string.IsNullOrWhiteSpace(name)) return "?";
-
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
-
-        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
-    }
-
-    private async Task TaskUpdated(MudItemDropInfo<KanbanTask> dropInfo, Guid? swimlaneAssigneeId) {
-        if (dropInfo.Item == null || !CanMoveTasks()) return;
-
-        try {
-            var task = dropInfo.Item;
-            var identifier = dropInfo.DropzoneIdentifier;
-            var parts = identifier.Split('|');
-
-            if (parts.Length < 2) {
-                return;
-            }
-
-            var targetStatus = Enum.Parse<KanbanStatus>(parts[0]);
-            var targetAssigneeId = parts[1] == "unassigned" ? (Guid?)null : Guid.Parse(parts[1]);
-
-            // If task is being moved between statuses or assignees
-            bool statusChanged = task.Status != targetStatus;
-            bool assigneeChanged =
-                (task.AssigneeId == null && targetAssigneeId != null) ||
-                (task.AssigneeId != null && targetAssigneeId == null) ||
-                (task.AssigneeId != null && targetAssigneeId != null && task.AssigneeId != targetAssigneeId);
-
-            if (statusChanged || assigneeChanged) {
-                // Only ask for confirmation if the assignee is being changed
-                bool shouldProceed = !assigneeChanged;
-
-                if (assigneeChanged) {
-                    // Get the new assignee name
-                    string? newAssigneeName = null;
-                    if (targetAssigneeId != null) {
-                        var specialist = specialists.FirstOrDefault(s => s.Id == targetAssigneeId);
-                        newAssigneeName = specialist?.FullName;
-                    }
-
-                    // Ask for confirmation
-                    var parameters = new DialogParameters {
-                    { "ContentText", $"Are you sure you want to {(task.AssigneeId == null ? "assign" : "reassign")} this task to {(newAssigneeName ?? "Unassigned")}?" },
-                    { "ButtonText", "Confirm" },
-                    { "Color", Color.Primary }
-                };
-
-                    var dialog = await DialogService.ShowAsync<KanbanConfirmationDialog>("Confirm Assignment", parameters);
-                    var result = await dialog.Result;
-                    shouldProceed = !result.Canceled;
-                }
-
-                if (shouldProceed) {
-                    // Get the new assignee name
-                    string? newAssigneeName = null;
-                    if (targetAssigneeId != null) {
-                        var specialist = specialists.FirstOrDefault(s => s.Id == targetAssigneeId);
-                        newAssigneeName = specialist?.FullName;
-                    }
-
-                    // Save the original values in case we need to revert
-                    var originalStatus = task.Status;
-                    var originalAssigneeId = task.AssigneeId;
-                    var originalAssigneeName = task.AssigneeName;
-
-                    // Update the task in the UI immediately for responsive feedback
-                    task.Status = targetStatus;
-                    task.AssigneeId = targetAssigneeId;
-                    task.AssigneeName = newAssigneeName;
-
-                    // Need to refresh containers when swimlanes change
-                    await RefreshSwimlanesAfterTaskChange();
-
-                    try {
-                        // Update the task in the database
-                        await KanbanService.UpdateTaskAssignmentAsync(
-                            task.Id,
-                            targetAssigneeId,
-                            newAssigneeName,
-                            statusChanged ? targetStatus : null);
-
-                        var statusMessage = statusChanged ? $" moved to {GetStatusDisplayName(targetStatus)}" : "";
-                        var assigneeMessage = assigneeChanged ? $" {(statusChanged ? "and " : "")}assigned to {(newAssigneeName ?? "Unassigned")}" : "";
-
-                        Snackbar.Add($"Task{statusMessage}{assigneeMessage}", Severity.Success);
-                    }
-                    catch (Exception ex) {
-                        // Revert the UI changes if database update fails
-                        task.Status = originalStatus;
-                        task.AssigneeId = originalAssigneeId;
-                        task.AssigneeName = originalAssigneeName;
-                        await RefreshSwimlanesAfterTaskChange();
-
-                        Snackbar.Add($"Error updating task: {ex.Message}", Severity.Error);
-                    }
-                }
-                else {
-                    // Revert the drop operation
-                    StateHasChanged();
-                }
-            }
-        }
-        catch (Exception ex) {
-            Snackbar.Add($"Error updating task: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task EditTask(KanbanTask task) {
-        if (!_canEditTasks) {
-            Snackbar.Add("You don't have permission to edit tasks for this reserve study", Severity.Warning);
-            return;
-        }
-
-        if (string.IsNullOrEmpty(_selectedReserveStudy) || !Guid.TryParse(_selectedReserveStudy, out var studyId)) {
-            Snackbar.Add("Please select a valid reserve study first", Severity.Warning);
-            return;
-        }
-
-        // Create a clone of the task to avoid modifying the original directly
-        var taskToEdit = new KanbanTask {
-                Id = task.Id,
-                Title = task.Title,
-                Description = task.Description,
-                Status = task.Status,
-                Priority = task.Priority,
-                DueDate = task.DueDate,
-                AssigneeId = task.AssigneeId,
-                AssigneeName = task.AssigneeName,
-                ReserveStudyId = task.ReserveStudyId
-            };
-
-        var parameters = new DialogParameters {
-                ["Task"] = taskToEdit,
-                ["ReserveStudyId"] = studyId,
-                ["Specialists"] = specialists
-            };
-
-        var dialog = await DialogService.ShowAsync<KanbanTaskDialog>("Edit Task", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data is KanbanTask updatedTask) {
-            // Update the task in the database
-            await KanbanService.UpdateTaskAsync(updatedTask);
-
-            // Find and replace the task in the local list
-            var index = kanbanTasks.FindIndex(t => t.Id == updatedTask.Id);
-            if (index >= 0) {
-                kanbanTasks[index] = updatedTask;
-                StateHasChanged();
-            }
-
-            Snackbar.Add("Task updated successfully", Severity.Success);
-        }
-    }
-
-    private async Task DeleteTask(KanbanTask task) {
-        if (!_canDeleteTasks) {
-            Snackbar.Add("You don't have permission to delete tasks", Severity.Warning);
-            return;
-        }
-
-        var parameters = new DialogParameters {
-            { "ContentText", $"Are you sure you want to delete the task '{task.Title}'?" },
-            { "ButtonText", "Delete" },
-            { "Color", Color.Error }
-        };
-
-        var dialog = await DialogService.ShowAsync<KanbanConfirmationDialog>("Delete Task", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled) {
-            try {
-                await KanbanService.DeleteTaskAsync(task.Id);
-                kanbanTasks.Remove(task);
-                Snackbar.Add("Task deleted successfully", Severity.Success);
-                StateHasChanged();
-            }
-            catch (Exception ex) {
-                Snackbar.Add($"Error deleting task: {ex.Message}", Severity.Error);
-            }
-        }
-    }
-
-    private async Task RefreshKanbanTasks() {
-        if (_isRefreshing) {
-            Snackbar.Add("Refresh already in progress", Severity.Info);
-            return;
-        }
-
-        await RefreshData();
-    }
-
-    private async Task ForceReinitializeKanbanBoard() {
-        if (string.IsNullOrEmpty(_selectedReserveStudy) || !Guid.TryParse(_selectedReserveStudy, out var studyId)) {
-            return;
-        }
-
-        try {
-            // Flag to track refresh state
-            _isRefreshing = true;
-
-            // Step 1: Get fresh data from the database
-            kanbanTasks = await KanbanService.GetTasksForReserveStudyAsync(studyId);
-
-            // Step 2: Create a new list of swimlanes with fresh containers
-            var swimlanes = GetSwimlanes();
-
-            // Step 3: Execute all UI updates in a controlled manner using InvokeAsync
-            await InvokeAsync(async () => {
-                try {
-                    foreach (var swimlane in swimlanes) {
-                        if (swimlane.DropContainer != null) {
-                            // Step 3a: Explicitly update Items collection
-                            var tasks = GetFilteredTasksForSwimlane(swimlane.AssigneeId);
-                            swimlane.DropContainer.Items = new List<KanbanTask>(tasks); // Create a new list reference
-
-                            // Step 3b: Explicitly call refresh on each container
-                            swimlane.DropContainer.Refresh();
-                        }
-                    }
-
-                    // Step 4: Ensure state is updated
-                    StateHasChanged();
-
-                    // Step 5: Use browser animation frame for smooth update
-                    await JSRuntime.InvokeVoidAsync("requestAnimationFrame",
-                        DotNetObjectReference.Create(this), "RefreshComplete");
-                }
-                catch (Exception ex) {
-                    Console.WriteLine($"Error during UI refresh: {ex}");
-                }
-            });
-        }
-        catch (Exception ex) {
-            Console.WriteLine($"Error reinitializing board: {ex}");
-        }
-        finally {
-            _isRefreshing = false;
-        }
-    }
-
-    [JSInvokable]
-    public void RefreshComplete() {
-        // This method is called when the browser's animation frame completes
-        // It ensures we're fully rendered before ending the refresh operation
-        StateHasChanged();
-    }
-
     public void Dispose() {
         try {
             _refreshTimer?.Dispose();
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             // Log but don't throw from Dispose
             Console.WriteLine($"Error in Dispose: {ex.Message}");
         }
