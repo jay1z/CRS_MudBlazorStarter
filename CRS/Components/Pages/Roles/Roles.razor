@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject UserManager<ApplicationUser> UserManager
-@inject RoleManager<IdentityRole> RoleManager
+@inject RoleManager<IdentityRole<Guid>> RoleManager
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -76,7 +76,7 @@
     private string userId;
     private string roleName;
     private string message;
-    private List<IdentityRole> roles = new();
+    private List<IdentityRole<Guid>> roles = new();
     private List<ApplicationUser> users = new();
     private bool isAddRoleDialogVisible;
     private ApplicationUser selectedUser;
@@ -145,13 +145,13 @@
         return DialogService.ShowAsync<AddRolesDialog>("Simple Dialog", options);
     }
 
-    private void EditRole(IdentityRole role)
+    private void EditRole(IdentityRole<Guid> role)
     {
         // Logic to edit role
         Snackbar.Add("EditRole", Severity.Success);
     }
 
-    private void DeleteRole(IdentityRole role)
+    private void DeleteRole(IdentityRole<Guid> role)
     {
         roles.Remove(role);
     }

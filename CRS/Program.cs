@@ -6,15 +6,16 @@ using CRS.Components.Account;
 using CRS.Data;
 using CRS.EventsAndListeners;
 using CRS.Hubs;
+using CRS.Middleware;
 using CRS.Services;
 using CRS.Services.Email;
 using CRS.Services.Interfaces;
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.CodeAnalysis.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -38,24 +39,11 @@ registration.Register<ReserveStudyCreatedEvent>().Subscribe<ReserveStudyCreatedL
 app.Run();
 
 void ConfigureLogging(WebApplicationBuilder builder) {
-    var dashboardConnectionString = builder.Configuration.GetConnectionString("DashboardConnection") ??
-        throw new InvalidOperationException("Connection string 'DashboardConnection' not found.");
-
-    builder.Host.UseSerilog((context, loggerConfiguration) => {
+    // Use Serilog configuration from appsettings.*
+    builder.Host.UseSerilog((context, services, loggerConfiguration) => {
         loggerConfiguration
-        .WriteTo.Console()
-        .WriteTo.MSSqlServer(
-            connectionString: dashboardConnectionString,
-            sinkOptions: new MSSqlServerSinkOptions {
-                TableName = "LogEvents",
-                AutoCreateSqlTable = true,
-                AutoCreateSqlDatabase = true
-            })
-            // Add these enrichers to provide more context
-            .Enrich.FromLogContext()
-            .Enrich.WithEnvironmentUserName()
-            .Enrich.WithMachineName()
-            .Enrich.WithProperty("Application", "CRS");
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services);
     });
 }
 
@@ -65,6 +53,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<UserStateService>();
     builder.Services.AddMudServices();
     builder.Services.AddSignalR();
+
+    // Health checks
+    builder.Services.AddHealthChecks();
 
     // Register DbRetryService
     builder.Services.AddScoped<DbRetryService>();
@@ -120,24 +111,66 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Additional services
     builder.Services.AddQuickGridEntityFrameworkAdapter();
     builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-    builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+    builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityEmailSender>();
 }
 
 void ConfigureDatabases(WebApplicationBuilder builder) {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
         throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
+    // Register scoped DbContext for consumers like Identity stores, RoleManager/UserManager, and seeding logic
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+
     builder.Services.AddDbContextFactory<ApplicationDbContext>(
-        options => options.UseSqlServer(connectionString),
+        options => options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()),
         ServiceLifetime.Scoped);
 }
 
 void ConfigureIdentity(WebApplicationBuilder builder) {
-    builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
+    var requireConfirmed = !builder.Environment.IsDevelopment();
+
+    builder.Services.AddIdentityCore<ApplicationUser>(options => {
+            // Sign-in policies
+            options.SignIn.RequireConfirmedAccount = requireConfirmed;
+
+            // Password policy
+            options.Password.RequireDigit = true;
+            options.Password.RequiredLength = 12;
+            options.Password.RequireNonAlphanumeric = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequiredUniqueChars = 1;
+
+            // Lockout policy
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+
+            // User settings
+            options.User.RequireUniqueEmail = true;
+        })
         .AddRoles<IdentityRole<Guid>>()
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddSignInManager<SignInManager<ApplicationUser>>()
         .AddDefaultTokenProviders();
+
+    // Token lifespan (e.g., email confirmation, reset password)
+    builder.Services.Configure<DataProtectionTokenProviderOptions>(o =>
+        o.TokenLifespan = TimeSpan.FromHours(3));
+
+    // Configure Identity cookies for Blazor Server
+    builder.Services.ConfigureApplicationCookie(options => {
+        options.Cookie.Name = ".CRS.Auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.SlidingExpiration = true;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+    });
 
     // Configure UserManager lifetime
     var userManagerServiceDescriptor = builder.Services.FirstOrDefault(
@@ -155,16 +188,16 @@ void ConfigureIdentity(WebApplicationBuilder builder) {
     builder.Services.AddScoped<UserManager<ApplicationUser>>();
     builder.Services.AddScoped<IUserStore<ApplicationUser>, UserStore<ApplicationUser, IdentityRole<Guid>, ApplicationDbContext, Guid>>();
 
-    // Register RoleManager
-    builder.Services.AddScoped<RoleManager<IdentityRole>>(sp => {
-        var roleStore = new RoleStore<IdentityRole>(sp.GetRequiredService<ApplicationDbContext>());
+    // Register RoleManager with Guid key type
+    builder.Services.AddScoped<RoleManager<IdentityRole<Guid>>>(sp => {
+        var roleStore = new RoleStore<IdentityRole<Guid>, ApplicationDbContext, Guid>(sp.GetRequiredService<ApplicationDbContext>());
         var options = sp.GetRequiredService<IOptions<IdentityOptions>>();
-        var logger = sp.GetRequiredService<ILogger<RoleManager<IdentityRole>>>();
+        var logger = sp.GetRequiredService<ILogger<RoleManager<IdentityRole<Guid>>>>();
         var keyNormalizer = sp.GetRequiredService<ILookupNormalizer>();
         var errors = sp.GetRequiredService<IdentityErrorDescriber>();
         var services = sp.GetRequiredService<IServiceProvider>();
-        var validators = new List<IRoleValidator<IdentityRole>>();
-        return new RoleManager<IdentityRole>(roleStore, validators, keyNormalizer, errors, logger);
+        var validators = new List<IRoleValidator<IdentityRole<Guid>>>();
+        return new RoleManager<IdentityRole<Guid>>(roleStore, validators, keyNormalizer, errors, logger);
     });
 }
 
@@ -183,6 +216,10 @@ async Task ConfigurePipeline(WebApplication app) {
 
     app.UseMigrationsEndPoint();
     app.UseHttpsRedirection();
+
+    // Security headers
+    app.UseSecurityHeaders();
+
     app.UseAntiforgery();
 
     // Map endpoints
@@ -191,6 +228,9 @@ async Task ConfigurePipeline(WebApplication app) {
     app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
     //app.MapBlazorHub();
     app.MapAdditionalIdentityEndpoints();
+
+    // Health checks
+    app.MapHealthChecks("/health");
 }
 
 async Task SeedDatabase(WebApplication app) {

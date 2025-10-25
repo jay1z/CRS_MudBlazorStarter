@@ -1,5 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Identity
-@inject RoleManager<IdentityRole> RoleManager;
+@inject RoleManager<IdentityRole<Guid>> RoleManager;
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -25,7 +25,7 @@
     {
         if (!string.IsNullOrWhiteSpace(selectedRoleName))
         {
-            var role = new IdentityRole { Name = selectedRoleName };
+            var role = new IdentityRole<Guid>(selectedRoleName);
             var result = await RoleManager.CreateAsync(role);
             if (result.Succeeded)
             {

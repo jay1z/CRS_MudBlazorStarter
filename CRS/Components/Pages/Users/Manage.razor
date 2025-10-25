@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject UserManager<ApplicationUser> UserManager
-@inject RoleManager<IdentityRole> RoleManager
+@inject RoleManager<IdentityRole<Guid>> RoleManager
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -57,13 +57,13 @@
 
 
 @code {
-    private List<IdentityRole> roles = new();
+    private List<IdentityRole<Guid>> roles = new();
     private List<ApplicationUser> users = new();
     private ApplicationUser selectedUser;
     private bool isAddRoleDialogVisible;
     public string searchValue { get; set; }
-    private IdentityRole _value;
-    private IEnumerable<IdentityRole> _options = new HashSet<IdentityRole>();
+    private IdentityRole<Guid> _value;
+    private IEnumerable<IdentityRole<Guid>> _options = new HashSet<IdentityRole<Guid>>();
 
     protected override async Task OnInitializedAsync()
     {
