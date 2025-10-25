@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using CRS.Data;
 
 namespace CRS.Models {
-    public class ReserveStudy : BaseModel {
+    public class ReserveStudy : BaseModel, CRS.Services.Tenant.ITenantScoped {
         [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
         public ApplicationUser? User { get; set; }
 
@@ -25,12 +25,8 @@ namespace CRS.Models {
         public Guid? PropertyManagerId { get; set; }
         public PropertyManager? PropertyManager { get; set; }
 
-        [ForeignKey("Proposal")]
-        public Guid? ProposalId { get; set; }
+        //1:1 relationships managed via dependent FKs
         public Proposal? Proposal { get; set; }
-
-        [ForeignKey("FinancialInfo")]
-        public Guid? FinancialInfoId { get; set; }
         public FinancialInfo? FinancialInfo { get; set; }
 
         public List<ReserveStudyBuildingElement>? ReserveStudyBuildingElements { get; set; }
@@ -115,5 +111,8 @@ namespace CRS.Models {
             Contact = 0,
             PropertyManager = 1
         }
+
+        // SaaS Refactor: Tenant scope
+        public int TenantId { get; set; }
     }
 }

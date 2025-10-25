@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using CRS.Data;
 
 namespace CRS.Models {
-    public class Contact : BaseModel, IContact {
+    public class Contact : BaseModel, IContact, CRS.Services.Tenant.ITenantScoped {
         [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
         public ApplicationUser? User { get; set; }
 
@@ -38,5 +38,8 @@ namespace CRS.Models {
                 return $"{LastName}, {FirstName}";
             }
         }
+
+        // SaaS Refactor: Tenant scope
+        public int TenantId { get; set; }
     }
 }

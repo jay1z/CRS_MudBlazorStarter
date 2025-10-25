@@ -1,0 +1,15 @@
+@using MudBlazor
+@inject IHostEnvironment Env
+
+@code {
+    private Color ChipColor => Env.EnvironmentName?.ToLowerInvariant() switch {
+        "production" => Color.Success,
+        "staging" => Color.Info,
+        "development" => Color.Warning,
+        _ => Color.Dark
+    };
+}
+
+<MudChip T="string" Color="@ChipColor" Variant="Variant.Filled" Style="position:fixed;top:8px;right:8px;z-index:9999;opacity:.9">
+    @(!string.IsNullOrWhiteSpace(Env.EnvironmentName) ? Env.EnvironmentName : "Unknown")
+</MudChip>

@@ -1,0 +1,42 @@
+@inherits LayoutComponentBase
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
+@using CRS.Services.Tenant
+@inject ITenantContext TenantContext
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudLayout>
+    <MudAppBar Elevation="25">
+        <MudText Typo="Typo.h5" Class="ml-3">@GetTitle()</MudText>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
+                    <MudText Typo="Typo.body1" Class="pa-4">Account</MudText>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary" Href="/Dashboard">Dashboard</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary" Href="/Account/Manage">Profile</MudMenuItem>
+                </MudMenu>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Href="/Account/Register" Variant="Variant.Filled" Size="Size.Large" Class="mx-4">Register</MudButton>
+                <MudButton Href="/Account/Login" Variant="Variant.Filled" Size="Size.Large">Login</MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudMainContent Class="pt-16 px-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+            <ErrorBoundary>
+                @Body
+            </ErrorBoundary>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+<EnvironmentBanner />
+
+@code {
+    private string GetTitle() => string.IsNullOrWhiteSpace(TenantContext?.TenantName) ? "Reserve Studies" : TenantContext.TenantName!;
+}

@@ -5,12 +5,17 @@
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using CRS.Data
+@using CRS.Services.Tenant
+@using CRS.Services.License
 
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ITenantContext TenantContext
+@inject ILicenseValidationService LicenseValidator
 
 <PageTitle>Log in</PageTitle>
 
@@ -79,11 +84,43 @@
     }
 
     public async Task LoginUser() {
+        errorMessage = null;
+
         // This doesn't count login failures towards account lockout
-        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded) {
             Logger.LogInformation("User logged in.");
+
+            // SaaS Refactor: Tenant match and license check
+            try {
+                var user = await UserManager.FindByEmailAsync(Input.Email);
+                if (user is null) {
+                    await SignInManager.SignOutAsync();
+                    errorMessage = "Error: Invalid login attempt.";
+                    return;
+                }
+
+                var currentTenantId = TenantContext.TenantId ?? 1; // default legacy tenant
+                if (user.TenantId != currentTenantId) {
+                    await SignInManager.SignOutAsync();
+                    errorMessage = "Error: You are trying to sign in to the wrong tenant.";
+                    return;
+                }
+
+                // Optional: license active check
+                var isActive = await LicenseValidator.IsTenantActiveAsync(currentTenantId);
+                if (!isActive) {
+                    await SignInManager.SignOutAsync();
+                    errorMessage = "Error: This tenant is inactive. Please contact support.";
+                    return;
+                }
+            }
+            catch (Exception ex) {
+                Logger.LogError(ex, "Tenant validation failed during login");
+                await SignInManager.SignOutAsync();
+                errorMessage = "Error: Login failed due to tenant validation.";
+                return;
+            }
 
             RedirectManager.RedirectTo(ReturnUrl);
         }

@@ -7,6 +7,7 @@
 @using CRS.Models
 @using CRS.Services
 @using CRS.Services.Interfaces
+@using System.Security.Claims
 @implements IDisposable
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
@@ -178,7 +179,7 @@
         try {
             await LoadReserveStudiesAsync();
 
-            // Set up periodic refresh as a fallback (every 5 minutes)
+            // Set up periodic refresh as a fallback (every5 minutes)
             _refreshTimer = new Timer(async _ => {
                 try {
                     await InvokeAsync(async () => await RefreshData(showNotification: false));
@@ -195,8 +196,27 @@
     private async Task LoadReserveStudiesAsync() {
         try {
             _isLoading = true;
+
+            // Ensure the user state is fresh and subscribe to auth state once in the service
             await UserState.InitializeAsync();
-            var userId = UserState.CurrentUser.Id;
+
+            // If not authenticated, bail out gracefully
+            if (!UserState.IsAuthenticated) {
+                _isLoading = false;
+                Snackbar.Add("No authenticated user available.", Severity.Error);
+                return;
+            }
+
+            // Resolve user id from claims (cheap, avoids DB lookup)
+            Guid userId = Guid.Empty;
+            if (!UserState.IsInRole("Admin")) {
+                var idClaim = UserState.ClaimsPrincipal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!Guid.TryParse(idClaim, out userId)) {
+                    _isLoading = false;
+                    Snackbar.Add("Unable to resolve current user id.", Severity.Error);
+                    return;
+                }
+            }
 
             // Fetch studies based on role
             if (UserState.IsInRole("Admin")) {
@@ -290,15 +310,15 @@
     }
 
     //private async Task LoadKanbanTasksAsync(Guid studyId) {
-    //    try {
-    //        if (DashboardService.KanbanService != null)
-    //            kanbanTasks = await DashboardService.KanbanService.GetTasksForReserveStudyAsync(studyId);
-    //        else
-    //            kanbanTasks = new List<KanbanTask>();
-    //    } catch (Exception ex) {
-    //        Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
-    //        kanbanTasks = new List<KanbanTask>();
-    //    }
+    // try {
+    // if (DashboardService.KanbanService != null)
+    // kanbanTasks = await DashboardService.KanbanService.GetTasksForReserveStudyAsync(studyId);
+    // else
+    // kanbanTasks = new List<KanbanTask>();
+    // } catch (Exception ex) {
+    // Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
+    // kanbanTasks = new List<KanbanTask>();
+    // }
     //}
 
     private int GetTaskCountByStatus(KanbanStatus status) {
@@ -336,13 +356,13 @@
 
     private async Task<bool> ShouldShowGenerateTasksButton() {
         // Show the generate tasks button if:
-        // 1. Current study exists
-        // 2. Study is not completed
-        // 3. User has appropriate permissions (Admin or Specialist)
+        //1. Current study exists
+        //2. Study is not completed
+        //3. User has appropriate permissions (Admin or Specialist)
         await UserState.InitializeAsync();
         return _currentStudy != null &&
-               !_currentStudy.IsComplete &&
-               (UserState.IsInRole("Admin") || UserState.IsInRole("Specialist"));
+        !_currentStudy.IsComplete &&
+        (UserState.IsInRole("Admin") || UserState.IsInRole("Specialist"));
     }
 
     private async Task GenerateTasksForCurrentStudy() {

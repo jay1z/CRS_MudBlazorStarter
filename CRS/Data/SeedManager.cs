@@ -19,22 +19,22 @@ namespace CRS.Data {
 
         public static async Task SeedAdminUserAsync(IServiceProvider serviceProvider) {
             // Use our helper to create the admin user if it doesn't exist.
-            await SeedUserIfNotExists(serviceProvider, email: "admin@company.com", password: "admin", firstName: "Admin", lastName: "", roles: new List<string>() { "Admin" });
-            await SeedUserIfNotExists(serviceProvider, email: "jason@admin.com", password: "Letmein1_", firstName: "Jason", lastName: "Admin", roles: new List<string>() { "Admin" });
+            await SeedUserIfNotExists(serviceProvider, email: "admin@company.com", password: "Letmeinnow1_", firstName: "Admin", lastName: "", roles: new List<string>() { "Admin" });
+            await SeedUserIfNotExists(serviceProvider, email: "jason@admin.com", password: "Letmeinnow1_", firstName: "Jason", lastName: "Admin", roles: new List<string>() { "Admin" });
         }
 
         public static async Task SeedTestUsersAsync(IServiceProvider serviceProvider) {
             // Specialist test user
-            await SeedUserIfNotExists(serviceProvider, email: "peter@specialist.com", password: "Letmein1_", firstName: "Peter", lastName: "Specialist", roles: new List<string>() { "Specialist" });
+            await SeedUserIfNotExists(serviceProvider, email: "peter@specialist.com", password: "Letmeinnow1_", firstName: "Peter", lastName: "Specialist", roles: new List<string>() { "Specialist" });
 
             // Specialist test user
-            await SeedUserIfNotExists(serviceProvider, email: "jeff@specialist.com", password: "Letmein1_", firstName: "Jeff", lastName: "Specialist", roles: new List<string>() { "Specialist" });
+            await SeedUserIfNotExists(serviceProvider, email: "jeff@specialist.com", password: "Letmeinnow1_", firstName: "Jeff", lastName: "Specialist", roles: new List<string>() { "Specialist" });
 
             // Regular test user
-            await SeedUserIfNotExists(serviceProvider, email: "jeff@user.com", password: "Letmein1_", firstName: "Jeff", lastName: "User", roles: new List<string>() { "User" });
+            await SeedUserIfNotExists(serviceProvider, email: "jeff@user.com", password: "Letmeinnow1_", firstName: "Jeff", lastName: "User", roles: new List<string>() { "User" });
 
             // Regular test user
-            await SeedUserIfNotExists(serviceProvider, email: "jason@user.com", password: "Letmein1_", firstName: "Jason", lastName: "User", roles: new List<string>() { "User" });
+            await SeedUserIfNotExists(serviceProvider, email: "jason@user.com", password: "Letmeinnow1_", firstName: "Jason", lastName: "User", roles: new List<string>() { "User" });
         }
 
         /// <summary>

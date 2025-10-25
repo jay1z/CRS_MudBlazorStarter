@@ -18,6 +18,25 @@
                 <MudListItem><MudLink Href="Settings">Settings</MudLink></MudListItem>
                 <MudDivider />
                 <MudListItem><MudLink Href="MudBlazorFontIcons">Font Icons</MudLink></MudListItem>
+                <MudDivider />
+
+                <!-- New: Tenant admin and account utilities -->
+                <MudListItem>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <MudLink Href="/Admin/Tenants">Admin • Tenants</MudLink>
+                        </Authorized>
+                        <NotAuthorized>
+                            <MudTooltip Text="Requires Admin role">
+                                <span class="mud-disabled-text">Admin • Tenants</span>
+                            </MudTooltip>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </MudListItem>
+                <MudDivider />
+                <MudListItem>
+                    <MudLink Href="/Account/ResendEmailConfirmation">Resend Email Confirmation</MudLink>
+                </MudListItem>
             </MudList>
         </MudPaper>
     </MudCardContent>

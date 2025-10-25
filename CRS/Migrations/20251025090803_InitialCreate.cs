@@ -59,6 +59,7 @@ namespace CRS.Migrations
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Roles = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -190,6 +191,7 @@ namespace CRS.Migrations
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -320,6 +322,24 @@ namespace CRS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ServiceContacts", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Tenants",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Subdomain = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    BrandingJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tenants", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -507,6 +527,7 @@ namespace CRS.Migrations
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -565,6 +586,7 @@ namespace CRS.Migrations
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -671,58 +693,6 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "FinancialInfos",
-                schema: "crs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CurrentReserveFundBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    AnnualContribution = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ProjectedAnnualExpenses = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    FiscalYearStartMonth = table.Column<int>(type: "int", nullable: false),
-                    FinancialDocumentUrls = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateSubmitted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateReviewed = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ReviewedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsComplete = table.Column<bool>(type: "bit", nullable: false),
-                    Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_FinancialInfos", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Proposals",
-                schema: "crs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ProposalScope = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    EstimatedCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ProposalDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    DateSent = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ApprovedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
-                    Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Proposals", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "ReserveStudies",
                 schema: "crs",
                 columns: table => new
@@ -734,14 +704,13 @@ namespace CRS.Migrations
                     PointOfContactType = table.Column<int>(type: "int", nullable: false),
                     ContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     PropertyManagerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    FinancialInfoId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsApproved = table.Column<bool>(type: "bit", nullable: false),
                     IsComplete = table.Column<bool>(type: "bit", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
                     LastModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -775,23 +744,79 @@ namespace CRS.Migrations
                         principalTable: "Contacts",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ReserveStudies_FinancialInfos_FinancialInfoId",
-                        column: x => x.FinancialInfoId,
-                        principalSchema: "crs",
-                        principalTable: "FinancialInfos",
-                        principalColumn: "Id");
-                    table.ForeignKey(
                         name: "FK_ReserveStudies_PropertyManagers_PropertyManagerId",
                         column: x => x.PropertyManagerId,
                         principalSchema: "crs",
                         principalTable: "PropertyManagers",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "FinancialInfos",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    CurrentReserveFundBalance = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    AnnualContribution = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    ProjectedAnnualExpenses = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    FiscalYearStartMonth = table.Column<int>(type: "int", nullable: false),
+                    FinancialDocumentUrls = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateSubmitted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateReviewed = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReviewedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsComplete = table.Column<bool>(type: "bit", nullable: false),
+                    Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FinancialInfos", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ReserveStudies_Proposals_ProposalId",
-                        column: x => x.ProposalId,
+                        name: "FK_FinancialInfos_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
                         principalSchema: "crs",
-                        principalTable: "Proposals",
-                        principalColumn: "Id");
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Proposals",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ProposalScope = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    EstimatedCost = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    ProposalDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DateSent = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ApprovedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
+                    Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Proposals", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Proposals_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalSchema: "crs",
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1039,6 +1064,12 @@ namespace CRS.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Communities_TenantId",
+                schema: "crs",
+                table: "Communities",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ContactGroups_ApplicationUserId",
                 schema: "crs",
                 table: "ContactGroups",
@@ -1049,6 +1080,12 @@ namespace CRS.Migrations
                 schema: "crs",
                 table: "Contacts",
                 column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Contacts_TenantId",
+                schema: "crs",
+                table: "Contacts",
+                column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContactXContactGroups_ContactGroupId",
@@ -1066,7 +1103,14 @@ namespace CRS.Migrations
                 name: "IX_FinancialInfos_ReserveStudyId",
                 schema: "crs",
                 table: "FinancialInfos",
-                column: "ReserveStudyId");
+                column: "ReserveStudyId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FinancialInfos_TenantId",
+                schema: "crs",
+                table: "FinancialInfos",
+                column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Profiles_ApplicationUserId",
@@ -1081,10 +1125,23 @@ namespace CRS.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PropertyManagers_TenantId",
+                schema: "crs",
+                table: "PropertyManagers",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Proposals_ReserveStudyId",
                 schema: "crs",
                 table: "Proposals",
-                column: "ReserveStudyId");
+                column: "ReserveStudyId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Proposals_TenantId",
+                schema: "crs",
+                table: "Proposals",
+                column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_ApplicationUserId",
@@ -1105,28 +1162,22 @@ namespace CRS.Migrations
                 column: "ContactId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudies_FinancialInfoId",
-                schema: "crs",
-                table: "ReserveStudies",
-                column: "FinancialInfoId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_PropertyManagerId",
                 schema: "crs",
                 table: "ReserveStudies",
                 column: "PropertyManagerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudies_ProposalId",
-                schema: "crs",
-                table: "ReserveStudies",
-                column: "ProposalId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_SpecialistUserId",
                 schema: "crs",
                 table: "ReserveStudies",
                 column: "SpecialistUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudies_TenantId",
+                schema: "crs",
+                table: "ReserveStudies",
+                column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyAdditionalElements_ElementMeasurementOptionsId",
@@ -1224,70 +1275,17 @@ namespace CRS.Migrations
                 table: "Settings",
                 column: "ApplicationUserId");
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_FinancialInfos_ReserveStudies_ReserveStudyId",
+            migrationBuilder.CreateIndex(
+                name: "IX_Tenants_Subdomain",
                 schema: "crs",
-                table: "FinancialInfos",
-                column: "ReserveStudyId",
-                principalSchema: "crs",
-                principalTable: "ReserveStudies",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_Proposals_ReserveStudies_ReserveStudyId",
-                schema: "crs",
-                table: "Proposals",
-                column: "ReserveStudyId",
-                principalSchema: "crs",
-                principalTable: "ReserveStudies",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                table: "Tenants",
+                column: "Subdomain",
+                unique: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_ReserveStudies_Communities_CommunityId",
-                schema: "crs",
-                table: "ReserveStudies");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_Contacts_AspNetUsers_ApplicationUserId",
-                schema: "crs",
-                table: "Contacts");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_PropertyManagers_AspNetUsers_ApplicationUserId",
-                schema: "crs",
-                table: "PropertyManagers");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_ReserveStudies_AspNetUsers_ApplicationUserId",
-                schema: "crs",
-                table: "ReserveStudies");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_ReserveStudies_AspNetUsers_SpecialistUserId",
-                schema: "crs",
-                table: "ReserveStudies");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_ReserveStudies_Contacts_ContactId",
-                schema: "crs",
-                table: "ReserveStudies");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_FinancialInfos_ReserveStudies_ReserveStudyId",
-                schema: "crs",
-                table: "FinancialInfos");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_Proposals_ReserveStudies_ReserveStudyId",
-                schema: "crs",
-                table: "Proposals");
-
             migrationBuilder.DropTable(
                 name: "AccessTokens",
                 schema: "crs");
@@ -1329,6 +1327,10 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
+                name: "FinancialInfos",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
                 name: "KanbanTasks",
                 schema: "crs");
 
@@ -1338,6 +1340,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Profiles",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "Proposals",
                 schema: "crs");
 
             migrationBuilder.DropTable(
@@ -1354,6 +1360,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Settings",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "Tenants",
                 schema: "crs");
 
             migrationBuilder.DropTable(
@@ -1385,6 +1395,10 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
+                name: "ReserveStudies",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
                 name: "ServiceContacts",
                 schema: "crs");
 
@@ -1393,19 +1407,7 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers",
-                schema: "crs");
-
-            migrationBuilder.DropTable(
                 name: "Contacts",
-                schema: "crs");
-
-            migrationBuilder.DropTable(
-                name: "ReserveStudies",
-                schema: "crs");
-
-            migrationBuilder.DropTable(
-                name: "FinancialInfos",
                 schema: "crs");
 
             migrationBuilder.DropTable(
@@ -1413,7 +1415,7 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
-                name: "Proposals",
+                name: "AspNetUsers",
                 schema: "crs");
         }
     }

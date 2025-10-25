@@ -8,6 +8,9 @@ namespace CRS.Data {
         public IList<string>? Roles { get; set; }
         public StatusEnum Status { get; set; } = StatusEnum.Active;
 
+        // SaaS Refactor: Tenant association for identity
+        public int TenantId { get; set; } = 1; // default backfill
+
         public string FullName {
             get {
                 return $"{FirstName} {LastName}";

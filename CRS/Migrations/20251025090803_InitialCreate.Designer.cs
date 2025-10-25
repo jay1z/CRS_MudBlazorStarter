@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250715010441_InitialCreate")]
+    [Migration("20251025090803_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -21,7 +21,7 @@ namespace CRS.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("crs")
-                .HasAnnotation("ProductVersion", "9.0.7")
+                .HasAnnotation("ProductVersion", "9.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -82,6 +82,9 @@ namespace CRS.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
                         .HasColumnType("int");
 
                     b.Property<string>("Title")
@@ -512,7 +515,12 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Communities", "crs");
                 });
@@ -559,9 +567,14 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Contacts", "crs");
                 });
@@ -758,12 +771,14 @@ namespace CRS.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("AnnualContribution")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Comments")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("CurrentReserveFundBalance")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("DateCreated")
@@ -791,6 +806,7 @@ namespace CRS.Migrations
                         .HasColumnType("bit");
 
                     b.Property<decimal?>("ProjectedAnnualExpenses")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("ReserveStudyId")
@@ -805,9 +821,15 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ReserveStudyId");
+                    b.HasIndex("ReserveStudyId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("FinancialInfos", "crs");
                 });
@@ -988,9 +1010,14 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("PropertyManagers", "crs");
                 });
@@ -1023,6 +1050,7 @@ namespace CRS.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("EstimatedCost")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsApproved")
@@ -1044,9 +1072,15 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ReserveStudyId");
+                    b.HasIndex("ReserveStudyId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Proposals", "crs");
                 });
@@ -1078,9 +1112,6 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("FinancialInfoId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -1099,9 +1130,6 @@ namespace CRS.Migrations
                     b.Property<Guid?>("PropertyManagerId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("ProposalId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -1114,6 +1142,9 @@ namespace CRS.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
@@ -1122,13 +1153,11 @@ namespace CRS.Migrations
 
                     b.HasIndex("ContactId");
 
-                    b.HasIndex("FinancialInfoId");
-
                     b.HasIndex("PropertyManagerId");
 
-                    b.HasIndex("ProposalId");
-
                     b.HasIndex("SpecialistUserId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("ReserveStudies", "crs");
                 });
@@ -1412,6 +1441,39 @@ namespace CRS.Migrations
                     b.ToTable("Settings", "crs");
                 });
 
+            modelBuilder.Entity("CRS.Models.Tenant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BrandingJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Subdomain")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Subdomain")
+                        .IsUnique();
+
+                    b.ToTable("Tenants", "crs");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1601,8 +1663,8 @@ namespace CRS.Migrations
             modelBuilder.Entity("CRS.Models.FinancialInfo", b =>
                 {
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
-                        .WithMany()
-                        .HasForeignKey("ReserveStudyId")
+                        .WithOne("FinancialInfo")
+                        .HasForeignKey("CRS.Models.FinancialInfo", "ReserveStudyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1632,8 +1694,8 @@ namespace CRS.Migrations
             modelBuilder.Entity("CRS.Models.Proposal", b =>
                 {
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
-                        .WithMany()
-                        .HasForeignKey("ReserveStudyId")
+                        .WithOne("Proposal")
+                        .HasForeignKey("CRS.Models.Proposal", "ReserveStudyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1654,17 +1716,9 @@ namespace CRS.Migrations
                         .WithMany()
                         .HasForeignKey("ContactId");
 
-                    b.HasOne("CRS.Models.FinancialInfo", "FinancialInfo")
-                        .WithMany()
-                        .HasForeignKey("FinancialInfoId");
-
                     b.HasOne("CRS.Models.PropertyManager", "PropertyManager")
                         .WithMany()
                         .HasForeignKey("PropertyManagerId");
-
-                    b.HasOne("CRS.Models.Proposal", "Proposal")
-                        .WithMany()
-                        .HasForeignKey("ProposalId");
 
                     b.HasOne("CRS.Data.ApplicationUser", "Specialist")
                         .WithMany()
@@ -1674,11 +1728,7 @@ namespace CRS.Migrations
 
                     b.Navigation("Contact");
 
-                    b.Navigation("FinancialInfo");
-
                     b.Navigation("PropertyManager");
-
-                    b.Navigation("Proposal");
 
                     b.Navigation("Specialist");
 
@@ -1883,6 +1933,10 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>
                 {
+                    b.Navigation("FinancialInfo");
+
+                    b.Navigation("Proposal");
+
                     b.Navigation("ReserveStudyAdditionalElements");
 
                     b.Navigation("ReserveStudyBuildingElements");

@@ -10,6 +10,8 @@ using CRS.Middleware;
 using CRS.Services;
 using CRS.Services.Email;
 using CRS.Services.Interfaces;
+using CRS.Services.Tenant;
+using CRS.Services.MultiTenancy;
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
@@ -72,7 +74,8 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
     // Theming services
-    builder.Services.AddSingleton<ThemeService>();
+    // Use scoped ThemeService so it can see scoped ITenantContext
+    builder.Services.AddScoped<ThemeService>();
 
     // Application services
     builder.Services.AddScoped<ICalendarService, CalendarService>();
@@ -83,6 +86,18 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IReserveStudyWorkflowService, ReserveStudyWorkflowService>();
     builder.Services.AddScoped<ISignalRService, SignalRService>();
     builder.Services.AddScoped<IKanbanService, KanbanService>(); // Must go after SignalRService
+
+    // SaaS Refactor: register tenant services
+    builder.Services.AddScoped<ITenantContext, TenantContext>();
+    builder.Services.AddScoped<TenantService>();
+    builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, TenantClaimsPrincipalFactory>();
+    builder.Services.AddScoped<CRS.Services.File.IFileStorageService, CRS.Services.File.FileStorageService>();
+    builder.Services.AddScoped<CRS.Services.License.ILicenseValidationService, CRS.Services.License.LicenseValidationService>();
+    // Optionally enable this recurring validator later
+    // builder.Services.AddHostedService<CRS.Services.License.LicenseValidationBackgroundService>();
+
+    // Authorization policy
+    builder.Services.AddTenantPolicies();
 
     // Register Coravel
     builder.Services.AddMailer(builder.Configuration);
@@ -128,7 +143,7 @@ void ConfigureDatabases(WebApplicationBuilder builder) {
 }
 
 void ConfigureIdentity(WebApplicationBuilder builder) {
-    var requireConfirmed = !builder.Environment.IsDevelopment();
+    var requireConfirmed = builder.Configuration.GetValue<bool>("Identity:RequireConfirmedAccount", !builder.Environment.IsDevelopment());
 
     builder.Services.AddIdentityCore<ApplicationUser>(options => {
             // Sign-in policies
@@ -220,13 +235,39 @@ async Task ConfigurePipeline(WebApplication app) {
     // Security headers
     app.UseSecurityHeaders();
 
+    // SaaS Refactor: resolve tenant before auth
+    app.UseMiddleware<TenantResolverMiddleware>();
+    app.UseLicenseGate();
+
+    // Apply tenant theme per-request (skip if unchanged within the request's scope)
+    app.Use(async (ctx, next) => {
+        var themeSvc = ctx.RequestServices.GetRequiredService<ThemeService>();
+        themeSvc.ApplyTenantBrandingIfAvailableAndChanged();
+        await next();
+    });
+
     app.UseAntiforgery();
+
+    // Dev helper: promote a user to Admin quickly
+    if (app.Environment.IsDevelopment()) {
+        app.MapGet("/dev/make-admin", async (string email, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole<Guid>> roleManager) => {
+            if (string.IsNullOrWhiteSpace(email)) return Results.BadRequest("email is required");
+            if (!await roleManager.RoleExistsAsync("Admin")) await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
+            var user = await userManager.FindByEmailAsync(email);
+            if (user == null) return Results.NotFound($"User '{email}' not found.");
+            var inRole = await userManager.IsInRoleAsync(user, "Admin");
+            if (!inRole) {
+                var r = await userManager.AddToRoleAsync(user, "Admin");
+                if (!r.Succeeded) return Results.BadRequest(string.Join(", ", r.Errors.Select(e => e.Description)));
+            }
+            return Results.Text($"'{email}' is now in Admin role.");
+        }).WithDisplayName("Dev: Promote user to Admin");
+    }
 
     // Map endpoints
     app.MapStaticAssets();
     app.MapHub<KanbanHub>("/kanbanhub");
     app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
-    //app.MapBlazorHub();
     app.MapAdditionalIdentityEndpoints();
 
     // Health checks

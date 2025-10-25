@@ -34,8 +34,7 @@ namespace CRS.Services {
             _userManager = userManager;
             _logger = logger;
 
-            // Subscribe to authentication state changes
-            _authenticationStateProvider.AuthenticationStateChanged += async _ => await RefreshStateAsync();
+            // NOTE: subscribe to AuthenticationStateChanged in InitializeAsync to avoid multiple subscriptions
         }
 
         public ApplicationUser? CurrentUser => _currentUser;
@@ -47,11 +46,15 @@ namespace CRS.Services {
             _userRoles?.Contains(role, StringComparer.OrdinalIgnoreCase) == true;
 
         public async Task InitializeAsync() {
-            if (_isInitialized) return;
+            // Subscribe once to authentication state changes and always refresh the auth snapshot
+            if (!_isInitialized) {
+                _authenticationStateProvider.AuthenticationStateChanged += async _ => await RefreshStateAsync();
+                _isInitialized = true;
+            }
 
             _logger.LogInformation("Initializing user state service");
+            // Always update state to ensure CurrentUser/roles/claims are up-to-date
             await UpdateStateFromAuthenticationAsync();
-            _isInitialized = true;
         }
 
         public async Task RefreshStateAsync() {
@@ -68,8 +71,11 @@ namespace CRS.Services {
                     _currentUser = await _userManager.GetUserAsync(authState.User);
                     if (_currentUser != null) {
                         _userRoles = await _userManager.GetRolesAsync(_currentUser);
-                        _logger.LogInformation($"User {_currentUser.Id} authenticated with {_userRoles.Count} roles",
-                            _currentUser.Id, _userRoles.Count);
+                        _logger.LogInformation("User {UserId} authenticated with {RoleCount} roles", _currentUser.Id, _userRoles.Count);
+                    }
+                    else {
+                        _userRoles = null;
+                        _logger.LogWarning("Authenticated principal has no corresponding ApplicationUser.");
                     }
                 }
                 else {
@@ -92,7 +98,7 @@ namespace CRS.Services {
                 }
 
                 var usersInRole = await _userManager.GetUsersInRoleAsync(roleName);
-                _logger.LogInformation($"Found {usersInRole.Count} users in role {roleName}");
+                _logger.LogInformation("Found {Count} users in role {Role}", usersInRole.Count, roleName);
                 return usersInRole.ToList();
             }
             catch (Exception ex) {

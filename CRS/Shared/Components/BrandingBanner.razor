@@ -1,0 +1,18 @@
+@using CRS.Services.Tenant
+@inject ITenantContext TenantContext
+
+@if (!string.IsNullOrEmpty(logoUrl)) {
+    <MudPaper Class="pa-2 d-flex align-center">
+        <MudImage Src="@logoUrl" Alt="Tenant Logo" Height="48" />
+        <MudText Typo="Typo.h6" Class="ml-3">@TenantContext.TenantName</MudText>
+    </MudPaper>
+}
+
+@code {
+    private string? logoUrl;
+    protected override void OnParametersSet() {
+        // Placeholder: when BrandingJson available, parse and set logo/color
+        // SaaS Refactor: this will read from TenantContext/BrandingJson (e.g., stored in cache or injected service)
+        logoUrl = null;
+    }
+}

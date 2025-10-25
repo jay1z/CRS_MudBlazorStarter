@@ -2,6 +2,7 @@
 using System.Security.Claims;
 
 using CRS.Models;
+using CRS.Services.Tenant;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -12,10 +13,13 @@ namespace CRS.Data {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid> {
         private const string DefaultSchema = "crs";
         private readonly IHttpContextAccessor _httpContextAccessor;
+        // SaaS Refactor: Inject tenant context
+        private readonly ITenantContext _tenantContext;
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor, ITenantContext tenantContext)
             : base(options) {
             _httpContextAccessor = httpContextAccessor;
+            _tenantContext = tenantContext;
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
@@ -36,12 +40,57 @@ namespace CRS.Data {
             builder.HasDefaultSchema(DefaultSchema);
 
             ConfigureEntities(builder);
+
+            // Indexes to improve tenant queries
+            builder.Entity<Community>().HasIndex(e => e.TenantId);
+            builder.Entity<Contact>().HasIndex(e => e.TenantId);
+            builder.Entity<PropertyManager>().HasIndex(e => e.TenantId);
+            builder.Entity<ReserveStudy>().HasIndex(e => e.TenantId);
+            builder.Entity<FinancialInfo>().HasIndex(e => e.TenantId);
+            builder.Entity<Proposal>().HasIndex(e => e.TenantId);
+
+            // SaaS Refactor: Tenant-aware query filters on principals
+            builder.Entity<Community>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
+            builder.Entity<ReserveStudy>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
+            builder.Entity<Contact>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
+            builder.Entity<PropertyManager>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
+            builder.Entity<FinancialInfo>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
+            builder.Entity<Proposal>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
+
+            // Matching filters on dependents to avoid EF warnings with required relationships
+            builder.Entity<ReserveStudyBuildingElement>().HasQueryFilter(e =>
+ _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
+ builder.Entity<ReserveStudyCommonElement>().HasQueryFilter(e =>
+ _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
+ builder.Entity<ReserveStudyAdditionalElement>().HasQueryFilter(e =>
+ _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
+ builder.Entity<ContactXContactGroup>().HasQueryFilter(e =>
+ _tenantContext.TenantId == null || (e.Contact != null && e.Contact.TenantId == _tenantContext.TenantId));
+
+            // Fix1: Configure1:1 relationships using dependent FKs
+            builder.Entity<ReserveStudy>()
+                .HasOne(r => r.Proposal)
+                .WithOne(p => p.ReserveStudy)
+                .HasForeignKey<Proposal>(p => p.ReserveStudyId);
+
+            builder.Entity<ReserveStudy>()
+                .HasOne(r => r.FinancialInfo)
+                .WithOne(f => f.ReserveStudy)
+                .HasForeignKey<FinancialInfo>(f => f.ReserveStudyId);
         }
 
         private void ConfigureEntities(ModelBuilder builder) {
             builder.Entity<AccessToken>(entity => {
                 entity.HasIndex(at => at.Token).IsUnique();
                 entity.Property(at => at.Expiration).IsRequired();
+            });
+
+            // SaaS Refactor: Tenant entity
+            builder.Entity<Tenant>(entity => {
+                entity.ToTable("Tenants");
+                entity.HasIndex(t => t.Subdomain).IsUnique();
+                entity.Property(t => t.Name).IsRequired();
+                entity.Property(t => t.Subdomain).IsRequired();
             });
 
             builder.Entity<ReserveStudyBuildingElement>()
@@ -73,11 +122,13 @@ namespace CRS.Data {
 
         public override int SaveChanges() {
             AddAuditLogs();
+            AddTenantIds();
             return base.SaveChanges();
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) {
             AddAuditLogs();
+            AddTenantIds();
             return base.SaveChangesAsync(cancellationToken);
         }
 
@@ -113,6 +164,19 @@ namespace CRS.Data {
             }
         }
 
+        // SaaS Refactor: Ensure TenantId is set on inserted entities
+        private void AddTenantIds() {
+            var tenantId = _tenantContext.TenantId ??1; // default to legacy tenant id1
+            foreach (var entry in ChangeTracker.Entries().Where(e => e.State == EntityState.Added)) {
+                if (entry.Entity is ITenantScoped scoped) {
+                    if (scoped.TenantId ==0) scoped.TenantId = tenantId;
+                }
+                if (entry.Entity is ApplicationUser user) {
+                    if (user.TenantId ==0) user.TenantId = tenantId;
+                }
+            }
+        }
+
         #region DbSet Properties
         public DbSet<AccessToken> AccessTokens { get; set; }
         public DbSet<Address> Addresses { get; set; }
@@ -139,6 +203,7 @@ namespace CRS.Data {
         public DbSet<ReserveStudyCommonElement> ReserveStudyCommonElements { get; set; }
         public DbSet<ServiceContact> ServiceContacts { get; set; }
         public DbSet<Settings> Settings { get; set; }
+        public DbSet<Tenant> Tenants { get; set; } // SaaS Refactor
         #endregion
 
         #region Seed Data
@@ -153,6 +218,18 @@ namespace CRS.Data {
             context.SaveChanges();
             GenerateElementUsefulLifeOptions(context);
             context.SaveChanges();
+
+            // SaaS Refactor: Seed a default tenant for legacy data
+            if (!context.Set<Tenant>().Any()) {
+                context.Set<Tenant>().Add(new Tenant {
+                    Name = "Default Tenant",
+                    Subdomain = "app",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    BrandingJson = "{\"primary\":\"#1976d2\",\"secondary\":\"#9c27b0\",\"appbarBackground\":\"#ffffff\",\"background\":\"#f7f7f7\",\"darkPrimary\":\"#90caf9\",\"darkSecondary\":\"#ce93d8\"}"
+                });
+                context.SaveChanges();
+            }
         }
 
         private static void GenerateBuildingElements(DbContext context) {
