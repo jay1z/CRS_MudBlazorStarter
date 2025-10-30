@@ -1,0 +1,147 @@
+@using CRS.Models
+@using CRS.Data
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+@inject ThemeService ThemeService
+@inject ITenantContext TenantContext
+@inject ILogger<CRS.Components.Pages.Admin.EditTenantDialog> Logger
+
+@* Dialog component content *@
+<div class="edit-tenant-dialog">
+    <MudPaper Class="pa-4">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.h6">@((editingTenant?.Id ?? 0) == 0 ? "Create Tenant" : "Edit Tenant")</MudText>
+            <MudTextField @bind-Value="editingTenant!.Name" Label="Name" Required="true" Immediate="true" />
+            <MudTextField @bind-Value="editingTenant!.Subdomain" Label="Subdomain" Required="true" HelperText="Example: acme (for acme.example.com)" Immediate="true" />
+            <div class="d-flex align-center gap-2">
+                <MudSwitch T="bool" @bind-Checked="editingTenant!.IsActive" Color="Color.Primary">Active</MudSwitch>
+                <MudText Typo="Typo.body2">Current: @(editingTenant?.IsActive == true ? "Active" : "Inactive")</MudText>
+            </div>
+            <MudText Typo="Typo.subtitle2">Branding (JSON)</MudText>
+            <MudSelect T="string" Label="Preset" @bind-Value="selectedPreset" Dense="true" Class="mb-2" Immediate="true" OnClose="ApplyPreset">
+                @foreach (var name in presetNames) {
+                    <MudSelectItem Value="@name">@name</MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField @bind-Value="editingTenant!.BrandingJson" Lines="6" Label="Branding JSON" Placeholder='{"primary":"#1976d2"}' Immediate="true" OnBlurred="ValidateBrandingJson" />
+            <MudText Color="Color.Error">@brandingError</MudText>
+            @if (IsEditingCurrentTenant) {
+                <MudAlert Severity="Severity.Info">Editing current tenant. Saving will update the active theme for this session.</MudAlert>
+            }
+        </MudStack>
+    </MudPaper>
+
+    <div class="mt-3 d-flex justify-end">
+        <MudButton OnClick="SaveAsync" Color="Color.Primary" Variant="Variant.Filled" Disabled="@(CanSave == false)">Save</MudButton>
+        <MudButton OnClick="Cancel" Color="Color.Secondary" Variant="Variant.Outlined" Class="ml-2">Cancel</MudButton>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Tenant Source { get; set; } = default!;
+
+    private Tenant? editingTenant;
+    private string? brandingError;
+    private string? selectedPreset;
+    private IReadOnlyList<string> presetNames = Array.Empty<string>();
+
+    private bool CanSave => editingTenant != null && string.IsNullOrWhiteSpace(brandingError);
+
+    protected override void OnInitialized() {
+        // Clone source
+        editingTenant = new Tenant {
+            Id = Source.Id,
+            Name = Source.Name,
+            Subdomain = Source.Subdomain,
+            IsActive = Source.IsActive,
+            BrandingJson = Source.BrandingJson,
+            CreatedAt = Source.CreatedAt
+        };
+
+        presetNames = ThemeService.GetPresetNames();
+
+        Logger.LogInformation("EditTenantDialog initialized. Source.Id={Id}, Source.IsActive={IsActive}", Source?.Id, Source?.IsActive);
+    }
+
+    private void ApplyPreset() {
+        if (string.IsNullOrWhiteSpace(selectedPreset) || editingTenant == null) return;
+        var preset = ThemeService.GetPresetByName(selectedPreset);
+        if (preset == null) return;
+        editingTenant.BrandingJson = ThemeService.ToBrandingJson(preset);
+        brandingError = null;
+    }
+
+    private void ValidateBrandingJson(FocusEventArgs _) {
+        brandingError = null;
+        if (string.IsNullOrWhiteSpace(editingTenant?.BrandingJson)) return;
+        try {
+            using var doc = System.Text.Json.JsonDocument.Parse(editingTenant!.BrandingJson);
+        } catch (Exception ex) {
+            brandingError = $"Invalid JSON: {ex.Message}";
+        }
+    }
+
+    private async Task SaveAsync() {
+        if (editingTenant is null) return;
+        ValidateBrandingJson(new FocusEventArgs());
+        if (!string.IsNullOrWhiteSpace(brandingError)) return;
+
+        try {
+            Logger.LogInformation("SaveAsync called. editingTenant.Id={Id}, IsActive={IsActive}", editingTenant.Id, editingTenant.IsActive);
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+            Tenant saved;
+            if (editingTenant.Id == 0) {
+                editingTenant.CreatedAt = DateTime.UtcNow;
+                db.Set<Tenant>().Add(editingTenant);
+                await db.SaveChangesAsync();
+                // ensure we have the id set from EF
+                var newId = editingTenant.Id;
+                saved = await db.Set<Tenant>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == newId) ?? editingTenant;
+            } else {
+                var existing = await db.Set<Tenant>().FirstOrDefaultAsync(t => t.Id == editingTenant.Id);
+                if (existing is null) {
+                    Snackbar.Add("Tenant not found.", Severity.Error);
+                    Logger.LogWarning("SaveAsync: existing tenant {Id} not found", editingTenant.Id);
+                    return;
+                }
+                existing.Name = editingTenant.Name;
+                existing.Subdomain = editingTenant.Subdomain;
+                existing.IsActive = editingTenant.IsActive;
+                existing.BrandingJson = editingTenant.BrandingJson;
+                await db.SaveChangesAsync();
+                saved = await db.Set<Tenant>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == existing.Id) ?? existing;
+            }
+
+            Logger.LogInformation("Saved tenant {Id} with IsActive={IsActive}", saved.Id, saved.IsActive);
+            Snackbar.Add($"Saved tenant {saved.Id}. IsActive={saved.IsActive}", Severity.Success);
+
+            // If editing the current tenant, update theme immediately in session
+            if (IsEditingCurrentTenant) {
+                TenantContext.BrandingJson = saved.BrandingJson;
+                ThemeService.ApplyTenantBrandingIfAvailable();
+            }
+
+            // Return the saved tenant in the result so the parent can update its list without an entire reload
+            MudDialog.Close(DialogResult.Ok(saved));
+        } catch (DbUpdateException ex) {
+            Snackbar.Add($"DB error: {ex.InnerException?.Message ?? ex.Message}", Severity.Error);
+            Logger.LogError(ex, "DB error saving tenant");
+        } catch (Exception ex) {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Error saving tenant");
+        }
+    }
+
+    private void Cancel() {
+        MudDialog.Cancel();
+    }
+
+    private bool IsEditingCurrentTenant => editingTenant != null && TenantContext.TenantId.HasValue && editingTenant.Id == TenantContext.TenantId.Value;
+}

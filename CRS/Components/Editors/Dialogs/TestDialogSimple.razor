@@ -1,0 +1,21 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div id="dbg-test-dialog" style="padding:12px">TEST DIALOG CONTENT - should be visible</div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Inject] ISnackbar Snackbar { get; set; }
+
+    protected override void OnInitialized() {
+        try { Snackbar?.Add("TestDialogSimple initialized", Severity.Info); } catch { }
+    }
+
+    private void Close() => MudDialog.Close();
+}

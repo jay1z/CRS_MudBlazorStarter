@@ -1,4 +1,12 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Http
+@using CRS.Components
+@using CRS.Components.Layout
+@inject ThemeService ThemeService
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -10,6 +18,9 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor.ThemeManager/MudBlazorThemeManager.css" rel="stylesheet" />
     <link href=@Assets["_content/MudBlazor/MudBlazor.min.css"] rel="stylesheet" />
+
+    <!-- HTML editor CSS from NuGet package -->
+    <link href="_content/Tizzani.MudBlazor.HtmlEditor/MudHtmlEditor.css" rel="stylesheet" />
 
     <link href="https://fonts.googleapis.com/css2?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined" rel="stylesheet">
@@ -25,11 +36,21 @@
 </head>
 
 <body>
-    <Routes @rendermode="PageRenderMode" />
+    <CascadingAuthenticationState>
+        <!-- App routes/components: MudBlazor providers moved to layouts -->
+        <Routes @rendermode="PageRenderMode" />
+    </CascadingAuthenticationState>
+
+    <!-- Ensure interop wrapper is loaded from absolute path -->
+    <script src="/js/grapesInterop.js"></script>
     <script src="_framework/blazor.web.js"></script>
     <script src=@Assets["_content/MudBlazor/MudBlazor.min.js"]></script>
     <script src=@Assets["_content/Extensions.MudBlazor.StaticInput/NavigationObserver.js"]></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.37.1/dist/apexcharts.min.js"></script>
+
+    <!-- Quill editor JS (from README) -->
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script src="_content/Tizzani.MudBlazor.HtmlEditor/quill-blot-formatter.min.js"></script> <!-- optional; for image resize -->
+
     <script src="js/apexcharts-interop.js"></script>
 </body>
 
@@ -40,5 +61,4 @@
     private HttpContext HttpContext { get; set; } = default!;
 
     private IComponentRenderMode? PageRenderMode => HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
-    //private IComponentRenderMode? PageRenderMode => new InteractiveServerRenderMode(prerender: false);
 }

@@ -1,0 +1,18 @@
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+
+@* Wrapper component that provides MudBlazor overlay providers for server-side HTML rendering. *@
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+@ChildContent
+
+@code {
+ [Parameter]
+ public RenderFragment? ChildContent { get; set; }
+
+ [Parameter]
+ public MudTheme? Theme { get; set; }
+}

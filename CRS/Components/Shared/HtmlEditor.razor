@@ -1,0 +1,104 @@
+@namespace CRS.Components.Shared
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+
+<div id="@_elementId" style="height:@Height; background: white;"></div>
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter]
+    public string Height { get; set; } = "200px";
+
+    private string _elementId = "quill-editor-" + Guid.NewGuid().ToString("N");
+    private DotNetObjectReference<HtmlEditor>? _dotNetRef;
+    private string? _instanceId;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            _dotNetRef = DotNetObjectReference.Create(this);
+
+            // Ensure Quill and blot-formatter are loaded and registered
+            try {
+                await JS.InvokeVoidAsync("quillInterop.ensureLoaded");
+            }
+            catch (JSDisconnectedException) {
+                // Circuit disconnected while attempting JS interop — ignore and allow graceful disposal
+            }
+            catch {
+                // fallback: continue, loader will attempt to load when init is called
+            }
+
+            // Initialize editor; pass initial HTML and dotNetRef so JS can call back on changes
+            try {
+                var result = await JS.InvokeAsync<object>("quillInterop.init", _elementId, Value ?? string.Empty, _dotNetRef, null);
+
+                // result is { instanceId: '...' }
+                try {
+                    if (result != null) {
+                        // extract instanceId if present
+                        var json = System.Text.Json.JsonSerializer.Serialize(result);
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object && doc.RootElement.TryGetProperty("instanceId", out var v)) {
+                            _instanceId = v.GetString();
+                        }
+                    }
+                }
+                catch { }
+            }
+            catch (JSDisconnectedException) {
+                // Circuit disconnected; nothing to do — component will be disposed.
+            }
+            catch {
+                // ignore other JS errors during init
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task NotifyQuillChange(string elementId, string html) {
+        if (elementId != _elementId) return;
+        Value = html;
+        if (ValueChanged.HasDelegate) await ValueChanged.InvokeAsync(html);
+    }
+
+    public async Task<string> GetContentAsync() {
+        try {
+            if (string.IsNullOrEmpty(_instanceId)) return string.Empty;
+            var content = await JS.InvokeAsync<string>("quillInterop.getHtml", _instanceId);
+            return content ?? string.Empty;
+        } catch (JSDisconnectedException) {
+            return string.Empty;
+        } catch {
+            return string.Empty;
+        }
+    }
+
+    public async Task SetContentAsync(string? html) {
+        try {
+            if (string.IsNullOrEmpty(_instanceId)) return;
+            await JS.InvokeVoidAsync("quillInterop.setHtml", _instanceId, html ?? string.Empty);
+        } catch (JSDisconnectedException) {
+            // ignore
+        } catch { }
+    }
+
+    public async ValueTask DisposeAsync() {
+        try {
+            if (!string.IsNullOrEmpty(_instanceId)) {
+                try {
+                    await JS.InvokeVoidAsync("eval", $"(function(){{ if(window.quillInterop && window.quillInterop.instances && window.quillInterop.instances['{_instanceId}']) {{ delete window.quillInterop.instances['{_instanceId}']; }} }})();");
+                } catch (JSDisconnectedException) {
+                    // Circuit disconnected while disposing JS object - ignore
+                } catch { }
+            }
+        } catch { }
+        try {
+            _dotNetRef?.Dispose();
+        } catch { }
+    }
+}

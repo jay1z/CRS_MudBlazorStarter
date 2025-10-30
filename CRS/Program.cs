@@ -26,6 +26,9 @@ using MudBlazor.Services;
 using Serilog;
 using Serilog.Sinks.MSSqlServer;
 
+using Ganss.Xss;
+using System.Text.RegularExpressions;
+
 var builder = WebApplication.CreateBuilder(args);
 
 ConfigureLogging(builder);
@@ -54,6 +57,8 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<UserStateService>();
     builder.Services.AddMudServices();
+    // HTTP client factory for server-side HttpClient usage in components (e.g., InspectorPanel uploads)
+    builder.Services.AddHttpClient();
     builder.Services.AddSignalR();
 
     // Health checks
@@ -93,8 +98,12 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, TenantClaimsPrincipalFactory>();
     builder.Services.AddScoped<CRS.Services.File.IFileStorageService, CRS.Services.File.FileStorageService>();
     builder.Services.AddScoped<CRS.Services.License.ILicenseValidationService, CRS.Services.License.LicenseValidationService>();
+    builder.Services.AddScoped<IUserSettingsService, UserSettingsService>();
     // Optionally enable this recurring validator later
     // builder.Services.AddHostedService<CRS.Services.License.LicenseValidationBackgroundService>();
+
+    // Register homepage service
+    builder.Services.AddScoped<TenantHomepageService>();
 
     // Authorization policy
     builder.Services.AddTenantPolicies();
@@ -103,6 +112,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddMailer(builder.Configuration);
     builder.Services.AddScoped<ReserveStudyCreatedListener>();
     builder.Services.AddEvents();
+
+    // Register controllers for API endpoints (media upload, etc.)
+    builder.Services.AddControllers();
 
     // Add memory cache service
     builder.Services.AddMemoryCache();
@@ -146,25 +158,25 @@ void ConfigureIdentity(WebApplicationBuilder builder) {
     var requireConfirmed = builder.Configuration.GetValue<bool>("Identity:RequireConfirmedAccount", !builder.Environment.IsDevelopment());
 
     builder.Services.AddIdentityCore<ApplicationUser>(options => {
-            // Sign-in policies
-            options.SignIn.RequireConfirmedAccount = requireConfirmed;
+        // Sign-in policies
+        options.SignIn.RequireConfirmedAccount = requireConfirmed;
 
-            // Password policy
-            options.Password.RequireDigit = true;
-            options.Password.RequiredLength = 12;
-            options.Password.RequireNonAlphanumeric = true;
-            options.Password.RequireUppercase = true;
-            options.Password.RequireLowercase = true;
-            options.Password.RequiredUniqueChars = 1;
+        // Password policy
+        options.Password.RequireDigit = true;
+        options.Password.RequiredLength = 12;
+        options.Password.RequireNonAlphanumeric = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequiredUniqueChars = 1;
 
-            // Lockout policy
-            options.Lockout.AllowedForNewUsers = true;
-            options.Lockout.MaxFailedAccessAttempts = 5;
-            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+        // Lockout policy
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
 
-            // User settings
-            options.User.RequireUniqueEmail = true;
-        })
+        // User settings
+        options.User.RequireUniqueEmail = true;
+    })
         .AddRoles<IdentityRole<Guid>>()
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddSignInManager<SignInManager<ApplicationUser>>()
@@ -223,8 +235,7 @@ async Task ConfigurePipeline(WebApplication app) {
     // Configure the HTTP request pipeline based on environment
     if (app.Environment.IsDevelopment()) {
         app.UseDeveloperExceptionPage();
-    }
-    else {
+    } else {
         app.UseExceptionHandler("/Error", createScopeForErrors: true);
         app.UseHsts();
     }
@@ -266,7 +277,65 @@ async Task ConfigurePipeline(WebApplication app) {
 
     // Map endpoints
     app.MapStaticAssets();
+    // Map attribute-routed controllers (API endpoints)
+    app.MapControllers();
     app.MapHub<KanbanHub>("/kanbanhub");
+
+    // SaaS Refactor: Public tenant homepage renderer (temporary preview endpoint)
+    // Use a tenant id-based preview route for local testing when subdomains are not available.
+    // Example: GET /tenant/preview/1
+    app.MapGet("/tenant/preview/{tenantId:int}", async (int tenantId, TenantHomepageService homepageService) => {
+        try {
+            var homepage = await homepageService.GetByTenantIdAsync(tenantId);
+            if (homepage != null && homepage.IsPublished && !string.IsNullOrWhiteSpace(homepage.PublishedHtml)) {
+                // Note: PublishedHtml should be sanitized when saved/published to avoid XSS
+                return Results.Content(homepage.PublishedHtml!, "text/html");
+            }
+        } catch {
+            // Best-effort - swallow exceptions to avoid crashing the site
+        }
+
+        // Not found or not published
+        return Results.NotFound();
+    });
+
+    // New minimal API: save GrapesJS HTML (sanitized) to wwwroot/exports/{slug}/{timestamp}.html
+    app.MapPost("/api/grapes/save", async (SaveRequest req, IWebHostEnvironment env) => {
+        if (req == null || string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Html)) return Results.BadRequest("name and html are required");
+        try {
+            var sanitizer = new HtmlSanitizer();
+            var sanitized = sanitizer.Sanitize(req.Html);
+            var slug = Regex.Replace(req.Name.ToLowerInvariant(), @"[^a-z0-9\-]", "-").Trim('-');
+            if (string.IsNullOrWhiteSpace(slug)) slug = "page";
+            var ts = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var dir = Path.Combine(env.ContentRootPath, "wwwroot", "exports", slug);
+            Directory.CreateDirectory(dir);
+            var htmlPath = Path.Combine(dir, ts + ".html");
+            await File.WriteAllTextAsync(htmlPath, sanitized);
+            // also save raw components JSON if provided
+            if (!string.IsNullOrWhiteSpace(req.ComponentsJson)) {
+                var jsonPath = Path.Combine(dir, ts + ".json");
+                await File.WriteAllTextAsync(jsonPath, req.ComponentsJson);
+            }
+            var url = $"/exports/{slug}/{ts}.html";
+            return Results.Json(new { name = req.Name, url, created = DateTime.UtcNow });
+        } catch (Exception ex) {
+            return Results.Problem(ex.Message);
+        }
+    }).WithName("GrapesSave");
+
+    // List saved exports for a slug
+    app.MapGet("/api/grapes/list/{slug}", (string slug, IWebHostEnvironment env) => {
+        var dir = Path.Combine(env.ContentRootPath, "wwwroot", "exports", slug);
+        if (!Directory.Exists(dir)) return Results.NotFound();
+        var files = Directory.GetFiles(dir, "*.html").Select(f => new {
+            file = Path.GetFileName(f),
+            url = $"/exports/{slug}/{Path.GetFileName(f)}",
+            created = File.GetCreationTimeUtc(f)
+        }).OrderByDescending(x => x.created);
+        return Results.Json(files);
+    }).WithName("GrapesList");
+
     app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
     app.MapAdditionalIdentityEndpoints();
 
@@ -288,11 +357,15 @@ async Task SeedDatabase(WebApplication app) {
                 await SeedManager.SeedTestUsersAsync(services);
             }
             await SeedManager.SeedAdminUserAsync(services);
+            // Seed tenants and per-tenant admin users
+            await SeedManager.SeedTenantsAndAdminsAsync(services);
 
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogError(ex, "An error occurred while migrating or seeding the database.");
         }
     }
 }
+
+// DTO for save endpoint
+public record SaveRequest(string Name, string Html, string? ComponentsJson);

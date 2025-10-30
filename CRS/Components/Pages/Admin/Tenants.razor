@@ -1,89 +1,76 @@
 @page "/Admin/Tenants"
-@attribute [Authorize(Roles = "Admin")]
 
 @using CRS.Models
 @using CRS.Data
 @using CRS.Services.Tenant
+@using CRS.Services
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject ThemeService ThemeService
 @inject ITenantContext TenantContext
+@inject ILogger<CRS.Components.Pages.Admin.Tenants> Logger
+@inject IJSRuntime JS
+@inject IUserSettingsService UserSettingsService
 
-<PageTitle>Tenants</PageTitle>
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+            <MudPaper Elevation="4" Class="pa-4">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+                    <MudText Typo="Typo.h5">Tenants</MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenEditDialog(new Tenant { IsActive = true }))" StartIcon="@Icons.Material.Filled.Add">New Tenant</MudButton>
+                </MudStack>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
-    <MudPaper Elevation="4" Class="pa-4">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
-            <MudText Typo="Typo.h5">Tenants</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenEditDialog(new Tenant { IsActive = true }))" StartIcon="@Icons.Material.Filled.Add">New Tenant</MudButton>
-        </MudStack>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Debug: editingTenantId=@(editingTenant?.Id.ToString() ?? "null")</MudText>
 
-        <MudTable Items="tenants" Hover="true" Dense="true" Bordered="true">
-            <HeaderContent>
-                <MudTh>ID</MudTh>
-                <MudTh>Name</MudTh>
-                <MudTh>Subdomain</MudTh>
-                <MudTh>Is Active</MudTh>
-                <MudTh>Actions</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="ID">@context.Id</MudTd>
-                <MudTd DataLabel="Name">@context.Name</MudTd>
-                <MudTd DataLabel="Subdomain">@context.Subdomain</MudTd>
-                <MudTd DataLabel="Is Active">
-                    <MudSwitch T="bool" @bind-Checked="context.IsActive" Color="Color.Success" Disabled="true" />
-                </MudTd>
-                <MudTd>
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(context))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteAsync(context))" />
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    </MudPaper>
-</MudContainer>
-
-<MudDialog @bind-IsVisible="editOpen" Position="DialogPosition.Center" DisableBackdropDismiss="true" MaxWidth="MaxWidth.Medium">
-    <DialogContent>
-        <MudStack Spacing="2">
-            <MudText Typo="Typo.h6">@((editingTenant?.Id ?? 0) == 0 ? "Create Tenant" : "Edit Tenant")</MudText>
-            <MudTextField @bind-Value="editingTenant!.Name" Label="Name" Required="true" Immediate="true" />
-            <MudTextField @bind-Value="editingTenant!.Subdomain" Label="Subdomain" Required="true" HelperText="Example: acme (for acme.example.com)" Immediate="true" />
-            <MudSwitch T="bool" @bind-Checked="editingTenant!.IsActive" Color="Color.Primary">Active</MudSwitch>
-            <MudText Typo="Typo.subtitle2">Branding (JSON)</MudText>
-            <MudSelect T="string" Label="Preset" @bind-Value="selectedPreset" Dense="true" Class="mb-2" Immediate="true" OnClose="ApplyPreset">
-                @foreach (var name in presetNames) {
-                    <MudSelectItem Value="@name">@name</MudSelectItem>
-                }
-            </MudSelect>
-            <MudTextField @bind-Value="editingTenant!.BrandingJson" Lines="6" Label="Branding JSON" Placeholder='{"primary":"#1976d2"}' Immediate="true" OnBlurred="ValidateBrandingJson" />
-            <MudText Color="Color.Error">@brandingError</MudText>
-            @if (IsEditingCurrentTenant) {
-                <MudAlert Severity="Severity.Info">Editing current tenant. Saving will update the active theme for this session.</MudAlert>
-            }
-        </MudStack>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="SaveAsync" Color="Color.Primary" Variant="Variant.Filled" Disabled="@(CanSave == false)">Save</MudButton>
-        <MudButton OnClick="@CloseDialog" Color="Color.Secondary" Variant="Variant.Outlined">Cancel</MudButton>
-    </DialogActions>
-</MudDialog>
+                <MudTable Items="tenants" Hover="true" Dense="true" Bordered="true">
+                    <HeaderContent>
+                        <MudTh>ID</MudTh>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Subdomain</MudTh>
+                        <MudTh>Is Active</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="tenant">
+                        <MudTd DataLabel="ID">@tenant.Id</MudTd>
+                        <MudTd DataLabel="Name">@tenant.Name</MudTd>
+                        <MudTd DataLabel="Subdomain">@tenant.Subdomain</MudTd>
+                        <MudTd DataLabel="Is Active">@(tenant.IsActive ? "Yes" : "No")</MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(tenant))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" OnClick="@(() => SelectTenantAsync(tenant))" Title="Select tenant" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteAsync(tenant))" Disabled="@(tenant.Id ==1)" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </MudContainer>
+    </Authorized>
+    <NotAuthorized>
+        <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">Access denied</MudText>
+                <MudText>Administrator access is required to view this page.</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/Account/Login">Sign in</MudButton>
+            </MudPaper>
+        </MudContainer>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
     private List<Tenant> tenants = new();
-    private bool editOpen;
     private Tenant? editingTenant;
-    private string? brandingError;
-
-    private bool CanSave => editingTenant != null && string.IsNullOrWhiteSpace(brandingError);
-
-    private string? selectedPreset;
-    private IReadOnlyList<string> presetNames = Array.Empty<string>();
+    private Tenant? _dialogSource;
+    private bool _showDialogOnAfterRender = false;
 
     protected override async Task OnInitializedAsync() {
-        presetNames = ThemeService.GetPresetNames();
         await LoadAsync();
     }
 
@@ -91,14 +78,15 @@
         try {
             await using var db = await DbFactory.CreateDbContextAsync();
             tenants = await db.Set<Tenant>().OrderBy(t => t.Id).ToListAsync();
+            Logger.LogInformation("Loaded {Count} tenants", tenants.Count);
         } catch (Exception ex) {
             Snackbar.Add($"Error loading tenants: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Error loading tenants");
         }
     }
 
     private void OpenEditDialog(Tenant source) {
-        // clone to avoid editing the table row by reference
-        editingTenant = new Tenant {
+        _dialogSource = new Tenant {
             Id = source.Id,
             Name = source.Name,
             Subdomain = source.Subdomain,
@@ -106,78 +94,43 @@
             BrandingJson = source.BrandingJson,
             CreatedAt = source.CreatedAt
         };
-        brandingError = null;
-        editOpen = true;
+        _showDialogOnAfterRender = true;
+        StateHasChanged();
     }
 
-    private void CloseDialog() {
-        editOpen = false;
-        editingTenant = null;
-        brandingError = null;
-    }
-
-    private void ValidateBrandingJson(FocusEventArgs _) {
-        brandingError = null;
-        if (string.IsNullOrWhiteSpace(editingTenant?.BrandingJson)) return;
-        try {
-            using var doc = System.Text.Json.JsonDocument.Parse(editingTenant!.BrandingJson);
-        } catch (Exception ex) {
-            brandingError = $"Invalid JSON: {ex.Message}";
-        }
-    }
-
-    private async Task SaveAsync() {
-        if (editingTenant is null) return;
-        ValidateBrandingJson(new());
-        if (!string.IsNullOrWhiteSpace(brandingError)) return;
-        try {
-            await using var db = await DbFactory.CreateDbContextAsync();
-            if (editingTenant.Id == 0) {
-                editingTenant.CreatedAt = DateTime.UtcNow;
-                db.Set<Tenant>().Add(editingTenant);
-            } else {
-                var existing = await db.Set<Tenant>().FirstOrDefaultAsync(t => t.Id == editingTenant.Id);
-                if (existing is null) {
-                    Snackbar.Add("Tenant not found.", Severity.Error);
-                    return;
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (_showDialogOnAfterRender && _dialogSource != null) {
+            _showDialogOnAfterRender = false;
+            var parameters = new DialogParameters { ["Source"] = _dialogSource };
+            var options = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+            var dialog = await DialogService.ShowAsync<EditTenantDialog>("Edit Tenant", parameters, options);
+            var result = await dialog.Result;
+            if (result.Data is Tenant saved) {
+                var existing = tenants.FirstOrDefault(t => t.Id == saved.Id);
+                if (existing != null) {
+                    existing.Name = saved.Name;
+                    existing.Subdomain = saved.Subdomain;
+                    existing.IsActive = saved.IsActive;
+                    existing.BrandingJson = saved.BrandingJson;
+                } else {
+                    tenants.Insert(0, saved);
                 }
-                existing.Name = editingTenant.Name;
-                existing.Subdomain = editingTenant.Subdomain;
-                existing.IsActive = editingTenant.IsActive;
-                existing.BrandingJson = editingTenant.BrandingJson;
+                tenants = tenants.ToList();
+                await InvokeAsync(StateHasChanged);
+            } else {
+                await LoadAsync();
+                await InvokeAsync(StateHasChanged);
             }
-            await db.SaveChangesAsync();
-            Snackbar.Add("Saved.", Severity.Success);
-
-            // If editing the current tenant, update theme immediately in session
-            if (IsEditingCurrentTenant) {
-                TenantContext.BrandingJson = editingTenant.BrandingJson;
-                ThemeService.ApplyTenantBrandingIfAvailable();
-            }
-
-            await LoadAsync();
-            CloseDialog();
-        } catch (DbUpdateException ex) {
-            Snackbar.Add($"DB error: {ex.InnerException?.Message ?? ex.Message}", Severity.Error);
-        } catch (Exception ex) {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
-    }
-
-    private void ApplyPreset() {
-        if (string.IsNullOrWhiteSpace(selectedPreset) || editingTenant == null) return;
-        var preset = ThemeService.GetPresetByName(selectedPreset);
-        if (preset == null) return;
-        editingTenant.BrandingJson = ThemeService.ToBrandingJson(preset);
-        brandingError = null;
     }
 
     private async Task DeleteAsync(Tenant tenant) {
-        bool confirm = await DialogService.ShowMessageBox(
-        "Confirm Delete",
-        (MarkupString)$"Are you sure you want to delete tenant '<b>{tenant.Name}</b>'?",
-        yesText: "Delete", cancelText: "Cancel") == true;
-        if (!confirm) return;
+        if (tenant.Id == 1) {
+            Snackbar.Add("Default tenant cannot be deleted.", Severity.Warning);
+            return;
+        }
+        var confirmed = (await DialogService.ShowMessageBox("Confirm Delete", (MarkupString)$"Are you sure you want to delete tenant '<b>{tenant.Name}</b>'?", yesText: "Delete", cancelText: "Cancel")) == true;
+        if (!confirmed) return;
         try {
             await using var db = await DbFactory.CreateDbContextAsync();
             var existing = await db.Set<Tenant>().FirstOrDefaultAsync(t => t.Id == tenant.Id);
@@ -191,8 +144,39 @@
             await LoadAsync();
         } catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Logger.LogError(ex, "Error deleting tenant {TenantId}", tenant.Id);
         }
     }
 
-    private bool IsEditingCurrentTenant => editingTenant != null && TenantContext.TenantId.HasValue && editingTenant.Id == TenantContext.TenantId.Value;
+    private async Task SelectTenantAsync(Tenant tenant) {
+        try {
+            // Set tenant into the scoped TenantContext so other pages (like HomepageEditor) will see it
+            TenantContext.TenantId = tenant.Id;
+            TenantContext.TenantName = tenant.Name;
+            TenantContext.Subdomain = tenant.Subdomain;
+            TenantContext.IsActive = tenant.IsActive;
+            TenantContext.BrandingJson = tenant.BrandingJson;
+
+            // Persist selection to localStorage for convenience across reloads
+            try { await JS.InvokeVoidAsync("localStorage.setItem", "selectedTenantId", tenant.Id.ToString()); } catch { }
+
+            // Persist selection to user settings (if logged in)
+            try {
+                var authState = await AuthenticationStateTask;
+                var user = authState.User;
+                if (user?.Identity?.IsAuthenticated == true) {
+                    var idClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                    if (Guid.TryParse(idClaim, out var userId)) {
+                        await UserSettingsService.SetSettingAsync(userId, "selectedTenantId", tenant.Id.ToString());
+                    }
+                }
+            } catch { }
+
+            Snackbar.Add($"Selected tenant: {tenant.Name}", Severity.Success);
+            // Apply tenant branding immediately via ThemeService if available
+            try { ThemeService.ApplyTenantBrandingIfAvailableAndChanged(); } catch { }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error selecting tenant: {ex.Message}", Severity.Error);
+        }
+    }
 }

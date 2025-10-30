@@ -17,6 +17,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Reserve Study Proposal</PageTitle>
 
@@ -37,7 +38,7 @@
                 </CardHeaderContent>
                 <CardHeaderActions>
                     <MudTooltip Text="Return to Study Details">
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudy/{reserveStudy.Id}/Details")" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudy/Details/{studyId}")" />
                     </MudTooltip>
                 </CardHeaderActions>
             </MudCardHeader>
@@ -149,12 +150,7 @@
                                           Placeholder="e.g., 50% due upon acceptance, 50% due upon completion" />
                         </MudItem>
                         <MudItem xs="12">
-                            <MudTextField T="string"
-                                          Label="Additional Comments"
-                                          @bind-Value="proposal.Comments"
-                                          Variant="Variant.Outlined"
-                                          Lines="4"
-                                          Placeholder="Any additional information or clarifications about the proposal" />
+                            <MudHtmlEditorField @bind-Value="proposal.Comments" Id="proposalCommentsEditor" />
                         </MudItem>
                     </MudGrid>
 
@@ -185,6 +181,8 @@
         </MudCard>
     }
 </MudContainer>
+
+<script src="/js/editor-interop.js"></script>
 
 @code {
     [Parameter]
@@ -231,13 +229,23 @@
     private async Task HandleValidSubmit() {
         isSaving = true;
         try {
+            // Ensure we capture editor HTML content (fallback if binding didn't propagate)
+            try {
+                var html = await JSRuntime.InvokeAsync<string>("getMudHtmlEditorContent", "proposalCommentsEditor");
+                if (!string.IsNullOrEmpty(html)) {
+                    proposal.Comments = html;
+                }
+            } catch (Exception jsEx) {
+                Console.WriteLine(jsEx.Message);
+            }
+
             // Map from view model to entity model
             var proposalEntity = new Models.Proposal {
                 ReserveStudyId = proposal.ReserveStudyId,
                 ProposalDate = proposal.ProposalDate.GetValueOrDefault(),
                 ProposalScope = proposal.ProposalScope,
                 EstimatedCost = proposal.EstimatedCost,
-                Comments = BuildCommentsString()
+                Comments = proposal.Comments
             };
 
             var result = await WorkflowService.SendProposalAsync(studyId, proposalEntity);
@@ -252,42 +260,6 @@
         } finally {
             isSaving = false;
         }
-    }
-
-    private string BuildCommentsString() {
-        var commentsList = new List<string>();
-
-        // Add selected services
-        var selectedServices = new List<string>();
-        if (proposal.IncludeLevel1Services) selectedServices.Add("Level I: Full Service");
-        if (proposal.IncludeLevel2Services) selectedServices.Add("Level II: Update with Site Visit");
-        if (proposal.IncludeLevel3Services) selectedServices.Add("Level III: Update without Site Visit");
-
-        if (selectedServices.Any())
-            commentsList.Add($"Selected Services: {string.Join(", ", selectedServices)}");
-
-        // Add delivery timeframe
-        commentsList.Add($"Delivery Timeframe: {proposal.DeliveryTimeframe}");
-
-        // Add additional services
-        var additionalServices = new List<string>();
-        if (proposal.IncludePrepaymentDiscount) additionalServices.Add("Prepayment Discount (5%)");
-        if (proposal.IncludeDigitalDelivery) additionalServices.Add("Digital Delivery Only");
-        if (proposal.IncludeComponentInventory) additionalServices.Add("Detailed Component Inventory");
-        if (proposal.IncludeFundingPlans) additionalServices.Add("Alternative Funding Plans");
-
-        if (additionalServices.Any())
-            commentsList.Add($"Additional Services: {string.Join(", ", additionalServices)}");
-
-        // Add payment terms
-        if (!string.IsNullOrEmpty(proposal.PaymentTerms))
-            commentsList.Add($"Payment Terms: {proposal.PaymentTerms}");
-
-        // Add comments
-        if (!string.IsNullOrEmpty(proposal.Comments))
-            commentsList.Add($"Additional Comments: {proposal.Comments}");
-
-        return string.Join("\n\n", commentsList);
     }
 
     public class ProposalViewModel {

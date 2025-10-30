@@ -325,6 +325,29 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TenantHomepages",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    TemplateName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DraftJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PublishedJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DraftHtml = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PublishedHtml = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MetaTitle = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MetaDescription = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsPublished = table.Column<bool>(type: "bit", nullable: false),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenantHomepages", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tenants",
                 schema: "crs",
                 columns: table => new
@@ -335,7 +358,8 @@ namespace CRS.Migrations
                     Subdomain = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     BrandingJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PublicId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()")
                 },
                 constraints: table =>
                 {
@@ -1276,6 +1300,19 @@ namespace CRS.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TenantHomepages_TenantId_IsPublished",
+                schema: "crs",
+                table: "TenantHomepages",
+                columns: new[] { "TenantId", "IsPublished" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tenants_PublicId",
+                schema: "crs",
+                table: "Tenants",
+                column: "PublicId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Tenants_Subdomain",
                 schema: "crs",
                 table: "Tenants",
@@ -1360,6 +1397,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Settings",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "TenantHomepages",
                 schema: "crs");
 
             migrationBuilder.DropTable(

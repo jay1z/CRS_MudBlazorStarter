@@ -2,25 +2,31 @@
 @implements IDisposable
 
 @using CRS.Data
+@using Microsoft.EntityFrameworkCore
 @using CRS.Themes
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Identity
+@using CRS.Services
+@using CRS.Services.Tenant
 @inject IHostEnvironment HostEnvironment
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 @inject ThemeService ThemeService
+@inject ITenantContext TenantContext
+@inject IJSRuntime JS
+@inject IUserSettingsService UserSettingsService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
-@* <MudThemeProvider @ref="@provider" @bind-IsDarkMode="@useDarkMode" Theme="_themeManager.Theme" /> *@
+<!-- MudBlazor providers: present once per layout (supports prerendering) -->
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" />
-<MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
+<MudPopoverProvider />
+
 <MudLayout>
-    @* <MudThemeManagerButton OnClick="@((e) => OpenThemeManager(true))" />
-    <MudThemeManager Open="_themeManagerOpen" OpenChanged="OpenThemeManager" Theme="_themeManager" ThemeChanged="UpdateTheme" />
-    <MudAppBar Elevation="_themeManager.AppBarElevation"> *@
     <MudAppBar Elevation="25">
         <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
         <MudText Typo="Typo.h5" Class="ml-3">Community Reserve Specialists</MudText>
@@ -34,23 +40,13 @@
         <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
             <MudMenuItem Href="/Account/Manage" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary">Profile</MudMenuItem>
             <MudMenuItem Href="/Settings" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Primary">Settings</MudMenuItem>
-            @* <MudDivider />
-            <MudMenuItem>
-                <MudButton StartIcon="@Icons.Material.Filled.Logout" ButtonType="ButtonType.Submit">Logout</MudButton>
-                <form action="Account/Logout" method="post" style="width: 100%">
-                    <AntiforgeryToken />
-                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                    <button type="submit" class="mud-nav-link mud-ripple">
-                        <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Error" Class="mr-3"></MudIcon> Logout
-                    </button>
-                </form>
-            </MudMenuItem> *@
         </MudMenu>
     </MudAppBar>
-    @* <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="_themeManager.DrawerClipMode" Elevation="_themeManager.DrawerElevation"> *@
+
     <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="25">
         <NavMenu />
     </MudDrawer>
+
     <MudMainContent id="main-content" Class="mt-16 pa-4">
         <ErrorBoundary>
             @Body
@@ -77,56 +73,45 @@
 
 @code {
     private string? currentUrl;
-
-    // private MudThemeProvider provider;
-    // private bool useDarkMode;
     private bool _drawerOpen = true;
 
-    protected override void OnInitialized() {
+    protected override async Task OnInitializedAsync() {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
 
         ThemeService.OnThemeChanged += StateHasChanged;
         ThemeService.SetTheme(new Default().Theme!);
 
-        // _themeManager.Theme = CrispyThemeSunsetSerenade.Theme;
-        // StateHasChanged();
+        // Ensure TenantContext is populated from authenticated user's tenant claim (login-driven)
+        try {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user?.Identity?.IsAuthenticated == true && TenantContext?.TenantId == null) {
+                var claimTenant = user.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
+                if (int.TryParse(claimTenant, out var tid)) {
+                    TenantContext.TenantId = tid;
+                    TenantContext.IsResolvedByLogin = true;
+                    // Load tenant metadata (name/branding) from DB
+                    try {
+                        await using var db = await DbFactory.CreateDbContextAsync();
+                        var t = await db.Tenants.FindAsync(tid);
+                        if (t != null) {
+                            TenantContext.TenantName = t.Name;
+                            TenantContext.Subdomain = t.Subdomain;
+                            TenantContext.IsActive = t.IsActive;
+                            TenantContext.BrandingJson = t.BrandingJson;
+                            try { ThemeService.ApplyTenantBrandingIfAvailableAndChanged(); } catch { }
+                        }
+                    } catch { }
+                }
+            }
+        } catch { }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) {
         currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
         StateHasChanged();
     }
-
-    // protected override async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         useDarkMode = await provider.GetSystemPreference();
-    //         await provider.WatchSystemPreference(OnSystemPreferenceChanged);
-    //         StateHasChanged();
-    //     }
-    // }
-
-    // private async Task OnSystemPreferenceChanged(bool newValue)
-    // {
-    //     useDarkMode = newValue;
-    //     StateHasChanged();
-    // }
-
-    // private ThemeManagerTheme _themeManager = new ThemeManagerTheme();
-    // public bool _themeManagerOpen = false;
-
-    // void OpenThemeManager(bool value)
-    // {
-    //     _themeManagerOpen = value;
-    // }
-
-    // void UpdateTheme(ThemeManagerTheme value)
-    // {
-    //     _themeManager = value;
-    //     StateHasChanged();
-    // }
 
     public void Dispose() {
         NavigationManager.LocationChanged -= OnLocationChanged;

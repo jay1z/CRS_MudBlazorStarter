@@ -1,0 +1,50 @@
+@using CRS.Models
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+
+<MudSwitch T="bool" Checked="@isActive" CheckedChanged="OnCheckedChanged" Color="Color.Success" />
+
+@code {
+    [Parameter] public Tenant Tenant { get; set; } = default!;
+    [Parameter] public EventCallback<bool> OnToggled { get; set; }
+
+    private bool isActive;
+
+    protected override void OnParametersSet()
+    {
+        isActive = Tenant?.IsActive ?? false;
+    }
+
+    private async Task OnCheckedChanged(bool newValue)
+    {
+        // optimistic update
+        isActive = newValue;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var existing = await db.Set<Tenant>().FirstOrDefaultAsync(t => t.Id == Tenant.Id);
+            if (existing != null)
+            {
+                existing.IsActive = newValue;
+                await db.SaveChangesAsync();
+                Snackbar.Add($"Tenant {(newValue ? "activated" : "deactivated")}", Severity.Success);
+                if (OnToggled.HasDelegate)
+                    await OnToggled.InvokeAsync(newValue);
+            }
+            else
+            {
+                Snackbar.Add("Tenant not found in database.", Severity.Error);
+                // rollback
+                isActive = !newValue;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating tenant: {ex.Message}", Severity.Error);
+            isActive = !newValue;
+        }
+    }
+}

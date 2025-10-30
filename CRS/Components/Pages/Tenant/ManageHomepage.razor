@@ -1,0 +1,150 @@
+@page "/Tenant/Homepage"
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+@using Tizzani.MudBlazor.HtmlEditor
+@inject TenantHomepageService HomepageService
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <MudContainer Class="mt-6">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h5">Manage Homepage</MudText>
+                <MudText Typo="Typo.subtitle2">Edit draft and publish when ready.</MudText>
+
+                <MudTextField Label="Meta Title" @bind-Value="model.MetaTitle" />
+                <MudTextField Label="Meta Description" @bind-Value="model.MetaDescription" />
+
+                <label class="mud-typography mud-typography-body1">Draft HTML (WYSIWYG)</label>
+
+                <ErrorBoundary>
+                    <ChildContent>
+                        @if (_quillAvailable)
+                        {
+                            <MudHtmlEditor @bind-Value="model.DraftHtml" Height="400px" />
+                        }
+                        else if (_quillLoadFailed)
+                        {
+                            <MudPaper Class="pa-4">
+                                <MudText Typo="Typo.body2">Editor failed to load — using fallback editor.</MudText>
+                                <textarea class="mud-input-root mud-text-field" rows="10" style="width:100%;padding:8px;border-radius:4px;" @bind="model.DraftHtml"></textarea>
+                            </MudPaper>
+                        }
+                        else
+                        {
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                        }
+                    </ChildContent>
+                    <ErrorContent Context="editorError">
+                        <MudPaper Class="pa-4">
+                            <MudText Typo="Typo.h6" Color="Color.Error">Editor failed to initialize — using fallback editor.</MudText>
+                            @if (editorError != null) {
+                                <MudAlert Severity="Severity.Error" Dense>
+                                    <div><strong>@editorError.Message</strong></div>
+                                    <pre style="white-space:pre-wrap;max-height:200px;overflow:auto;">@editorError.ToString()</pre>
+                                </MudAlert>
+                            }
+                            <textarea class="mud-input-root mud-text-field" rows="10" style="width:100%;padding:8px;border-radius:4px;" @bind="model.DraftHtml"></textarea>
+                        </MudPaper>
+                    </ErrorContent>
+                </ErrorBoundary>
+
+                <MudStack Row="true" Class="mt-3" Spacing="2">
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveDraft">Save Draft</MudButton>
+                    <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Publish">Publish</MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudContainer>
+    </Authorized>
+    <NotAuthorized>
+        <MudContainer Class="mt-6">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">Access denied</MudText>
+                <MudText>You must be an admin to manage the homepage.</MudText>
+            </MudPaper>
+        </MudContainer>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private TenantHomepage model = new();
+    private bool _quillAvailable = false;
+    private bool _quillLoadFailed = false;
+
+    protected override async Task OnInitializedAsync() {
+        await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Define a helper to ensure Quill v2 is loaded; returns a promise
+                await JS.InvokeVoidAsync("eval", @"window.ensureQuillLoaded = function() {
+                    return new Promise((resolve, reject) => {
+                        try {
+                            if (window.Quill) { resolve(true); return; }
+                            const s = document.createElement('script');
+                            s.src = 'https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js';
+                            s.onload = () => resolve(true);
+                            s.onerror = () => reject('Failed to load Quill v2');
+                            document.head.appendChild(s);
+                        } catch (e) { reject(e); }
+                    });
+                };");
+
+                await JS.InvokeAsync<object>("ensureQuillLoaded");
+                _quillAvailable = true;
+                _quillLoadFailed = false;
+            }
+            catch (Exception ex)
+            {
+                _quillAvailable = false;
+                _quillLoadFailed = true;
+                Console.WriteLine($"Failed to load Quill: {ex.Message}");
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync() {
+        try {
+            var existing = await HomepageService.GetForCurrentTenantAsync();
+            if (existing != null) model = existing;
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading homepage: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveDraft() {
+        try {
+            var saved = await HomepageService.SaveDraftAsync(model, "admin");
+            model = saved;
+            Snackbar.Add("Draft saved", Severity.Success);
+        } catch (Exception ex) {
+            Snackbar.Add($"Error saving draft: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task Publish() {
+        try {
+            var published = await HomepageService.PublishAsync();
+            if (published != null) {
+                model = published;
+                Snackbar.Add("Published", Severity.Success);
+            } else {
+                Snackbar.Add("Nothing to publish", Severity.Warning);
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error publishing homepage: {ex.Message}", Severity.Error);
+        }
+    }
+}

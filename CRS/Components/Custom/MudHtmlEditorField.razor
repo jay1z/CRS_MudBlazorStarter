@@ -1,0 +1,40 @@
+@using Microsoft.AspNetCore.Components
+@using System.Linq.Expressions
+@using Tizzani.MudBlazor.HtmlEditor
+
+@* Simple wrapper that forwards changes from the underlying MudHtmlEditor to the parent via ValueChanged *@
+<MudHtmlEditor id="@EditorId" @bind-Value="InternalValue" />
+
+@code {
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    [Parameter]
+    public Expression<Func<string>>? ValueExpression { get; set; }
+
+    [Parameter]
+    public string? Id { get; set; }
+
+    private string internalValue = string.Empty;
+    private string EditorId = string.Empty;
+
+    protected override void OnInitialized() {
+        EditorId = !string.IsNullOrWhiteSpace(Id) ? Id : ("mudhtml_" + Guid.NewGuid().ToString("N"));
+    }
+
+    protected override void OnParametersSet() {
+        internalValue = Value ?? string.Empty;
+    }
+
+    private string InternalValue {
+        get => internalValue;
+        set {
+            if (internalValue == value) return;
+            internalValue = value ?? string.Empty;
+            _ = ValueChanged.InvokeAsync(internalValue);
+        }
+    }
+}

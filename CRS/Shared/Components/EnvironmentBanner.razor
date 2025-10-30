@@ -1,5 +1,9 @@
 @using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
+@implements IDisposable
 @inject IHostEnvironment Env
+@inject ThemeService ThemeService
+@inject AuthenticationStateProvider AuthStateProvider
 
 @code {
     private Color ChipColor => Env.EnvironmentName?.ToLowerInvariant() switch {
@@ -8,8 +12,55 @@
         "development" => Color.Warning,
         _ => Color.Dark
     };
+
+    private string label = "";
+
+    private string GetDefaultEnv() => !string.IsNullOrWhiteSpace(Env.EnvironmentName) ? Env.EnvironmentName! : "Unknown";
+
+    private async Task UpdateLabelAsync()
+    {
+        var envName = GetDefaultEnv();
+        // Only use authenticated user's claims for tenant
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                var claimTenantName = user.FindFirst("tenant_name")?.Value;
+                var claimTenantId = user.FindFirst("tenant_id")?.Value;
+                if (!string.IsNullOrWhiteSpace(claimTenantName) || !string.IsNullOrWhiteSpace(claimTenantId))
+                {
+                    var tn = !string.IsNullOrWhiteSpace(claimTenantName) ? claimTenantName : "(unnamed)";
+                    label = $"{envName} — Tenant: {tn} (Id:{claimTenantId ?? "?"})";
+                    return;
+                }
+            }
+        }
+        catch { }
+
+        label = envName;
+    }
+
+    private void OnAuthStateChanged(Task<AuthenticationState> task)
+    {
+        _ = InvokeAsync(async () => { await UpdateLabelAsync(); StateHasChanged(); });
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ThemeService.OnThemeChanged += StateHasChanged;
+        AuthStateProvider.AuthenticationStateChanged += OnAuthStateChanged;
+        await UpdateLabelAsync();
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+        try { AuthStateProvider.AuthenticationStateChanged -= OnAuthStateChanged; } catch { }
+    }
 }
 
-<MudChip T="string" Color="@ChipColor" Variant="Variant.Filled" Style="position:fixed;top:8px;right:8px;z-index:9999;opacity:.9">
-    @(!string.IsNullOrWhiteSpace(Env.EnvironmentName) ? Env.EnvironmentName : "Unknown")
+<MudChip T="string" Color="@ChipColor" Variant="Variant.Filled" Style="position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:9999;opacity:.9">
+    @label
 </MudChip>

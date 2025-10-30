@@ -1,0 +1,29 @@
+@using MudBlazor
+
+<div style="position:fixed; left:12px; bottom:12px; z-index:2000;">
+    <MudPaper Class="pa-2 d-flex flex-column" Elevation="6">
+        <MudFab Icon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="@OnInsertClicked" />
+        <MudDivider Class="my-1" />
+        <MudFab Icon="@Icons.Material.Filled.Undo" Color="Color.Default" OnClick="@OnUndoClicked" Disabled="@(!CanUndo)" />
+        <MudFab Icon="@Icons.Material.Filled.Redo" Color="Color.Default" OnClick="@OnRedoClicked" Disabled="@(!CanRedo)" />
+        <MudDivider Class="my-1" />
+        <MudFab Icon="@Icons.Material.Filled.Save" Color="Color.Secondary" OnClick="@OnSaveClicked" />
+        <MudFab Icon="@Icons.Material.Filled.Publish" Color="Color.Primary" OnClick="@OnPublishClicked" />
+    </MudPaper>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnPublish { get; set; }
+    [Parameter] public EventCallback OnInsert { get; set; }
+    [Parameter] public EventCallback OnUndo { get; set; }
+    [Parameter] public EventCallback OnRedo { get; set; }
+    [Parameter] public bool CanUndo { get; set; }
+    [Parameter] public bool CanRedo { get; set; }
+
+    private Task OnSaveClicked() => OnSave.HasDelegate ? OnSave.InvokeAsync() : Task.CompletedTask;
+    private Task OnPublishClicked() => OnPublish.HasDelegate ? OnPublish.InvokeAsync() : Task.CompletedTask;
+    private Task OnInsertClicked() => OnInsert.HasDelegate ? OnInsert.InvokeAsync() : Task.CompletedTask;
+    private Task OnUndoClicked() => OnUndo.HasDelegate ? OnUndo.InvokeAsync() : Task.CompletedTask;
+    private Task OnRedoClicked() => OnRedo.HasDelegate ? OnRedo.InvokeAsync() : Task.CompletedTask;
+}

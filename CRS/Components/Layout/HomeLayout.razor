@@ -6,62 +6,66 @@
 @inject ThemeService ThemeService
 @inject NavigationManager NavigationManager
 
+<!-- MudBlazor providers for this layout -->
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
 <MudPopoverProvider />
+
 <MudLayout>
-    <MudAppBar Elevation="25">
-        <MudText Typo="Typo.h5" Class="ml-3">Community Reserve Specialists</MudText>
-        <MudSpacer />
-        <AuthorizeView>
-            <Authorized>
-                <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
-                    <MudText Typo="Typo.body1" Class="pa-4">@context.User.Identity?.Name</MudText>
-                    <MudDivider />
-                    <MudMenuItem Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Dashboard"))">Dashboard</MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Account/Manage"))">Profile</MudMenuItem>
-                </MudMenu>
-            </Authorized>
-            <NotAuthorized>
-                <MudButton Href="/Account/Register" Variant="Variant.Filled" Size="Size.Large" Style="background-color: gray; color: white;" Class="mx-4">Register</MudButton>
-                <MudButton Href="/Account/Login" Variant="Variant.Filled" Size="Size.Large" Style="background-color: gray; color: white;">Login</MudButton>
-            </NotAuthorized>
-        </AuthorizeView>
-    </MudAppBar>
+ <MudAppBar Elevation="25">
+ <MudText Typo="Typo.h5" Class="ml-3">Community Reserve Specialists</MudText>
+ <MudSpacer />
+ <AuthorizeView>
+ <Authorized>
+ <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
+ <MudText Typo="Typo.body1" Class="pa-4">@context.User.Identity?.Name</MudText>
+ <MudDivider />
+ <MudMenuItem Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Dashboard"))">Dashboard</MudMenuItem>
+ <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Account/Manage"))">Profile</MudMenuItem>
+ </MudMenu>
+ </Authorized>
+ <NotAuthorized>
+ <MudButton Href="/Account/Register" Variant="Variant.Filled" Size="Size.Large" Style="background-color: gray; color: white;" Class="mx-4">Register</MudButton>
+ <MudButton Href="/Account/Login" Variant="Variant.Filled" Size="Size.Large" Style="background-color: gray; color: white;">Login</MudButton>
+ </NotAuthorized>
+ </AuthorizeView>
+ </MudAppBar>
 
-    <MudMainContent Class="pt-16 px-4">
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
-            <ErrorBoundary>
-                @Body
-            </ErrorBoundary>
-        </MudContainer>
-    </MudMainContent>
+ <MudMainContent Class="pt-16 px-4">
+ <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+ <ErrorBoundary>
+ @Body
+ </ErrorBoundary>
+ </MudContainer>
+ </MudMainContent>
 
-    <MudScrollToTop TopOffset="100" Selector="#unique_id_scroll_section">
-        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowUpward">Go to top</MudButton>
-    </MudScrollToTop>
+ <MudScrollToTop TopOffset="100" Selector="#unique_id_scroll_section">
+ <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowUpward">Go to top</MudButton>
+ </MudScrollToTop>
 </MudLayout>
 
 <EnvironmentBanner />
 
 <div id="blazor-error-ui" data-nosnippet>
-    @if (HostEnvironment.IsProduction()) {
-        <span>An error has occurred.</span>
-    }
-    else {
-        <span>An unhandled exception occurred.</span>
-    }
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
+ @if (HostEnvironment.IsProduction()) {
+ <span>An error has occurred.</span>
+ }
+ else {
+ <span>An unhandled exception occurred.</span>
+ }
+ <a href="" class="reload">Reload</a>
+ <a class="dismiss">🗙</a>
 </div>
 
 @code {
-    protected override void OnInitialized() {
-        ThemeService.OnThemeChanged += StateHasChanged;
-        ThemeService.SetTheme(new Default().Theme!);
-    }
+ protected override void OnInitialized() {
+ ThemeService.OnThemeChanged += StateHasChanged;
+ ThemeService.SetTheme(new Default().Theme!);
+ }
 
-    public void Dispose() {
-        ThemeService.OnThemeChanged -= StateHasChanged;
-    }
+ public void Dispose() {
+ ThemeService.OnThemeChanged -= StateHasChanged;
+ }
 
 }

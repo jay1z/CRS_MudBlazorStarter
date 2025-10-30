@@ -46,6 +46,9 @@ public class ThemeService {
         ApplyTenantBrandingIfAvailable();
     }
 
+    // Allow external callers to request a UI refresh when theme/tenant context changed
+    public void NotifyThemeChanged() => OnThemeChanged?.Invoke();
+
     // Presets
     public IReadOnlyList<string> GetPresetNames() => _presets.Select(p => p.Name).ToList();
     public MudTheme? GetPresetByName(string name) => _presets.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)).Theme;

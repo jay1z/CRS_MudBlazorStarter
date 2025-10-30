@@ -91,6 +91,13 @@ namespace CRS.Data {
                 entity.HasIndex(t => t.Subdomain).IsUnique();
                 entity.Property(t => t.Name).IsRequired();
                 entity.Property(t => t.Subdomain).IsRequired();
+
+                // PublicId is a time-ordered UUIDv7 used for public/opaque identifiers
+                // Map as uniqueidentifier with a DB default to NEWSEQUENTIALID() to reduce index fragmentation.
+                entity.Property(t => t.PublicId)
+                    .HasColumnType("uniqueidentifier")
+                    .HasDefaultValueSql("NEWSEQUENTIALID()");
+                entity.HasIndex(t => t.PublicId).IsUnique();
             });
 
             builder.Entity<ReserveStudyBuildingElement>()
@@ -118,6 +125,16 @@ namespace CRS.Data {
                 .HasOne(rsbe => rsbe.CommonElement)
                 .WithMany(ce => ce.ReserveStudyCommonElements)
                 .HasForeignKey(rsbe => rsbe.CommonElementId);
+
+            // TenantHomepage entity configuration
+            builder.Entity<TenantHomepage>(entity => {
+                entity.ToTable("TenantHomepages");
+                entity.HasIndex(h => new { h.TenantId, h.IsPublished });
+                entity.Property(h => h.DraftJson).HasColumnType("nvarchar(max)");
+                entity.Property(h => h.PublishedJson).HasColumnType("nvarchar(max)");
+                entity.Property(h => h.DraftHtml).HasColumnType("nvarchar(max)");
+                entity.Property(h => h.PublishedHtml).HasColumnType("nvarchar(max)");
+            });
         }
 
         public override int SaveChanges() {
@@ -204,6 +221,7 @@ namespace CRS.Data {
         public DbSet<ServiceContact> ServiceContacts { get; set; }
         public DbSet<Settings> Settings { get; set; }
         public DbSet<Tenant> Tenants { get; set; } // SaaS Refactor
+        public DbSet<TenantHomepage> TenantHomepages { get; set; } // SaaS Refactor: Tenant homepage
         #endregion
 
         #region Seed Data

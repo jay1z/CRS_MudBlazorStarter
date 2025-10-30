@@ -7,6 +7,7 @@
 @using CRS.Data
 @using CRS.Services.Tenant
 @using CRS.Services.License
+@using Microsoft.EntityFrameworkCore
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
@@ -16,6 +17,8 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ITenantContext TenantContext
 @inject ILicenseValidationService LicenseValidator
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ThemeService ThemeService
 
 <PageTitle>Log in</PageTitle>
 
@@ -100,15 +103,53 @@
                     return;
                 }
 
-                var currentTenantId = TenantContext.TenantId ?? 1; // default legacy tenant
-                if (user.TenantId != currentTenantId) {
+                // If middleware resolved a tenant, require a match.
+                if (TenantContext.TenantId.HasValue) {
+                    var currentTenantId = TenantContext.TenantId.Value;
+                    if (user.TenantId != currentTenantId) {
+                        await SignInManager.SignOutAsync();
+                        errorMessage = "Error: You are trying to sign in to the wrong tenant.";
+                        return;
+                    }
+                }
+                else {
+                    // No tenant resolved (common on localhost). Adopt user's tenant for this session.
+                    try {
+                        TenantContext.TenantId = user.TenantId;
+                        TenantContext.IsResolvedByLogin = true;
+                        // try to resolve tenant name for UI
+                        try {
+                            await using var db = await DbFactory.CreateDbContextAsync();
+                            var tenant = await db.Tenants.FindAsync(user.TenantId);
+                            if (tenant != null) TenantContext.TenantName = tenant.Name;
+                        } catch { }
+                        try { ThemeService.ApplyTenantBrandingIfAvailableAndChanged(); } catch { }
+                        // Ensure UI that listens for theme/tenant changes updates immediately
+                        try { ThemeService.NotifyThemeChanged(); } catch { }
+                    } catch (Exception ex) {
+                        Logger.LogWarning(ex, "Failed to set TenantContext from user after login");
+                    }
+                }
+
+                // Re-issue authentication cookie including tenant claims so UI (EnvironmentBanner) that reads claims sees tenant
+                try {
+                    var additionalClaims = new List<System.Security.Claims.Claim>();
+                    if (user.TenantId != null) {
+                        additionalClaims.Add(new System.Security.Claims.Claim("tenant_id", user.TenantId.ToString()));
+                    }
+                    if (!string.IsNullOrWhiteSpace(TenantContext.TenantName)) {
+                        additionalClaims.Add(new System.Security.Claims.Claim("tenant_name", TenantContext.TenantName!));
+                    }
+                    // Sign out the current cookie and sign in with additional claims
                     await SignInManager.SignOutAsync();
-                    errorMessage = "Error: You are trying to sign in to the wrong tenant.";
-                    return;
+                    var authProps = new AuthenticationProperties { IsPersistent = Input.RememberMe };
+                    await SignInManager.SignInWithClaimsAsync(user, authProps, additionalClaims);
+                } catch (Exception ex) {
+                    Logger.LogWarning(ex, "Failed to attach tenant claims to authentication cookie");
                 }
 
                 // Optional: license active check
-                var isActive = await LicenseValidator.IsTenantActiveAsync(currentTenantId);
+                var isActive = await LicenseValidator.IsTenantActiveAsync(TenantContext.TenantId.Value);
                 if (!isActive) {
                     await SignInManager.SignOutAsync();
                     errorMessage = "Error: This tenant is inactive. Please contact support.";

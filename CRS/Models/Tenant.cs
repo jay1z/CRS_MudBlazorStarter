@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace CRS.Models {
@@ -12,5 +13,8 @@ namespace CRS.Models {
         public bool IsActive { get; set; } = true;
         public string? BrandingJson { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // New: time-ordered public identifier (UUIDv7) - use runtime-provided GUID v7
+        public Guid PublicId { get; set; } = Guid.CreateVersion7();
     }
 }

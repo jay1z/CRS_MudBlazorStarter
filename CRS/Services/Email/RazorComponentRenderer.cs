@@ -75,14 +75,17 @@ namespace CRS.Services.Email {
             where TComponent : IComponent {
             var parameterView = ParameterView.FromDictionary(parameters);
 
-            //var output = await _htmlRenderer.Dispatcher.InvokeAsync(async () => {
-            //    return await _htmlRenderer.RenderComponentAsync<TComponent>(parameterView);
-            //});
-
-            //return output.ToHtmlString();
-
             return _htmlRenderer.Dispatcher.InvokeAsync(async () => {
-                var output = await _htmlRenderer.RenderComponentAsync<TComponent>(parameterView);
+                // Wrap the component inside ProviderWrapper to ensure MudBlazor overlay providers are present for server-side HTML rendering
+                var wrapperParams = new Dictionary<string, object> {
+                    { "ChildContent", (RenderFragment)(builder => {
+                        builder.OpenComponent(0, typeof(TComponent));
+                        foreach (var p in parameters) builder.AddAttribute(1, p.Key, p.Value);
+                        builder.CloseComponent();
+                    }) }
+                };
+
+                var output = await _htmlRenderer.RenderComponentAsync<CRS.Components.Shared.ProviderWrapper>(ParameterView.FromDictionary(wrapperParams));
                 return output.ToHtmlString();
             });
         }

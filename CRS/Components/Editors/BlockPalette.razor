@@ -1,0 +1,29 @@
+@using CRS.Components.Editors.Models
+@inject IDialogService DialogService
+
+<MudPaper Class="pa-2">
+    <MudText Typo="Typo.h6">Block Palette</MudText>
+    <MudDivider Class="my-2" />
+    <MudStack Spacing="1">
+        <MudButton Variant="Variant.Outlined" OnClick="AddSection">Section</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="AddRow">Row</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="AddColumn">Column</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="AddText">Text</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="AddImage">Image</MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public EventCallback<string> OnAddBlock { get; set; }
+
+    private Task AddSection() => InvokeAdd("section");
+    private Task AddRow() => InvokeAdd("row");
+    private Task AddColumn() => InvokeAdd("column");
+    private Task AddText() => InvokeAdd("text");
+    private Task AddImage() => InvokeAdd("image");
+
+    private Task InvokeAdd(string type) {
+        if (OnAddBlock.HasDelegate) return OnAddBlock.InvokeAsync(type);
+        return Task.CompletedTask;
+    }
+}

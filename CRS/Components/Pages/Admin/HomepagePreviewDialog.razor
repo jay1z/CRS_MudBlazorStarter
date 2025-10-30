@@ -1,0 +1,22 @@
+@using MudBlazor
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <MudDialogTitle>Preview</MudDialogTitle>
+    <MudDialogContent>
+        @if (!string.IsNullOrEmpty(Html)) {
+            <div class="homepage-preview" style="padding:16px;">@((MarkupString)Html)</div>
+        } else {
+            <MudText>No preview content</MudText>
+        }
+    </MudDialogContent>
+    <MudDialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Close">Close</MudButton>
+    </MudDialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public string? Html { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    private void Close() => MudDialog.Cancel();
+}

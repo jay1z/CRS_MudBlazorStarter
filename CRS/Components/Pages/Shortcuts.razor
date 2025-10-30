@@ -1,6 +1,11 @@
 ﻿@page "/shortcuts"
 @attribute [AllowAnonymous]
 
+@using MudBlazor
+@using CRS.Services.Tenant
+
+@inject ITenantContext TenantContext
+
 <PageTitle>Shortcuts</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">Shortcuts</MudText>
@@ -9,15 +14,15 @@
     <MudCardContent>
         <MudPaper Width="300px" Elevation="25">
             <MudList T="string">
-                <MudListItem><MudLink Href="dbmanager">Database Manager</MudLink></MudListItem>
+                <MudListItem><MudLink Href="/dbmanager">Database Manager</MudLink></MudListItem>
                 <MudDivider />
-                <MudListItem><MudLink Href="Users/Manage">Manage Users</MudLink></MudListItem>
+                <MudListItem><MudLink Href="/Users/Manage">Manage Users</MudLink></MudListItem>
                 <MudDivider />
-                <MudListItem><MudLink Href="Roles">Roles</MudLink></MudListItem>
+                <MudListItem><MudLink Href="/Roles">Roles</MudLink></MudListItem>
                 <MudDivider />
-                <MudListItem><MudLink Href="Settings">Settings</MudLink></MudListItem>
+                <MudListItem><MudLink Href="/Settings">Settings</MudLink></MudListItem>
                 <MudDivider />
-                <MudListItem><MudLink Href="MudBlazorFontIcons">Font Icons</MudLink></MudListItem>
+                <MudListItem><MudLink Href="/MudBlazorFontIcons">Font Icons</MudLink></MudListItem>
                 <MudDivider />
 
                 <!-- New: Tenant admin and account utilities -->
@@ -35,6 +40,74 @@
                 </MudListItem>
                 <MudDivider />
                 <MudListItem>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <!-- Link to the block-model admin homepage editor -->
+                            <MudLink Href="/Admin/HomepageEditor">Admin • Homepage Editor (Block)</MudLink>
+                            <MudDivider />
+                            <MudLink Href="/Admin/VisualEditor">Admin • Visual Editor</MudLink>
+                        </Authorized>
+                        <NotAuthorized>
+                            <MudTooltip Text="Requires Admin role">
+                                <span class="mud-disabled-text">Admin • Homepage Editor (Block)</span>
+                            </MudTooltip>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </MudListItem>
+                <MudDivider />
+                <MudListItem>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <MudLink Href="@PreviewUrl" Target="_blank">Preview Tenant Homepage</MudLink>
+                        </Authorized>
+                        <NotAuthorized>
+                            <MudTooltip Text="Requires Admin role">
+                                <span class="mud-disabled-text">Preview Tenant Homepage</span>
+                            </MudTooltip>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </MudListItem>
+                <MudDivider />
+                <MudListItem>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <MudLink Href="/Admin/GrapesEditor">Admin • GrapesJS Prototype</MudLink>
+                        </Authorized>
+                        <NotAuthorized>
+                            <MudTooltip Text="Requires Admin role">
+                                <span class="mud-disabled-text">Admin • GrapesJS Prototype</span>
+                            </MudTooltip>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </MudListItem>
+                <MudDivider />
+                <MudListItem>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <MudLink Href="/Admin/GrapesPreview">Admin • GrapesJS Preview</MudLink>
+                        </Authorized>
+                        <NotAuthorized>
+                            <MudTooltip Text="Requires Admin role">
+                                <span class="mud-disabled-text">Admin • GrapesJS Preview</span>
+                            </MudTooltip>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </MudListItem>
+                <MudDivider />
+                <MudListItem>
+                    <AuthorizeView Roles="Admin">
+                        <Authorized>
+                            <MudLink Href="/Admin/GrapesStudio">Admin • Grapes Studio Test</MudLink>
+                        </Authorized>
+                        <NotAuthorized>
+                            <MudTooltip Text="Requires Admin role">
+                                <span class="mud-disabled-text">Admin • Grapes Studio Test</span>
+                            </MudTooltip>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </MudListItem>
+                <MudDivider />
+                <MudListItem>
                     <MudLink Href="/Account/ResendEmailConfirmation">Resend Email Confirmation</MudLink>
                 </MudListItem>
             </MudList>
@@ -46,5 +119,6 @@
 </MudCard>
 
 @code {
+    private string PreviewUrl => $"/tenant/preview/{(TenantContext?.TenantId ?? 1)}";
 
 }

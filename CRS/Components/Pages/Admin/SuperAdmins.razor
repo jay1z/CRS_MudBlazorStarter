@@ -1,0 +1,103 @@
+@page "/Admin/SuperAdmins"
+@attribute [Authorize(Roles = "Admin")]
+
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using CRS.Data
+@using CRS.Models
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole<Guid>> RoleManager
+@inject ISnackbar Snackbar
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<PageTitle>Super Admins</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5">SuperAdmin Management</MudText>
+        <MudText Typo="Typo.subtitle2" Class="mb-4">Grant or revoke the "SuperAdmin" role for users.</MudText>
+
+        <MudTable Items="users" Hover="true" Dense="true" Bordered="true">
+            <HeaderContent>
+                <MudTh>User</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Tenant</MudTh>
+                <MudTh>SuperAdmin</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate Context="u">
+                <MudTd>@u.UserName</MudTd>
+                <MudTd>@u.Email</MudTd>
+                <MudTd>@u.TenantId</MudTd>
+                <MudTd>
+                    @if (superAdminMap.TryGetValue(u.Id, out var isSuper) && isSuper) {
+                        <MudChip T="string" Color="Color.Success">Yes</MudChip>
+                    } else {
+                        <MudChip T="string" Color="Color.Default">No</MudChip>
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (superAdminMap.TryGetValue(u.Id, out var isSuper2) && isSuper2) {
+                        <MudButton Color="Color.Error" Variant="Variant.Outlined" OnClick="() => ToggleSuperAsync(u, false)">Revoke</MudButton>
+                    } else {
+                        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="() => ToggleSuperAsync(u, true)">Grant</MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<ApplicationUser> users = new();
+    private Dictionary<Guid, bool> superAdminMap = new();
+
+    protected override async Task OnInitializedAsync() {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync() {
+        try {
+            // ensure role exists
+            if (!await RoleManager.RoleExistsAsync("SuperAdmin")) {
+                await RoleManager.CreateAsync(new IdentityRole<Guid>("SuperAdmin"));
+            }
+
+            // load users
+            await using var db = await DbFactory.CreateDbContextAsync();
+            users = await UserManager.Users.OrderBy(u => u.UserName).ToListAsync();
+
+            superAdminMap.Clear();
+            foreach (var u in users) {
+                var inRole = await UserManager.IsInRoleAsync(u, "SuperAdmin");
+                superAdminMap[u.Id] = inRole;
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ToggleSuperAsync(ApplicationUser user, bool grant) {
+        try {
+            if (grant) {
+                var r = await UserManager.AddToRoleAsync(user, "SuperAdmin");
+                if (!r.Succeeded) {
+                    Snackbar.Add($"Failed to grant role: {string.Join(',', r.Errors.Select(e => e.Description))}", Severity.Error);
+                    return;
+                }
+                superAdminMap[user.Id] = true;
+                Snackbar.Add($"Granted SuperAdmin to {user.Email}", Severity.Success);
+            } else {
+                var r = await UserManager.RemoveFromRoleAsync(user, "SuperAdmin");
+                if (!r.Succeeded) {
+                    Snackbar.Add($"Failed to revoke role: {string.Join(',', r.Errors.Select(e => e.Description))}", Severity.Error);
+                    return;
+                }
+                superAdminMap[user.Id] = false;
+                Snackbar.Add($"Revoked SuperAdmin from {user.Email}", Severity.Success);
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error updating role: {ex.Message}", Severity.Error);
+        }
+    }
+}

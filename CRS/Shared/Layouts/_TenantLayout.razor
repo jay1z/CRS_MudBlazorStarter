@@ -3,9 +3,14 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using CRS.Services.Tenant
 @inject ITenantContext TenantContext
+@inject ThemeService ThemeService
 
-<MudThemeProvider />
+<!-- MudBlazor providers for tenant layout -->
+<MudThemeProvider Theme="@EffectiveTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
 <MudPopoverProvider />
+
 <MudLayout>
     <MudAppBar Elevation="25">
         <MudText Typo="Typo.h5" Class="ml-3">@GetTitle()</MudText>
@@ -39,4 +44,33 @@
 
 @code {
     private string GetTitle() => string.IsNullOrWhiteSpace(TenantContext?.TenantName) ? "Reserve Studies" : TenantContext.TenantName!;
+    private MudTheme EffectiveTheme = new MudTheme();
+
+    protected override void OnInitialized() {
+        // Apply tenant branding on init and listen for changes
+        ApplyBranding();
+        TenantContext.OnTenantChanged += OnTenantChanged;
+        ThemeService.OnThemeChanged += StateHasChanged;
+    }
+
+    private void OnTenantChanged() {
+        InvokeAsync(() => { ApplyBranding(); StateHasChanged(); });
+    }
+
+    private void ApplyBranding() {
+        // SaaS Refactor: Use ThemeService to apply branding payload from TenantContext
+        try {
+            ThemeService.ApplyTenantBrandingIfAvailable();
+            var theme = ThemeService.GetPresetByName("Default") ?? new MudTheme();
+            // Copy the applied theme to the EffectiveTheme used by the provider
+            EffectiveTheme = ThemeService.CurrentTheme;
+        } catch {
+            EffectiveTheme = new MudTheme();
+        }
+    }
+
+    public void Dispose() {
+        try { TenantContext.OnTenantChanged -= OnTenantChanged; } catch { }
+        try { ThemeService.OnThemeChanged -= StateHasChanged; } catch { }
+    }
 }

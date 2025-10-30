@@ -7,10 +7,6 @@
 @inject NavigationManager NavigationManager
 @inject ThemeService ThemeService
 
-@* https://coolors.co/palettes/trending *@
-@* https://coolors.co/8ecae6-219ebc-023047-ffb703-fb8500 *@
-
-<MudThemeProvider Theme="@ThemeService.CurrentTheme" />
 <PageTitle>Theme Customization</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
@@ -40,9 +36,6 @@
 </MudContainer>
 
 @code {
-    // private ThemeSettings themeSettings = new ThemeSettings();
-    // private MudTheme currentTheme = new MudTheme();
-
     private List<IMudTheme> themes = new List<IMudTheme>
     {
         new Default(),
@@ -56,39 +49,4 @@
         ThemeService.SetTheme(theme.Theme);
         Snackbar.Add("Theme applied successfully!", Severity.Success);
     }
-
-    // private void EditPreset(string presetName)
-    // {
-    //     NavigationManager.NavigateTo($"/themepreset/{presetName}");
-    // }
-
-    // public class ThemePreset
-    // {
-    //     public string Name { get; set; }
-    //     public string PrimaryColor { get; set; }
-    //     public string SecondaryColor { get; set; }
-    //     public string BackgroundColor { get; set; }
-    //     public string TextColor { get; set; }
-    // }
-
-    // MudTheme CustomTheme = new MudTheme()
-    //     {
-    //         PaletteLight = new PaletteLight()
-    //         {
-    //             AppbarBackground = Colors.Red.Default,
-    //             Primary = Colors.Blue.Default,
-    //             Secondary = Colors.Green.Accent4,
-    //         },
-    //         PaletteDark = new PaletteDark()
-    //         {
-    //             AppbarBackground = Colors.Red.Default,
-    //             Primary = Colors.Blue.Default,
-    //             Secondary = Colors.Green.Accent4,
-    //         },
-    //         LayoutProperties = new LayoutProperties()
-    //         {
-    //             DrawerWidthLeft = "260px",
-    //             DrawerWidthRight = "300px"
-    //         }
-    //     };
 }
