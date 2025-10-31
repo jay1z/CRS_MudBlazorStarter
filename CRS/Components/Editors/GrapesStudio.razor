@@ -1,138 +1,49 @@
 @page "/Admin/GrapesStudio"
 @attribute [AllowAnonymous]
-@using Microsoft.JSInterop
+@using MudBlazor
+@inject ISnackbar Snackbar
 @inject IJSRuntime JS
-@inject ILogger<CRS.Components.Editors.GrapesStudio> Logger
+@implements IDisposable
 
 <PageTitle>Grapes Studio Test</PageTitle>
 
 <div id="studio-editor" style="height:100dvh; background: #fff; border:1px solid rgba(0,0,0,0.06);">
- <noscript>Please enable JavaScript to use the Studio SDK.</noscript>
+    <noscript>Please enable JavaScript to use the Studio SDK.</noscript>
 </div>
 
-<script>
-// Dynamically load required CSS/scripts and initialize the Studio SDK.
-// Returns a Promise that resolves when the editor is created.
-window.initGrapesStudio = function () {
- return new Promise((resolve, reject) => {
- try {
- if (window._grapesStudioInited) {
- resolve();
- return;
- }
-
- const cssHref = 'https://unpkg.com/@@grapesjs/studio-sdk/dist/style.css';
- const scriptUrls = [
- 'https://unpkg.com/@@grapesjs/studio-sdk/dist/index.umd.js',
- 'https://cdn.jsdelivr.net/npm/@@grapesjs/studio-sdk-plugins@latest/dist/tableComponent/index.umd.js',
- 'https://cdn.jsdelivr.net/npm/@@grapesjs/studio-sdk-plugins@latest/dist/listPagesComponent/index.umd.js',
- 'https://cdn.jsdelivr.net/npm/@@grapesjs/studio-sdk-plugins@latest/dist/iconifyComponent/index.umd.js',
- 'https://cdn.jsdelivr.net/npm/@@grapesjs/studio-sdk-plugins@latest/dist/accordionComponent/index.umd.js',
- 'https://cdn.jsdelivr.net/npm/@@grapesjs/studio-sdk-plugins@latest/dist/flexComponent/index.umd.js',
- 'https://cdn.jsdelivr.net/npm/@@grapesjs/studio-sdk-plugins@latest/dist/prosemirror/index.umd.js',
- 'https://cdn.jsdelivr.net/npm/@@grapesjs/studio-sdk-plugins@latest/dist/canvasFullSize/index.umd.js',
- 'https://cdn.jsdelivr.net/npm/@@grapesjs/studio-sdk-plugins@latest/dist/layoutSidebarButtons/index.umd.js'
- ];
-
- function loadCss(href) {
- return new Promise((res) => {
- if (document.querySelector('link[href="' + href + '"]')) return res();
- const link = document.createElement('link');
- link.rel = 'stylesheet';
- link.href = href;
- link.onload = () => res();
- link.onerror = () => res();
- document.head.appendChild(link);
- });
- }
-
- function loadScript(src) {
- return new Promise((res, rej) => {
- // If already present, resolve immediately (assume previously loaded)
- if (document.querySelector('script[src="' + src + '"]')) return res();
- const s = document.createElement('script');
- s.src = src;
- s.async = false;
- s.onload = () => res();
- s.onerror = () => rej(new Error('Failed to load ' + src));
- document.head.appendChild(s);
- });
- }
-
- // Load CSS then scripts sequentially
- loadCss(cssHref)
- .then(() => scriptUrls.reduce((p, url) => p.then(() => loadScript(url)), Promise.resolve()))
- .then(() => {
- // Wait briefly for the SDK to attach to window
- const waitForSdk = (attemptsLeft) => {
- if (window.GrapesJsStudioSDK) {
- try {
- // create the editor instance
- window._grapesStudioInited = true;
- GrapesJsStudioSDK.createStudioEditor({
- root: '#studio-editor',
- licenseKey: 'a3ddf8cbeacf4bfd98a4e6ae11ecbc85ad2ed8a1ba4e43f1bd9acd57909654d2',
- project: { type: 'web' },
- assets: {
- storageType: 'self',
- onUpload: async ({ files }) => { return []; },
- onDelete: async ({ assets }) => { }
- },
- storage: {
- type: 'self',
- onSave: async ({ project }) => { console.log('Studio onSave called', project); },
- onLoad: async () => { return { project: {} }; },
- autosaveChanges:100,
- autosaveIntervalMs:10000
- },
- plugins: [
- window.StudioSdkPlugins_tableComponent && StudioSdkPlugins_tableComponent.init(),
- window.StudioSdkPlugins_listPagesComponent && StudioSdkPlugins_listPagesComponent.init(),
- window.StudioSdkPlugins_iconifyComponent && StudioSdkPlugins_iconifyComponent.init(),
- window.StudioSdkPlugins_accordionComponent && StudioSdkPlugins_accordionComponent.init(),
- window.StudioSdkPlugins_flexComponent && StudioSdkPlugins_flexComponent.init(),
- window.StudioSdkPlugins_prosemirror && StudioSdkPlugins_prosemirror.init(),
- window.StudioSdkPlugins_canvasFullSize && StudioSdkPlugins_canvasFullSize.init(),
- window.StudioSdkPlugins_layoutSidebarButtons && StudioSdkPlugins_layoutSidebarButtons.init()
- ].filter(Boolean)
- });
- resolve();
- } catch (err) {
- reject(err);
- }
- } else if (attemptsLeft >0) {
- setTimeout(() => waitForSdk(attemptsLeft -1),200);
- } else {
- reject(new Error('GrapesJsStudioSDK not available after loading scripts'));
- }
- };
- waitForSdk(10);
- })
- .catch(err => reject(err));
- } catch (ex) {
- reject(ex);
- }
- });
-};
-</script>
-
 @code {
- protected override async Task OnAfterRenderAsync(bool firstRender) {
- if (firstRender) {
- try {
- await JS.InvokeAsync<object>("initGrapesStudio");
- Logger.LogInformation("Grapes Studio initialized");
- } catch (Exception ex) {
- Logger.LogWarning(ex, "Failed to initialize Grapes Studio on first render; retrying once after delay");
- // Retry once after a small delay to handle flaky CDN timing
- await Task.Delay(500);
- try {
- await JS.InvokeAsync<object>("initGrapesStudio");
- Logger.LogInformation("Grapes Studio initialized on retry");
- } catch (Exception ex2) {
- Logger.LogError(ex2, "Grapes Studio failed to initialize");
- }
- }
- }
- }
+    private DotNetObjectReference<CRS.Components.Editors.GrapesStudio>? _dotNetRef;
+    private bool _initialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender && !_initialized) {
+            _initialized = true;
+            _dotNetRef = DotNetObjectReference.Create(this);
+            try {
+                await JS.InvokeVoidAsync("loadGrapesStudioDeps");
+                var result = await JS.InvokeAsync<object>("initGrapesStudio", "#studio-editor", _dotNetRef);
+                Snackbar.Add("Grapes Studio initialized", Severity.Success);
+            } catch (Exception ex) {
+                Console.WriteLine(ex);
+                Snackbar.Add("Failed to initialize Grapes Studio: " + ex.Message, Severity.Error);
+            }
+        }
+    }
+
+    [JSInvokable]
+    public Task NotifySaveStatus(string status, string message) {
+        switch (status) {
+            case "saving": InvokeAsync(() => Snackbar.Add(message ?? "Saving...", Severity.Info)); break;
+            case "saved": InvokeAsync(() => Snackbar.Add(message ?? "Saved", Severity.Success)); break;
+            case "error": InvokeAsync(() => Snackbar.Add(message ?? "Error", Severity.Error)); break;
+        }
+        return Task.CompletedTask;
+    }
+
+    public void Dispose() {
+        try {
+            _dotNetRef?.Dispose();
+            JS.InvokeVoidAsync("disposeGrapesStudio");
+        } catch { }
+    }
 }

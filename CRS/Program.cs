@@ -28,6 +28,8 @@ using Serilog.Sinks.MSSqlServer;
 
 using Ganss.Xss;
 using System.Text.RegularExpressions;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -115,6 +117,10 @@ void ConfigureServices(WebApplicationBuilder builder) {
 
     // Register controllers for API endpoints (media upload, etc.)
     builder.Services.AddControllers();
+
+    // Register FluentValidation validators for request DTOs (automatic registration)
+    builder.Services.AddFluentValidationAutoValidation();
+    builder.Services.AddValidatorsFromAssemblyContaining<CRS.Controllers.Requests.Validators.SendProposalRequestValidator>();
 
     // Add memory cache service
     builder.Services.AddMemoryCache();
@@ -249,6 +255,9 @@ async Task ConfigurePipeline(WebApplication app) {
     // SaaS Refactor: resolve tenant before auth
     app.UseMiddleware<TenantResolverMiddleware>();
     app.UseLicenseGate();
+
+    // Add request audit middleware after tenant resolution and before auth
+    app.UseMiddleware<RequestAuditMiddleware>();
 
     // Apply tenant theme per-request (skip if unchanged within the request's scope)
     app.Use(async (ctx, next) => {

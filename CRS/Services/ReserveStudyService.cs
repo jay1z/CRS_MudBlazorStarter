@@ -6,6 +6,7 @@ using CRS.EventsAndListeners;
 using CRS.Models;
 using CRS.Models.Emails;
 using CRS.Services.Interfaces;
+using CRS.Services.Tenant;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -14,15 +15,21 @@ namespace CRS.Services {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
         private readonly IDispatcher _dispatcher;
         private readonly string _baseUrl;
+        private readonly ITenantContext _tenantContext;
 
-        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration) {
+        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext) {
             _dbFactory = dbFactory;
             _dispatcher = dispatcher;
             _baseUrl = configuration["Application:BaseUrl"] ?? "https://yourdomain.com";
+            _tenantContext = tenantContext;
         }
 
         public async Task<ReserveStudy> CreateReserveStudyAsync(ReserveStudy reserveStudy) {
             using var context = await _dbFactory.CreateDbContextAsync();
+
+            // Ensure TenantId is set (defensive) — ApplicationDbContext will also set if missing
+            var tenantId = _tenantContext.TenantId ??1;
+            if (reserveStudy.TenantId ==0) reserveStudy.TenantId = tenantId;
 
             // Set default values for a new study
             reserveStudy.IsActive = true;
@@ -33,6 +40,7 @@ namespace CRS.Services {
             if (reserveStudy.Contact != null && reserveStudy.ContactId == null) {
                 // This is a new contact
                 reserveStudy.Contact.Id = Guid.CreateVersion7(); // Generate new ID
+                if (reserveStudy.Contact.TenantId ==0) reserveStudy.Contact.TenantId = tenantId;
             }
             else if (reserveStudy.ContactId != null) {
                 // This is a reference to existing contact - detach entity
@@ -43,6 +51,7 @@ namespace CRS.Services {
             if (reserveStudy.PropertyManager != null && reserveStudy.PropertyManagerId == null) {
                 // This is a new property manager
                 reserveStudy.PropertyManager.Id = Guid.CreateVersion7(); // Generate new ID
+                if (reserveStudy.PropertyManager.TenantId ==0) reserveStudy.PropertyManager.TenantId = tenantId;
             }
             else if (reserveStudy.PropertyManagerId != null) {
                 // This is a reference to existing property manager - detach entity

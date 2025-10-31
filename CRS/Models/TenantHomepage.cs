@@ -32,5 +32,9 @@ namespace CRS.Models {
 
         public DateTime DateModified { get; set; } = DateTime.UtcNow;
         public string? ModifiedBy { get; set; }
+
+        // Concurrency token to prevent silent overwrites during concurrent edits/publishes
+        [Timestamp]
+        public byte[]? RowVersion { get; set; }
     }
 }

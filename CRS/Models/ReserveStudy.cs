@@ -114,5 +114,9 @@ namespace CRS.Models {
 
         // SaaS Refactor: Tenant scope
         public int TenantId { get; set; }
+
+        // Concurrency token
+        [Timestamp]
+        public byte[]? RowVersion { get; set; }
     }
 }

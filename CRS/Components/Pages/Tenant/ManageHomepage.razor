@@ -126,7 +126,8 @@
 
     private async Task SaveDraft() {
         try {
-            var saved = await HomepageService.SaveDraftAsync(model, "admin");
+            // Pass RowVersion as originalRowVersion and provide modifiedBy
+            var saved = await HomepageService.SaveDraftAsync(model, model.RowVersion, "admin");
             model = saved;
             Snackbar.Add("Draft saved", Severity.Success);
         } catch (Exception ex) {
@@ -136,7 +137,7 @@
 
     private async Task Publish() {
         try {
-            var published = await HomepageService.PublishAsync();
+            var published = await HomepageService.PublishAsync(model.RowVersion);
             if (published != null) {
                 model = published;
                 Snackbar.Add("Published", Severity.Success);

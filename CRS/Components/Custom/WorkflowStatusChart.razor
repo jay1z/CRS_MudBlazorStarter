@@ -1,11 +1,12 @@
-﻿@inject IJSRuntime JSRuntime
+﻿@using CRS.Models
+@using MudBlazor
+@inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
 
 <MudPaper Elevation="2" Class="pa-4 mb-6">
     <MudText Typo="Typo.h6" Class="mb-3">Reserve Study Timeline</MudText>
-    @if (!string.IsNullOrEmpty(ChartId))
-    {
-        <div id="@ChartId" style="height: 350px;"></div>
+    @if (!string.IsNullOrEmpty(ChartId)) {
+        <div id="@ChartId" style="height:350px;"></div>
     }
 </MudPaper>
 
@@ -18,352 +19,121 @@
 
     private bool scriptsLoaded = false;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // First try to dynamically load the scripts
-            if (!scriptsLoaded)
-            {
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            if (!scriptsLoaded) {
                 await LoadScriptsAsync();
                 scriptsLoaded = true;
             }
+
             await InitializeChartAsync();
-        }
-        else if (ReserveStudy != null)
-        {
+        } else if (ReserveStudy != null) {
             await UpdateChartAsync();
         }
     }
 
-    private async Task LoadScriptsAsync()
-    {
-        try
-        {
-            // Check if ApexCharts is already defined
-            var apexChartsExists = await JSRuntime.InvokeAsync<bool>("eval", "typeof ApexCharts !== 'undefined'");
-            if (!apexChartsExists)
-            {
-                // Load ApexCharts directly via JSRuntime if not loaded
-                await JSRuntime.InvokeVoidAsync("eval", @"
-                    return new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = 'https://cdn.jsdelivr.net/npm/apexcharts@3.37.1/dist/apexcharts.min.js';
-                        script.onload = () => resolve();
-                        script.onerror = () => reject(new Error('Failed to load ApexCharts'));
-                        document.head.appendChild(script);
-                    });
-                ");
-            }
-
-            // Check if our interop functions are defined
-            var interopExists = await JSRuntime.InvokeAsync<bool>("eval", "typeof window.initDumbbellChart !== 'undefined'");
-            if (!interopExists)
-            {
-                // Define our interop functions inline if the script wasn't loaded
-                await JSRuntime.InvokeVoidAsync("eval", @"
-                    // Store chart instances to allow cleanup
-                    window.charts = window.charts || {};
-
-                    // Initialize a dumbbell chart
-                    window.initDumbbellChart = function(elementId, options) {
-                        // Destroy any existing chart
-                        window.destroyChart(elementId);
-
-                        // Process the options to handle date formatting
-                        const dateFormatter = function(val) { 
-                            if (!val) return '';
-                            return new Date(val).toLocaleDateString(); 
-                        };
-                        
-                        if (options.xaxis && options.xaxis.labels) {
-                            options.xaxis.labels.formatter = dateFormatter;
-                        }
-                        
-                        if (options.tooltip && options.tooltip.x) {
-                            options.tooltip.x.formatter = dateFormatter;
-                        }
-
-                        // Create the chart directly
-                        const element = document.getElementById(elementId);
-                        if (element && typeof ApexCharts !== 'undefined') {
-                            console.log('Creating chart with options:', JSON.stringify(options));
-                            const chart = new ApexCharts(element, options);
-                            window.charts[elementId] = chart;
-                            chart.render();
-                        } else {
-                            console.error('Element not found or ApexCharts not loaded:', elementId);
-                        }
-                    };
-
-                    window.destroyChart = function(elementId) {
-                        if (window.charts[elementId]) {
-                            try {
-                                window.charts[elementId].destroy();
-                                delete window.charts[elementId];
-                            } catch (e) {
-                                console.error('Error destroying chart:', e);
-                            }
-                        }
-                    };
-                ");
-            }
-        }
-        catch (Exception ex)
-        {
+    private async Task LoadScriptsAsync() {
+        try {
+            // Use the loader in wwwroot/js/apexcharts-interop.js which returns a Promise
+            await JSRuntime.InvokeVoidAsync("loadApexChartsLibrary");
+        } catch (Exception ex) {
             Console.WriteLine($"Error loading scripts: {ex.Message}");
-            Snackbar.Add($"Error loading chart scripts: {ex.Message}", Severity.Error);
+            try { Snackbar.Add($"Error loading chart scripts: {ex.Message}", Severity.Error); } catch { }
         }
     }
 
-    private async Task InitializeChartAsync()
-    {
+    private async Task InitializeChartAsync() {
         if (ReserveStudy == null) return;
-
         await UpdateChartAsync();
     }
 
-    private async Task UpdateChartAsync()
-    {
+    private async Task UpdateChartAsync() {
         if (ReserveStudy == null) return;
 
         var workflowStatuses = GenerateWorkflowData();
 
-        // Define explicit hex colors that match MudBlazor palette
-        var primaryColor = "#594ae2";   // MudBlazor primary (purple)
-        var secondaryColor = "#ff4081"; // MudBlazor secondary (pink)
-        var tertiaryColor = "#1ec8a5";  // MudBlazor tertiary (teal)
-        var infoColor = "#2196f3";      // MudBlazor info (blue)
-        var successColor = "#4caf50";   // MudBlazor success (green)
-        var warningColor = "#ff9800";   // MudBlazor warning (orange)
-        var errorColor = "#f44336";     // MudBlazor error (red)
-        var surfaceColor = "#ffffff";   // MudBlazor surface (white)
-        var darkPrimaryColor = "#3a2fa2"; // Darker shade of primary
+        var infoColor = "#2196f3";
+        var surfaceColor = "#ffffff";
+        var warningColor = "#ff9800";
 
-        // For each workflow stage, create a customized series with different colors
-        var seriesData = new List<object>();
-        foreach (var item in workflowStatuses)
-        {
-            seriesData.Add(new {
-                data = new[] { item }
-            });
-        }
-
-        // Structure the chart data in the format expected by ApexCharts
         var chartOptions = new {
             series = new[] {
-                new {
-                    name = "Reserve Study Progress",
-                    data = workflowStatuses,
-                    color = infoColor // Set the default color for the series
-                }
-            },
-            chart = new {
-                height = 350,
-                type = "rangeBar",
-                toolbar = new {
-                    show = true,
-                    tools = new {
-                        download = true,
-                        selection = false,
-                        zoom = false,
-                        zoomin = false,
-                        zoomout = false,
-                        pan = false
-                    }
-                },
-                fontFamily = "Roboto, sans-serif",
-                background = surfaceColor
-            },
-            fill = new {
-                type = "solid",
-                opacity = 1,
-                gradient = new {
-                    shade = "light",
-                    type = "horizontal",
-                    shadeIntensity = 0.5,
-                    inverseColors = true,
-                    opacityFrom = 1,
-                    opacityTo = 1
-                }
-            },
-            plotOptions = new {
-                bar = new {
-                    horizontal = true,
-                    barHeight = "75%",
-                    distributed = false,
-                    borderRadius = 8,
-                    borderRadiusApplication = "end"
-                }
-            },
-            stroke = new {
-                width = 0
-            },
-            title = new {
-                text = "Workflow Timeline",
-                align = "center",
-                style = new {
-                    fontSize = "18px",
-                    fontWeight = 500,
-                    color = "#333333"
-                }
-            },
-            xaxis = new {
-                type = "datetime",
-                labels = new {
-                    style = new {
-                        fontSize = "12px"
-                    }
-                },
-                axisBorder = new {
-                    show = true
-                },
-                axisTicks = new {
-                    show = true
-                }
-            },
-            yaxis = new {
-                labels = new {
-                    style = new {
-                        fontSize = "14px"
-                    }
-                }
-            },
-            tooltip = new {
-                theme = "light",
-                style = new {
-                    fontSize = "12px"
-                },
-                x = new { },
-                custom = "function(opts) { const start = new Date(opts.y1).toLocaleDateString(); const end = new Date(opts.y2).toLocaleDateString(); return `<div class=\"apexcharts-tooltip-rangebar\"><div><span class=\"series-name\">${opts.w.globals.seriesNames[opts.seriesIndex]}</span></div><div><span class=\"category\">${opts.w.globals.labels[opts.dataPointIndex]}</span></div><div><span>Start: ${start}</span><br><span>End: ${end}</span></div></div>`; }"
-            },
-            legend = new {
-                show = false
-            },
-            dataLabels = new {
-                enabled = false
-            },
-            annotations = new {
-                xaxis = new[] {
-                    new {
-                        x = new DateTimeOffset(DateTime.Now).ToUnixTimeMilliseconds(),
-                        borderColor = warningColor,
-                        label = new {
-                            text = "Today",
-                            style = new {
-                                color = surfaceColor,
-                                background = warningColor,
-                                fontSize = "12px",
-                                fontWeight = 600,
-                                padding = new {
-                                    left = 8,
-                                    right = 8,
-                                    top = 4,
-                                    bottom = 4
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            theme = new {
-                mode = "light",
-                palette = "palette3" // This will generate different colors for each bar
-            }
+ new {
+ name = "Reserve Study Progress",
+ data = workflowStatuses,
+ color = infoColor
+ }
+ },
+            chart = new { height = 350, type = "rangeBar", toolbar = new { show = true }, fontFamily = "Roboto, sans-serif", background = surfaceColor },
+            plotOptions = new { bar = new { horizontal = true, barHeight = "75%", borderRadius = 8 } },
+            xaxis = new { type = "datetime" },
+            tooltip = new { theme = "light", x = new { }, custom = "function(opts) { const start = new Date(opts.y1).toLocaleDateString(); const end = new Date(opts.y2).toLocaleDateString(); return `<div class=\"apexcharts-tooltip-rangebar\"><div><span>${opts.w.globals.labels[opts.dataPointIndex]}</span></div><div><span>Start: ${start}</span><br><span>End: ${end}</span></div></div>`; }" },
+            annotations = new { xaxis = new[] { new { x = new DateTimeOffset(DateTime.Now).ToUnixTimeMilliseconds(), borderColor = warningColor, label = new { text = "Today" } } } }
         };
 
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("window.initDumbbellChart", ChartId, chartOptions);
-        }
-        catch (Exception ex)
-        {
+        try {
+            // Call the global init function exposed by apexcharts-interop.js
+            await JSRuntime.InvokeVoidAsync("initDumbbellChart", ChartId, chartOptions);
+        } catch (Exception ex) {
             Console.WriteLine($"Error creating chart: {ex.Message}");
-            Snackbar.Add($"Error creating timeline chart: {ex.Message}", Severity.Error);
+            try { Snackbar.Add($"Error creating timeline chart: {ex.Message}", Severity.Error); } catch { }
         }
     }
 
-    private object[] GenerateWorkflowData()
-    {
-        var today = DateTime.Now;
+    private object[] GenerateWorkflowData() {
         var data = new List<object>();
-
         if (ReserveStudy == null || !ReserveStudy.DateCreated.HasValue) return data.ToArray();
 
+        var today = DateTime.Now;
         var startDate = ReserveStudy.DateCreated.Value;
 
-        // Add workflow status entries based on the current status
-        AddWorkflowStatusData(data, "Request Created", ReserveStudy.DateCreated.HasValue ? ReserveStudy.DateCreated.Value : startDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalCreated ? ReserveStudy.LastModified ?? today : today);
+        void AddWorkflowStatusData(string name, DateTime start, DateTime end) {
+            data.Add(new { x = name, y = new[] { new DateTimeOffset(start).ToUnixTimeMilliseconds(), new DateTimeOffset(end).ToUnixTimeMilliseconds() }, fillColor = GetColorByWorkflowStatus(name) });
+        }
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalCreated)
-        {
+        AddWorkflowStatusData("Request Created", startDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalCreated ? ReserveStudy.LastModified ?? today : today);
+
+        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalCreated) {
             var proposalDate = ReserveStudy.Proposal?.DateCreated ?? ReserveStudy.LastModified ?? startDate.AddDays(7);
-            AddWorkflowStatusData(data, "Proposal Phase", proposalDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalAccepted ? ReserveStudy.Proposal?.DateApproved ?? today : today);
+            AddWorkflowStatusData("Proposal Phase", proposalDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalAccepted ? ReserveStudy.Proposal?.DateApproved ?? today : today);
         }
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalAccepted)
-        {
+        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalAccepted) {
             var financialInfoDate = ReserveStudy.Status >= ReserveStudy.WorkflowStatus.FinancialInfoRequested ? ReserveStudy.FinancialInfo?.DateCreated ?? ReserveStudy.Proposal?.DateApproved?.AddDays(3) ?? startDate.AddDays(14) : startDate.AddDays(14);
-            AddWorkflowStatusData(data, "Financial Information", financialInfoDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.FinancialInfoReviewed ? ReserveStudy.FinancialInfo?.DateReviewed ?? today : today);
+            AddWorkflowStatusData("Financial Information", financialInfoDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.FinancialInfoReviewed ? ReserveStudy.FinancialInfo?.DateReviewed ?? today : today);
         }
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.FinancialInfoReviewed)
-        {
+        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.FinancialInfoReviewed) {
             var siteVisitDate = ReserveStudy.FinancialInfo?.DateReviewed?.AddDays(7) ?? startDate.AddDays(21);
-            AddWorkflowStatusData(data, "Site Visit", siteVisitDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.SiteVisitDataEntered ? siteVisitDate.AddDays(3) : today);
+            AddWorkflowStatusData("Site Visit", siteVisitDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.SiteVisitDataEntered ? siteVisitDate.AddDays(3) : today);
         }
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.SiteVisitDataEntered)
-        {
+        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.SiteVisitDataEntered) {
             var reportDate = startDate.AddDays(28);
-            AddWorkflowStatusData(data, "Report Preparation", reportDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ReportComplete ? reportDate.AddDays(14) : today);
+            AddWorkflowStatusData("Report Preparation", reportDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ReportComplete ? reportDate.AddDays(14) : today);
         }
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ReportComplete)
-        {
+        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ReportComplete) {
             var completionDate = ReserveStudy.Status == ReserveStudy.WorkflowStatus.RequestCompleted ? ReserveStudy.LastModified ?? startDate.AddDays(45) : startDate.AddDays(45);
-            AddWorkflowStatusData(data, "Study Completion", completionDate.AddDays(-5), completionDate);
+            AddWorkflowStatusData("Study Completion", completionDate.AddDays(-5), completionDate);
         }
 
         return data.ToArray();
     }
 
-    private void AddWorkflowStatusData(List<object> data, string name, DateTime startDate, DateTime endDate)
-    {
-        data.Add(new {
-            x = name,
-            y = new[] {
-                new DateTimeOffset(startDate).ToUnixTimeMilliseconds(),
-                new DateTimeOffset(endDate).ToUnixTimeMilliseconds()
-            },
-            fillColor = GetColorByWorkflowStatus(name) // Add a unique color for each workflow step
-        });
-    }
+    private string GetColorByWorkflowStatus(string workflowName) => workflowName switch {
+        "Request Created" => "#594ae2",
+        "Proposal Phase" => "#ff4081",
+        "Financial Information" => "#2196f3",
+        "Site Visit" => "#1ec8a5",
+        "Report Preparation" => "#4caf50",
+        "Study Completion" => "#673ab7",
+        _ => "#594ae2"
+    };
 
-    private string GetColorByWorkflowStatus(string workflowName)
-    {
-        // Map different colors to different workflow steps
-        return workflowName switch
-        {
-            "Request Created" => "#594ae2",     // MudBlazor primary (purple)
-            "Proposal Phase" => "#ff4081",      // MudBlazor secondary (pink)
-            "Financial Information" => "#2196f3", // MudBlazor info (blue)
-            "Site Visit" => "#1ec8a5",          // MudBlazor tertiary (teal)
-            "Report Preparation" => "#4caf50",  // MudBlazor success (green) 
-            "Study Completion" => "#673ab7",    // MudBlazor deep purple
-            _ => "#594ae2"                     // Default to primary
-        };
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        try
-        {
+    public async ValueTask DisposeAsync() {
+        try {
             await JSRuntime.InvokeVoidAsync("destroyChart", ChartId);
-        }
-        catch (Exception)
-        {
-            // Ignore errors when disposing
-        }
+        } catch { }
     }
 }

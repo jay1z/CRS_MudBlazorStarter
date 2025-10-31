@@ -49,13 +49,12 @@ namespace CRS.Data {
             builder.Entity<FinancialInfo>().HasIndex(e => e.TenantId);
             builder.Entity<Proposal>().HasIndex(e => e.TenantId);
 
+            // Ensure an index on AspNetUsers.TenantId for tenant-scoped user lookups
+            builder.Entity<ApplicationUser>().HasIndex(u => u.TenantId);
+
             // SaaS Refactor: Tenant-aware query filters on principals
-            builder.Entity<Community>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
-            builder.Entity<ReserveStudy>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
-            builder.Entity<Contact>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
-            builder.Entity<PropertyManager>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
-            builder.Entity<FinancialInfo>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
-            builder.Entity<Proposal>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
+            // Apply a global tenant query filter to all entities implementing ITenantScoped
+            ApplyTenantQueryFilters(builder);
 
             // Matching filters on dependents to avoid EF warnings with required relationships
             builder.Entity<ReserveStudyBuildingElement>().HasQueryFilter(e =>
@@ -77,6 +76,27 @@ namespace CRS.Data {
                 .HasOne(r => r.FinancialInfo)
                 .WithOne(f => f.ReserveStudy)
                 .HasForeignKey<FinancialInfo>(f => f.ReserveStudyId);
+        }
+
+        // Apply tenant query filters to all ITenantScoped entities
+        private void ApplyTenantQueryFilters(ModelBuilder builder) {
+            var tenantScopedTypes = builder.Model.GetEntityTypes()
+                .Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType))
+                .Select(t => t.ClrType)
+                .ToList();
+
+            foreach (var type in tenantScopedTypes) {
+                // Skip Tenants, Settings, AccessToken (global tables) if they implement the interface by accident
+                if (type == typeof(Tenant) || type == typeof(Settings) || type == typeof(AccessToken)) continue;
+
+                var method = typeof(ApplicationDbContext).GetMethod(nameof(ApplyTenantFilterGeneric), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    ?.MakeGenericMethod(type);
+                method?.Invoke(this, new object[] { builder });
+            }
+        }
+
+        private void ApplyTenantFilterGeneric<TEntity>(ModelBuilder builder) where TEntity : class, ITenantScoped {
+            builder.Entity<TEntity>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
         }
 
         private void ConfigureEntities(ModelBuilder builder) {
@@ -129,6 +149,8 @@ namespace CRS.Data {
             // TenantHomepage entity configuration
             builder.Entity<TenantHomepage>(entity => {
                 entity.ToTable("TenantHomepages");
+                // Ensure one homepage row per tenant
+                entity.HasIndex(h => h.TenantId).IsUnique();
                 entity.HasIndex(h => new { h.TenantId, h.IsPublished });
                 entity.Property(h => h.DraftJson).HasColumnType("nvarchar(max)");
                 entity.Property(h => h.PublishedJson).HasColumnType("nvarchar(max)");
