@@ -1,0 +1,75 @@
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+@using MudBlazor
+@inject IUserStateService UserState
+@inject IMessageService MessageService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6">Send Message</MudText>
+        <MudForm @ref="form" Model="messageModel">
+            <MudTextField @bind-Value="messageModel.Body" Label="Message" Required="true" Lines="6" Immediate="true" />
+            <MudText Class="mt-1" Color="Color.Error">@validationMessage</MudText>
+            <MudStack Row="true" Spacing="2" Class="mt-2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitMessage">Send</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Guid ToUserId { get; set; }
+
+    [Parameter]
+    public string ToUserName { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OnSent { get; set; }
+
+    private Message messageModel = new();
+    private MudForm? form;
+    private string? validationMessage;
+
+    protected override async Task OnInitializedAsync() {
+        await UserState.InitializeAsync();
+        var current = UserState.CurrentUser;
+        if (current != null) {
+            messageModel.FromUserId = current.Id;
+            messageModel.TenantId = current.TenantId;
+        }
+        messageModel.ToUserId = ToUserId;
+    }
+
+    private async Task SubmitMessage() {
+        validationMessage = null;
+        if (form is not null) {
+            await form.Validate();
+            if (!form.IsValid) {
+                validationMessage = "Please enter a message.";
+                return;
+            }
+        }
+        try {
+            // Derive subject from body
+            var body = (messageModel.Body ?? string.Empty).Trim();
+            messageModel.Subject = string.IsNullOrWhiteSpace(body)
+                ? "Message"
+                : (body.Length >40 ? body[..40] : body);
+            messageModel.DateSent = DateTime.UtcNow;
+            await MessageService.SendMessageAsync(messageModel);
+            Snackbar.Add("Message sent", Severity.Success);
+            await OnSent.InvokeAsync();
+            MudDialog.Close(DialogResult.Ok(true));
+        } catch (Exception ex) {
+            Snackbar.Add($"Failed to send message: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

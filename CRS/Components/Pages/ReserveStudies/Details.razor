@@ -8,6 +8,8 @@
 @using CRS.Services
 @using CRS.Services.Email
 @using CRS.Services.Interfaces
+@using CRS.Models.Workflow
+@using CRS.Services.Workflow
 @using Coravel.Events.Interfaces
 @using Coravel.Mailer.Mail
 @using Coravel.Mailer.Mail.Interfaces
@@ -16,6 +18,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
+@using System.Linq
 @using static CRS.Components.Custom.WorkflowStatusButtons
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
@@ -28,6 +31,7 @@
 @inject IReserveStudyWorkflowService WorkflowService
 @inject IMailer _mailer
 @inject IDispatcher _dispatcher
+@inject IDialogService DialogService
 
 <PageTitle>Reserve Study Details</PageTitle>
 
@@ -38,7 +42,7 @@
             <MudText Typo="Typo.h5" Class="mt-4">Loading Reserve Study...</MudText>
         </MudPaper>
     } else if (reserveStudy == null) {
-        NavigationManager.NavigateTo("/ReserveStudies/notfound");
+        NavigationManager.NavigateTo("/ReserveStudies/NotFound");
     } else {
         <MudContainer MaxWidth="MaxWidth.ExtraLarge">
             <MudText Typo="Typo.h4">@reserveStudy.Community?.Name</MudText>
@@ -78,7 +82,8 @@
                         </MudCardHeader>
                         <MudCardContent>
                             <MudText Typo="Typo.body1">@reserveStudy.Specialist?.FullName</MudText>
-                            <MudLink Href="@($"mailto:{reserveStudy.Specialist?.Email}")">@(reserveStudy.Specialist?.Email ?? "Not Assigned")</MudLink>
+                            <MudButton Variant="Variant.Text" Disabled="@(reserveStudy?.SpecialistUserId == null)" OnClick="OpenComposeMessage">Message Specialist</MudButton>
+                            <MudText Typo="Typo.caption">@(reserveStudy.Specialist?.Email ?? "Not Assigned")</MudText>
                         </MudCardContent>
                     </MudCard>
 
@@ -94,15 +99,31 @@
                                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendAccessTokenLink">Send Access Token Link</MudButton>
 
                                 <MudDivider Class="my-2" />
-                                <MudText Typo="Typo.subtitle1">Test Workflow Status Transitions</MudText>
+                                <MudText Typo="Typo.subtitle1">Workflow Debugger</MudText>
+                                <MudText Typo="Typo.caption" Class="mb-1">Select a valid next state and apply it via the state machine.</MudText>
 
+                                <MudGrid Class="mb-2">
+                                    <MudItem xs="12">
+                                        <MudSelect T="StudyStatus ?" @bind-Value="selectedNextStudy" Label="Allowed next states (engine)" Dense="true" Variant="Variant.Outlined" Clearable="true">
+                                            @foreach (var s in allowedNextStudy) {
+                                                <MudSelectItem T="StudyStatus ?" Value="@((StudyStatus?)s)">@s.ToString()</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    </MudItem>
+                                </MudGrid>
+                                <MudStack Row="true" Spacing="2">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Info" Disabled="@(selectedNextStudy == null)" OnClick="@ApplySelectedStudyTransition">Apply Transition</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="LoadAllowedTransitions">Refresh</MudButton>
+                                </MudStack>
+
+                                <MudDivider Class="my-2" />
+                                <MudText Typo="Typo.subtitle1">Quick Actions</MudText>
                                 <MudGrid>
-                                    <!-- Status buttons using the new component -->
                                     <MudItem xs="6">
-                                        <WorkflowStatusButtons CurrentStatus="@reserveStudy?.Status" StatusList="@firstColumnStatuses" OnStatusChange="@HandleStatusChange" />
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => SendProposalAsync(Id))">Send Proposal</MudButton>
                                     </MudItem>
                                     <MudItem xs="6">
-                                        <WorkflowStatusButtons CurrentStatus="@reserveStudy?.Status" StatusList="@secondColumnStatuses" OnStatusChange="@HandleStatusChange" />
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => RequestFinancialInfoAsync(Id))">Request Financial Info</MudButton>
                                     </MudItem>
                                 </MudGrid>
                             </MudStack>
@@ -122,23 +143,68 @@
 
                 <!-- Main Column -->
                 <MudItem xs="12" lg="8">
-                    <MudTabs Elevation="0" Outlined="true" Color="Color.Primary" ActivePanelIndex="activeTabIndex" OnActivePanelIndexChange="HandleTabChange">
+                    <MudTabs Elevation="0" Outlined="true" Color="Color.Primary" ActivePanelIndex="activeTabIndex" ActivePanelIndexChanged="HandleTabChange">
                         <!-- Workflow Status Tab -->
                         <MudTabPanel Text="Workflow Status" Icon="@Icons.Material.Filled.DoubleArrow">
                             <MudCard Class="mb-4">
                                 <MudCardHeader>
-                                    <MudText Typo="Typo.h6">Workflow Status</MudText>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">Workflow Status</MudText>
+                                    </CardHeaderContent>
+                                    <CardHeaderActions>
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.History" Href="@($"/ReserveStudies/{Id}/History")">Raw History</MudButton>
+                                    </CardHeaderActions>
                                 </MudCardHeader>
                                 <MudCardContent>
+                                    @if (timelineItems.Any()) {
+                                        var currentEngine = reserveStudy?.StudyRequest?.CurrentStatus;
+                                        var currentLegacy = currentEngine.HasValue ? StatusMapper.ToLegacy(currentEngine.Value) : reserveStudy?.Status ?? ReserveStudy.WorkflowStatus.RequestCreated;
+                                        var currentRank = RankByStatus.TryGetValue(currentLegacy, out var rnk) ? rnk : -1;
+                                        var next = DisplayLegacyOrder.FirstOrDefault(s => (RankByStatus.TryGetValue(s, out var rr) ? rr : int.MaxValue) > currentRank);
+                                        if (!EqualityComparer<ReserveStudy.WorkflowStatus>.Default.Equals(next, default)) {
+                                            <MudPaper Elevation="0" Class="pa-2 mb-1 d-flex align-center">
+                                                <MudIcon Icon="@Icons.Material.Filled.DoubleArrow" Color="Color.Primary" Class="mr-2" />
+                                                <MudText Typo="Typo.subtitle2">Next: @FormatStatusTitle(next)</MudText>
+                                            </MudPaper>
+                                            <MudStack Row="true" Spacing="1" Class="mb-2">
+                                                @{
+                                                    var engineNext = StatusMapper.ToStudyStatus(next); var canAdvance = allowedNextStudy.Contains(engineNext);
+                                                }
+                                                @if (next == ReserveStudy.WorkflowStatus.ProposalSent) {
+                                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send" OnClick="@(() => SendProposalAsync(Id))">Send Proposal</MudButton>
+                                                } else if (next == ReserveStudy.WorkflowStatus.FinancialInfoRequested) {
+                                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Description" OnClick="@(() => RequestFinancialInfoAsync(Id))">Request Financial Info</MudButton>
+                                                } else if (next == ReserveStudy.WorkflowStatus.SiteVisitScheduled && allowedNextStudy.Contains(StudyStatus.Scheduled)) {
+                                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Event" OnClick="@(() => ApplyTransition(StudyStatus.Scheduled))">Schedule Visit</MudButton>
+                                                } else if (next == ReserveStudy.WorkflowStatus.ReportComplete) {
+                                                    <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.CheckCircle" OnClick="@(() => CompleteReserveStudyAsync(Id))">Complete Study</MudButton>
+                                                } else if (canAdvance) {
+                                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowForward" OnClick="@(() => ApplyTransition(engineNext))">Advance</MudButton>
+                                                } else {
+                                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Awaiting external action</MudText>
+                                                }
+                                            </MudStack>
+                                        }
+                                    }
                                     <MudTimeline TimelineAlign="TimelineAlign.Start">
-                                        @foreach (var timelineItem in timelineItems) {
-                                            <TimelineStatusItem Status="@timelineItem.Status"
-                                                                DateValue="@timelineItem.DateValue"
-                                                                Title="@timelineItem.Title"
-                                                                Actor="@timelineItem.Actor"
-                                                                IsAlignEnd="@timelineItem.IsAlignEnd"
-                                                                IsHidden="@timelineItem.IsHidden"
-                                                                ReserveStudy="@reserveStudy" />
+                                        @{
+                                            // Determine current engine status and map to legacy for correct coloring order
+                                            var currentEngine = reserveStudy?.StudyRequest?.CurrentStatus;
+                                            var currentLegacy = currentEngine.HasValue ? StatusMapper.ToLegacy(currentEngine.Value) : reserveStudy?.Status ?? ReserveStudy.WorkflowStatus.RequestCreated;
+                                            var currentRank = RankByStatus.TryGetValue(currentLegacy, out var cr) ? cr : -1;
+                                        }
+                                        @foreach (var item in timelineItems) {
+                                            var itemRank = RankByStatus.TryGetValue(item.Status, out var ir) ? ir : int.MaxValue;
+                                            var isCompleted = currentRank > itemRank;
+                                            var isCurrent = currentRank == itemRank;
+                                            <TimelineStatusItem Status="@item.Status"
+                                                                DateValue="@item.DateValue"
+                                                                Title="@item.Title"
+                                                                Actor="@item.Actor"
+                                                                IsHidden="@item.IsHidden"
+                                                                ReserveStudy="@reserveStudy"
+                                                                IsCurrent="@isCurrent"
+                                                                IsCompleted="@isCompleted" />
                                         }
                                     </MudTimeline>
 
@@ -261,13 +327,13 @@
                             </MudCard>
                         </MudTabPanel>
                         <!-- Elements Tab -->
-                        <MudTabPanel Text="Elements" Icon="@Icons.Material.Filled.List" OnClick="@(() => LoadElementsDataIfNeeded())">
+                        <MudTabPanel Text="Elements" Icon="@Icons.Material.Filled.List">
                             @if (isElementsLoading) {
                                 <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-4" />
-                            } else if (elementsLoaded && reserveStudy.ReserveStudyElements.Any()) {
+                            } else if (elementsLoaded && GetAllElements().Any()) {
                                 <MudCard Elevation="25">
                                     <MudCardContent Class="py-6">
-                                        <MudTable Dense="true" Hover="true" Elevation="0" Items="@reserveStudy.ReserveStudyElements"
+                                        <MudTable Dense="true" Hover="true" Elevation="0" Items="@GetAllElements()"
                                                   GroupBy="@_groupDefinition"
                                                   GroupHeaderStyle="background-color:var(--mud-palette-background-gray)"
                                                   GroupFooterClass="mb-4">
@@ -294,7 +360,7 @@
                                                     <MudText Typo="Typo.body1">@rowContext.Name</MudText>
                                                 </MudTd>
                                                 <MudTd>
-                                                    <MudCheckBox T="bool" Value="rowContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
+                                                    <MudCheckBox T="bool" Value="@rowContext.NeedsService" Color="Color.Success" UncheckedColor="Color.Error" ReadOnly="true" />
                                                 </MudTd>
                                                 <MudTd class="text-end">
                                                     <MudText Typo="Typo.body1">@rowContext.Count</MudText>
@@ -326,12 +392,14 @@
                                         </MudTable>
                                     </MudCardContent>
                                 </MudCard>
-                            } else if (elementsLoaded) {
-                                <MudText Typo="Typo.body1" Class="mt-4">No elements available.</MudText>
+                            } else if (!elementsLoaded) {
+                                <MudText Typo="Typo.body2" Class="mt-4">Elements will load when this tab is selected.</MudText>
+                            } else {
+                                <MudText Typo="Typo.body1" Class="mt-4">@( "No elements available (" + GetAllElements().Count() + ")" )</MudText>
                             }
                         </MudTabPanel>
                         <!-- Service Contacts Tab -->
-                        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone" OnClick="@(() => LoadServiceContactsIfNeeded())">
+                        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone">
                             @if (isContactsLoading) {
                                 <MudProgressLinear Color="Color.Secondary" Indeterminate="true" Class="my-4" />
                             } else if (serviceContactsLoaded && elementsWithServiceContact.Any()) {
@@ -370,7 +438,9 @@
                                         </MudExpansionPanel>
                                     }
                                 </MudExpansionPanels>
-                            } else if (serviceContactsLoaded) {
+                            } else if (!serviceContactsLoaded) {
+                                <MudText Typo="Typo.body2" Class="mt-4">Service contacts will load when this tab is selected.</MudText>
+                            } else {
                                 <MudText Typo="Typo.body1" Class="mt-4">No service contacts available.</MudText>
                             }
                         </MudTabPanel>
@@ -393,141 +463,148 @@
     private List<IReserveStudyElement> elementsWithServiceContact = new();
     private int activeTabIndex = 0;
 
-    // Dictionary for special status colors
-    private readonly Dictionary<ReserveStudy.WorkflowStatus, Color> _specialStatusColors = new()
-    {
-        { ReserveStudy.WorkflowStatus.RequestCancelled, Color.Error },
-        { ReserveStudy.WorkflowStatus.RequestArchived, Color.Info }
-    };
+    private List<StudyStatus> allowedNextStudy = new();
+    private StudyStatus? selectedNextStudy;
 
-    // Fix 2: Move status button configurations to OnInitialized to avoid field initializer errors
-    private List<StatusButtonInfo> firstColumnStatuses = new();
-    private List<StatusButtonInfo> secondColumnStatuses = new();
+    private List<StudyStatusHistory> statusHistory = new();
 
     // Timeline items data
     private readonly List<TimelineItemInfo> timelineItems = new();
 
-    protected override async Task OnInitializedAsync() {
-        // Fix 2: Initialize button configurations here instead of in field initializers
-        InitializeStatusButtons();
+    // Curated engine status order to match tests, then mapped to legacy UI statuses
+    private static readonly StudyStatus[] EngineTimelineOrder = new[] {
+        StudyStatus.NewRequest,
+        StudyStatus.PendingDetails,
+        StudyStatus.ReadyForReview,
+        StudyStatus.NeedsInfo,
+        StudyStatus.Approved,
+        StudyStatus.Assigned,
+        StudyStatus.ProposalPendingESign,
+        StudyStatus.Accepted,
+        StudyStatus.Rejected,
+        StudyStatus.Scheduled,
+        StudyStatus.InProgress,
+        StudyStatus.UnderReview,
+        StudyStatus.ReportDrafted,
+        StudyStatus.ApprovedReport,
+        StudyStatus.Complete,
+        StudyStatus.Archived
+    };
 
+    // Display order for timeline (includes key milestones and user-action steps)
+    private static readonly ReserveStudy.WorkflowStatus[] DisplayLegacyOrder = new[] {
+        ReserveStudy.WorkflowStatus.RequestCreated,
+        ReserveStudy.WorkflowStatus.ProposalCreated, // Specialist Assigned
+        ReserveStudy.WorkflowStatus.ProposalSent,
+        ReserveStudy.WorkflowStatus.ProposalAccepted,
+        ReserveStudy.WorkflowStatus.FinancialInfoRequested,
+        ReserveStudy.WorkflowStatus.FinancialInfoSubmitted,
+        ReserveStudy.WorkflowStatus.SiteVisitScheduled,
+        ReserveStudy.WorkflowStatus.SiteVisitCompleted,
+        ReserveStudy.WorkflowStatus.ReportComplete,
+        ReserveStudy.WorkflowStatus.FundingPlanReady,
+        ReserveStudy.WorkflowStatus.RequestCompleted
+    };
+
+    // Rank map used to compute completed/current/pending independent of enum numeric values
+    private static readonly Dictionary<ReserveStudy.WorkflowStatus, int> RankByStatus =
+    DisplayLegacyOrder
+    .Select((s, idx) => new { s, idx })
+    .ToDictionary(x => x.s, x => x.idx);
+
+    protected override async Task OnInitializedAsync() {
         await LoadInitialData();
         InitializeTimelineItems();
+        await LoadAllowedTransitions();
     }
 
-    private void InitializeStatusButtons() {
-        // First column status buttons
-        firstColumnStatuses = new List<StatusButtonInfo>
-        {
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.RequestCreated, "Request Created", false),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalCreated, "Proposal Created", false),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalReviewed, "Proposal Reviewed", false),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalApproved, "Proposal Approved", true, (id) => ApproveProposalAsync(id)),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalSent, "Proposal Sent", true, (id) => SendProposalAsync(id)),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ProposalAccepted, "Proposal Accepted", false),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.FinancialInfoRequested, "Financial Info Requested", true, (id) => RequestFinancialInfoAsync(id))
-        };
-
-        // Second column status buttons
-        secondColumnStatuses = new List<StatusButtonInfo>
-        {
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.FinancialInfoCreated, "Financial Info Created", true, (id) => SubmitFinancialInfoAsync(id)),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.FinancialInfoSubmitted, "Financial Info Submitted", true, (id) => SubmitFinancialInfoAsync(id)),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.FinancialInfoReviewed, "Financial Info Reviewed", true, (id) => ReviewFinancialInfoAsync(id)),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.ReportInProcess, "Processing", false),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.RequestCompleted, "Completed", true, (id) => CompleteReserveStudyAsync(id), Color.Success),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.RequestCancelled, "Cancelled", false, specialColor: Color.Error),
-            new StatusButtonInfo(ReserveStudy.WorkflowStatus.RequestArchived, "Archived", false)
-        };
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        // Ensure data loads when tab becomes visible even if the change event didn't trigger in time
+        try {
+            if (activeTabIndex == 2) {
+                await LoadElementsDataIfNeeded();
+            } else if (activeTabIndex == 3) {
+                await LoadServiceContactsIfNeeded();
+            }
+        } catch { /* swallow render-time exceptions, surfaced via Snackbar inside loaders */ }
     }
 
     private void InitializeTimelineItems() {
         timelineItems.Clear();
 
-        // Add all timeline items in order
-        timelineItems.AddRange(new[] {
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.RequestCreated,
-                DateValue = reserveStudy?.DateCreated,
-                Title = "Request Created",
-                IsAlignEnd = true
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.ProposalCreated,
-                DateValue = reserveStudy?.Proposal?.DateSent,
-                Title = "Proposal Sent",
-                Actor = reserveStudy?.Specialist?.FullName,
-                IsAlignEnd = true
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.ProposalReviewed,
-                DateValue = reserveStudy?.Status >= ReserveStudy.WorkflowStatus.ProposalReviewed ?
-                    reserveStudy?.DateModified : null,
-                Title = "Proposal Reviewed",
-                IsAlignEnd = true
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.ProposalApproved,
-                DateValue = reserveStudy?.Proposal?.DateApproved,
-                Title = "Proposal Approved",
-                Actor = reserveStudy?.Proposal?.ApprovedBy,
-                IsAlignEnd = true
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.FinancialInfoRequested,
-                DateValue = reserveStudy?.Status >= ReserveStudy.WorkflowStatus.FinancialInfoRequested ?
-                    reserveStudy?.FinancialInfo?.DateCreated : null,
-                Title = "Financial Info Requested",
-                Actor = reserveStudy?.Specialist?.FullName,
-                IsAlignEnd = true
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.FinancialInfoSubmitted,
-                DateValue = reserveStudy?.FinancialInfo?.DateSubmitted,
-                Title = "Financial Info Submitted",
-                Actor = reserveStudy?.PointOfContact?.FullName,
-                IsAlignEnd = true
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.FinancialInfoReviewed,
-                DateValue = reserveStudy?.FinancialInfo?.DateReviewed,
-                Title = "Financial Info Reviewed",
-                Actor = reserveStudy?.Specialist?.FullName,
-                IsAlignEnd = true
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.ReportInProcess,
-                DateValue = reserveStudy?.Status >= ReserveStudy.WorkflowStatus.ReportInProcess ?
-                    reserveStudy?.DateModified : null,
-                Title = "Study In Progress",
-                Actor = reserveStudy?.Specialist?.FullName,
-                IsAlignEnd = true
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.RequestCompleted,
-                DateValue = reserveStudy?.Status == ReserveStudy.WorkflowStatus.RequestCompleted ?
-                    reserveStudy?.DateModified : null,
-                Title = "Study Complete",
-                Actor = reserveStudy?.Specialist?.FullName,
-                IsAlignEnd = true
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.RequestArchived,
-                DateValue = reserveStudy?.Status == ReserveStudy.WorkflowStatus.RequestArchived ?
-                    reserveStudy?.DateModified : null,
-                Title = "Study Archived",
-                IsAlignEnd = false,
-                IsHidden = reserveStudy?.Status != ReserveStudy.WorkflowStatus.RequestArchived
-            },
-            new TimelineItemInfo {
-                Status = ReserveStudy.WorkflowStatus.RequestCancelled,
-                DateValue = reserveStudy?.Status == ReserveStudy.WorkflowStatus.RequestCancelled ?
-                    reserveStudy?.DateModified : null,
-                Title = "Study Cancelled",
-                IsAlignEnd = false,
-                IsHidden = reserveStudy?.Status != ReserveStudy.WorkflowStatus.RequestCancelled
-            }
-        });
+        // Map history entries (StudyStatus) to legacy ReserveStudy.WorkflowStatus for date/actor
+        var historyByLegacy = statusHistory
+            .Select(h => new { Legacy = StatusMapper.ToLegacy(h.ToStatus), h.ChangedAt, h.ChangedBy })
+            .GroupBy(x => x.Legacy)
+            .ToDictionary(g => g.Key, g => new { First = g.OrderBy(x => x.ChangedAt).First(), Last = g.OrderBy(x => x.ChangedAt).Last() });
+
+        // Build curated legacy order from engine order, de-duplicated while preserving order
+        var legacyOrder = new List<ReserveStudy.WorkflowStatus>();
+        var seen = new HashSet<ReserveStudy.WorkflowStatus>();
+        foreach (var st in EngineTimelineOrder) {
+            var legacy = StatusMapper.ToLegacy(st);
+            if (seen.Add(legacy)) legacyOrder.Add(legacy);
+        }
+
+        // Reduce to milestone-only in the order we want
+        var milestonesToShow = DisplayLegacyOrder.Where(m => legacyOrder.Contains(m)).ToList();
+
+        // If cancelled/archived occurred, append as terminal markers
+        if (legacyOrder.Contains(ReserveStudy.WorkflowStatus.RequestCancelled))
+            milestonesToShow.Add(ReserveStudy.WorkflowStatus.RequestCancelled);
+        if (legacyOrder.Contains(ReserveStudy.WorkflowStatus.RequestArchived))
+            milestonesToShow.Add(ReserveStudy.WorkflowStatus.RequestArchived);
+
+        foreach (var status in milestonesToShow) {
+            // Prevent duplicates defensively
+            if (timelineItems.Any(t => t.Status == status))
+                continue;
+
+            var hasHist = historyByLegacy.TryGetValue(status, out var hist);
+            // Choose earliest for "start" type, latest for decision/delivery type
+            var useLast = status == ReserveStudy.WorkflowStatus.ProposalSent
+                || status == ReserveStudy.WorkflowStatus.ProposalAccepted
+                || status == ReserveStudy.WorkflowStatus.FinancialInfoRequested
+                || status == ReserveStudy.WorkflowStatus.SiteVisitScheduled
+                || status == ReserveStudy.WorkflowStatus.ReportComplete
+                || status == ReserveStudy.WorkflowStatus.FundingPlanComplete
+                || status == ReserveStudy.WorkflowStatus.RequestArchived
+                || status == ReserveStudy.WorkflowStatus.RequestCancelled;
+            DateTime? date = hasHist ? (useLast ? hist!.Last.ChangedAt.LocalDateTime : hist!.First.ChangedAt.LocalDateTime) : GetFallbackDate(status);
+            var actor = hasHist ? (useLast ? hist!.Last.ChangedBy : hist!.First.ChangedBy) : null;
+
+            timelineItems.Add(new TimelineItemInfo {
+                Status = status,
+                DateValue = date,
+                Title = FormatStatusTitle(status),
+                Actor = actor,
+                IsHidden = false
+            });
+        }
+    }
+
+    private DateTime? GetFallbackDate(ReserveStudy.WorkflowStatus status) {
+        // Fallback dates for key milestones only
+        if (status == ReserveStudy.WorkflowStatus.RequestCreated) return reserveStudy?.DateCreated;
+        if (status == ReserveStudy.WorkflowStatus.ProposalCreated || status == ReserveStudy.WorkflowStatus.ProposalSent) return reserveStudy?.Proposal?.DateSent;
+        if (status == ReserveStudy.WorkflowStatus.ProposalApproved || status == ReserveStudy.WorkflowStatus.ProposalAccepted) return reserveStudy?.Proposal?.DateApproved;
+        if (status == ReserveStudy.WorkflowStatus.FinancialInfoRequested) return reserveStudy?.FinancialInfo?.DateCreated;
+        if (status == ReserveStudy.WorkflowStatus.FinancialInfoSubmitted) return reserveStudy?.FinancialInfo?.DateSubmitted;
+        if (status == ReserveStudy.WorkflowStatus.FinancialInfoReviewed) return reserveStudy?.FinancialInfo?.DateReviewed;
+        if (status == ReserveStudy.WorkflowStatus.SiteVisitCompleted) return reserveStudy?.LastModified;
+        if (status == ReserveStudy.WorkflowStatus.ReportComplete) return reserveStudy?.LastModified;
+        if (status == ReserveStudy.WorkflowStatus.FundingPlanReady) return reserveStudy?.LastModified;
+        if (status == ReserveStudy.WorkflowStatus.RequestArchived) return reserveStudy?.LastModified;
+        if (status == ReserveStudy.WorkflowStatus.RequestCancelled) return reserveStudy?.LastModified;
+        return null;
+    }
+
+    private static string FormatStatusTitle(ReserveStudy.WorkflowStatus status) {
+        var name = Enum.GetName(typeof(ReserveStudy.WorkflowStatus), status) ?? status.ToString();
+        // Insert spaces before capital letters and between letter-number boundaries
+        var withSpaces = System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z])([A-Z])", " $1");
+        withSpaces = System.Text.RegularExpressions.Regex.Replace(withSpaces, "([A-Za-z])(\\d)", "$1 $2");
+        return withSpaces.Trim();
     }
 
     private async Task LoadInitialData() {
@@ -536,7 +613,6 @@
             await UserState.InitializeAsync();
 
             using var context = await DbFactory.CreateDbContextAsync();
-            // Only load core data initially - reduced includes
             reserveStudy = await context.ReserveStudies
                 .AsNoTracking()
                 .Include(rs => rs.Community).ThenInclude(c => c.Addresses)
@@ -548,7 +624,12 @@
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(rs => rs.Id == Id);
 
-            // Do not load elements data yet - wait for tab selection
+            // Load workflow history used for timeline
+            statusHistory = await context.StudyStatusHistories
+                .AsNoTracking()
+                .Where(h => h.RequestId == Id)
+                .OrderBy(h => h.ChangedAt)
+                .ToListAsync();
         } catch (Exception ex) {
             Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
         } finally {
@@ -668,7 +749,7 @@
             }
 
             // Update the list of elements with service contacts
-            elementsWithServiceContact = reserveStudy.ReserveStudyElements.Where(e => e.NeedsService).ToList();
+            elementsWithServiceContact = GetAllElements().Where(e => e.NeedsService).ToList();
 
             serviceContactsLoaded = true;
         } catch (Exception ex) {
@@ -679,7 +760,7 @@
         }
     }
 
-    private string GetUpdateLink() => $"/ReserveStudies/Update/{reserveStudy?.Id}";
+    private string GetUpdateLink() => $"/ReserveStudies/{reserveStudy?.Id}/Update";
 
     private void HandleTabChange(int index) {
         activeTabIndex = index;
@@ -692,14 +773,6 @@
             case 3: // Service Contacts tab
                 _ = LoadServiceContactsIfNeeded();
                 break;
-        }
-    }
-
-    private async Task HandleStatusChange(StatusChangeEventArgs args) {
-        if (args.HasCustomAction) {
-            await args.CustomAction(Id);
-        } else {
-            await SetStatusAsync(args.Status);
         }
     }
 
@@ -739,23 +812,6 @@
 
     private string GetGroupName(TableGroupData<object, IReserveStudyElement> headerContext) => $"{headerContext.GroupName}: {headerContext.Key}";
 
-    private Color GetTimelineColor(ReserveStudy.WorkflowStatus status) {
-        // Use the dictionary for special statuses
-        if (_specialStatusColors.TryGetValue(status, out var color))
-            return color;
-
-        // If this status is the current status, highlight it
-        if (reserveStudy?.Status == status)
-            return Color.Warning;
-        // If this status has been completed (current status is beyond this one)
-        else if (reserveStudy?.Status > status)
-            return Color.Success;
-        // If this status hasn't been reached yet
-        else
-            return Color.Default;
-    }
-
-    // Generic action execution method with error handling
     private async Task<bool> ExecuteActionAsync(Func<Task<bool>> action, string successMessage, string failureMessage) {
         try {
             var result = await action();
@@ -772,20 +828,19 @@
         }
     }
 
-    // Status change methods that use the generic execution method
     private async Task ApproveProposalAsync(Guid studyId) {
         if (reserveStudy?.Proposal == null) return;
 
         var success = await ExecuteActionAsync(
             async () => {
-                var currentUser = "User Name"; // Replace with actual user name
+                var currentUser = UserState.CurrentUser?.UserName ?? "system";
                 return await WorkflowService.ApproveProposalAsync(reserveStudy.Proposal.Id, currentUser);
             },
             "Proposal approved successfully",
             "Failed to approve proposal"
         );
 
-        if (success) await LoadInitialData();
+        if (success) await ReloadAfterChange();
     }
 
     private async Task RequestFinancialInfoAsync(Guid studyId) {
@@ -795,7 +850,7 @@
             "Failed to request financial information"
         );
 
-        if (success) await LoadInitialData();
+        if (success) await ReloadAfterChange();
     }
 
     private async Task ReviewFinancialInfoAsync(Guid studyId) {
@@ -803,14 +858,14 @@
 
         var success = await ExecuteActionAsync(
             async () => {
-                var currentUser = "User Name"; // Replace with actual user name
+                var currentUser = UserState.CurrentUser?.UserName ?? "system";
                 return await WorkflowService.ReviewFinancialInfoAsync(reserveStudy.FinancialInfo.Id, currentUser);
             },
             "Financial information reviewed successfully",
             "Failed to review financial information"
         );
 
-        if (success) await LoadInitialData();
+        if (success) await ReloadAfterChange();
     }
 
     private async Task CompleteReserveStudyAsync(Guid studyId) {
@@ -820,37 +875,14 @@
             "Failed to complete reserve study"
         );
 
-        if (success) await LoadInitialData();
-    }
-
-    private async Task SetStatusAsync(ReserveStudy.WorkflowStatus status) {
-        try {
-            if (reserveStudy == null) return;
-
-            using var context = await DbFactory.CreateDbContextAsync();
-            var study = await context.ReserveStudies.FindAsync(Id);
-
-            if (study != null) {
-                study.Status = status;
-                study.DateModified = DateTime.Now;
-
-                await context.SaveChangesAsync();
-                Snackbar.Add($"Status updated to {status}", Severity.Success);
-                await LoadInitialData(); // Reload data
-                InitializeTimelineItems(); // Refresh timeline items
-            }
-        } catch (Exception ex) {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-        }
+        if (success) await ReloadAfterChange();
     }
 
     private async Task SendProposalAsync(Guid studyId) {
         if (reserveStudy == null) return;
 
         try {
-            // Check if proposal exists, create one if not
             if (reserveStudy.Proposal == null) {
-                // Create a sample proposal
                 var proposal = new Models.Proposal {
                     ReserveStudyId = reserveStudy.Id,
                     ProposalScope = "Test Scope",
@@ -862,14 +894,12 @@
                 var result = await WorkflowService.SendProposalAsync(Id, proposal);
                 if (result) {
                     Snackbar.Add("Proposal sent successfully", Severity.Success);
-                    await LoadInitialData(); // Reload data
-                    InitializeTimelineItems(); // Refresh timeline items
+                    await ReloadAfterChange();
                 } else {
                     Snackbar.Add("Failed to send proposal", Severity.Error);
                 }
             } else {
-                // If proposal exists, just update the status
-                await SetStatusAsync(ReserveStudy.WorkflowStatus.ProposalSent);
+                await ApplyTransition(StudyStatus.ProposalPendingESign);
             }
         } catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
@@ -881,7 +911,6 @@
 
         try {
             if (reserveStudy.FinancialInfo == null) {
-                // Create sample financial info
                 var financialInfo = new Models.FinancialInfo {
                     ReserveStudyId = reserveStudy.Id,
                     CurrentReserveFundBalance = 50000.00m,
@@ -895,18 +924,59 @@
                 var result = await WorkflowService.SubmitFinancialInfoAsync(Id, financialInfo);
                 if (result) {
                     Snackbar.Add("Financial information submitted successfully", Severity.Success);
-                    await LoadInitialData(); // Reload data
-                    InitializeTimelineItems(); // Refresh timeline items
+                    await ReloadAfterChange();
                 } else {
                     Snackbar.Add("Failed to submit financial information", Severity.Error);
                 }
             } else {
-                // If financial info already exists, just update the status
-                await SetStatusAsync(ReserveStudy.WorkflowStatus.FinancialInfoSubmitted);
+                await ApplyTransition(StudyStatus.UnderReview);
             }
         } catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task LoadAllowedTransitions() {
+        try {
+            var studyAllowed = await WorkflowService.GetAllowedStudyTransitionsAsync(Id);
+            allowedNextStudy = studyAllowed.ToList();
+            if (!allowedNextStudy.Contains(selectedNextStudy ?? default)) selectedNextStudy = null;
+        } catch {
+            allowedNextStudy.Clear();
+            selectedNextStudy = null;
+        }
+        // Rebuild the timeline since history/allowed may influence displayed metadata
+        InitializeTimelineItems();
+        StateHasChanged();
+    }
+
+    private async Task ApplySelectedStudyTransition() {
+        if (selectedNextStudy == null) return;
+        await ApplyTransition(selectedNextStudy.Value);
+    }
+
+    private async Task ApplyTransition(StudyStatus status) {
+        var ok = await WorkflowService.TryTransitionStudyAsync(Id, status);
+        if (ok) {
+            Snackbar.Add($"Transitioned to {status}", Severity.Success);
+            await ReloadAfterChange();
+        } else {
+            Snackbar.Add($"Transition to {status} not allowed", Severity.Warning);
+        }
+    }
+
+    private async Task ReloadAfterChange() {
+        await LoadInitialData();
+        InitializeTimelineItems();
+        await LoadAllowedTransitions();
+    }
+
+    // Aggregate all element types safely
+    private IEnumerable<IReserveStudyElement> GetAllElements() {
+        var building = reserveStudy?.ReserveStudyBuildingElements?.Cast<IReserveStudyElement>() ?? Enumerable.Empty<IReserveStudyElement>();
+        var common = reserveStudy?.ReserveStudyCommonElements?.Cast<IReserveStudyElement>() ?? Enumerable.Empty<IReserveStudyElement>();
+        var additional = reserveStudy?.ReserveStudyAdditionalElements?.Cast<IReserveStudyElement>() ?? Enumerable.Empty<IReserveStudyElement>();
+        return building.Concat(common).Concat(additional);
     }
 
     // Class to hold timeline item information
@@ -915,7 +985,13 @@
         public DateTime? DateValue { get; set; }
         public string? Title { get; set; }
         public string? Actor { get; set; }
-        public bool IsAlignEnd { get; set; } = true;
         public bool IsHidden { get; set; } = false;
+    }
+
+    private void OpenComposeMessage() {
+        if (reserveStudy?.SpecialistUserId == null) return;
+        var parameters = new DialogParameters { ["ToUserId"] = reserveStudy.SpecialistUserId.Value, ["ToUserName"] = reserveStudy.Specialist?.Email ?? string.Empty };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+        DialogService.ShowAsync<CRS.Components.Pages.Messages.ComposeMessageDialog>("Send Message", parameters, options);
     }
 }

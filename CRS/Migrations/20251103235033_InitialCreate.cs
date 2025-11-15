@@ -284,6 +284,26 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Messages",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FromUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ToUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Subject = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Body = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DateSent = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Messages", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Notifications",
                 schema: "crs",
                 columns: table => new
@@ -1031,6 +1051,63 @@ namespace CRS.Migrations
                         principalColumn: "Id");
                 });
 
+            migrationBuilder.CreateTable(
+                name: "StudyRequests",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CurrentStatus = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    StateChangedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    StatusChangedBy = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    StatusNotes = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudyRequests", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StudyRequests_ReserveStudies_Id",
+                        column: x => x.Id,
+                        principalSchema: "crs",
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "StudyStatusHistories",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    RequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FromStatus = table.Column<int>(type: "int", nullable: false),
+                    ToStatus = table.Column<int>(type: "int", nullable: false),
+                    ChangedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    ChangedBy = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
+                    Source = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    CorrelationId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudyStatusHistories", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StudyStatusHistories_StudyRequests_RequestId",
+                        column: x => x.RequestId,
+                        principalSchema: "crs",
+                        principalTable: "StudyRequests",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AccessTokens_Token",
                 schema: "crs",
@@ -1315,6 +1392,54 @@ namespace CRS.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_StudyRequests_CommunityId",
+                schema: "crs",
+                table: "StudyRequests",
+                column: "CommunityId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyRequests_TenantId",
+                schema: "crs",
+                table: "StudyRequests",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyRequests_TenantId_CurrentStatus",
+                schema: "crs",
+                table: "StudyRequests",
+                columns: new[] { "TenantId", "CurrentStatus" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyRequests_TenantId_StateChangedAt",
+                schema: "crs",
+                table: "StudyRequests",
+                columns: new[] { "TenantId", "StateChangedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyStatusHistories_RequestId",
+                schema: "crs",
+                table: "StudyStatusHistories",
+                column: "RequestId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyStatusHistories_TenantId",
+                schema: "crs",
+                table: "StudyStatusHistories",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyStatusHistories_TenantId_RequestId_ChangedAt",
+                schema: "crs",
+                table: "StudyStatusHistories",
+                columns: new[] { "TenantId", "RequestId", "ChangedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyStatusHistories_TenantId_ToStatus_ChangedAt",
+                schema: "crs",
+                table: "StudyStatusHistories",
+                columns: new[] { "TenantId", "ToStatus", "ChangedAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TenantHomepages_TenantId",
                 schema: "crs",
                 table: "TenantHomepages",
@@ -1394,6 +1519,10 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
+                name: "Messages",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
                 name: "Notifications",
                 schema: "crs");
 
@@ -1419,6 +1548,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Settings",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "StudyStatusHistories",
                 schema: "crs");
 
             migrationBuilder.DropTable(
@@ -1458,11 +1591,15 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
-                name: "ReserveStudies",
+                name: "ServiceContacts",
                 schema: "crs");
 
             migrationBuilder.DropTable(
-                name: "ServiceContacts",
+                name: "StudyRequests",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "ReserveStudies",
                 schema: "crs");
 
             migrationBuilder.DropTable(

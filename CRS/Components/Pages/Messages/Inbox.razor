@@ -1,0 +1,93 @@
+@page "/messages/inbox"
+@using CRS.Services
+@using CRS.Models
+@using MudBlazor
+@using Microsoft.EntityFrameworkCore
+@using CRS.Data
+@inject CRS.Services.Interfaces.IMessageService MessageService
+@inject UserStateService UserState
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Inbox</PageTitle>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
+    <MudCard>
+        <MudCardHeader>
+            <MudText Typo="Typo.h5">Inbox</MudText>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (isLoading) {
+                <MudProgressCircular Indeterminate="true" />
+            } else if (!items.Any()) {
+                <MudAlert Severity="Severity.Info">No messages.</MudAlert>
+            } else {
+                <MudList T="InboxItem">
+                    @foreach (var it in items) {
+                        <MudListItem T="InboxItem" Class="d-flex justify-space-between align-center" @onclick="() => OpenConversation(it.OtherUserId)">
+                            <div>
+                                <MudText Typo="Typo.subtitle1">@it.DisplayName</MudText>
+                                <MudText Typo="Typo.caption">@it.Snippet</MudText>
+                            </div>
+                            <div class="d-flex align-center gap-2">
+                                <MudText Typo="Typo.caption">@it.Date.ToLocalTime()</MudText>
+                                @if (it.Unread) {
+                                    <MudBadge Color="Color.Primary" Dot="true" />
+                                }
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private bool isLoading = true;
+    private List<InboxItem> items = new();
+    private Dictionary<Guid, string> userNames = new();
+
+    private sealed record InboxItem(Guid OtherUserId, string DisplayName, string Snippet, DateTime Date, bool Unread);
+
+    protected override async Task OnInitializedAsync() {
+        try {
+            await UserState.InitializeAsync();
+            if (UserState.CurrentUser == null) return;
+            var latest = await MessageService.GetLatestConversationsAsync(UserState.CurrentUser.Id);
+            var otherIds = latest.Select(m => m.FromUserId == UserState.CurrentUser.Id ? m.ToUserId : m.FromUserId).Distinct();
+            await PreloadUserNames(otherIds);
+            items = latest.Select(m => {
+                var other = m.FromUserId == UserState.CurrentUser!.Id ? m.ToUserId : m.FromUserId;
+                var name = ResolveUserName(other);
+                var snippet = string.IsNullOrWhiteSpace(m.Body) ? m.Subject : m.Body;
+                var unread = !m.IsRead && m.ToUserId == UserState.CurrentUser!.Id;
+                return new InboxItem(other, name, snippet, m.DateSent, unread);
+            }).OrderByDescending(i => i.Date).ToList();
+        } catch (Exception ex) {
+            Snackbar.Add(ex.Message, Severity.Error);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    private async Task PreloadUserNames(IEnumerable<Guid> userIds) {
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var users = await db.Users.Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FirstName, u.LastName, u.Email })
+            .ToListAsync();
+            foreach (var u in users) {
+                var name = string.Join(" ", new[] { u.FirstName, u.LastName }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                if (string.IsNullOrWhiteSpace(name)) name = u.Email ?? u.Id.ToString();
+                userNames[u.Id] = name;
+            }
+        } catch { }
+    }
+
+    private string ResolveUserName(Guid id) => userNames.TryGetValue(id, out var n) ? n : id.ToString();
+
+    private void OpenConversation(Guid otherUserId) {
+        NavigationManager.NavigateTo($"/messages/conversation/{otherUserId}");
+    }
+}

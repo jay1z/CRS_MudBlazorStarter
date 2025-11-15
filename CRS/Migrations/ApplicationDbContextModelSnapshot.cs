@@ -908,6 +908,45 @@ namespace CRS.Migrations
                     b.ToTable("KanbanTasks", "crs");
                 });
 
+            modelBuilder.Entity("CRS.Models.Message", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("DateSent")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("FromUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ToUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Messages", "crs");
+                });
+
             modelBuilder.Entity("CRS.Models.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1558,6 +1597,110 @@ namespace CRS.Migrations
                     b.ToTable("TenantHomepages", "crs");
                 });
 
+            modelBuilder.Entity("CRS.Models.Workflow.StudyRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CommunityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("CurrentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("StateChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("StatusChangedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("StatusNotes")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "CurrentStatus");
+
+                    b.HasIndex("TenantId", "StateChangedAt");
+
+                    b.ToTable("StudyRequests", "crs");
+                });
+
+            modelBuilder.Entity("CRS.Models.Workflow.StudyStatusHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ChangedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("FromStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToStatus")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "RequestId", "ChangedAt");
+
+                    b.HasIndex("TenantId", "ToStatus", "ChangedAt");
+
+                    b.ToTable("StudyStatusHistories", "crs");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1949,6 +2092,28 @@ namespace CRS.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CRS.Models.Workflow.StudyRequest", b =>
+                {
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithOne("StudyRequest")
+                        .HasForeignKey("CRS.Models.Workflow.StudyRequest", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReserveStudy");
+                });
+
+            modelBuilder.Entity("CRS.Models.Workflow.StudyStatusHistory", b =>
+                {
+                    b.HasOne("CRS.Models.Workflow.StudyRequest", "Request")
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Request");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -2026,6 +2191,8 @@ namespace CRS.Migrations
                     b.Navigation("ReserveStudyBuildingElements");
 
                     b.Navigation("ReserveStudyCommonElements");
+
+                    b.Navigation("StudyRequest");
                 });
 #pragma warning restore 612, 618
         }

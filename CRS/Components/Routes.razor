@@ -2,11 +2,16 @@
 @using CRS.Components.Layout
 @using CRS.Data
 @using CRS.Services
+@using CRS.Services.Tenant
 @using Microsoft.AspNetCore.Identity
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject UserStateService UserState
+@inject ITenantContext TenantContext
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavigationManager
+@inject ILogger<Routes> Logger
 
 <CascadingAuthenticationState>
     <CascadingValue Value="this">

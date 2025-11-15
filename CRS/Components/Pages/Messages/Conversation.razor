@@ -1,0 +1,147 @@
+@page "/messages/conversation/{OtherUserId:guid}"
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+@using MudBlazor
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@inject IMessageService MessageService
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<PageTitle>Conversation</PageTitle>
+<MudContainer Class="mt-6">
+    <MudCard>
+        <MudCardHeader>
+            <MudText Typo="Typo.h5">Conversation with @otherUserName</MudText>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (isLoading) {
+                <MudProgressCircular Indeterminate="true" />
+            } else if (!isAuthorized) {
+                <MudAlert Severity="Severity.Error">You are not authorized to view this conversation.</MudAlert>
+            } else {
+                <MudPaper Class="pa-2" Style="max-height:60vh; overflow-y:auto;">
+                    @foreach (var m in messages) {
+                        var isMe = m.FromUserId == UserState.CurrentUser!.Id;
+                        <MudChat ChatPosition="@(isMe? ChatBubblePosition.End: ChatBubblePosition.Start)">
+                            <MudChatBubble>
+                                <MudText Typo="Typo.body2">@m.Body</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@m.DateSent.ToLocalTime()</MudText>
+                            </MudChatBubble>
+                        </MudChat>
+                    }
+                </MudPaper>
+                <MudDivider Class="my-2" />
+                <MudStack Row="true" Spacing="2" Class="w-100">
+                    <MudTextField @bind-Value="replyText" Placeholder="Type a message" Lines="2" Class="flex-grow-1" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isAuthorized)" OnClick="SendTextAsync">Send</MudButton>
+                </MudStack>
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    [Parameter] public Guid OtherUserId { get; set; }
+    private bool isLoading = true;
+    private bool isAuthorized = false;
+    private List<Message> messages = new();
+    private string otherUserName = string.Empty;
+    private string currentUserName = string.Empty;
+    private string otherInitials = string.Empty;
+    private string replyText = string.Empty;
+
+    protected override async Task OnParametersSetAsync() {
+        isLoading = true;
+        try {
+            await UserState.InitializeAsync();
+            if (UserState.CurrentUser == null) { isAuthorized = false; return; }
+            isAuthorized = await AuthorizeConversationAsync(UserState.CurrentUser.Id, OtherUserId);
+            if (!isAuthorized) { Snackbar.Add("Not authorized to view this conversation", Severity.Error); return; }
+            await LoadUserNamesAsync();
+            messages = await MessageService.GetConversationAsync(UserState.CurrentUser.Id, OtherUserId);
+            await MarkInboxAsReadAsync();
+            await ScrollToBottomAsync();
+        } catch (Exception ex) {
+            Snackbar.Add(ex.Message, Severity.Error);
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadUserNamesAsync() {
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var me = await db.Users.Where(x => x.Id == UserState.CurrentUser!.Id).Select(x => new { x.FirstName, x.LastName, x.Email }).FirstOrDefaultAsync();
+            if (me != null) {
+                currentUserName = string.Join(" ", new[] { me.FirstName, me.LastName }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                if (string.IsNullOrWhiteSpace(currentUserName)) currentUserName = me.Email ?? UserState.CurrentUser!.Id.ToString();
+            }
+            var u = await db.Users.Where(x => x.Id == OtherUserId).Select(x => new { x.FirstName, x.LastName, x.Email }).FirstOrDefaultAsync();
+            if (u != null) {
+                otherUserName = string.Join(" ", new[] { u.FirstName, u.LastName }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                if (string.IsNullOrWhiteSpace(otherUserName)) otherUserName = u.Email ?? OtherUserId.ToString();
+                otherInitials = GetInitials(u.FirstName, u.LastName);
+            }
+        } catch { otherUserName = OtherUserId.ToString(); }
+    }
+
+    private static string GetInitials(string? first, string? last) {
+        var a = string.IsNullOrWhiteSpace(first) ? string.Empty : first![0].ToString().ToUpperInvariant();
+        var b = string.IsNullOrWhiteSpace(last) ? string.Empty : last![0].ToString().ToUpperInvariant();
+        return string.IsNullOrWhiteSpace(a + b) ? "?" : a + b;
+    }
+
+    private async Task<bool> AuthorizeConversationAsync(Guid currentUserId, Guid otherUserId) {
+        if (UserState.IsInRole("Admin") || UserState.IsInRole("Specialist")) return true;
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var exists = await db.ReserveStudies.AsNoTracking()
+            .AnyAsync(rs => rs.ApplicationUserId == currentUserId && rs.SpecialistUserId == otherUserId && rs.IsActive);
+            return exists;
+        } catch { return false; }
+    }
+
+    private async Task MarkInboxAsReadAsync() {
+        if (UserState.CurrentUser == null) return;
+        var me = UserState.CurrentUser.Id;
+        foreach (var m in messages) {
+            if (!m.IsRead && m.ToUserId == me) {
+                await MessageService.MarkAsReadAsync(m.Id);
+                m.IsRead = true;
+            }
+        }
+    }
+
+    private async Task SendTextAsync() {
+        try {
+            var text = replyText?.Trim();
+            if (string.IsNullOrWhiteSpace(text)) return;
+            var entity = new Message {
+                FromUserId = UserState.CurrentUser!.Id,
+                ToUserId = OtherUserId,
+                TenantId = UserState.CurrentUser!.TenantId,
+                Subject = text.Length > 40 ? text[..40] : text,
+                Body = text,
+                DateSent = DateTime.UtcNow
+            };
+            await MessageService.SendMessageAsync(entity);
+            messages.Add(entity);
+            replyText = string.Empty;
+            StateHasChanged();
+            await ScrollToBottomAsync();
+        } catch (Exception ex) {
+            Snackbar.Add($"Failed to send: {ex.Message}", Severity.Error);
+        }
+    }
+
+    [Inject] IJSRuntime JS { get; set; }
+    private async Task ScrollToBottomAsync() {
+        try {
+            await JS.InvokeVoidAsync("crsChat.scrollToBottom");
+        } catch { }
+    }
+}

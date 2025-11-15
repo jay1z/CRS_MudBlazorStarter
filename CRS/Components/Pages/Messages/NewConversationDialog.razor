@@ -1,0 +1,42 @@
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6">Start Conversation</MudText>
+        <MudAutocomplete T="ApplicationUser" @bind-Value="selectedUser" ToStringFunc="(u) => (u == null ? string.Empty : (string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName))"
+                         Label="User" Dense="true" ResetValueOnEmptyText="true" Clearable="true" SearchFunc="SearchUsers" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Disabled="@(_selectedUserId == Guid.Empty)" OnClick="Submit">Open</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    private ApplicationUser? selectedUser;
+    private Guid _selectedUserId => selectedUser?.Id ?? Guid.Empty;
+
+    private Task<IEnumerable<ApplicationUser>> SearchUsers(string value, CancellationToken _)
+    => string.IsNullOrWhiteSpace(value) ? Task.FromResult(Enumerable.Empty<ApplicationUser>()) : FindUsersAsync(value);
+
+    private async Task<IEnumerable<ApplicationUser>> FindUsersAsync(string term) {
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            term = term.ToLowerInvariant();
+            var q = await db.Users.Where(u => (u.Email != null && u.Email.ToLower().Contains(term))
+            || (u.FirstName != null && u.FirstName.ToLower().Contains(term))
+            || (u.LastName != null && u.LastName.ToLower().Contains(term)))
+            .OrderBy(u => u.FirstName).ThenBy(u => u.LastName)
+            .Take(20)
+            .ToListAsync();
+            return q;
+        } catch { return Enumerable.Empty<ApplicationUser>(); }
+    }
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(_selectedUserId));
+    private void Cancel() => MudDialog.Cancel();
+}

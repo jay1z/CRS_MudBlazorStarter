@@ -5,7 +5,6 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject UserStateService UserState
 @implements IDisposable
 
 <MudNavMenu>
@@ -26,6 +25,7 @@
         <Authorized>
             <!-- Common Links for All Authenticated Users -->
             <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary">Dashboard</MudNavLink>
+            <MudNavLink Href="/messages/inbox" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Email" IconColor="Color.Primary">Messages</MudNavLink>
 
             <!-- User Role Specific Links -->
             <AuthorizeView Roles="User">
@@ -55,7 +55,7 @@
             <!-- Specialist Role Specific Links -->
             <AuthorizeView Roles="Specialist">
                 <MudNavGroup Title="Specialist Tools" Expanded="true">
-                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">Assigned Studies</MudNavLink>
+                    <MudNavLink Href="/ReserveStudies/Specialist" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">Assigned Studies</MudNavLink>
                     <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">Communities</MudNavLink>
                     <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary">Calendar</MudNavLink>
                     <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary">Contacts</MudNavLink>

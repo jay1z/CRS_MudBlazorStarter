@@ -29,6 +29,9 @@ namespace CRS.Models {
         public Proposal? Proposal { get; set; }
         public FinancialInfo? FinancialInfo { get; set; }
 
+        // Shared PK1:1 to workflow StudyRequest (Id)
+        public CRS.Models.Workflow.StudyRequest? StudyRequest { get; set; }
+
         public List<ReserveStudyBuildingElement>? ReserveStudyBuildingElements { get; set; }
         public List<ReserveStudyCommonElement>? ReserveStudyCommonElements { get; set; }
         public List<ReserveStudyAdditionalElement>? ReserveStudyAdditionalElements { get; set; }
@@ -55,8 +58,7 @@ namespace CRS.Models {
             get {
                 if (PointOfContactType == PointOfContactTypeEnum.Contact) {
                     return Contact;
-                }
-                else {
+                } else {
                     return PropertyManager;
                 }
             }
@@ -71,35 +73,35 @@ namespace CRS.Models {
             RequestCreated = 0,
             ProposalCreated = 1,
             ProposalReviewed = 2,
-            ProposalUpdated = 6,
-            ProposalApproved = 3,
-            ProposalSent = 4,
-            ProposalAccepted = 5,
+            ProposalUpdated = 3,
+            ProposalApproved = 4,
+            ProposalSent = 5,
+            ProposalAccepted = 6,
             FinancialInfoRequested = 7,
-            ServiceContactsRequested,
-            FinancialInfoCreated = 8,
-            FinancialInfoSubmitted = 9,
-            FinancialInfoReviewed = 10,
-            FinancialInfoReceived = 11,
-            SiteVisitReady,
-            SiteVisitScheduled = 12,
-            SiteVisitCompleted,
-            SiteVisitDataEntered,
-            FundingPlanReady,
-            FundingPlanInProcess,
-            FundingPlanComplete,
-            NarrativeReady,
-            NarrativeInProcess,
-            NarrativeComplete,
-            NarrativePrintReady,
-            NarrativePackaged,
-            NarrativeSent,
-            ReportReady,
-            ReportInProcess,
-            ReportComplete,
-            RequestCompleted = 14,
-            RequestCancelled = 15,
-            RequestArchived = 16,
+            ServiceContactsRequested = 8,
+            FinancialInfoCreated = 9,
+            FinancialInfoSubmitted = 10,
+            FinancialInfoReviewed = 11,
+            FinancialInfoReceived = 12,
+            SiteVisit = 13,
+            SiteVisitScheduled = 14,
+            SiteVisitCompleted = 15,
+            SiteVisitDataEntered = 16,
+            FundingPlanReady = 17,
+            FundingPlanInProcess = 18,
+            FundingPlanComplete = 19,
+            NarrativeReady = 20,
+            NarrativeInProcess = 21,
+            NarrativeComplete = 22,
+            NarrativePrintReady = 23,
+            NarrativePackaged = 24,
+            NarrativeSent = 25,
+            ReportReady = 26,
+            ReportInProcess = 27,
+            ReportComplete = 28,
+            RequestCompleted = 29,
+            RequestCancelled = 30,
+            RequestArchived = 31,
         }
 
         [DataType(DataType.DateTime)]

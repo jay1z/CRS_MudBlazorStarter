@@ -12,6 +12,7 @@ using CRS.Services.Email;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 using CRS.Services.MultiTenancy;
+using CRS.Models.Workflow; // Added for workflow example
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
@@ -42,6 +43,11 @@ await ConfigurePipeline(app);
 var provider = app.Services;
 IEventRegistration registration = provider.ConfigureEvents();
 registration.Register<ReserveStudyCreatedEvent>().Subscribe<ReserveStudyCreatedListener>();
+registration.Register<ProposalSentEvent>().Subscribe<ProposalSentListener>();
+registration.Register<ProposalApprovedEvent>().Subscribe<ProposalApprovedListener>();
+registration.Register<FinancialInfoRequestedEvent>().Subscribe<FinancialInfoRequestedListener>();
+registration.Register<FinancialInfoSubmittedEvent>().Subscribe<FinancialInfoSubmittedListener>();
+registration.Register<ReserveStudyCompletedEvent>().Subscribe<ReserveStudyCompletedListener>();
 
 app.Run();
 
@@ -58,6 +64,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Core services
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<UserStateService>();
+    builder.Services.AddScoped<IUserStateService>(sp => sp.GetRequiredService<UserStateService>());
     builder.Services.AddMudServices();
     // HTTP client factory for server-side HttpClient usage in components (e.g., InspectorPanel uploads)
     builder.Services.AddHttpClient();
@@ -78,7 +85,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddCascadingAuthenticationState();
     builder.Services.AddScoped<IdentityUserAccessor>();
     builder.Services.AddScoped<IdentityRedirectManager>();
-    builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+    builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, CRS.Components.Account.IdentityRevalidatingAuthenticationStateProvider>();
 
     // Theming services
     // Use scoped ThemeService so it can see scoped ITenantContext
@@ -94,6 +101,11 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<ISignalRService, SignalRService>();
     builder.Services.AddScoped<IKanbanService, KanbanService>(); // Must go after SignalRService
 
+    // Register workflow engine + notifications (new)
+    builder.Services.AddScoped<CRS.Services.Workflow.INotificationService, CRS.Services.Workflow.NotificationService>();
+    builder.Services.AddScoped<IStudyWorkflowService, CRS.Services.Workflow.StudyWorkflowService>();
+    builder.Services.Configure<CRS.Services.Workflow.WorkflowOptions>(builder.Configuration.GetSection("Workflow"));
+
     // SaaS Refactor: register tenant services
     builder.Services.AddScoped<ITenantContext, TenantContext>();
     builder.Services.AddScoped<TenantService>();
@@ -101,6 +113,10 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.File.IFileStorageService, CRS.Services.File.FileStorageService>();
     builder.Services.AddScoped<CRS.Services.License.ILicenseValidationService, CRS.Services.License.LicenseValidationService>();
     builder.Services.AddScoped<IUserSettingsService, UserSettingsService>();
+    // Messaging
+    builder.Services.AddScoped<CRS.Services.Interfaces.IMessageService, CRS.Services.MessageService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.IAppNotificationService, CRS.Services.AppNotificationService>();
+
     // Optionally enable this recurring validator later
     // builder.Services.AddHostedService<CRS.Services.License.LicenseValidationBackgroundService>();
 
@@ -113,6 +129,11 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Register Coravel
     builder.Services.AddMailer(builder.Configuration);
     builder.Services.AddScoped<ReserveStudyCreatedListener>();
+    builder.Services.AddScoped<ProposalSentListener>();
+    builder.Services.AddScoped<ProposalApprovedListener>();
+    builder.Services.AddScoped<FinancialInfoRequestedListener>();
+    builder.Services.AddScoped<FinancialInfoSubmittedListener>();
+    builder.Services.AddScoped<ReserveStudyCompletedListener>();
     builder.Services.AddEvents();
 
     // Register controllers for API endpoints (media upload, etc.)
@@ -282,6 +303,13 @@ async Task ConfigurePipeline(WebApplication app) {
             }
             return Results.Text($"'{email}' is now in Admin role.");
         }).WithDisplayName("Dev: Promote user to Admin");
+
+        // Example workflow transition + notification trigger
+        app.MapGet("/dev/workflow/example", async (IStudyWorkflowService engine) => {
+            var req = new StudyRequest { TenantId =1, CommunityId = Guid.CreateVersion7() };
+            var ok = await engine.TryTransitionAsync(req, StudyStatus.PendingDetails, "dev");
+            return Results.Json(new { ok, from = StudyStatus.NewRequest.ToString(), to = StudyStatus.PendingDetails.ToString(), stateChangedAt = req.StateChangedAt });
+        }).WithDisplayName("Dev: Workflow example");
     }
 
     // Map endpoints

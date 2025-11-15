@@ -2,6 +2,7 @@
 using System.Security.Claims;
 
 using CRS.Models;
+using CRS.Models.Workflow; // add
 using CRS.Services.Tenant;
 
 using Microsoft.AspNetCore.Identity;
@@ -48,6 +49,11 @@ namespace CRS.Data {
             builder.Entity<ReserveStudy>().HasIndex(e => e.TenantId);
             builder.Entity<FinancialInfo>().HasIndex(e => e.TenantId);
             builder.Entity<Proposal>().HasIndex(e => e.TenantId);
+            builder.Entity<StudyRequest>().HasIndex(e => e.TenantId); // add
+            builder.Entity<StudyRequest>().HasIndex(e => new { e.TenantId, e.CurrentStatus }); // add
+            builder.Entity<StudyStatusHistory>().HasIndex(e => e.TenantId); // add
+            builder.Entity<StudyStatusHistory>().HasIndex(e => new { e.TenantId, e.RequestId, e.ChangedAt }); // add
+            builder.Entity<StudyStatusHistory>().HasIndex(e => new { e.TenantId, e.ToStatus, e.ChangedAt }); // add
 
             // Ensure an index on AspNetUsers.TenantId for tenant-scoped user lookups
             builder.Entity<ApplicationUser>().HasIndex(u => u.TenantId);
@@ -76,6 +82,12 @@ namespace CRS.Data {
                 .HasOne(r => r.FinancialInfo)
                 .WithOne(f => f.ReserveStudy)
                 .HasForeignKey<FinancialInfo>(f => f.ReserveStudyId);
+
+            // Shared PK1:1 ReserveStudy <-> StudyRequest
+            builder.Entity<StudyRequest>()
+                .HasOne(r => r.ReserveStudy)
+                .WithOne(s => s.StudyRequest)
+                .HasForeignKey<StudyRequest>(r => r.Id);
         }
 
         // Apply tenant query filters to all ITenantScoped entities
@@ -244,6 +256,9 @@ namespace CRS.Data {
         public DbSet<Settings> Settings { get; set; }
         public DbSet<Tenant> Tenants { get; set; } // SaaS Refactor
         public DbSet<TenantHomepage> TenantHomepages { get; set; } // SaaS Refactor: Tenant homepage
+        public DbSet<StudyRequest> StudyRequests { get; set; } // add
+        public DbSet<StudyStatusHistory> StudyStatusHistories { get; set; } // add
+        public DbSet<CRS.Models.Message> Messages { get; set; }
         #endregion
 
         #region Seed Data
