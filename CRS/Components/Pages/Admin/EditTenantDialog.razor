@@ -1,8 +1,9 @@
-@using CRS.Models
+﻿@using CRS.Models
 @using CRS.Data
 @using CRS.Services.Tenant
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
+@using System.Text.RegularExpressions
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject ThemeService ThemeService
@@ -87,10 +88,28 @@
         }
     }
 
+    private async Task<bool> SubdomainExistsAsync(string sub) {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var currentId = editingTenant != null ? editingTenant.Id : 0;
+        return await db.Set<Tenant>().AnyAsync(t => t.Subdomain == sub && t.Id != currentId);
+    }
+
     private async Task SaveAsync() {
         if (editingTenant is null) return;
         ValidateBrandingJson(new FocusEventArgs());
         if (!string.IsNullOrWhiteSpace(brandingError)) return;
+
+        // Check duplicate subdomain
+        var sub = (editingTenant.Subdomain ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(sub) || !Regex.IsMatch(sub, "^[a-z0-9-]{1,63}$")) {
+            Snackbar.Add("Please enter a valid subdomain (letters, numbers, hyphen).", Severity.Warning);
+            return;
+        }
+        if (await SubdomainExistsAsync(sub)) {
+            Snackbar.Add($"Subdomain '{sub}' is already in use.", Severity.Error);
+            return;
+        }
+        editingTenant.Subdomain = sub;
 
         try {
             Logger.LogInformation("SaveAsync called. editingTenant.Id={Id}, IsActive={IsActive}", editingTenant.Id, editingTenant.IsActive);

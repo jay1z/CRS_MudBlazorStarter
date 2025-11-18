@@ -43,54 +43,41 @@ namespace CRS.Data {
         }
 
         /// <summary>
-        /// Seed three example tenants and create an admin user for each tenant.
+        /// Production-safe seeding: ensure a single default tenant exists. Do not create sample tenants or demo admins here.
         /// </summary>
         public static async Task SeedTenantsAndAdminsAsync(IServiceProvider serviceProvider) {
-            // Create a scope to resolve DbContext
             using var scope = serviceProvider.CreateScope();
             var sp = scope.ServiceProvider;
-            ApplicationDbContext? db = null;
+
+            ApplicationDbContext db;
             try {
                 var factory = sp.GetService<IDbContextFactory<ApplicationDbContext>>();
-                if (factory != null) db = await factory.CreateDbContextAsync();
-                else db = sp.GetRequiredService<ApplicationDbContext>();
+                db = factory != null ? await factory.CreateDbContextAsync() : sp.GetRequiredService<ApplicationDbContext>();
             } catch {
                 db = sp.GetRequiredService<ApplicationDbContext>();
             }
+
             await using (db.ConfigureAwait(false)) {
-                var tenantsToEnsure = new[] {
-                    new Tenant { Name = "Tenant Alpha", Subdomain = "alpha", IsActive = true, CreatedAt = DateTime.UtcNow },
-                    new Tenant { Name = "Tenant Beta", Subdomain = "beta", IsActive = true, CreatedAt = DateTime.UtcNow },
-                    new Tenant { Name = "Tenant Gamma", Subdomain = "gamma", IsActive = true, CreatedAt = DateTime.UtcNow }
-                };
-
-                var createdTenants = new List<Tenant>();
-                foreach (var t in tenantsToEnsure) {
-                    var existing = db.Set<Tenant>().FirstOrDefault(x => x.Subdomain == t.Subdomain);
-                    if (existing == null) {
-                        db.Set<Tenant>().Add(t);
-                        await db.SaveChangesAsync();
-                        createdTenants.Add(t);
-                    } else {
-                        createdTenants.Add(existing);
-                    }
-                }
-
                 // Ensure roles exist
                 await SeedRolesAsync(serviceProvider);
 
-                // Create an admin user for each tenant using the same password as existing seeds
-                var password = "Letmeinnow1_";
+                // Ensure a default tenant (Id=1) exists with predictable subdomain
+                var defaultSubdomain = "default";
+                var defaultName = "Default Tenant";
 
-                // Define admin accounts for tenants (you can change names/emails as desired)
-                var admins = new[] {
-                    new { Email = "admin@alpha.com", First = "Alice", Last = "Alpha", Tenant = createdTenants[0] },
-                    new { Email = "admin@beta.com", First = "Ben", Last = "Beta", Tenant = createdTenants[1] },
-                    new { Email = "admin@gamma.com", First = "Gina", Last = "Gamma", Tenant = createdTenants[2] }
-                };
+                var existingDefault = await db.Set<Tenant>()
+                    .AsTracking()
+                    .FirstOrDefaultAsync(t => t.Id == 1 || t.Subdomain == defaultSubdomain);
 
-                foreach (var a in admins) {
-                    await SeedUserIfNotExists(serviceProvider, email: a.Email, password: password, firstName: a.First, lastName: a.Last, roles: new List<string> { "Admin" }, tenantId: a.Tenant.Id);
+                if (existingDefault == null) {
+                    var t = new Tenant { Name = defaultName, Subdomain = defaultSubdomain, IsActive = true, CreatedAt = DateTime.UtcNow };
+                    db.Add(t);
+                    await db.SaveChangesAsync();
+                } else {
+                    // Normalize name/subdomain if needed
+                    if (string.IsNullOrWhiteSpace(existingDefault.Subdomain)) existingDefault.Subdomain = defaultSubdomain;
+                    if (string.IsNullOrWhiteSpace(existingDefault.Name)) existingDefault.Name = defaultName;
+                    await db.SaveChangesAsync();
                 }
             }
         }
@@ -114,7 +101,7 @@ namespace CRS.Data {
                 UserName = email,
                 Email = email,
                 EmailConfirmed = true,
-                TenantId = tenantId ??1
+                TenantId = tenantId ?? 1
             };
 
             var result = await userManager.CreateAsync(user, password);

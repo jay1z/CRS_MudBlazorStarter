@@ -85,7 +85,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddCascadingAuthenticationState();
     builder.Services.AddScoped<IdentityUserAccessor>();
     builder.Services.AddScoped<IdentityRedirectManager>();
-    builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, CRS.Components.Account.IdentityRevalidatingAuthenticationStateProvider>();
+    builder.Services.AddScoped<AuthenticationStateProvider, CRS.Components.Account.IdentityRevalidatingAuthenticationStateProvider>();
 
     // Theming services
     // Use scoped ThemeService so it can see scoped ITenantContext
@@ -166,6 +166,24 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddQuickGridEntityFrameworkAdapter();
     builder.Services.AddDatabaseDeveloperPageExceptionFilter();
     builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityEmailSender>();
+
+    // CORS for subdomains (SignalR/JS interop scenarios)
+    builder.Services.AddCors(o => {
+        o.AddPolicy("AllowSubdomains", policy => {
+            var root = builder.Configuration["App:RootDomain"]; // e.g., example.com
+            policy.SetIsOriginAllowed(origin => {
+                if (string.IsNullOrEmpty(root)) return true; // allow all if not configured
+                try {
+                    var u = new Uri(origin);
+                    var h = u.Host;
+                    return h.Equals(root, StringComparison.OrdinalIgnoreCase) || h.EndsWith("." + root, StringComparison.OrdinalIgnoreCase);
+                } catch { return false; }
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+        });
+    });
 }
 
 void ConfigureDatabases(WebApplicationBuilder builder) {
@@ -224,6 +242,12 @@ void ConfigureIdentity(WebApplicationBuilder builder) {
         options.LoginPath = "/Account/Login";
         options.LogoutPath = "/Account/Logout";
         options.AccessDeniedPath = "/Account/AccessDenied";
+
+        // Share auth cookie across all subdomains if RootDomain configured
+        var rootDomain = builder.Configuration["App:RootDomain"];
+        if (!string.IsNullOrWhiteSpace(rootDomain)) {
+            options.Cookie.Domain = "." + rootDomain.Trim('.');
+        }
     });
 
     // Configure UserManager lifetime
@@ -280,6 +304,8 @@ async Task ConfigurePipeline(WebApplication app) {
     // Add request audit middleware after tenant resolution and before auth
     app.UseMiddleware<RequestAuditMiddleware>();
 
+    app.UseCors("AllowSubdomains");
+
     // Apply tenant theme per-request (skip if unchanged within the request's scope)
     app.Use(async (ctx, next) => {
         var themeSvc = ctx.RequestServices.GetRequiredService<ThemeService>();
@@ -310,6 +336,17 @@ async Task ConfigurePipeline(WebApplication app) {
             var ok = await engine.TryTransitionAsync(req, StudyStatus.PendingDetails, "dev");
             return Results.Json(new { ok, from = StudyStatus.NewRequest.ToString(), to = StudyStatus.PendingDetails.ToString(), stateChangedAt = req.StateChangedAt });
         }).WithDisplayName("Dev: Workflow example");
+
+        // Tenant preview endpoint only in Development
+        app.MapGet("/tenant/preview/{tenantId:int}", async (int tenantId, TenantHomepageService homepageService) => {
+            try {
+                var homepage = await homepageService.GetByTenantIdAsync(tenantId);
+                if (homepage != null && homepage.IsPublished && !string.IsNullOrWhiteSpace(homepage.PublishedHtml)) {
+                    return Results.Content(homepage.PublishedHtml!, "text/html");
+                }
+            } catch { }
+            return Results.NotFound();
+        }).WithDisplayName("Dev: Tenant homepage preview");
     }
 
     // Map endpoints
@@ -384,19 +421,40 @@ async Task SeedDatabase(WebApplication app) {
     // Seed roles for all environments
     using (var scope = app.Services.CreateScope()) {
         try {
-            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            dbContext.Database.Migrate();
             var services = scope.ServiceProvider;
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            var dbContext = services.GetRequiredService<ApplicationDbContext>();
+
+            // Determine whether the database is reachable and whether migrations have already been applied.
+            var canConnect = await dbContext.Database.CanConnectAsync();
+            bool hasAppliedMigrations = false;
+            try {
+                hasAppliedMigrations = dbContext.Database.GetAppliedMigrations().Any();
+            } catch (Exception ex) {
+                // If querying applied migrations fails, log and continue. We'll try to migrate only when the server is reachable.
+                logger.LogWarning(ex, "Unable to determine applied migrations.");
+            }
+
+            if (canConnect) {
+                if (!hasAppliedMigrations) {
+                    logger.LogInformation("Database reachable but no applied migrations found. Applying migrations.");
+                    dbContext.Database.Migrate();
+                }
+            } else {
+                logger.LogWarning("Database is not reachable at startup; skipping automatic migrations.");
+            }
+
+            // Always seed roles
             await SeedManager.SeedRolesAsync(services);
 
-            // Environment-specific user seeding
             if (app.Environment.IsDevelopment()) {
                 await SeedManager.SeedTestUsersAsync(services);
+                await SeedManager.SeedAdminUserAsync(services);
+                await SeedManager.SeedTenantsAndAdminsAsync(services); // Dev-only helper if you keep it
+            } else {
+                // Production: only seed admin user(s) and no tenants/users
+                await SeedManager.SeedAdminUserAsync(services);
             }
-            await SeedManager.SeedAdminUserAsync(services);
-            // Seed tenants and per-tenant admin users
-            await SeedManager.SeedTenantsAndAdminsAsync(services);
-
         } catch (Exception ex) {
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             logger.LogError(ex, "An error occurred while migrating or seeding the database.");

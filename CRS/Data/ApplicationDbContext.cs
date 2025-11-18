@@ -217,13 +217,13 @@ namespace CRS.Data {
 
         // SaaS Refactor: Ensure TenantId is set on inserted entities
         private void AddTenantIds() {
-            var tenantId = _tenantContext.TenantId ??1; // default to legacy tenant id1
+            var tenantId = _tenantContext.TenantId; // no default, new site may have no tenant context
             foreach (var entry in ChangeTracker.Entries().Where(e => e.State == EntityState.Added)) {
                 if (entry.Entity is ITenantScoped scoped) {
-                    if (scoped.TenantId ==0) scoped.TenantId = tenantId;
+                    if (scoped.TenantId == 0 && tenantId.HasValue) scoped.TenantId = tenantId.Value;
                 }
                 if (entry.Entity is ApplicationUser user) {
-                    if (user.TenantId ==0) user.TenantId = tenantId;
+                    if (user.TenantId == 0 && tenantId.HasValue) user.TenantId = tenantId.Value;
                 }
             }
         }
@@ -274,17 +274,7 @@ namespace CRS.Data {
             GenerateElementUsefulLifeOptions(context);
             context.SaveChanges();
 
-            // SaaS Refactor: Seed a default tenant for legacy data
-            if (!context.Set<Tenant>().Any()) {
-                context.Set<Tenant>().Add(new Tenant {
-                    Name = "Default Tenant",
-                    Subdomain = "app",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow,
-                    BrandingJson = "{\"primary\":\"#1976d2\",\"secondary\":\"#9c27b0\",\"appbarBackground\":\"#ffffff\",\"background\":\"#f7f7f7\",\"darkPrimary\":\"#90caf9\",\"darkSecondary\":\"#ce93d8\"}"
-                });
-                context.SaveChanges();
-            }
+            // Removed default tenant seeding for new multi-tenant site; tenants are created via signup
         }
 
         private static void GenerateBuildingElements(DbContext context) {

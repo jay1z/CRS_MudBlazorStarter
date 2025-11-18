@@ -1,0 +1,26 @@
+﻿@page "/tenant/not-found"
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager Nav
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "host")] public string? Host { get; set; }
+}
+
+<div class="pa-8">
+    <h3>We couldn't find that tenant</h3>
+    <p>
+        @if (!string.IsNullOrWhiteSpace(Host)) {
+            <span>Requested host: <strong>@Host</strong></span>
+        } else {
+            <span>The subdomain you requested does not match any tenant.</span>
+        }
+    </p>
+    <p>
+        - Check the spelling of the subdomain<br />
+        - If you are a new customer, your site may not be activated yet.<br />
+        - Return to the home page or contact support.
+    </p>
+    <p>
+        <a href="/">Go to Home</a>
+    </p>
+</div>

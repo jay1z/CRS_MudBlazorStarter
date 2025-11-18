@@ -1,4 +1,4 @@
-using CRS.Data;
+﻿using CRS.Data;
 using CRS.Models;
 using CRS.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +15,11 @@ namespace CRS.Services {
             _tenantContext = tenantContext;
         }
 
-        private int GetTenantId() => _tenantContext.TenantId ?? 1;
+        private int RequireTenantId() => _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context not set.");
 
         public async Task<TenantHomepage?> GetForCurrentTenantAsync(CancellationToken ct = default) {
-            var tenantId = GetTenantId();
+            if (!_tenantContext.TenantId.HasValue) return null;
+            var tenantId = _tenantContext.TenantId.Value;
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
             return await db.TenantHomepages.AsNoTracking().FirstOrDefaultAsync(h => h.TenantId == tenantId, ct);
         }
@@ -31,7 +32,7 @@ namespace CRS.Services {
 
         // Save draft with optional original RowVersion used for optimistic concurrency checks
         public async Task<TenantHomepage> SaveDraftAsync(TenantHomepage source, byte[]? originalRowVersion = null, string? modifiedBy = null, CancellationToken ct = default) {
-            var tenantId = GetTenantId();
+            var tenantId = RequireTenantId();
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
             var existing = await db.TenantHomepages.FirstOrDefaultAsync(h => h.TenantId == tenantId, ct);
             if (existing == null) {
@@ -73,7 +74,7 @@ namespace CRS.Services {
 
         // Force-save: fetch latest, overwrite, and set OriginalValue to current RowVersion to avoid conflict
         public async Task<TenantHomepage> SaveDraftForceAsync(TenantHomepage source, string? modifiedBy = null, CancellationToken ct = default) {
-            var tenantId = GetTenantId();
+            var tenantId = RequireTenantId();
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
             var existing = await db.TenantHomepages.FirstOrDefaultAsync(h => h.TenantId == tenantId, ct);
             if (existing == null) {
@@ -108,7 +109,7 @@ namespace CRS.Services {
         }
 
         public async Task<TenantHomepage?> PublishAsync(byte[]? originalRowVersion = null, CancellationToken ct = default) {
-            var tenantId = GetTenantId();
+            var tenantId = RequireTenantId();
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
             var existing = await db.TenantHomepages.FirstOrDefaultAsync(h => h.TenantId == tenantId, ct);
             if (existing == null) return null;
@@ -151,7 +152,7 @@ namespace CRS.Services {
         }
 
         public async Task<TenantHomepage?> PublishForceAsync(CancellationToken ct = default) {
-            var tenantId = GetTenantId();
+            var tenantId = RequireTenantId();
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
             var existing = await db.TenantHomepages.FirstOrDefaultAsync(h => h.TenantId == tenantId, ct);
             if (existing == null) return null;

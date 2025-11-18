@@ -13,11 +13,12 @@
         <MudText Typo="Typo.h6" Class="px-4">My Application</MudText>
         <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Secondary Text</MudText>
         <MudDivider Class="my-2" />
-        <MudNavLink Href="/Shortcuts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AppShortcut" IconColor="Color.Primary">Shortcuts</MudNavLink>
+        <!-- Removed Shortcuts link -->
     </MudNavMenu>
 
     <AuthorizeView Context="authContext">
         <NotAuthorized>
+            <MudNavLink Href="/tenant/signup" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AppRegistration">Sign up</MudNavLink>
             <MudNavLink Href="Account/Register" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Person">Register</MudNavLink>
             <MudNavLink Href="Account/Login" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Password">Login</MudNavLink>
         </NotAuthorized>
@@ -45,10 +46,16 @@
                     <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary">Calendar</MudNavLink>
                     <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary">Contacts</MudNavLink>
                     <MudNavLink Href="/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt" IconColor="Color.Primary">Users</MudNavLink>
+                    <MudNavLink Href="/Roles" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.VerifiedUser" IconColor="Color.Primary">Roles</MudNavLink>
+                    <MudNavLink Href="/Settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Primary">Settings</MudNavLink>
                     <MudNavLink Href="/Admin/Tenants" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Apartment" IconColor="Color.Primary">Tenants</MudNavLink>
-                    <MudNavLink Href="/Admin/SuperAdmins" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Security" IconColor="Color.Primary">SuperAdmin Management</MudNavLink>
                     <MudDivider />
-                    <!-- GrapesJS links moved to Shortcuts page -->
+                    <MudNavLink Href="/Admin/VisualEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Brush" IconColor="Color.Primary">Visual Editor</MudNavLink>
+                    <MudNavLink Href="/Admin/GrapesEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Draw" IconColor="Color.Primary">GrapesJS Prototype</MudNavLink>
+                    <MudNavLink Href="/Admin/GrapesPreview" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Preview" IconColor="Color.Primary">GrapesJS Preview</MudNavLink>
+                    <MudNavLink Href="/Admin/GrapesStudio" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.DeveloperMode" IconColor="Color.Primary">Grapes Studio Test</MudNavLink>
+                    <MudDivider />
+                    <MudNavLink Href="/dbmanager" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Storage" IconColor="Color.Primary">Database Manager</MudNavLink>
                 </MudNavGroup>
             </AuthorizeView>
 

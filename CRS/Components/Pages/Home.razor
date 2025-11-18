@@ -7,6 +7,7 @@
 @inject ILogger<Home> Logger
 @inject UserStateService UserState
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Nav
 
 <PageTitle>Reserve Study - Community Reserve Specialists</PageTitle>
 
@@ -34,13 +35,17 @@
                     <MudText Typo="Typo.body1" Align="Align.Center">
                         (see below)
                     </MudText>
+                    <div class="d-flex justify-center mt-4">
+                        <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Large" OnClick="@(() => Nav.NavigateTo("/tenant/signup"))" StartIcon="@Icons.Material.Filled.AppRegistration">Sign up your company</MudButton>
+                        <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Class="ml-2" Size="Size.Large" Href="#about">Learn more</MudButton>
+                    </div>
                 </MudCardContent>
             </MudCard>
         </MudPaper>
     </MudContainer>
 
     <!-- About Section -->
-    <MudContainer MaxWidth="MaxWidth.Large">
+    <MudContainer id="about" MaxWidth="MaxWidth.Large">
         <MudPaper Elevation="0" Class="py-16">
             <MudText Typo="Typo.h5">ABOUT US</MudText>
             <MudDivider />
@@ -95,6 +100,9 @@
                 </ItemTemplate>
             </MudCarousel>
             <MudText Typo="Typo.h6" Class="mb-8">Feel free to call with any questions or click the button below to request a free quote for your Community Reserve Study.</MudText>
+            <div class="d-flex justify-center my-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AppRegistration" Size="Size.Large" OnClick="@(() => Nav.NavigateTo("/tenant/signup"))">Sign up your company</MudButton>
+            </div>
         </MudPaper>
         <MudPaper Elevation="0">
             <MudStack>
@@ -139,15 +147,6 @@
 @code {
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
-
-        // Logger.LogInformation("Home");
-
-        // NavigationService Start
-        // var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        // if (authState.User.Identity?.IsAuthenticated == true) {
-        //     await NavigationService.NavigateToHomePageByRole(authState.User);
-        // }
-        // NavigationService End
     }
 
     private class BulletPoint {
@@ -162,7 +161,7 @@
         new BulletPoint() { Text = "A CRS Reserve Study meets and exceeds all the requirements set by the State of Ohio, the N.R.S.S., the C.A.I. and the A.P.R.A. (Association of Professional Reserve Analysts)." },
         new BulletPoint() { Text = "CRS is a local Ohio Reserve Study provider and carries all available Reserve Study credentials (Reserve Specialist, Professional Reserve Analyst) from the C.A.I./N.R.S.S., and the A.P.R.A." },
         new BulletPoint() { Text = "CRS has an A+ rating with the BBB, is a Business Partner with the C.A.I., a Member in good standing with the C.A.I., the A.P.R.A., the Stow-Monroe Falls Chamber of Commerce, and is a Veteran Owned and Operated Ohio Company." },
-        new BulletPoint() { Text = "We find most Boards/Managers look for 3 primary features/benefits when considering a Reserve Study provider, cost, qualifications, and locality. CRS very rarely is underbid, but if we are, we will do our best to work with a Community/Manager should they wish to work with us. Per the CAI and APRA websites, there is no other individual with both credentials (R.S. and P.R.A.) residing in the State of Ohio, Jeff appears to be the only one. We have performed hundreds and hundreds of Reserve Studies in the State of Ohio, it's all we do. We are located in Northeast Ohio, this makes it very easy to visit properties without the time constraints, costs, time and expenses of flying, hotels, rental cars etc. when coming in from out of state.  Living in Ohio and building relationships with local contractors gives us real time local costs vs companies using national templates. This ensures the highest level of accuracy in your financial projections." },
+        new BulletPoint() { Text = "We find most Boards/Managers look for 3 primary features/benefits when considering a Reserve Study provider, cost, qualifications, and locality. CRS very rarely is underbid, but if we are, we will do our best to work with a Community/Manager should they wish to work with us. Per the CAI and APRA websites, there is no other individual with both credentials (R.S. and P.R.A.) residing in the State of Ohio, Jeff appears to be the only one. We have performed hundreds of Reserve Studies throughout Ohio, it's all we do. We are located in Northeast Ohio, this makes it very easy to visit properties without the time constraints, costs, time and expenses of flying, hotels, rental cars etc. when coming in from out of state.  Living in Ohio and building relationships with local contractors gives us real time local costs vs companies using national templates. This ensures the highest level of accuracy in your financial projections." },
         new BulletPoint() { Text = "CRS does not maintain fancy websites, and we spend nothing on advertising. We find these things don't make the report any better, just more expensive.  We continue to rely solely on word of mouth as we feel it is the best way to continue growing our business as well as keep our, and therefore your costs down. Every dollar counts when it comes out of Community Members pockets." }
     };
 

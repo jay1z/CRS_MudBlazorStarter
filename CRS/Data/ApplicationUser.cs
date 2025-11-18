@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 
 namespace CRS.Data {
     public class ApplicationUser : IdentityUser<Guid> {
@@ -9,7 +9,7 @@ namespace CRS.Data {
         public StatusEnum Status { get; set; } = StatusEnum.Active;
 
         // SaaS Refactor: Tenant association for identity
-        public int TenantId { get; set; } = 1; // default backfill
+        public int TenantId { get; set; } = 0; // no default tenant; must be assigned on signup
 
         public string FullName {
             get {

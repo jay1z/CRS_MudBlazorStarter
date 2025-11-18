@@ -1,4 +1,4 @@
-@page "/Admin/Tenants"
+﻿@page "/Admin/Tenants"
 
 @using CRS.Models
 @using CRS.Data
@@ -26,8 +26,6 @@
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenEditDialog(new Tenant { IsActive = true }))" StartIcon="@Icons.Material.Filled.Add">New Tenant</MudButton>
                 </MudStack>
 
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Debug: editingTenantId=@(editingTenant?.Id.ToString() ?? "null")</MudText>
-
                 <MudTable Items="tenants" Hover="true" Dense="true" Bordered="true">
                     <HeaderContent>
                         <MudTh>ID</MudTh>
@@ -43,7 +41,6 @@
                         <MudTd DataLabel="Is Active">@(tenant.IsActive ? "Yes" : "No")</MudTd>
                         <MudTd>
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(tenant))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" OnClick="@(() => SelectTenantAsync(tenant))" Title="Select tenant" />
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteAsync(tenant))" Disabled="@(tenant.Id ==1)" />
                         </MudTd>
                     </RowTemplate>
@@ -145,38 +142,6 @@
         } catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
             Logger.LogError(ex, "Error deleting tenant {TenantId}", tenant.Id);
-        }
-    }
-
-    private async Task SelectTenantAsync(Tenant tenant) {
-        try {
-            // Set tenant into the scoped TenantContext so other pages (like HomepageEditor) will see it
-            TenantContext.TenantId = tenant.Id;
-            TenantContext.TenantName = tenant.Name;
-            TenantContext.Subdomain = tenant.Subdomain;
-            TenantContext.IsActive = tenant.IsActive;
-            TenantContext.BrandingJson = tenant.BrandingJson;
-
-            // Persist selection to localStorage for convenience across reloads
-            try { await JS.InvokeVoidAsync("localStorage.setItem", "selectedTenantId", tenant.Id.ToString()); } catch { }
-
-            // Persist selection to user settings (if logged in)
-            try {
-                var authState = await AuthenticationStateTask;
-                var user = authState.User;
-                if (user?.Identity?.IsAuthenticated == true) {
-                    var idClaim = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                    if (Guid.TryParse(idClaim, out var userId)) {
-                        await UserSettingsService.SetSettingAsync(userId, "selectedTenantId", tenant.Id.ToString());
-                    }
-                }
-            } catch { }
-
-            Snackbar.Add($"Selected tenant: {tenant.Name}", Severity.Success);
-            // Apply tenant branding immediately via ThemeService if available
-            try { ThemeService.ApplyTenantBrandingIfAvailableAndChanged(); } catch { }
-        } catch (Exception ex) {
-            Snackbar.Add($"Error selecting tenant: {ex.Message}", Severity.Error);
         }
     }
 }
