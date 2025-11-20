@@ -1,4 +1,5 @@
 ﻿@page "/Admin/Tenants"
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
 @using CRS.Models
 @using CRS.Data
@@ -17,53 +18,40 @@
 @inject IJSRuntime JS
 @inject IUserSettingsService UserSettingsService
 
-<AuthorizeView Roles="Admin">
-    <Authorized>
-        <MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
-            <MudPaper Elevation="4" Class="pa-4">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
-                    <MudText Typo="Typo.h5">Tenants</MudText>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenEditDialog(new Tenant { IsActive = true }))" StartIcon="@Icons.Material.Filled.Add">New Tenant</MudButton>
-                </MudStack>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudPaper Elevation="4" Class="pa-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudText Typo="Typo.h5">Tenants</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenEditDialog(new Tenant { IsActive = true }))" StartIcon="@Icons.Material.Filled.Add">New Tenant</MudButton>
+        </MudStack>
 
-                <MudTable Items="tenants" Hover="true" Dense="true" Bordered="true">
-                    <HeaderContent>
-                        <MudTh>ID</MudTh>
-                        <MudTh>Name</MudTh>
-                        <MudTh>Subdomain</MudTh>
-                        <MudTh>Is Active</MudTh>
-                        <MudTh>Actions</MudTh>
-                    </HeaderContent>
-                    <RowTemplate Context="tenant">
-                        <MudTd DataLabel="ID">@tenant.Id</MudTd>
-                        <MudTd DataLabel="Name">@tenant.Name</MudTd>
-                        <MudTd DataLabel="Subdomain">@tenant.Subdomain</MudTd>
-                        <MudTd DataLabel="Is Active">@(tenant.IsActive ? "Yes" : "No")</MudTd>
-                        <MudTd>
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(tenant))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteAsync(tenant))" Disabled="@(tenant.Id ==1)" />
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
-            </MudPaper>
-        </MudContainer>
-    </Authorized>
-    <NotAuthorized>
-        <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
-            <MudPaper Class="pa-4">
-                <MudText Typo="Typo.h6">Access denied</MudText>
-                <MudText>Administrator access is required to view this page.</MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/Account/Login">Sign in</MudButton>
-            </MudPaper>
-        </MudContainer>
-    </NotAuthorized>
-</AuthorizeView>
+        <MudTable Items="tenants" Hover="true" Dense="true" Bordered="true">
+            <HeaderContent>
+                <MudTh>ID</MudTh>
+                <MudTh>Name</MudTh>
+                <MudTh>Subdomain</MudTh>
+                <MudTh>Is Active</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate Context="tenant">
+                <MudTd DataLabel="ID">@tenant.Id</MudTd>
+                <MudTd DataLabel="Name">@tenant.Name</MudTd>
+                <MudTd DataLabel="Subdomain">@tenant.Subdomain</MudTd>
+                <MudTd DataLabel="Is Active">@(tenant.IsActive ? "Yes" : "No")</MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(tenant))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteAsync(tenant))" Disabled="@(tenant.Id ==1)" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
 
     private List<Tenant> tenants = new();
-    private Tenant? editingTenant;
+    // private Tenant? editingTenant;
     private Tenant? _dialogSource;
     private bool _showDialogOnAfterRender = false;
 

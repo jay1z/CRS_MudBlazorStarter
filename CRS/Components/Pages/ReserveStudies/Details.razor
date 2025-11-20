@@ -1,5 +1,5 @@
 ﻿@page "/ReserveStudies/{Id:guid}/Details"
-@attribute [Authorize]
+@attribute [Authorize(Policy = "RequireTenantViewer")]
 
 @using CRS.Components.Custom
 @using CRS.Data
@@ -94,9 +94,13 @@
                         </MudCardHeader>
                         <MudCardContent>
                             <MudStack>
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@GetUpdateLink()">Update Request</MudButton>
-                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendRequestLink">Send Request Link</MudButton>
-                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendAccessTokenLink">Send Access Token Link</MudButton>
+                                <AuthorizeView Policy="RequireTenantStaff">
+                                    <Authorized>
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@GetUpdateLink()">Update Request</MudButton>
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendRequestLink">Send Request Link</MudButton>
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="mx-4" OnClick="SendAccessTokenLink">Send Access Token Link</MudButton>
+                                    </Authorized>
+                                </AuthorizeView>
 
                                 <MudDivider Class="my-2" />
                                 <MudText Typo="Typo.subtitle1">Workflow Debugger</MudText>
@@ -112,19 +116,27 @@
                                     </MudItem>
                                 </MudGrid>
                                 <MudStack Row="true" Spacing="2">
-                                    <MudButton Variant="Variant.Filled" Color="Color.Info" Disabled="@(selectedNextStudy == null)" OnClick="@ApplySelectedStudyTransition">Apply Transition</MudButton>
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="LoadAllowedTransitions">Refresh</MudButton>
+                                    <AuthorizeView Policy="RequireTenantStaff">
+                                        <Authorized>
+                                            <MudButton Variant="Variant.Filled" Color="Color.Info" Disabled="@(selectedNextStudy == null)" OnClick="@ApplySelectedStudyTransition">Apply Transition</MudButton>
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="LoadAllowedTransitions">Refresh</MudButton>
+                                        </Authorized>
+                                    </AuthorizeView>
                                 </MudStack>
 
                                 <MudDivider Class="my-2" />
                                 <MudText Typo="Typo.subtitle1">Quick Actions</MudText>
                                 <MudGrid>
-                                    <MudItem xs="6">
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => SendProposalAsync(Id))">Send Proposal</MudButton>
-                                    </MudItem>
-                                    <MudItem xs="6">
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => RequestFinancialInfoAsync(Id))">Request Financial Info</MudButton>
-                                    </MudItem>
+                                    <AuthorizeView Policy="RequireTenantStaff">
+                                        <Authorized>
+                                            <MudItem xs="6">
+                                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => SendProposalAsync(Id))">Send Proposal</MudButton>
+                                            </MudItem>
+                                            <MudItem xs="6">
+                                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => RequestFinancialInfoAsync(Id))">Request Financial Info</MudButton>
+                                            </MudItem>
+                                        </Authorized>
+                                    </AuthorizeView>
                                 </MudGrid>
                             </MudStack>
                         </MudCardContent>
@@ -171,15 +183,35 @@
                                                     var engineNext = StatusMapper.ToStudyStatus(next); var canAdvance = allowedNextStudy.Contains(engineNext);
                                                 }
                                                 @if (next == ReserveStudy.WorkflowStatus.ProposalSent) {
-                                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send" OnClick="@(() => SendProposalAsync(Id))">Send Proposal</MudButton>
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send" OnClick="@(() => SendProposalAsync(Id))">Send Proposal</MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
                                                 } else if (next == ReserveStudy.WorkflowStatus.FinancialInfoRequested) {
-                                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Description" OnClick="@(() => RequestFinancialInfoAsync(Id))">Request Financial Info</MudButton>
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Description" OnClick="@(() => RequestFinancialInfoAsync(Id))">Request Financial Info</MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
                                                 } else if (next == ReserveStudy.WorkflowStatus.SiteVisitScheduled && allowedNextStudy.Contains(StudyStatus.Scheduled)) {
-                                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Event" OnClick="@(() => ApplyTransition(StudyStatus.Scheduled))">Schedule Visit</MudButton>
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Event" OnClick="@(() => ApplyTransition(StudyStatus.Scheduled))">Schedule Visit</MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
                                                 } else if (next == ReserveStudy.WorkflowStatus.ReportComplete) {
-                                                    <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.CheckCircle" OnClick="@(() => CompleteReserveStudyAsync(Id))">Complete Study</MudButton>
+                                                    <AuthorizeView Policy="RequireTenantOwner">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.CheckCircle" OnClick="@(() => CompleteReserveStudyAsync(Id))">Complete Study</MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
                                                 } else if (canAdvance) {
-                                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowForward" OnClick="@(() => ApplyTransition(engineNext))">Advance</MudButton>
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowForward" OnClick="@(() => ApplyTransition(engineNext))">Advance</MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
                                                 } else {
                                                     <MudText Typo="Typo.caption" Class="mud-text-secondary">Awaiting external action</MudText>
                                                 }

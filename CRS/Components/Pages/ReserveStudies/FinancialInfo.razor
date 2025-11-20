@@ -1,11 +1,11 @@
-@page "/ReserveStudies/{studyId:guid}/FinancialInfo"
+﻿@page "/ReserveStudies/{studyId:guid}/FinancialInfo"
+@attribute [Authorize(Policy = "RequireTenantStaff")]
 @using CRS.Models
 @using CRS.Services.Interfaces
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 
-@attribute [Authorize]
 @inject IReserveStudyWorkflowService WorkflowService
 @inject IReserveStudyService ReserveStudyService
 @inject NavigationManager Navigation

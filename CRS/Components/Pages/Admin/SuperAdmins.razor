@@ -1,5 +1,5 @@
-@page "/Admin/SuperAdmins"
-@attribute [Authorize(Roles = "Admin")]
+﻿@page "/Admin/SuperAdmins"
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore

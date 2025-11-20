@@ -1,4 +1,5 @@
 ﻿@page "/ReserveStudies/{Id:guid}/Update"
+@attribute [Authorize(Policy = "RequireTenantStaff")]
 @using CRS.Components.Layout
 @using CRS.Components.Pages.ReserveStudies.Dialogs
 @using CRS.Data

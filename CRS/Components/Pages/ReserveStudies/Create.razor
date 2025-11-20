@@ -1,5 +1,5 @@
 ﻿@page "/ReserveStudies/Create"
-@attribute [Authorize]
+@attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @using System.Security.Claims
 @using CRS.Components.Layout

@@ -1,0 +1,66 @@
+﻿@page "/Admin/Impersonate"
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
+
+@using CRS.Data
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<CRS.Components.Pages.Admin.Impersonate> Logger
+
+<PageTitle>Impersonate Tenant</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
+    <MudPaper Elevation="4" Class="pa-4">
+        <MudText Typo="Typo.h5">Impersonate Tenant</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Choose a tenant to impersonate. This sets the tenant context for your session until you stop impersonating.</MudText>
+
+        <MudTable Items="tenants" Hover="true" Dense="true">
+            <HeaderContent>
+                <MudTh>Id</MudTh>
+                <MudTh>Name</MudTh>
+                <MudTh>Subdomain</MudTh>
+                <MudTh>Active</MudTh>
+                <MudTh>Action</MudTh>
+            </HeaderContent>
+            <RowTemplate Context="t">
+                <MudTd>@t.Id</MudTd>
+                <MudTd>@t.Name</MudTd>
+                <MudTd>@t.Subdomain</MudTd>
+                <MudTd>@(t.IsActive ? "Yes" : "No")</MudTd>
+                <MudTd>
+                    <MudButton Variant="Variant.Text" Disabled="@(!t.IsActive)" OnClick="@(() => ImpersonateAsync(t))">Impersonate</MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<Tenant> tenants = new();
+
+    protected override async Task OnInitializedAsync() {
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            tenants = await db.Tenants.OrderBy(t => t.Id).ToListAsync();
+        } catch (Exception ex) {
+            Snackbar?.Add($"Failed loading tenants: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ImpersonateAsync(Tenant t) {
+        if (t == null) return;
+        TenantContext.TenantId = t.Id;
+        TenantContext.TenantName = t.Name;
+        TenantContext.Subdomain = t.Subdomain;
+        TenantContext.IsActive = t.IsActive;
+        TenantContext.IsResolvedByLogin = false; // explicit impersonation
+        Logger.LogInformation("Impersonation started for tenant {TenantId} ({Name}) by platform admin", t.Id, t.Name);
+        Snackbar.Add($"Now impersonating tenant '{t.Name}'", Severity.Success);
+        NavigationManager.NavigateTo("/");
+    }
+}

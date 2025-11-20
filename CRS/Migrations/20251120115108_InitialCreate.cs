@@ -323,6 +323,20 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Roles",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    Scope = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Roles", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ServiceContacts",
                 schema: "crs",
                 columns: table => new
@@ -710,6 +724,41 @@ namespace CRS.Migrations
                         column: x => x.CommunityId,
                         principalSchema: "crs",
                         principalTable: "Communities",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserRoleAssignments",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserRoleAssignments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserRoleAssignments_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "crs",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserRoleAssignments_Roles_RoleId",
+                        column: x => x.RoleId,
+                        principalSchema: "crs",
+                        principalTable: "Roles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserRoleAssignments_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalSchema: "crs",
+                        principalTable: "Tenants",
                         principalColumn: "Id");
                 });
 
@@ -1386,6 +1435,13 @@ namespace CRS.Migrations
                 column: "ServiceContactId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Roles_Name",
+                schema: "crs",
+                table: "Roles",
+                column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Settings_ApplicationUserId",
                 schema: "crs",
                 table: "Settings",
@@ -1465,6 +1521,24 @@ namespace CRS.Migrations
                 table: "Tenants",
                 column: "Subdomain",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserRoleAssignments_RoleId",
+                schema: "crs",
+                table: "UserRoleAssignments",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserRoleAssignments_TenantId",
+                schema: "crs",
+                table: "UserRoleAssignments",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserRoleAssignments_UserId",
+                schema: "crs",
+                table: "UserRoleAssignments",
+                column: "UserId");
         }
 
         /// <inheritdoc />
@@ -1559,7 +1633,7 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
-                name: "Tenants",
+                name: "UserRoleAssignments",
                 schema: "crs");
 
             migrationBuilder.DropTable(
@@ -1596,6 +1670,14 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "StudyRequests",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "Roles",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "Tenants",
                 schema: "crs");
 
             migrationBuilder.DropTable(

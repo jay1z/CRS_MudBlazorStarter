@@ -1,5 +1,5 @@
 ﻿@page "/Communities"
-@attribute [Authorize]
+@attribute [Authorize(Policy = "RequireTenantViewer")]
 
 @using CRS.Components.Pages.ReserveStudy.Dialogs
 @using CRS.Data
@@ -43,7 +43,7 @@
                 </MudGrid>
             </MudCardHeader>
             <MudCardContent>
-                <MudTable Items="@(FilteredCommunities)" Dense="true" Hover="true" Elevation="0" Loading="@isLoading" SortLabel="Sort by">
+                <MudTable T="Community" Items="@(FilteredCommunities)" Dense="true" Hover="true" Elevation="0" Loading="@isLoading" SortLabel="Sort by">
                     <HeaderContent>
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Name)">NAME</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.Street)">STREET</MudTableSortLabel></MudTh>
@@ -53,32 +53,36 @@
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.DateCreated)">Created</MudTableSortLabel></MudTh>
                         <MudTh></MudTh>
                     </HeaderContent>
-                    <RowTemplate>
+                    <RowTemplate Context="community">
                         <MudTd DataLabel="Name">
-                            <MudText Typo="Typo.h5" Class="fw-bold">@context.Name</MudText>
+                            <MudText Typo="Typo.h5" Class="fw-bold">@community.Name</MudText>
                         </MudTd>
                         <MudTd DataLabel="Street">
-                            @context.Addresses?.FirstOrDefault()?.Street
+                            @community.Addresses?.FirstOrDefault()?.Street
                         </MudTd>
                         <MudTd DataLabel="City">
-                            @context.Addresses?.FirstOrDefault()?.City
+                            @community.Addresses?.FirstOrDefault()?.City
                         </MudTd>
                         <MudTd DataLabel="State">
-                            @context.Addresses?.FirstOrDefault()?.State
+                            @community.Addresses?.FirstOrDefault()?.State
                         </MudTd>
                         <MudTd DataLabel="Zip">
-                            @context.Addresses?.FirstOrDefault()?.Zip
+                            @community.Addresses?.FirstOrDefault()?.Zip
                         </MudTd>
                         <MudTd DataLabel="Created">
-                            @context.DateCreated.ToString()
+                            @community.DateCreated.ToString()
                         </MudTd>
                         <MudTd>
-                            <MudButton Href="@($"Communities/Details/{context.Id}")" Size="Size.Small" Variant="Variant.Filled">
+                            <MudButton Href="@($"/Communities/Details/{community.Id}")" Size="Size.Small" Variant="Variant.Filled">
                                 View
                             </MudButton>
-                            <MudButton OnClick="@(() => OpenDeleteDialog(context))" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
-                                Delete
-                            </MudButton>
+                            <AuthorizeView Policy="RequireTenantStaff" Context="authState">
+                                <Authorized>
+                                    <MudButton OnClick="@(() => OpenDeleteDialog(community))" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
+                                        Delete
+                                    </MudButton>
+                                </Authorized>
+                            </AuthorizeView>
                         </MudTd>
                     </RowTemplate>
                     <LoadingContent>

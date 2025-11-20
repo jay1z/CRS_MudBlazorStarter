@@ -1,121 +1,96 @@
 ﻿@using CRS.Data
 @using CRS.Services
+@using CRS.Services.Tenant
 @using Microsoft.AspNetCore.Identity
+
 @inject UserStateService UserState
-@inject UserManager<ApplicationUser> UserManager
+@inject ITenantContext TenantContext
 @inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@implements IDisposable
 
 <MudNavMenu>
     <MudDivider Class="my-2" />
-    <MudNavMenu>
-        <MudText Typo="Typo.h6" Class="px-4">My Application</MudText>
-        <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Secondary Text</MudText>
-        <MudDivider Class="my-2" />
-        <!-- Removed Shortcuts link -->
-    </MudNavMenu>
+    <MudText Typo="Typo.h6" Class="px-4">Navigation</MudText>
+    <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Links shown based on your access</MudText>
+    <MudDivider Class="my-2" />
 
-    <AuthorizeView Context="authContext">
-        <NotAuthorized>
-            <MudNavLink Href="/tenant/signup" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AppRegistration">Sign up</MudNavLink>
-            <MudNavLink Href="Account/Register" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Person">Register</MudNavLink>
-            <MudNavLink Href="Account/Login" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Password">Login</MudNavLink>
-        </NotAuthorized>
-
+    <!-- Tenant links: require tenant viewer/staff/owner policies as appropriate -->
+    <AuthorizeView Policy="RequireTenantViewer">
         <Authorized>
-            <!-- Common Links for All Authenticated Users -->
-            <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary">Dashboard</MudNavLink>
-            <MudNavLink Href="/messages/inbox" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Email" IconColor="Color.Primary">Messages</MudNavLink>
+            <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="/messages/inbox" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Email">Messages</MudNavLink>
+            <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Reserve Studies</MudNavLink>
+            <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business">Communities</MudNavLink>
+        </Authorized>
+    </AuthorizeView>
 
-            <!-- User Role Specific Links -->
-            <AuthorizeView Roles="User">
-                <MudNavGroup Title="Reserve Studies" Expanded="true">
-                    <MudNavLink Href="/ReserveStudies/Create" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary">Create New Study</MudNavLink>
-                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">My Requests</MudNavLink>
-                </MudNavGroup>
+    <AuthorizeView Policy="RequireTenantOwner">
+        <Authorized>
+            <MudNavGroup Title="Tenant Admin" Expanded="true">
+                <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Manage Users</MudNavLink>
+                <MudNavLink Href="/Admin/Settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">Tenant Settings</MudNavLink>
+                <MudNavLink Href="/Reports/Publish" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Publish">Publish Reports</MudNavLink>
+            </MudNavGroup>
+        </Authorized>
+    </AuthorizeView>
 
-                <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">My Communities</MudNavLink>
-            </AuthorizeView>
+    <AuthorizeView Policy="RequireTenantStaff">
+        <Authorized>
+            <MudNavGroup Title="Specialist Tools" Expanded="false">
+                <MudNavLink Href="/ReserveStudies/Specialist" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Assigned Studies</MudNavLink>
+                <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth">Calendar</MudNavLink>
+                <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts">Contacts</MudNavLink>
+            </MudNavGroup>
+        </Authorized>
+    </AuthorizeView>
 
-            <!-- Admin Role Specific Links -->
-            <AuthorizeView Roles="Admin">
-                <MudNavGroup Title="Administration" Expanded="true">
-                    <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">All Requests</MudNavLink>
-                    <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">Communities</MudNavLink>
-                    <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary">Calendar</MudNavLink>
-                    <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary">Contacts</MudNavLink>
-                    <MudNavLink Href="/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt" IconColor="Color.Primary">Users</MudNavLink>
-                    <MudNavLink Href="/Roles" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.VerifiedUser" IconColor="Color.Primary">Roles</MudNavLink>
-                    <MudNavLink Href="/Settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Primary">Settings</MudNavLink>
-                    <MudNavLink Href="/Admin/Tenants" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Apartment" IconColor="Color.Primary">Tenants</MudNavLink>
-                    <MudDivider />
-                    <MudNavLink Href="/Admin/VisualEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Brush" IconColor="Color.Primary">Visual Editor</MudNavLink>
-                    <MudNavLink Href="/Admin/GrapesEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Draw" IconColor="Color.Primary">GrapesJS Prototype</MudNavLink>
-                    <MudNavLink Href="/Admin/GrapesPreview" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Preview" IconColor="Color.Primary">GrapesJS Preview</MudNavLink>
-                    <MudNavLink Href="/Admin/GrapesStudio" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.DeveloperMode" IconColor="Color.Primary">Grapes Studio Test</MudNavLink>
-                    <MudDivider />
-                    <MudNavLink Href="/dbmanager" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Storage" IconColor="Color.Primary">Database Manager</MudNavLink>
-                </MudNavGroup>
-            </AuthorizeView>
+    <AuthorizeView Policy="RequireTenantViewer">
+        <Authorized>
+            <MudNavLink Href="/Reports/View" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Visibility">View Reports</MudNavLink>
+        </Authorized>
+    </AuthorizeView>
 
-            <!-- Specialist Role Specific Links -->
-            <AuthorizeView Roles="Specialist">
-                <MudNavGroup Title="Specialist Tools" Expanded="true">
-                    <MudNavLink Href="/ReserveStudies/Specialist" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment" IconColor="Color.Primary">Assigned Studies</MudNavLink>
-                    <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">Communities</MudNavLink>
-                    <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth" IconColor="Color.Primary">Calendar</MudNavLink>
-                    <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts" IconColor="Color.Primary">Contacts</MudNavLink>
-                </MudNavGroup>
-            </AuthorizeView>
+    <AuthorizeView Policy="RequireHOAUser">
+        <Authorized>
+            <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Download Final Report</MudNavLink>
+        </Authorized>
+    </AuthorizeView>
 
-            <!-- Common Support Section for All Authenticated Users -->
+    <!-- Platform admin links -->
+    <AuthorizeView Policy="RequirePlatformAdmin">
+        <Authorized>
             <MudDivider Class="my-2" />
-            <MudNavGroup Title="Support" Expanded="false">
-                <MudNavLink Href="/Help" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Help" IconColor="Color.Primary">Help Center</MudNavLink>
-                <MudNavLink Href="/Contact" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ContactSupport" IconColor="Color.Primary">Contact</MudNavLink>
-                <MudNavLink Href="/Faqs" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.QuestionAnswer" IconColor="Color.Primary">FAQs</MudNavLink>
+            <MudText Typo="Typo.h6" Class="px-4">Platform Administration</MudText>
+            <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Global tools</MudText>
+            <MudDivider Class="my-2" />
+
+            <MudNavGroup Title="Platform" Expanded="true">
+                <MudNavLink Href="/Admin/Tenants" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Apartment">Tenants</MudNavLink>
+                <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Users & Roles</MudNavLink>
+                <MudNavLink Href="/Admin/SuperAdmins" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.VerifiedUser">SuperAdmins</MudNavLink>
+                <MudNavLink Href="/Admin/Billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing</MudNavLink>
             </MudNavGroup>
 
-            <!-- User Profile Section -->
-            <MudDivider Class="my-2" />
-            <MudNavLink Href="Account/Manage" Match="NavLinkMatch.All">
-                @if (UserState.CurrentUser != null) {
-                    <MudText Typo="Typo.body2">
-                        <MudAvatar Color="Color.Primary" Size="Size.Small">@UserState.CurrentUser.Initials</MudAvatar>
-                        @($"{UserState.CurrentUser.FullName}")
-                    </MudText>
-                }
-            </MudNavLink>
+            <MudDivider />
+            <MudNavGroup Title="Platform Tools" Expanded="false">
+                <MudNavLink Href="/Admin/VisualEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Brush">Visual Editor</MudNavLink>
+                <MudNavLink Href="/Admin/GrapesEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Draw">GrapesJS Prototype</MudNavLink>
+                <MudNavLink Href="/dbmanager" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Storage">Database Manager</MudNavLink>
+                <MudNavLink Href="/Admin/Audit" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.History">Audit Logs</MudNavLink>
+            </MudNavGroup>
 
-            <!-- Logout Form -->
-            <form action="Account/Logout" method="post">
-                <AntiforgeryToken />
-                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                <button type="submit" class="mud-nav-link mud-ripple">
-                    <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Error" Class="mr-3"></MudIcon> Logout
-                </button>
-            </form>
+            <MudDivider />
+            <MudNavGroup Title="Support" Expanded="false">
+                <MudNavLink Href="/Admin/Support/Tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Support Tickets</MudNavLink>
+            </MudNavGroup>
+
+            <MudDivider />
+            <MudNavGroup Title="Tenant Actions" Expanded="false">
+                <MudNavLink Href="/Admin/Impersonate" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonSearch">Impersonate Tenant</MudNavLink>
+                @if (TenantContext?.TenantId != null)
+                {
+                    <MudNavLink Href="/Admin/StopImpersonation" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.HighlightOff" IconColor="Color.Error">Stop Impersonation</MudNavLink>
+                }
+            </MudNavGroup>
         </Authorized>
     </AuthorizeView>
 </MudNavMenu>
-
-@code {
-    private string? currentUrl;
-
-    protected override void OnInitialized() {
-        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        NavigationManager.LocationChanged += OnLocationChanged;
-        UserState.OnChange += StateHasChanged;
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) {
-        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
-        StateHasChanged();
-    }
-
-    public void Dispose() {
-        NavigationManager.LocationChanged -= OnLocationChanged;
-        UserState.OnChange -= StateHasChanged;
-    }
-}

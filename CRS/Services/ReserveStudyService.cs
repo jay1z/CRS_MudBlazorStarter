@@ -7,74 +7,67 @@ using CRS.Models;
 using CRS.Models.Emails;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
+using CRS.MultiTenancy.Database; // add
 
 using Microsoft.EntityFrameworkCore;
 
 namespace CRS.Services {
     public class ReserveStudyService : IReserveStudyService {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
+        private readonly ITenantDbContextFactory _tenantDbFactory; // add
         private readonly IDispatcher _dispatcher;
         private readonly string _baseUrl;
         private readonly ITenantContext _tenantContext;
 
-        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext) {
+        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, ITenantDbContextFactory tenantDbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext) {
             _dbFactory = dbFactory;
+            _tenantDbFactory = tenantDbFactory; // add
             _dispatcher = dispatcher;
             _baseUrl = configuration["Application:BaseUrl"] ?? "https://yourdomain.com";
             _tenantContext = tenantContext;
         }
 
         public async Task<ReserveStudy> CreateReserveStudyAsync(ReserveStudy reserveStudy) {
-            using var context = await _dbFactory.CreateDbContextAsync();
+            // Use tenant-specific database if configured
+            var usePerTenantDb = true; // future: configuration flag
+            ApplicationDbContext context = usePerTenantDb && _tenantContext.TenantId.HasValue
+                ? await _tenantDbFactory.CreateAsync(_tenantContext.TenantId)
+                : await _dbFactory.CreateDbContextAsync();
 
-            // Ensure TenantId is set (defensive) — ApplicationDbContext will also set if missing
-            var tenantId = _tenantContext.TenantId ??1;
-            if (reserveStudy.TenantId ==0) reserveStudy.TenantId = tenantId;
+            await using (context.ConfigureAwait(false)) {
+                var tenantId = _tenantContext.TenantId ?? 1;
+                if (reserveStudy.TenantId == 0) reserveStudy.TenantId = tenantId;
 
-            // Set default values for a new study
-            reserveStudy.IsActive = true;
-            reserveStudy.IsApproved = false;
-            reserveStudy.IsComplete = false;
+                reserveStudy.IsActive = true;
+                reserveStudy.IsApproved = false;
+                reserveStudy.IsComplete = false;
 
-            // Handle Contact
-            if (reserveStudy.Contact != null && reserveStudy.ContactId == null) {
-                // This is a new contact
-                reserveStudy.Contact.Id = Guid.CreateVersion7(); // Generate new ID
-                if (reserveStudy.Contact.TenantId ==0) reserveStudy.Contact.TenantId = tenantId;
-            }
-            else if (reserveStudy.ContactId != null) {
-                // This is a reference to existing contact - detach entity
-                reserveStudy.Contact = null;
-            }
+                if (reserveStudy.Contact != null && reserveStudy.ContactId == null) {
+                    reserveStudy.Contact.Id = Guid.CreateVersion7();
+                    if (reserveStudy.Contact.TenantId == 0) reserveStudy.Contact.TenantId = tenantId;
+                } else if (reserveStudy.ContactId != null) {
+                    reserveStudy.Contact = null;
+                }
 
-            // Handle PropertyManager
-            if (reserveStudy.PropertyManager != null && reserveStudy.PropertyManagerId == null) {
-                // This is a new property manager
-                reserveStudy.PropertyManager.Id = Guid.CreateVersion7(); // Generate new ID
-                if (reserveStudy.PropertyManager.TenantId ==0) reserveStudy.PropertyManager.TenantId = tenantId;
-            }
-            else if (reserveStudy.PropertyManagerId != null) {
-                // This is a reference to existing property manager - detach entity
-                reserveStudy.PropertyManager = null;
-            }
+                if (reserveStudy.PropertyManager != null && reserveStudy.PropertyManagerId == null) {
+                    reserveStudy.PropertyManager.Id = Guid.CreateVersion7();
+                    if (reserveStudy.PropertyManager.TenantId == 0) reserveStudy.PropertyManager.TenantId = tenantId;
+                } else if (reserveStudy.PropertyManagerId != null) {
+                    reserveStudy.PropertyManager = null;
+                }
 
-            // Add to database
-            context.ReserveStudies.Add(reserveStudy);
-            await context.SaveChangesAsync();
+                context.ReserveStudies.Add(reserveStudy);
+                await context.SaveChangesAsync();
 
-            // Get community data for the email
-            var community = await context.Communities
-                .AsNoTracking()
-                .Include(c => c.Addresses)
-                .FirstOrDefaultAsync(c => c.Id == reserveStudy.CommunityId);
-
-            if (community != null) {
-                reserveStudy.Community = community;
+                var community = await context.Communities
+                    .AsNoTracking()
+                    .Include(c => c.Addresses)
+                    .FirstOrDefaultAsync(c => c.Id == reserveStudy.CommunityId);
+                if (community != null) reserveStudy.Community = community;
             }
 
             var createdEvent = new ReserveStudyCreatedEvent(reserveStudy);
             await _dispatcher.Broadcast<ReserveStudyCreatedEvent>(createdEvent);
-
             return reserveStudy;
         }
 

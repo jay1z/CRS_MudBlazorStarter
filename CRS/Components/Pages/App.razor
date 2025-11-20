@@ -1,0 +1,20 @@
+﻿@page "/app"
+@attribute [Authorize]
+@using CRS.Components.Account.Shared
+@using CRS.Services.Tenant
+@inject ITenantContext Tenant
+@inject NavigationManager Nav
+
+<PageTitle>Dashboard</PageTitle>
+
+@if (!Tenant.TenantId.HasValue)
+{
+    <RedirectToLogin />
+}
+else
+{
+    <MudText Typo="Typo.h5">Welcome to your tenant dashboard</MudText>
+    <MudText Typo="Typo.body1">Tenant: @Tenant.TenantName (@Tenant.Subdomain)</MudText>
+    <MudDivider Class="my-4" />
+    <MudText Typo="Typo.body2">TODO: Add tenant-specific content here.</MudText>
+}

@@ -1,13 +1,16 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using CRS.Components.Account.Pages;
 using CRS.Components.Account.Pages.Manage;
 using CRS.Data;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.Routing
@@ -40,14 +43,65 @@ namespace Microsoft.AspNetCore.Routing
                 return TypedResults.Challenge(properties, [provider]);
             });
 
+            // Helper to aggressively remove auth cookies including legacy domain-scoped ones
+            static void RemoveAuthCookies(HttpContext context, IOptionsMonitor<CookieAuthenticationOptions> options, IConfiguration config)
+            {
+                var appOpts = options.Get(IdentityConstants.ApplicationScheme);
+                var configured = appOpts.Cookie.Name ?? ".AspNetCore.Identity.Application";
+                var names = new[] { configured, ".AspNetCore.Identity.Application", ".AspNetCore.Cookies" };
+
+                // Host-scoped
+                foreach (var name in names)
+                {
+                    context.Response.Cookies.Delete(name, new CookieOptions { Path = "/" });
+                }
+
+                // Legacy domain-scoped
+                var root = config["App:RootDomain"]?.Trim('.') ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(root))
+                {
+                    foreach (var name in names)
+                    {
+                        context.Response.Cookies.Delete(name, new CookieOptions { Path = "/", Domain = "." + root });
+                    }
+                }
+            }
+
+            static string CoerceSafeReturnUrl(string? returnUrl)
+            {
+                if (string.IsNullOrWhiteSpace(returnUrl)) return "/";
+                var candidate = "/" + returnUrl.TrimStart('/');
+                // Ensure relative only
+                return Uri.IsWellFormedUriString(candidate, UriKind.Relative) ? candidate : "/";
+            }
+
             accountGroup.MapPost("/Logout", async (
-                ClaimsPrincipal user,
+                HttpContext context,
                 [FromServices] SignInManager<ApplicationUser> signInManager,
-                [FromForm] string returnUrl) =>
+                [FromServices] IOptionsMonitor<CookieAuthenticationOptions> cookieOptions,
+                [FromServices] IConfiguration config,
+                [FromForm] string? returnUrl) =>
             {
                 await signInManager.SignOutAsync();
-                return TypedResults.LocalRedirect($"~/{returnUrl}");
-            });
+                RemoveAuthCookies(context, cookieOptions, config);
+                var target = CoerceSafeReturnUrl(returnUrl);
+                return TypedResults.Redirect(target);
+            }).DisableAntiforgery();
+
+            // Allow GET /Account/Logout for convenience
+            // GET /Account/Logout also disables antiforgery to avoid 400s if proxies strip headers
+            accountGroup.MapGet("/Logout", async (
+                HttpContext context,
+                [FromServices] SignInManager<ApplicationUser> signInManager,
+                [FromServices] IOptionsMonitor<CookieAuthenticationOptions> cookieOptions,
+                [FromServices] IConfiguration config,
+                [FromQuery] string? returnUrl) =>
+            {
+                await signInManager.SignOutAsync();
+                RemoveAuthCookies(context, cookieOptions, config);
+                var target = CoerceSafeReturnUrl(returnUrl);
+                return TypedResults.Redirect(target);
+            }).DisableAntiforgery();
 
             var manageGroup = accountGroup.MapGroup("/Manage").RequireAuthorization();
 

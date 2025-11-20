@@ -1,0 +1,96 @@
+﻿@page "/tenant/find"
+@attribute [AllowAnonymous]
+
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IConfiguration Config
+
+<PageTitle>Find my tenant</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="mt-6">
+    <MudPaper Class="pa-6" Elevation="2">
+        <MudText Typo="Typo.h5" Class="mb-2">Find my tenant</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Enter your email and we'll take you to the right sign-in page.</MudText>
+
+        <EditForm Model="this" OnValidSubmit="OnSubmitAsync">
+            <DataAnnotationsValidator />
+            <MudTextField @bind-Value="email" Label="Email" For="() => email" Required="true" InputType="InputType.Email" Variant="Variant.Outlined" />
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" Class="mt-4" ButtonType="ButtonType.Submit">Continue</MudButton>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <MudAlert Severity="@messageSeverity" Class="mt-4">@message</MudAlert>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string email = string.Empty;
+    private string message = string.Empty;
+    private Severity messageSeverity = Severity.Info;
+
+    private async Task OnSubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            message = "Email is required.";
+            messageSeverity = Severity.Warning;
+            return;
+        }
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+            {
+                message = "We couldn't find an account with that email.";
+                messageSeverity = Severity.Error;
+                return;
+            }
+
+            var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == user.TenantId);
+            if (tenant == null || !tenant.IsActive)
+            {
+                message = "Your tenant is not available right now.";
+                messageSeverity = Severity.Warning;
+                return;
+            }
+
+            var root = Nav.BaseUri.TrimEnd('/');
+            var uri = new Uri(root);
+            var host = uri.Host; // e.g., www.alxreservecloud.com or platform.alxreservecloud.com
+
+            // If config root domain is set, prefer that (strip leading www.)
+            var configuredRoot = Config["App:RootDomain"]?.Trim().Trim('.');
+            if (!string.IsNullOrWhiteSpace(configuredRoot))
+            {
+                host = configuredRoot; // trust configuration
+            }
+            else
+            {
+                // Strip leading www.
+                if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+                    host = host.Substring(4);
+                // If we are already on a subdomain (a.b.c), attempt to reduce to parent domain (last two labels)
+                var parts = host.Split('.');
+                if (parts.Length > 2)
+                {
+                    host = string.Join('.', parts.Skip(parts.Length - 2));
+                }
+            }
+
+            var target = $"https://{tenant.Subdomain}.{host}/Account/Login";
+            Nav.NavigateTo(target, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            message = ex.Message;
+            messageSeverity = Severity.Error;
+        }
+    }
+}

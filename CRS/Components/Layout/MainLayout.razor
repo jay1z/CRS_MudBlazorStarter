@@ -34,6 +34,14 @@
         <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
         <MudText Typo="Typo.h5" Class="ml-3">Community Reserve Specialists</MudText>
         <MudSpacer />
+        @if (_authResolved && TenantContext?.TenantId != null
+            && TenantContext.IsResolvedByLogin == false
+            && _isPlatformAdmin) {
+            <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Class="mx-2" StartIcon="@Icons.Material.Filled.PersonSearch">
+                Impersonating: @(TenantContext.TenantName ?? ($"Tenant {TenantContext.TenantId}"))
+            </MudChip>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" Class="mx-2" OnClick="@(()=>NavigationManager.NavigateTo("/Admin/StopImpersonation"))" StartIcon="@Icons.Material.Filled.HighlightOff">Stop</MudButton>
+        }
         <AuthorizeView>
             <Authorized>
                 <MudBadge Color="Color.Error" Content="@((unreadCount > 0) ? unreadCount.ToString() : null)" MaxValue="99" Overlap="true">
@@ -41,20 +49,32 @@
                 </MudBadge>
             </Authorized>
         </AuthorizeView>
-        <AuthorizeView>
-            <MudText Typo="Typo.body1">@context.User.Identity?.Name</MudText>
-            @foreach (var role in context.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value)) {
+        <AuthorizeView Context="auth">
+            <MudText Typo="Typo.body1">@auth.User.Identity?.Name</MudText>
+            @foreach (var role in auth.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value)) {
                 <MudChip T="string" Color="Color.Primary" Class="ml-2">@role</MudChip>
             }
         </AuthorizeView>
         <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
             <MudMenuItem Href="/Account/Manage" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary">Profile</MudMenuItem>
             <MudMenuItem Href="/Settings" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Primary">Settings</MudMenuItem>
+            <MudMenuItem Href="/Account/Logout" Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error">Logout</MudMenuItem>
         </MudMenu>
     </MudAppBar>
 
     <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="25">
-        <NavMenu />
+        @if (!_authResolved)
+        {
+            <MudStack Class="pa-4" Spacing="2">
+                <MudSkeleton Width="60%" Height="28px" />
+                <MudSkeleton Width="80%" />
+                <MudSkeleton Width="40%" />
+            </MudStack>
+        }
+        else
+        {
+            <NavMenu />
+        }
     </MudDrawer>
 
     <MudMainContent id="main-content" Class="mt-16 pa-4">
@@ -84,6 +104,10 @@
     private string? currentUrl;
     private bool _drawerOpen = true;
     private int unreadCount = 0;
+    private bool _authResolved = false;
+    private int _claimTenantId = 0;
+    private bool _isPlatformAdmin = false;
+    private bool _hasTenant = false; // sticky tenant presence
 
     protected override async Task OnInitializedAsync() {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
@@ -92,19 +116,22 @@
         ThemeService.OnThemeChanged += StateHasChanged;
         ThemeService.SetTheme(new Default().Theme!);
 
-        // Ensure TenantContext is populated from authenticated user's tenant claim (login-driven)
+        // Hydrate TenantContext and cache claim-based flags for stable nav
         try {
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
-            if (user?.Identity?.IsAuthenticated == true && TenantContext?.TenantId == null) {
+            if (user?.Identity?.IsAuthenticated == true) {
                 var claimTenant = user.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
-                if (int.TryParse(claimTenant, out var tid)) {
-                    TenantContext.TenantId = tid;
+                _ = int.TryParse(claimTenant, out _claimTenantId);
+                _isPlatformAdmin = user.IsInRole("PlatformAdmin");
+
+                if (_claimTenantId > 0) {
+                    _hasTenant = true; // sticky once true
+                    TenantContext!.TenantId = _claimTenantId;
                     TenantContext.IsResolvedByLogin = true;
-                    // Load tenant metadata (name/branding) from DB
                     try {
                         await using var db = await DbFactory.CreateDbContextAsync();
-                        var t = await db.Tenants.FindAsync(tid);
+                        var t = await db.Tenants.FindAsync(_claimTenantId);
                         if (t != null) {
                             TenantContext.TenantName = t.Name;
                             TenantContext.Subdomain = t.Subdomain;
@@ -114,24 +141,50 @@
                         }
                     } catch { }
                 }
+                else if (TenantContext?.TenantId != null)
+                {
+                    _hasTenant = true; // sticky from context
+                }
             }
         } catch { }
 
         // Init user state and unread count
         try {
             await UserState.InitializeAsync();
-            UserState.OnChange += RefreshUnreadCountOnChange;
+            UserState.OnChange += RefreshUserFlagsOnChange;
             await RefreshUnreadCountAsync();
         } catch { }
+
+        _authResolved = true;
+        StateHasChanged();
     }
 
-    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e) {
-        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+    private async void RefreshUserFlagsOnChange() {
+        try {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user?.Identity?.IsAuthenticated == true) {
+                var claimTenant = user.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
+                _ = int.TryParse(claimTenant, out _claimTenantId);
+                _isPlatformAdmin = user.IsInRole("PlatformAdmin");
+                if (_claimTenantId > 0 || TenantContext?.TenantId != null)
+                {
+                    _hasTenant = true; // keep sticky once acquired
+                }
+            } else {
+                // Do NOT clear sticky flags here to avoid flicker during transient auth state changes
+                _isPlatformAdmin = false;
+                // _hasTenant remains as-is; it will reset on explicit logout/navigation
+            }
+        } catch {
+            // keep existing flags on transient error
+        }
         await RefreshUnreadCountAsync();
         StateHasChanged();
     }
 
-    private async void RefreshUnreadCountOnChange() {
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e) {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
         await RefreshUnreadCountAsync();
         StateHasChanged();
     }
@@ -149,7 +202,7 @@
     public void Dispose() {
         NavigationManager.LocationChanged -= OnLocationChanged;
         ThemeService.OnThemeChanged -= StateHasChanged;
-        UserState.OnChange -= RefreshUnreadCountOnChange;
+        UserState.OnChange -= RefreshUserFlagsOnChange;
     }
 }
 

@@ -1,0 +1,35 @@
+﻿@page "/Admin/StopImpersonation"
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
+
+@using CRS.Services.Tenant
+@inject ITenantContext TenantContext
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject ILogger<CRS.Components.Pages.Admin.StopImpersonation> Logger
+
+<PageTitle>Stop Impersonation</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-6">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" Class="mb-2">Stop Impersonation</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Return to platform context.</MudText>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Stop">Stop impersonating</MudButton>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private void Stop()
+    {
+        var previousTenant = TenantContext.TenantName ?? TenantContext.TenantId?.ToString();
+        // Clear tenant context and return to platform area
+        TenantContext.TenantId = null;
+        TenantContext.TenantName = null;
+        TenantContext.Subdomain = null;
+        TenantContext.IsActive = true;
+        TenantContext.BrandingJson = null;
+        TenantContext.IsResolvedByLogin = false;
+        Logger.LogInformation("Impersonation stopped for tenant {Tenant}", previousTenant);
+        Snackbar.Add($"Stopped impersonating '{previousTenant}'", Severity.Info);
+        Nav.NavigateTo("/Admin/Tenants", forceLoad: true);
+    }
+}

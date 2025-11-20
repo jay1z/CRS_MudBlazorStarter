@@ -1407,6 +1407,54 @@ namespace CRS.Migrations
                     b.ToTable("ReserveStudyCommonElements", "crs");
                 });
 
+            modelBuilder.Entity("CRS.Models.Security.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Roles", "crs");
+                });
+
+            modelBuilder.Entity("CRS.Models.Security.UserRoleAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserRoleAssignments", "crs");
+                });
+
             modelBuilder.Entity("CRS.Models.ServiceContact", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2081,6 +2129,33 @@ namespace CRS.Migrations
                     b.Navigation("ServiceContact");
                 });
 
+            modelBuilder.Entity("CRS.Models.Security.UserRoleAssignment", b =>
+                {
+                    b.HasOne("CRS.Models.Security.Role", "Role")
+                        .WithMany("Assignments")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Models.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Role");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CRS.Models.Settings", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", "User")
@@ -2193,6 +2268,11 @@ namespace CRS.Migrations
                     b.Navigation("ReserveStudyCommonElements");
 
                     b.Navigation("StudyRequest");
+                });
+
+            modelBuilder.Entity("CRS.Models.Security.Role", b =>
+                {
+                    b.Navigation("Assignments");
                 });
 #pragma warning restore 612, 618
         }

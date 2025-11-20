@@ -1,64 +1,63 @@
 ﻿@* A reusable timeline item component for workflow status displays *@
 
-<MudTimelineItem TimelineAlign="TimelineAlign.Start" 
- Color="@GetItemColor()" 
- Hidden="@IsHidden"
- Class="@(IsCurrent ? "timeline-current" : null)">
- <ItemOpposite>
- @if (DateValue.HasValue) {
- <MudText Color="@GetItemColor()" Typo="Typo.caption">
- @FormatDate(DateValue.Value)
- </MudText>
- }
- </ItemOpposite>
- <ItemContent>
- <MudPaper Elevation="0">
- <MudText Color="@GetItemColor()" Typo="@(IsCurrent ? Typo.subtitle1 : Typo.body1)" Class="@(IsCurrent ? "fw-bold" : null)">@Title</MudText>
- @if (!string.IsNullOrEmpty(Actor)) {
- <MudText Typo="Typo.caption" Class="mud-text-secondary">@Actor</MudText>
- }
- </MudPaper>
- </ItemContent>
+<MudTimelineItem TimelineAlign="TimelineAlign.Start"
+                 Color="@GetItemColor()"
+                 Hidden="@IsHidden"
+                 Class="@(IsCurrent ? "timeline-current" : null)">
+    <ItemOpposite>
+        @if (DateValue.HasValue) {
+            <MudText Color="@GetItemColor()" Typo="Typo.caption">
+                @FormatDate(DateValue.Value)
+            </MudText>
+        }
+    </ItemOpposite>
+    <ItemContent>
+        <MudPaper Elevation="0">
+            <MudText Color="@GetItemColor()" Typo="@(IsCurrent? Typo.subtitle1: Typo.body1)" Class="@(IsCurrent ? "fw-bold" : null)">@Title</MudText>
+            @if (!string.IsNullOrEmpty(Actor)) {
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@Actor</MudText>
+            }
+        </MudPaper>
+    </ItemContent>
 </MudTimelineItem>
 
 @code {
- [Parameter]
- public ReserveStudy.WorkflowStatus Status { get; set; }
+    [Parameter]
+    public ReserveStudy.WorkflowStatus Status { get; set; }
 
- [Parameter]
- public DateTime? DateValue { get; set; }
+    [Parameter]
+    public DateTime? DateValue { get; set; }
 
- [Parameter]
- public string? Title { get; set; }
+    [Parameter]
+    public string? Title { get; set; }
 
- [Parameter]
- public string? Actor { get; set; }
+    [Parameter]
+    public string? Actor { get; set; }
 
- [Parameter]
- public bool IsHidden { get; set; } = false;
+    [Parameter]
+    public bool IsHidden { get; set; } = false;
 
- [Parameter]
- public ReserveStudy? ReserveStudy { get; set; }
+    [Parameter]
+    public ReserveStudy? ReserveStudy { get; set; }
 
- // explicit coloring state from parent (order-aware)
- [Parameter]
- public bool IsCurrent { get; set; }
+    // explicit coloring state from parent (order-aware)
+    [Parameter]
+    public bool IsCurrent { get; set; }
 
- [Parameter]
- public bool IsCompleted { get; set; }
+    [Parameter]
+    public bool IsCompleted { get; set; }
 
- private Color GetItemColor()
- {
- if (Status == ReserveStudy.WorkflowStatus.RequestCancelled) {
- return Color.Error;
- }
- if (IsCurrent) return Color.Warning;
- if (IsCompleted) return Color.Success;
- if (ReserveStudy?.Status == Status) return Color.Warning;
- else if (ReserveStudy?.Status > Status) return Color.Success;
- else return Color.Default;
- }
+    private Color GetItemColor() {
+        if (Status == ReserveStudy.WorkflowStatus.RequestCancelled) {
+            return Color.Error;
+        }
+        if (IsCurrent) return Color.Warning;
+        if (IsCompleted) return Color.Success;
+        if (ReserveStudy?.Status == Status) return Color.Warning;
+        else if (ReserveStudy?.Status > Status) return Color.Success;
+        else return Color.Default;
+    }
 
- private string FormatDate(DateTime dt)
- => dt.ToLocalTime().ToString("MMM d, h:mm tt");
+    private string FormatDate(DateTime dt)
+    => dt.ToLocalTime().ToString("MMM d, h:mm tt");
 }

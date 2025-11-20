@@ -1,0 +1,177 @@
+﻿@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using CRS.Services.Tenant
+@using CRS.Data
+@using CRS.MultiTenancy.Database // add
+@using Microsoft.EntityFrameworkCore // add
+@using Microsoft.AspNetCore.Identity // add
+@using CRS.Models.Security // add
+@using MudBlazor // ensure Mud types
+@inject ITenantContext TenantContext
+@inject ITenantDbContextFactory TenantDbFactory
+@inject NavigationManager Nav
+@inject ILogger<TenantUserManagement> Logger
+@inject IServiceProvider Services
+
+<PageTitle>Manage Users</PageTitle>
+
+<h3>User Management (@TenantContext.TenantName)</h3>
+@if (TenantContext.TenantId == null)
+{
+    <p>No tenant context.</p>
+}
+else if (_loading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <MudTable Items="_users" Hover="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Email</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Roles</MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Email</MudTd>
+            <MudTd>@context.FirstName @context.LastName</MudTd>
+            <MudTd>
+                @if (_userRoles.TryGetValue(context.Id, out var roles))
+                {
+                    @string.Join(", ", roles)
+                }
+            </MudTd>
+            <MudTd>
+                <MudButton Color="Color.Primary" Variant="Variant.Text" OnClick="() => EditRoles(context)">Edit Roles</MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    <MudDivider Class="my-4" />
+    <MudPaper Class="pa-4" Elevation="1">
+        <MudText Typo="Typo.h6">Invite New User</MudText>
+        <MudForm @ref="_form" OnValidSubmit="InviteUserAsync">
+            <MudTextField @bind-Value="_inviteEmail" Label="Email" Required="true" />
+            <MudTextField @bind-Value="_firstName" Label="First Name" />
+            <MudTextField @bind-Value="_lastName" Label="Last Name" />
+            <MudSelect T="string" Label="Initial Role" @bind-Value="_initialRole" Required="true">
+                @foreach (var r in _tenantRoles)
+                {
+                    <MudSelectItem Value="@r">@r</MudSelectItem>
+                }
+            </MudSelect>
+            <MudButton Disabled="_inviting" ButtonType="ButtonType.Submit" Color="Color.Primary">@(_inviting?"Inviting...":"Invite")</MudButton>
+        </MudForm>
+    </MudPaper>
+}
+
+<MudDialog @bind-IsVisible="_roleDialogOpen" MaxWidth="MaxWidth.Small">
+    <DialogContent>
+        <MudText Typo="Typo.h6">Edit Roles - @_editUserEmail</MudText>
+        <MudList T="string">
+            @foreach (var r in _tenantRoles)
+            {
+                <MudListItem T="string">
+                    <MudCheckBox T="bool" @bind-Checked="_editRoles[r]" /> @r
+                </MudListItem>
+            }
+        </MudList>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="SaveRolesAsync" Color="Color.Primary">Save</MudButton>
+        <MudButton OnClick="() => _roleDialogOpen = false" Color="Color.Secondary">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool _loading = true;
+    private bool _inviting = false;
+    private List<ApplicationUser> _users = new();
+    private Dictionary<Guid, List<string>> _userRoles = new();
+    private string _inviteEmail = string.Empty;
+    private string _firstName = string.Empty;
+    private string _lastName = string.Empty;
+    private string _initialRole = "TenantViewer";
+    private MudForm? _form;
+    private readonly string[] _tenantRoles = new[] {"TenantOwner","TenantSpecialist","TenantViewer"};
+
+    private bool _roleDialogOpen = false;
+    private Guid _editUserId;
+    private string _editUserEmail = string.Empty;
+    private Dictionary<string,bool> _editRoles = new();
+
+    protected override async Task OnInitializedAsync() {
+        if (TenantContext.TenantId == null) { _loading = false; return; }
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync() {
+        try {
+            _loading = true;
+            await using var db = await TenantDbFactory.CreateAsync(TenantContext.TenantId);
+            _users = await db.Users.Where(u => u.TenantId == TenantContext.TenantId).OrderBy(u => u.Email).ToListAsync();
+            var roleAssignments = await db.UserRoleAssignments.Include(a => a.Role!).Where(a => a.TenantId == TenantContext.TenantId).ToListAsync();
+            _userRoles = roleAssignments.GroupBy(a => a.UserId).ToDictionary(g => g.Key, g => g.Select(a => a.Role!.Name).Distinct().ToList());
+        } catch (Exception ex) { Logger.LogError(ex, "Error loading tenant users"); }
+        finally { _loading = false; }
+    }
+
+    private async Task InviteUserAsync() {
+        if (TenantContext.TenantId == null) return;
+        _inviting = true;
+        try {
+            await using var db = await TenantDbFactory.CreateAsync(TenantContext.TenantId);
+            if (await db.Users.AnyAsync(u => u.Email == _inviteEmail)) return;
+            var userManager = Services.GetRequiredService<UserManager<ApplicationUser>>();
+            var newUser = new ApplicationUser {
+                Email = _inviteEmail,
+                UserName = _inviteEmail,
+                FirstName = _firstName,
+                LastName = _lastName,
+                EmailConfirmed = true,
+                TenantId = TenantContext.TenantId.Value
+            };
+            var result = await userManager.CreateAsync(newUser, "Temp1!Password");
+            if (result.Succeeded) {
+                var role = await db.Roles2.FirstOrDefaultAsync(r => r.Name == _initialRole);
+                if (role != null) {
+                    db.UserRoleAssignments.Add(new UserRoleAssignment { UserId = newUser.Id, RoleId = role.Id, TenantId = TenantContext.TenantId.Value });
+                    await db.SaveChangesAsync();
+                }
+                _inviteEmail = _firstName = _lastName = string.Empty;
+                _initialRole = "TenantViewer";
+                await LoadUsersAsync();
+            }
+        } catch (Exception ex) { Logger.LogError(ex, "Invite failed"); }
+        finally { _inviting = false; }
+    }
+
+    private void EditRoles(ApplicationUser user) {
+        _editUserId = user.Id;
+        _editUserEmail = user.Email ?? string.Empty;
+        _editRoles = _tenantRoles.ToDictionary(r => r, r => _userRoles.TryGetValue(user.Id, out var rs) && rs.Contains(r));
+        _roleDialogOpen = true;
+    }
+
+    private async Task SaveRolesAsync() {
+        if (TenantContext.TenantId == null) return;
+        try {
+            await using var db = await TenantDbFactory.CreateAsync(TenantContext.TenantId);
+            var allAssignments = await db.UserRoleAssignments.Where(a => a.UserId == _editUserId && a.TenantId == TenantContext.TenantId).ToListAsync();
+            var rolesAll = await db.Roles2.Where(r => r.Scope == RoleScope.Tenant).ToListAsync();
+            foreach (var a in allAssignments) {
+                var rName = rolesAll.FirstOrDefault(r => r.Id == a.RoleId)?.Name;
+                if (rName != null && _editRoles.ContainsKey(rName) && !_editRoles[rName]) db.UserRoleAssignments.Remove(a);
+            }
+            foreach (var kvp in _editRoles.Where(k => k.Value)) {
+                var role = rolesAll.FirstOrDefault(r => r.Name == kvp.Key);
+                if (role == null) continue;
+                bool exists = allAssignments.Any(a => a.RoleId == role.Id);
+                if (!exists) db.UserRoleAssignments.Add(new UserRoleAssignment { UserId = _editUserId, RoleId = role.Id, TenantId = TenantContext.TenantId.Value });
+            }
+            await db.SaveChangesAsync();
+            _roleDialogOpen = false;
+            await LoadUsersAsync();
+        } catch (Exception ex) { Logger.LogError(ex, "Failed to save roles"); }
+    }
+}

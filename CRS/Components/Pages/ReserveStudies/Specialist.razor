@@ -1,5 +1,5 @@
-@page "/ReserveStudies/Specialist"
-@attribute [Authorize(Roles = "Specialist,Admin")]
+﻿@page "/ReserveStudies/Specialist"
+@attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @using CRS.Models
 @using CRS.Services

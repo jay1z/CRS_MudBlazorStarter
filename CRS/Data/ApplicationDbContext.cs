@@ -2,6 +2,7 @@
 using System.Security.Claims;
 
 using CRS.Models;
+using CRS.Models.Security; // add
 using CRS.Models.Workflow; // add
 using CRS.Services.Tenant;
 
@@ -16,23 +17,26 @@ namespace CRS.Data {
         private readonly IHttpContextAccessor _httpContextAccessor;
         // SaaS Refactor: Inject tenant context
         private readonly ITenantContext _tenantContext;
+        private readonly string? _explicitConnection; // multi-tenant override
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor, ITenantContext tenantContext)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor, ITenantContext tenantContext, string? explicitConnection = null)
             : base(options) {
             _httpContextAccessor = httpContextAccessor;
             _tenantContext = tenantContext;
+            _explicitConnection = explicitConnection;
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
             base.OnConfiguring(optionsBuilder);
 
+            // If explicit connection provided (per-tenant DB), ensure it's applied when options not yet configured
+            if (!string.IsNullOrEmpty(_explicitConnection) && !optionsBuilder.IsConfigured) {
+                optionsBuilder.UseSqlServer(_explicitConnection, sql => sql.EnableRetryOnFailure());
+            }
+
             optionsBuilder
                 .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
-                //.ConfigureWarnings(w => w.Throw(SqlServerEventId.SavepointsDisabledBecauseOfMARS))
                 .UseSeeding((context, _) => { SeedData(context); });
-            //.UseAsyncSeeding(async (context, _, cancellationToken) => {
-            //    await SeedDataAsync(context);
-            //});
         }
 
         protected override void OnModelCreating(ModelBuilder builder) {
@@ -88,6 +92,34 @@ namespace CRS.Data {
                 .HasOne(r => r.ReserveStudy)
                 .WithOne(s => s.StudyRequest)
                 .HasForeignKey<StudyRequest>(r => r.Id);
+
+            // Security entities
+            builder.Entity<Role>(entity => {
+                entity.ToTable("Roles");
+                entity.HasKey(r => r.Id);
+                entity.Property(r => r.Name).IsRequired().HasMaxLength(128);
+                entity.HasIndex(r => r.Name).IsUnique();
+                entity.Property(r => r.Scope).IsRequired();
+            });
+
+            builder.Entity<UserRoleAssignment>(entity => {
+                entity.ToTable("UserRoleAssignments");
+                entity.HasKey(a => a.Id);
+                entity.HasIndex(a => a.UserId);
+                entity.HasIndex(a => a.TenantId);
+                entity.HasOne(a => a.User)
+                      .WithMany()
+                      .HasForeignKey(a => a.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(a => a.Role)
+                      .WithMany(r => r.Assignments)
+                      .HasForeignKey(a => a.RoleId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(a => a.Tenant)
+                      .WithMany()
+                      .HasForeignKey(a => a.TenantId)
+                      .OnDelete(DeleteBehavior.NoAction);
+            });
         }
 
         // Apply tenant query filters to all ITenantScoped entities
@@ -259,6 +291,9 @@ namespace CRS.Data {
         public DbSet<StudyRequest> StudyRequests { get; set; } // add
         public DbSet<StudyStatusHistory> StudyStatusHistories { get; set; } // add
         public DbSet<CRS.Models.Message> Messages { get; set; }
+        // New security sets
+        public DbSet<Role> Roles2 { get; set; }
+        public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
         #endregion
 
         #region Seed Data

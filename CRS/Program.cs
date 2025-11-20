@@ -12,6 +12,8 @@ using CRS.Services.Email;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 using CRS.Services.MultiTenancy;
+using CRS.Services.MultiTenancy.Provisioning; // add
+using CRS.MultiTenancy.Database; // add missing database interfaces
 using CRS.Models.Workflow; // Added for workflow example
 
 using Microsoft.AspNetCore.Components.Authorization;
@@ -109,9 +111,13 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // SaaS Refactor: register tenant services
     builder.Services.AddScoped<ITenantContext, TenantContext>();
     builder.Services.AddScoped<TenantService>();
-    builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, TenantClaimsPrincipalFactory>();
-    builder.Services.AddScoped<CRS.Services.File.IFileStorageService, CRS.Services.File.FileStorageService>();
-    builder.Services.AddScoped<CRS.Services.License.ILicenseValidationService, CRS.Services.License.LicenseValidationService>();
+
+    // Multi-DB per-tenant strategy services
+    builder.Services.AddSingleton<ITenantDatabaseResolver, DefaultTenantDatabaseResolver>();
+    builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
+    builder.Services.AddScoped<ITenantMigrationService, TenantMigrationService>();
+
+    // User management and notification services
     builder.Services.AddScoped<IUserSettingsService, UserSettingsService>();
     // Messaging
     builder.Services.AddScoped<CRS.Services.Interfaces.IMessageService, CRS.Services.MessageService>();
@@ -125,6 +131,13 @@ void ConfigureServices(WebApplicationBuilder builder) {
 
     // Authorization policy
     builder.Services.AddTenantPolicies();
+
+    // Antiforgery options: relax SameSite to ensure cookie is sent on top-level POSTs
+    builder.Services.AddAntiforgery(options => {
+        options.Cookie.Name = ".CRS.AntiForgery";
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    });
 
     // Register Coravel
     builder.Services.AddMailer(builder.Configuration);
@@ -162,6 +175,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Identity configuration
     ConfigureIdentity(builder);
 
+    // IMPORTANT: Register custom claims principal factory AFTER AddIdentityCore so it overrides the default
+    builder.Services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, TenantClaimsPrincipalFactory>();
+
     // Additional services
     builder.Services.AddQuickGridEntityFrameworkAdapter();
     builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -184,6 +200,11 @@ void ConfigureServices(WebApplicationBuilder builder) {
             .AllowCredentials();
         });
     });
+
+    // Multi-tenant provisioning services
+    builder.Services.AddSingleton<ITenantProvisioningQueue, InMemoryTenantProvisioningQueue>();
+    builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+    builder.Services.AddHostedService<CRS.Workers.TenantProvisioningWorker>();
 }
 
 void ConfigureDatabases(WebApplicationBuilder builder) {
@@ -243,9 +264,11 @@ void ConfigureIdentity(WebApplicationBuilder builder) {
         options.LogoutPath = "/Account/Logout";
         options.AccessDeniedPath = "/Account/AccessDenied";
 
-        // Share auth cookie across all subdomains if RootDomain configured
-        var rootDomain = builder.Configuration["App:RootDomain"];
-        if (!string.IsNullOrWhiteSpace(rootDomain)) {
+        // IMPORTANT: Keep sessions tenant-specific by default.
+        // Only share auth cookie across subdomains if explicitly enabled via configuration.
+        var rootDomain = builder.Configuration["App:RootDomain"]; // e.g., alxreservecloud.com
+        var shareAcross = builder.Configuration.GetValue<bool>("App:ShareAuthAcrossSubdomains", false);
+        if (shareAcross && !string.IsNullOrWhiteSpace(rootDomain)) {
             options.Cookie.Domain = "." + rootDomain.Trim('.');
         }
     });
@@ -315,6 +338,10 @@ async Task ConfigurePipeline(WebApplication app) {
 
     app.UseAntiforgery();
 
+    // Authenticate and authorize requests
+    app.UseAuthentication();
+    app.UseAuthorization();
+
     // Dev helper: promote a user to Admin quickly
     if (app.Environment.IsDevelopment()) {
         app.MapGet("/dev/make-admin", async (string email, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole<Guid>> roleManager) => {
@@ -351,116 +378,60 @@ async Task ConfigurePipeline(WebApplication app) {
 
     // Map endpoints
     app.MapStaticAssets();
-    // Map attribute-routed controllers (API endpoints)
     app.MapControllers();
     app.MapHub<KanbanHub>("/kanbanhub");
-
-    // SaaS Refactor: Public tenant homepage renderer (temporary preview endpoint)
-    // Use a tenant id-based preview route for local testing when subdomains are not available.
-    // Example: GET /tenant/preview/1
-    app.MapGet("/tenant/preview/{tenantId:int}", async (int tenantId, TenantHomepageService homepageService) => {
-        try {
-            var homepage = await homepageService.GetByTenantIdAsync(tenantId);
-            if (homepage != null && homepage.IsPublished && !string.IsNullOrWhiteSpace(homepage.PublishedHtml)) {
-                // Note: PublishedHtml should be sanitized when saved/published to avoid XSS
-                return Results.Content(homepage.PublishedHtml!, "text/html");
-            }
-        } catch {
-            // Best-effort - swallow exceptions to avoid crashing the site
-        }
-
-        // Not found or not published
-        return Results.NotFound();
-    });
-
-    // New minimal API: save GrapesJS HTML (sanitized) to wwwroot/exports/{slug}/{timestamp}.html
-    app.MapPost("/api/grapes/save", async (SaveRequest req, IWebHostEnvironment env) => {
-        if (req == null || string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Html)) return Results.BadRequest("name and html are required");
-        try {
-            var sanitizer = new HtmlSanitizer();
-            var sanitized = sanitizer.Sanitize(req.Html);
-            var slug = Regex.Replace(req.Name.ToLowerInvariant(), @"[^a-z0-9\-]", "-").Trim('-');
-            if (string.IsNullOrWhiteSpace(slug)) slug = "page";
-            var ts = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-            var dir = Path.Combine(env.ContentRootPath, "wwwroot", "exports", slug);
-            Directory.CreateDirectory(dir);
-            var htmlPath = Path.Combine(dir, ts + ".html");
-            await File.WriteAllTextAsync(htmlPath, sanitized);
-            // also save raw components JSON if provided
-            if (!string.IsNullOrWhiteSpace(req.ComponentsJson)) {
-                var jsonPath = Path.Combine(dir, ts + ".json");
-                await File.WriteAllTextAsync(jsonPath, req.ComponentsJson);
-            }
-            var url = $"/exports/{slug}/{ts}.html";
-            return Results.Json(new { name = req.Name, url, created = DateTime.UtcNow });
-        } catch (Exception ex) {
-            return Results.Problem(ex.Message);
-        }
-    }).WithName("GrapesSave");
-
-    // List saved exports for a slug
-    app.MapGet("/api/grapes/list/{slug}", (string slug, IWebHostEnvironment env) => {
-        var dir = Path.Combine(env.ContentRootPath, "wwwroot", "exports", slug);
-        if (!Directory.Exists(dir)) return Results.NotFound();
-        var files = Directory.GetFiles(dir, "*.html").Select(f => new {
-            file = Path.GetFileName(f),
-            url = $"/exports/{slug}/{Path.GetFileName(f)}",
-            created = File.GetCreationTimeUtc(f)
-        }).OrderByDescending(x => x.created);
-        return Results.Json(files);
-    }).WithName("GrapesList");
 
     app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
     app.MapAdditionalIdentityEndpoints();
 
-    // Health checks
     app.MapHealthChecks("/health");
 }
 
 async Task SeedDatabase(WebApplication app) {
-    // Seed roles for all environments
-    using (var scope = app.Services.CreateScope()) {
-        try {
-            var services = scope.ServiceProvider;
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            var dbContext = services.GetRequiredService<ApplicationDbContext>();
+    using var scope = app.Services.CreateScope();
+    try {
+        var services = scope.ServiceProvider;
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
 
-            // Determine whether the database is reachable and whether migrations have already been applied.
-            var canConnect = await dbContext.Database.CanConnectAsync();
-            bool hasAppliedMigrations = false;
-            try {
-                hasAppliedMigrations = dbContext.Database.GetAppliedMigrations().Any();
-            } catch (Exception ex) {
-                // If querying applied migrations fails, log and continue. We'll try to migrate only when the server is reachable.
-                logger.LogWarning(ex, "Unable to determine applied migrations.");
-            }
+        var canConnect = await dbContext.Database.CanConnectAsync();
+        bool hasAppliedMigrations = false;
+        try { hasAppliedMigrations = dbContext.Database.GetAppliedMigrations().Any(); } catch (Exception ex) { logger.LogWarning(ex, "Unable to determine applied migrations."); }
 
-            if (canConnect) {
-                if (!hasAppliedMigrations) {
-                    logger.LogInformation("Database reachable but no applied migrations found. Applying migrations.");
-                    dbContext.Database.Migrate();
-                }
-            } else {
-                logger.LogWarning("Database is not reachable at startup; skipping automatic migrations.");
-            }
-
-            // Always seed roles
-            await SeedManager.SeedRolesAsync(services);
-
-            if (app.Environment.IsDevelopment()) {
-                await SeedManager.SeedTestUsersAsync(services);
-                await SeedManager.SeedAdminUserAsync(services);
-                await SeedManager.SeedTenantsAndAdminsAsync(services); // Dev-only helper if you keep it
-            } else {
-                // Production: only seed admin user(s) and no tenants/users
-                await SeedManager.SeedAdminUserAsync(services);
-            }
-        } catch (Exception ex) {
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        if (canConnect && !hasAppliedMigrations) {
+            logger.LogInformation("Applying migrations.");
+            dbContext.Database.Migrate();
         }
+
+        // Ensure core scoped roles before users/tenants so claims resolve correctly
+        await SeedManager.SeedScopedRolesAsync(services);
+
+        if (app.Environment.IsDevelopment()) {
+            await SeedManager.SeedTenantsAndAdminsAsync(services); // ensure platform tenant
+            await SeedManager.SeedAdminUserAsync(services);
+            await SeedManager.SeedTestUsersAsync(services);
+        } else {
+            await SeedManager.SeedTenantsAndAdminsAsync(services);
+            await SeedManager.SeedAdminUserAsync(services);
+        }
+
+        // Dev-only: ensure per-tenant databases for all tenants if config flag set
+        var provisionFlag = app.Configuration.GetValue<bool>("MultiTenancy:ProvisionTenantDatabases", false);
+        if (provisionFlag) {
+            var tenantIds = await dbContext.Tenants.Select(t => t.Id).ToListAsync();
+            var migrator = services.GetRequiredService<ITenantMigrationService>();
+            foreach (var tid in tenantIds) {
+                await migrator.EnsureDatabaseAsync(tid);
+                await migrator.MigrateAsync(tid);
+                await migrator.SeedAsync(tid);
+            }
+        }
+    } catch (Exception ex) {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
     }
 }
 
-// DTO for save endpoint
+// DTOs
 public record SaveRequest(string Name, string Html, string? ComponentsJson);
+public record TenantFindRequest(string Email);

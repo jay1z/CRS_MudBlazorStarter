@@ -1,5 +1,5 @@
 ﻿@page "/Communities/Details/{Id:guid}"
-@attribute [Authorize]
+@attribute [Authorize(Policy = "RequireTenantViewer")]
 
 @using CRS.Data
 @using CRS.Services
@@ -51,7 +51,11 @@
                     <!-- Actions Card -->
                     <MudCard Outlined="true" Class="mb-4">
                         <MudCardContent>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/Communities/Update/{community.Id}")">Update Community</MudButton>
+                            <AuthorizeView Policy="RequireTenantStaff">
+                                <Authorized>
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/Communities/Update/{community.Id}")">Update Community</MudButton>
+                                </Authorized>
+                            </AuthorizeView>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -117,12 +121,7 @@
                 .AsSplitQuery()
                 .Where(rs => rs.CommunityId == community.Id).ToListAsync();
 
-                isAuthorized = UserState.ClaimsPrincipal.Identity.IsAuthenticated; // &&
-                // (await UserManager.IsInRoleAsync(UserState.CurrentUser, "Admin") ||
-                //      reserveStudy.ApplicationUserId == UserState.CurrentUser.Id ||
-                //      reserveStudy.SpecialistUserId == UserState.CurrentUser.Id ||
-                //      reserveStudy.PointOfContactType == ReserveStudy.PointOfContactTypeEnum.Contact && reserveStudy.Contact?.Email == UserState.CurrentUser.Email ||
-                //      reserveStudy.PointOfContactType == ReserveStudy.PointOfContactTypeEnum.PropertyManager && reserveStudy.PropertyManager?.Email == UserState.CurrentUser.Email);
+                isAuthorized = UserState.ClaimsPrincipal.Identity.IsAuthenticated; // additional checks can be applied
             }
         }
         catch (Exception ex) {

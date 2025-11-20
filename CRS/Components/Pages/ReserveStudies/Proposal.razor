@@ -1,5 +1,5 @@
-@page "/ReserveStudies/{studyId:guid}/Proposal"
-@attribute [Authorize]
+﻿@page "/ReserveStudies/{studyId:guid}/Proposal"
+@attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @using CRS.Data
 @using CRS.Models

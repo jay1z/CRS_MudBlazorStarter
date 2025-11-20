@@ -8,6 +8,10 @@
     <AddRazorSupportForMvc>True</AddRazorSupportForMvc>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Documentation\Financial Data.pdf" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="Coravel" Version="6.0.2" />

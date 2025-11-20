@@ -1,0 +1,85 @@
+﻿@page "/Admin/Users"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using CRS.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole<Guid>> RoleManager
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Manage Users</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudPaper Class="pa-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <MudText Typo="Typo.h5">Tenant Users</MudText>
+            <MudTextField @bind-Value="searchValue" Placeholder="Search users..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Class="w-50" />
+        </MudStack>
+
+        <MudTable T="ApplicationUser" Items="filteredUsers" Hover="true" Dense="true" Bordered="true">
+            <HeaderContent>
+                <MudTh>User Name</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Roles</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh align="right">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.UserName</MudTd>
+                <MudTd>@context.Email</MudTd>
+                <MudTd>
+                    @foreach (var role in (context.Roles ?? Array.Empty<string>()))
+                    {
+                        <MudChip T="string" Size="Size.Small" Class="mr-1">@role</MudChip>
+                    }
+                </MudTd>
+                <MudTd>@context.Status</MudTd>
+                <MudTd align="right">
+                    <MudIconButton Icon="@Icons.Material.Filled.GroupAdd" OnClick="() => OpenAddRoleToUserDialog(context)" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<ApplicationUser> users = new();
+    private string? searchValue;
+
+    private IEnumerable<ApplicationUser> filteredUsers => string.IsNullOrWhiteSpace(searchValue)
+        ? users
+        : users.Where(u =>
+            (u.UserName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (u.Email?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            users = await UserManager.Users.OrderBy(u => u.UserName).ToListAsync();
+            foreach (var user in users)
+            {
+                user.Roles = await UserManager.GetRolesAsync(user);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Task OpenAddRoleToUserDialog(ApplicationUser user)
+    {
+        var parameters = new DialogParameters<CRS.Components.Pages.Users.AddUserToRoleDialog> { { x => x.User, user } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true, MaxWidth = MaxWidth.Medium };
+        return DialogService.ShowAsync<CRS.Components.Pages.Users.AddUserToRoleDialog>("Add Role", parameters, options);
+    }
+}

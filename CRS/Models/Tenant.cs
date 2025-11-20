@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace CRS.Models {
@@ -16,5 +16,18 @@ namespace CRS.Models {
 
         // New: time-ordered public identifier (UUIDv7) - use runtime-provided GUID v7
         public Guid PublicId { get; set; } = Guid.CreateVersion7();
+
+        // Provisioning lifecycle
+        public TenantProvisioningStatus ProvisioningStatus { get; set; } = TenantProvisioningStatus.Pending; // initial
+        public DateTime? ProvisionedAt { get; set; }
+        public string? ProvisioningError { get; set; }
+    }
+
+    public enum TenantProvisioningStatus {
+        Pending = 0,
+        Provisioning = 1,
+        Active = 2,
+        Failed = 3,
+        Disabled = 4
     }
 }

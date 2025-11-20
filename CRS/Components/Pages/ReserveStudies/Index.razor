@@ -1,5 +1,5 @@
 ﻿@page "/ReserveStudies"
-@attribute [Authorize]
+@attribute [Authorize(Policy = "RequireTenantViewer")]
 
 @using CRS.Components.Pages.ReserveStudy.Dialogs
 @using CRS.Data
@@ -59,39 +59,43 @@
                         <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.DateCreated)">CREATED</MudTableSortLabel></MudTh>
                         <MudTh>ACTIONS</MudTh>
                     </HeaderContent>
-                    <RowTemplate>
+                    <RowTemplate Context="study">
                         <MudTd DataLabel="Community">
-                            <MudText Typo="Typo.h5" Class="fw-bold">@context.Community.Name</MudText>
+                            <MudText Typo="Typo.h5" Class="fw-bold">@study.Community.Name</MudText>
                         </MudTd>
                         <MudTd DataLabel="Contact">
-                            <MudText Typo="Typo.body1">@context.PointOfContact?.FullNameInverted</MudText>
-                            <MudText Typo="Typo.caption">@context.PointOfContact?.CompanyName</MudText>
+                            <MudText Typo="Typo.body1">@study.PointOfContact?.FullNameInverted</MudText>
+                            <MudText Typo="Typo.caption">@study.PointOfContact?.CompanyName</MudText>
                         </MudTd>
                         <MudTd DataLabel="Email">
-                            <MudLink Href="@($"mailto:{context.PointOfContact?.Email}")">@context.PointOfContact?.Email</MudLink>
+                            <MudLink Href="@($"mailto:{study.PointOfContact?.Email}")">@study.PointOfContact?.Email</MudLink>
                         </MudTd>
                         <MudTd DataLabel="Phone">
-                            <MudText Typo="Typo.body1">@context.PointOfContact?.Phone
-                            @if (!string.IsNullOrEmpty(context.PointOfContact?.Extension)) {
-                                <MudText Typo="Typo.caption">@($" x{context.PointOfContact?.Extension}")</MudText>
+                            <MudText Typo="Typo.body1">@study.PointOfContact?.Phone
+                            @if (!string.IsNullOrEmpty(study.PointOfContact?.Extension)) {
+                                <MudText Typo="Typo.caption">@($" x{study.PointOfContact?.Extension}")</MudText>
                             }
                             </MudText>
                         </MudTd>
                         <MudTd DataLabel="Specialist">
-                            <MudText Typo="Typo.body1">@context.Specialist?.FullName</MudText>
-                            <MudText Typo="Typo.caption">@context.Specialist?.Email</MudText>
+                            <MudText Typo="Typo.body1">@study.Specialist?.FullName</MudText>
+                            <MudText Typo="Typo.caption">@study.Specialist?.Email</MudText>
                         </MudTd>
                         <MudTd DataLabel="Created">
-                            <MudText Typo="Typo.body1">@($"{context.DateCreated?.ToShortDateString()} {context.DateCreated?.ToShortTimeString()}")</MudText>
+                            <MudText Typo="Typo.body1">@($"{study.DateCreated?.ToShortDateString()} {study.DateCreated?.ToShortTimeString()}")</MudText>
                         </MudTd>
                         <MudTd>
                             <MudStack Row>
-                                <MudButton Href="@($"/ReserveStudies/{context.Id}/Details")" Size="Size.Small" Variant="Variant.Filled">
+                                <MudButton Href="@($"/ReserveStudies/{study.Id}/Details")" Size="Size.Small" Variant="Variant.Filled">
                                     View
                                 </MudButton>
-                                <MudButton OnClick="@(() => OpenDeleteDialog(context))" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
-                                    Delete
-                                </MudButton>
+                                <AuthorizeView Policy="RequireTenantStaff">
+                                    <Authorized Context="auth">
+                                        <MudButton OnClick="@(() => OpenDeleteDialog(study))" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
+                                            Delete
+                                        </MudButton>
+                                    </Authorized>
+                                </AuthorizeView>
                             </MudStack>
                         </MudTd>
                     </RowTemplate>

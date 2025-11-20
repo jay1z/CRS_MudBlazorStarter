@@ -1,5 +1,6 @@
 ﻿@attribute [AllowAnonymous]
 @page "/Account/Login"
+@page "/login"
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
@@ -8,7 +9,7 @@
 @using CRS.Services.Tenant
 @using CRS.Services.License
 @using Microsoft.EntityFrameworkCore
-
+@using CRS.Services.MultiTenancy
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Login> Logger
@@ -19,6 +20,8 @@
 @inject ILicenseValidationService LicenseValidator
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ThemeService ThemeService
+@inject TenantService TenantService
+@inject IConfiguration Config
 
 <PageTitle>Log in</PageTitle>
 
@@ -27,10 +30,11 @@
 <MudGrid>
     <MudItem md="6">
         <StatusMessage Message="@errorMessage" />
-        <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+        <!-- Blazor handles submit in-circuit; do NOT set method/action here -->
+        <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="login">
             <DataAnnotationsValidator />
 
-            <MudText GutterBottom="true" Typo="Typo.body1">Use a local account to log in.</MudText>
+            <MudText GutterBottom="true" Typo="Typo.body1">Use your account to log in.</MudText>
 
             <MudGrid>
                 <MudItem md="12">
@@ -43,6 +47,20 @@
                                         Label="Password" InputType="InputType.Password" Placeholder="password"
                                         UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } } )" />
                 </MudItem>
+
+                <MudItem md="12">
+                    @if (!IsTenantFixed)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Text">
+                            Please log in on your tenant's subdomain (for example, https://tenant.@(Config["App:RootDomain"]) ).
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">Tenant: <strong>@FixedTenantSlug</strong></MudText>
+                    }
+                </MudItem>
+
                 <MudItem md="12">
                     <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Remember me</MudStaticCheckBox>
                 </MudItem>
@@ -79,6 +97,9 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
+    private bool IsTenantFixed => !string.IsNullOrWhiteSpace(TenantContext.Subdomain);
+    private string? FixedTenantSlug => TenantContext.Subdomain;
+
     protected override async Task OnInitializedAsync() {
         if (HttpMethods.IsGet(HttpContext.Request.Method)) {
             // Clear the existing external cookie to ensure a clean login process
@@ -89,91 +110,63 @@
     public async Task LoginUser() {
         errorMessage = null;
 
-        // This doesn't count login failures towards account lockout
-        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-        if (result.Succeeded) {
-            Logger.LogInformation("User logged in.");
-
-            // SaaS Refactor: Tenant match and license check
-            try {
-                var user = await UserManager.FindByEmailAsync(Input.Email);
-                if (user is null) {
-                    await SignInManager.SignOutAsync();
-                    errorMessage = "Error: Invalid login attempt.";
-                    return;
-                }
-
-                // If middleware resolved a tenant, require a match.
-                if (TenantContext.TenantId.HasValue) {
-                    var currentTenantId = TenantContext.TenantId.Value;
-                    if (user.TenantId != currentTenantId) {
-                        await SignInManager.SignOutAsync();
-                        errorMessage = "Error: You are trying to sign in to the wrong tenant.";
-                        return;
-                    }
-                }
-                else {
-                    // No tenant resolved (common on localhost). Adopt user's tenant for this session.
-                    try {
-                        TenantContext.TenantId = user.TenantId;
-                        TenantContext.IsResolvedByLogin = true;
-                        // try to resolve tenant name for UI
-                        try {
-                            await using var db = await DbFactory.CreateDbContextAsync();
-                            var tenant = await db.Tenants.FindAsync(user.TenantId);
-                            if (tenant != null) TenantContext.TenantName = tenant.Name;
-                        } catch { }
-                        try { ThemeService.ApplyTenantBrandingIfAvailableAndChanged(); } catch { }
-                        // Ensure UI that listens for theme/tenant changes updates immediately
-                        try { ThemeService.NotifyThemeChanged(); } catch { }
-                    } catch (Exception ex) {
-                        Logger.LogWarning(ex, "Failed to set TenantContext from user after login");
-                    }
-                }
-
-                // Re-issue authentication cookie including tenant claims so UI (EnvironmentBanner) that reads claims sees tenant
-                try {
-                    var additionalClaims = new List<System.Security.Claims.Claim>();
-                    if (user.TenantId != null) {
-                        additionalClaims.Add(new System.Security.Claims.Claim("tenant_id", user.TenantId.ToString()));
-                    }
-                    if (!string.IsNullOrWhiteSpace(TenantContext.TenantName)) {
-                        additionalClaims.Add(new System.Security.Claims.Claim("tenant_name", TenantContext.TenantName!));
-                    }
-                    // Sign out the current cookie and sign in with additional claims
-                    await SignInManager.SignOutAsync();
-                    var authProps = new AuthenticationProperties { IsPersistent = Input.RememberMe };
-                    await SignInManager.SignInWithClaimsAsync(user, authProps, additionalClaims);
-                } catch (Exception ex) {
-                    Logger.LogWarning(ex, "Failed to attach tenant claims to authentication cookie");
-                }
-
-                // Optional: license active check
-                var isActive = await LicenseValidator.IsTenantActiveAsync(TenantContext.TenantId.Value);
-                if (!isActive) {
-                    await SignInManager.SignOutAsync();
-                    errorMessage = "Error: This tenant is inactive. Please contact support.";
-                    return;
-                }
-            }
-            catch (Exception ex) {
-                Logger.LogError(ex, "Tenant validation failed during login");
-                await SignInManager.SignOutAsync();
-                errorMessage = "Error: Login failed due to tenant validation.";
-                return;
-            }
-
-            RedirectManager.RedirectTo(ReturnUrl);
+        // Require tenant to be resolved from subdomain
+        if (!IsTenantFixed) {
+            errorMessage = "Please login from your tenant subdomain (e.g., https://tenant." + (Config["App:RootDomain"] ?? "your-domain") + ").";
+            return;
         }
-        else if (result.RequiresTwoFactor) {
+
+        // Resolve tenant from subdomain
+        CRS.Models.Tenant? hostTenant = null;
+        try {
+            hostTenant = await TenantService.FindBySubdomainAsync(FixedTenantSlug!);
+        } catch { /* ignore */ }
+        if (hostTenant == null) {
+            errorMessage = "Error: Invalid username, password, or tenant.";
+            return;
+        }
+
+        // Validate credentials without issuing cookie first
+        var user = await UserManager.FindByEmailAsync(Input.Email);
+        if (user is null) {
+            errorMessage = "Error: Invalid username, password, or tenant.";
+            return;
+        }
+        var pwd = await SignInManager.CheckPasswordSignInAsync(user, Input.Password, lockoutOnFailure: false);
+        if (pwd.RequiresTwoFactor) {
             RedirectManager.RedirectTo("Account/LoginWith2fa", new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
         }
-        else if (result.IsLockedOut) {
-            Logger.LogWarning("User account locked out.");
-            RedirectManager.RedirectTo("Account/Lockout");
+        if (!pwd.Succeeded) {
+            if (pwd.IsLockedOut) {
+                Logger.LogWarning("User account locked out.");
+                RedirectManager.RedirectTo("Account/Lockout");
+            }
+            errorMessage = "Error: Invalid username, password, or tenant.";
+            return;
         }
-        else {
-            errorMessage = "Error: Invalid login attempt.";
+
+        // Enforce user belongs to this tenant
+        if (user.TenantId != hostTenant.Id) {
+            errorMessage = "Error: Invalid username, password, or tenant.";
+            return;
+        }
+
+        // Issue auth cookie for current host (tenant subdomain)
+        await SignInManager.SignInAsync(user, isPersistent: Input.RememberMe);
+
+        // License check
+        var isActive = await LicenseValidator.IsTenantActiveAsync(hostTenant.Id);
+        if (!isActive) {
+            await SignInManager.SignOutAsync();
+            errorMessage = "Error: This tenant is inactive. Please contact support.";
+            return;
+        }
+
+        // Stay on this host; go to ReturnUrl or /Dashboard
+        if (!string.IsNullOrWhiteSpace(ReturnUrl) && Uri.IsWellFormedUriString(ReturnUrl, UriKind.Relative)) {
+            RedirectManager.RedirectTo(ReturnUrl);
+        } else {
+            RedirectManager.RedirectTo("/Dashboard");
         }
     }
 

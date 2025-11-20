@@ -1,0 +1,64 @@
+﻿@using CRS.Data
+@using CRS.Services
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Identity
+@inject UserStateService UserState
+@inject ITenantContext TenantContext
+@inject NavigationManager NavigationManager
+
+<MudNavMenu>
+    <MudDivider Class="my-2" />
+    <MudNavMenu>
+        <MudText Typo="Typo.h6" Class="px-4">@TenantContext.TenantName</MudText>
+        <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Tenant tools</MudText>
+        <MudDivider Class="my-2" />
+    </MudNavMenu>
+
+    <AuthorizeView Context="tenantAuth">
+        <Authorized>
+            <!-- Common tenant links -->
+            <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="/messages/inbox" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Email">Messages</MudNavLink>
+            <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Reserve Studies</MudNavLink>
+            <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business">Communities</MudNavLink>
+
+            <!-- TenantOwner section -->
+            <AuthorizeView Policy="RequireTenantOwner" Context="tenantOwnerAuth">
+                <Authorized>
+                    <MudNavGroup Title="Tenant Admin" Expanded="true">
+                        <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Manage Users</MudNavLink>
+                        <MudNavLink Href="/Admin/Settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">Tenant Settings</MudNavLink>
+                        <MudNavLink Href="/Reports/Publish" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Publish">Publish Reports</MudNavLink>
+                    </MudNavGroup>
+                </Authorized>
+            </AuthorizeView>
+
+            <!-- TenantSpecialist section -->
+            <AuthorizeView Policy="RequireTenantStaff" Context="tenantStaffAuth">
+                <Authorized>
+                    <MudNavGroup Title="Specialist Tools" Expanded="false">
+                        <MudNavLink Href="/ReserveStudies/Specialist" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Assigned Studies</MudNavLink>
+                        <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth">Calendar</MudNavLink>
+                        <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts">Contacts</MudNavLink>
+                    </MudNavGroup>
+                </Authorized>
+            </AuthorizeView>
+
+            <!-- Viewer and external links -->
+            <AuthorizeView Policy="RequireTenantViewer" Context="tenantViewerAuth">
+                <Authorized>
+                    <MudNavLink Href="/Reports/View" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Visibility">View Reports</MudNavLink>
+                </Authorized>
+            </AuthorizeView>
+
+            <AuthorizeView Policy="RequireHOAUser" Context="hoaAuth">
+                <Authorized>
+                    <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Download Final Report</MudNavLink>
+                </Authorized>
+            </AuthorizeView>
+        </Authorized>
+    </AuthorizeView>
+
+    <MudDivider Class="my-2" />
+    <MudText Typo="Typo.caption" Class="px-4">Tenant mode</MudText>
+</MudNavMenu>

@@ -1,0 +1,54 @@
+﻿@using CRS.Data
+@using CRS.Services
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Identity
+@inject UserStateService UserState
+@inject NavigationManager NavigationManager
+@inject ITenantContext TenantContext
+
+<MudNavMenu>
+    <MudDivider Class="my-2" />
+    <MudNavMenu>
+        <MudText Typo="Typo.h6" Class="px-4">Platform Administration</MudText>
+        <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Global tools and management</MudText>
+        <MudDivider Class="my-2" />
+    </MudNavMenu>
+
+    <AuthorizeView Policy="RequirePlatformAdmin" Context="platAuth">
+        <Authorized>
+            <MudNavGroup Title="Platform" Expanded="true">
+                <MudNavLink Href="/Admin/Tenants" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Apartment">Tenants</MudNavLink>
+                <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Users & Roles</MudNavLink>
+                <MudNavLink Href="/Admin/SuperAdmins" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.VerifiedUser">SuperAdmins</MudNavLink>
+                <MudNavLink Href="/Admin/Billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing</MudNavLink>
+            </MudNavGroup>
+
+            <MudDivider />
+            <MudNavGroup Title="Platform Tools" Expanded="false">
+                <MudNavLink Href="/Admin/VisualEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Brush">Visual Editor</MudNavLink>
+                <MudNavLink Href="/Admin/GrapesEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Draw">GrapesJS Prototype</MudNavLink>
+                <MudNavLink Href="/dbmanager" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Storage">Database Manager</MudNavLink>
+                <MudNavLink Href="/Admin/Audit" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.History">Audit Logs</MudNavLink>
+            </MudNavGroup>
+
+            <MudDivider />
+            <MudNavGroup Title="Support" Expanded="false">
+                <MudNavLink Href="/Admin/Support/Tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Support Tickets</MudNavLink>
+            </MudNavGroup>
+
+            <MudDivider />
+            <MudNavGroup Title="Tenant Actions" Expanded="false">
+                <MudNavLink Href="/Admin/Impersonate" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonSearch">Impersonate Tenant</MudNavLink>
+                @if (TenantContext?.TenantId != null)
+                {
+                    <MudNavLink Href="/Admin/StopImpersonation" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.HighlightOff" IconColor="Color.Error">Stop Impersonation</MudNavLink>
+                }
+            </MudNavGroup>
+
+        </Authorized>
+    </AuthorizeView>
+
+    <!-- Show platform info for transparency -->
+    <MudDivider Class="my-2" />
+    <MudText Typo="Typo.caption" Class="px-4">Platform mode</MudText>
+</MudNavMenu>

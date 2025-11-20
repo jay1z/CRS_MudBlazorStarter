@@ -1,4 +1,5 @@
 ﻿@page "/Users/Manage"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
 @using CRS.Data
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -9,19 +10,6 @@
 @inject ISnackbar Snackbar
 
 <MudContainer>
-    @* <MudGrid>
-        <MudItem xs="9">
-            <MudTextField @bind-Value="searchValue" Label="Search Users..." Variant="Variant.Text"></MudTextField>
-        </MudItem>
-        <MudItem xs="3">
-            <MudSelect T="IdentityRole" Label="Roles" MultiSelection="true" @bind-Value="_value" @bind-SelectedValues="roles">
-                @foreach (var role in roles)
-                {
-                    <MudSelectItem T="IdentityRole" Value="@role">@role.Name</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-    </MudGrid> *@
     <MudCard Elevation="0">
         <MudCardHeader>
             <MudText Typo="Typo.h5">Users</MudText>
@@ -87,16 +75,12 @@
 
     private Task OpenAddRoleToUserDialog(ApplicationUser user)
     {
-        // isAddRoleDialogVisible = true;
-
         var parameters = new DialogParameters<AddUserToRoleDialog> { { x => x.User, user } };
         var options = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true, MaxWidth = MaxWidth.Large };
         return DialogService.ShowAsync<AddUserToRoleDialog>("Simple Dialog", parameters, options);
-
     }
     private void OpenRemoveRoleFromUserDialog(ApplicationUser user)
     {
-        // Logic to open Remove Role from User dialog
         Snackbar.Add($"OpenRemoveRoleFromUserDialog for {user.UserName}", Severity.Success);
     }
 
