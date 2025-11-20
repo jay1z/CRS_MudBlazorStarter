@@ -12,8 +12,6 @@ using CRS.Services.Email;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 using CRS.Services.MultiTenancy;
-using CRS.Services.MultiTenancy.Provisioning; // add
-using CRS.MultiTenancy.Database; // add missing database interfaces
 using CRS.Models.Workflow; // Added for workflow example
 
 using Microsoft.AspNetCore.Components.Authorization;
@@ -112,10 +110,13 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<ITenantContext, TenantContext>();
     builder.Services.AddScoped<TenantService>();
 
-    // Multi-DB per-tenant strategy services
-    builder.Services.AddSingleton<ITenantDatabaseResolver, DefaultTenantDatabaseResolver>();
-    builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
-    builder.Services.AddScoped<ITenantMigrationService, TenantMigrationService>();
+    // Remove Multi-tenant provisioning services and multi-DB resolvers
+    // builder.Services.AddSingleton<ITenantDatabaseResolver, DefaultTenantDatabaseResolver>();
+    // builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
+    // builder.Services.AddScoped<ITenantMigrationService, TenantMigrationService>();
+    // builder.Services.AddSingleton<ITenantProvisioningQueue, InMemoryTenantProvisioningQueue>();
+    // builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+    // builder.Services.AddHostedService<CRS.Workers.TenantProvisioningWorker>();
 
     // User management and notification services
     builder.Services.AddScoped<IUserSettingsService, UserSettingsService>();
@@ -201,10 +202,6 @@ void ConfigureServices(WebApplicationBuilder builder) {
         });
     });
 
-    // Multi-tenant provisioning services
-    builder.Services.AddSingleton<ITenantProvisioningQueue, InMemoryTenantProvisioningQueue>();
-    builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
-    builder.Services.AddHostedService<CRS.Workers.TenantProvisioningWorker>();
 }
 
 void ConfigureDatabases(WebApplicationBuilder builder) {
@@ -415,17 +412,7 @@ async Task SeedDatabase(WebApplication app) {
             await SeedManager.SeedAdminUserAsync(services);
         }
 
-        // Dev-only: ensure per-tenant databases for all tenants if config flag set
-        var provisionFlag = app.Configuration.GetValue<bool>("MultiTenancy:ProvisionTenantDatabases", false);
-        if (provisionFlag) {
-            var tenantIds = await dbContext.Tenants.Select(t => t.Id).ToListAsync();
-            var migrator = services.GetRequiredService<ITenantMigrationService>();
-            foreach (var tid in tenantIds) {
-                await migrator.EnsureDatabaseAsync(tid);
-                await migrator.MigrateAsync(tid);
-                await migrator.SeedAsync(tid);
-            }
-        }
+        // Removed per-tenant provisioning loop
     } catch (Exception ex) {
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred while migrating or seeding the database.");

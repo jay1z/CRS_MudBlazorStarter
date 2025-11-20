@@ -1,13 +1,12 @@
 ﻿@attribute [Authorize(Policy = "RequireTenantOwner")]
 @using CRS.Services.Tenant
 @using CRS.Data
-@using CRS.MultiTenancy.Database // add
-@using Microsoft.EntityFrameworkCore // add
-@using Microsoft.AspNetCore.Identity // add
-@using CRS.Models.Security // add
-@using MudBlazor // ensure Mud types
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using CRS.Models.Security
+@using MudBlazor
 @inject ITenantContext TenantContext
-@inject ITenantDbContextFactory TenantDbFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject NavigationManager Nav
 @inject ILogger<TenantUserManagement> Logger
 @inject IServiceProvider Services
@@ -108,7 +107,7 @@ else
     private async Task LoadUsersAsync() {
         try {
             _loading = true;
-            await using var db = await TenantDbFactory.CreateAsync(TenantContext.TenantId);
+            await using var db = await DbFactory.CreateDbContextAsync();
             _users = await db.Users.Where(u => u.TenantId == TenantContext.TenantId).OrderBy(u => u.Email).ToListAsync();
             var roleAssignments = await db.UserRoleAssignments.Include(a => a.Role!).Where(a => a.TenantId == TenantContext.TenantId).ToListAsync();
             _userRoles = roleAssignments.GroupBy(a => a.UserId).ToDictionary(g => g.Key, g => g.Select(a => a.Role!.Name).Distinct().ToList());
@@ -120,8 +119,8 @@ else
         if (TenantContext.TenantId == null) return;
         _inviting = true;
         try {
-            await using var db = await TenantDbFactory.CreateAsync(TenantContext.TenantId);
-            if (await db.Users.AnyAsync(u => u.Email == _inviteEmail)) return;
+            await using var db = await DbFactory.CreateDbContextAsync();
+            if (await db.Users.AnyAsync(u => u.Email == _inviteEmail && u.TenantId == TenantContext.TenantId)) return;
             var userManager = Services.GetRequiredService<UserManager<ApplicationUser>>();
             var newUser = new ApplicationUser {
                 Email = _inviteEmail,
@@ -156,7 +155,7 @@ else
     private async Task SaveRolesAsync() {
         if (TenantContext.TenantId == null) return;
         try {
-            await using var db = await TenantDbFactory.CreateAsync(TenantContext.TenantId);
+            await using var db = await DbFactory.CreateDbContextAsync();
             var allAssignments = await db.UserRoleAssignments.Where(a => a.UserId == _editUserId && a.TenantId == TenantContext.TenantId).ToListAsync();
             var rolesAll = await db.Roles2.Where(r => r.Scope == RoleScope.Tenant).ToListAsync();
             foreach (var a in allAssignments) {

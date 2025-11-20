@@ -1,17 +1,15 @@
 ﻿@page "/tenant/signup"
 @using CRS.Data
 @using CRS.Services.MultiTenancy
-@using CRS.Services.MultiTenancy.Provisioning // add
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using System.Text.RegularExpressions
 @using MudBlazor
-@using CRS.Models.Security // added for RoleScope
+@using CRS.Models.Security
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
 @inject TenantService TenantService
-@inject ITenantProvisioningQueue ProvisioningQueue // add
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 
@@ -27,15 +25,11 @@
             <MudTextField @bind-Value="model.AdminPassword" Label="Password" InputType="InputType.Password" Required="true" Immediate="true" />
             <MudButton Color="Color.Primary" Variant="Variant.Filled" Class="mt-4" ButtonType="ButtonType.Submit">Sign up</MudButton>
         </EditForm>
-        @if (_provisioningInfo != null) {
-            <MudAlert Severity="Severity.Info" Class="mt-4">@_provisioningInfo</MudAlert>
-        }
     </MudPaper>
 </MudContainer>
 
 @code {
     private SignUpModel model = new();
-    private string? _provisioningInfo;
 
     public class SignUpModel {
         public string CompanyName { get; set; } = string.Empty;
@@ -60,18 +54,16 @@
             return;
         }
 
-        // Create tenant in Pending state
+        // Create tenant and mark active (single shared DB)
         var tenant = new CRS.Models.Tenant {
             Name = model.CompanyName.Trim(),
             Subdomain = sub,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow,
-            ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Pending
+            CreatedAt = DateTime.UtcNow
         };
         db.Add(tenant);
         await db.SaveChangesAsync();
 
-        // Create admin user for the tenant (user record before provisioning)
         var user = new ApplicationUser {
             Email = model.AdminEmail.Trim(),
             UserName = model.AdminEmail.Trim(),
@@ -84,7 +76,6 @@
             return;
         }
 
-        // Assign scoped TenantOwner role
         var ownerRole = await db.Set<Role>().FirstOrDefaultAsync(r => r.Name == "TenantOwner");
         if (ownerRole == null) {
             ownerRole = new Role { Name = "TenantOwner", Scope = RoleScope.Tenant };
@@ -100,13 +91,8 @@
             await db.SaveChangesAsync();
         }
 
-        // Enqueue provisioning (background worker will create/migrate tenant DB)
-        await ProvisioningQueue.EnqueueAsync(tenant.Id);
-        _provisioningInfo = "Provisioning started. Your tenant database is being prepared. You can log in once status is Active.";
-
-        // Sign in user (will likely hit Pending status until provisioning completes)
         await SignInManager.SignInAsync(user, isPersistent: false);
-        Snackbar.Add("Tenant creation accepted. Provisioning in progress.", Severity.Success);
+        Snackbar.Add("Welcome! Your company has been created.", Severity.Success);
         Nav.NavigateTo("/");
     }
 }

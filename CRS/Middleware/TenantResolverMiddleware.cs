@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 using CRS.Data;
 using CRS.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 
@@ -25,14 +24,9 @@ namespace CRS.Middleware {
                 await using var db = await dbFactory.CreateDbContextAsync();
                 tenantFromHost = await db.Set<Tenant>().AsNoTracking().FirstOrDefaultAsync(t => t.Subdomain == subdomain);
 
-                if (tenantFromHost == null && ShouldRedirect(path)) {
+                if (tenantFromHost == null && ShouldAllowRedirect(path)) {
                     var q = Uri.EscapeDataString(host);
                     context.Response.Redirect($"/tenant/not-found?host={q}");
-                    return;
-                }
-                // Enforce provisioning status before allowing app routes
-                if (tenantFromHost != null && tenantFromHost.ProvisioningStatus != TenantProvisioningStatus.Active && ShouldBlockForProvisioning(path)) {
-                    context.Response.Redirect($"/tenant/provisioning?status={tenantFromHost.ProvisioningStatus}&tenant={tenantFromHost.Subdomain}");
                     return;
                 }
             }
@@ -79,23 +73,15 @@ namespace CRS.Middleware {
             await _next(context);
         }
 
-        private static bool ShouldRedirect(PathString path) =>
+        private static bool ShouldAllowRedirect(PathString path) =>
             !path.StartsWithSegments("/tenant/not-found") &&
             !path.StartsWithSegments("/tenant/signup") &&
-            !path.StartsWithSegments("/tenant/provisioning") &&
             !path.StartsWithSegments("/health") &&
             !path.StartsWithSegments("/api") &&
             !path.StartsWithSegments("/_framework") &&
             !path.StartsWithSegments("/_content") &&
             !path.StartsWithSegments("/kanbanhub") &&
             !path.StartsWithSegments("/favicon.ico");
-
-        private static bool ShouldBlockForProvisioning(PathString path) =>
-            !path.StartsWithSegments("/tenant/provisioning") &&
-            !path.StartsWithSegments("/Account/Logout") &&
-            !path.StartsWithSegments("/Account/Login") &&
-            !path.StartsWithSegments("/health") &&
-            !path.StartsWithSegments("/tenant/signup");
 
         private static string? ExtractSubdomain(string host, string? rootDomain) {
             if (string.IsNullOrWhiteSpace(host) || host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return null;

@@ -51,7 +51,10 @@
 
   <ItemGroup>
     <Folder Include="Migrations\" />
+    <Folder Include="MultiTenancy\Database\" />
     <Folder Include="Services\Guid\" />
+    <Folder Include="Services\MultiTenancy\Provisioning\" />
+    <Folder Include="Workers\" />
   </ItemGroup>
 
 </Project>
