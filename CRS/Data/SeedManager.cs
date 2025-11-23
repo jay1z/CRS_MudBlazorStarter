@@ -2,10 +2,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-
 using System.Linq;
 using System.Collections.Generic;
-
 using CRS.Models;
 using CRS.Models.Security;
 
@@ -16,9 +14,11 @@ namespace CRS.Data {
             using var scope = serviceProvider.CreateScope();
             var sp = scope.ServiceProvider;
             var db = sp.GetRequiredService<ApplicationDbContext>();
-            await db.Database.EnsureCreatedAsync();
+            var logger = sp.GetRequiredService<ILogger<SeedManager>>();
 
-            // Upsert required roles (idempotent)
+            // Use migrations only; do NOT call EnsureCreated (conflicts with Migrate)
+            // Always assume schema exists or will be migrated earlier in pipeline.
+
             var required = new (string Name, RoleScope Scope)[] {
                 ("PlatformAdmin", RoleScope.Platform),
                 ("PlatformSupport", RoleScope.Platform),
@@ -28,55 +28,48 @@ namespace CRS.Data {
                 ("HOAUser", RoleScope.External),
                 ("HOAAuditor", RoleScope.External)
             };
-            // Use Set<Role>() to target custom roles table, avoid IdentityRole DbSet
+
             var roleSet = db.Set<Role>();
-            var existingNames = await roleSet.Select(r => r.Name).ToListAsync();
+            var existing = await roleSet.AsNoTracking().ToDictionaryAsync(r => r.Name, r => r.Id);
+            int added = 0;
             foreach (var r in required) {
-                if (!existingNames.Contains(r.Name)) {
+                if (!existing.ContainsKey(r.Name)) {
                     roleSet.Add(new Role { Name = r.Name, Scope = r.Scope });
+                    added++;
                 }
             }
-            if (db.ChangeTracker.HasChanges()) await db.SaveChangesAsync();
+            if (added > 0) {
+                await db.SaveChangesAsync();
+                logger.LogInformation("SeedScopedRolesAsync: Added {Count} missing roles.", added);
+            } else {
+                logger.LogInformation("SeedScopedRolesAsync: All required roles already present.");
+            }
         }
 
         public static async Task SeedAdminUserAsync(IServiceProvider serviceProvider) {
-            // Ensure scoped roles first
             await SeedScopedRolesAsync(serviceProvider);
-
-            // Ensure platform tenant exists (now the only seeded tenant)
             var platformTenant = await EnsureTenantAsync(serviceProvider, subdomain: "platform", name: "Platform", isActive: true);
-
-            // Single platform admin account - no Identity role assignment
             var user = await SeedUserIfNotExists(serviceProvider,
                 email: "admin@platform.com",
                 password: "Letmeinnow1_",
                 firstName: "Platform",
                 lastName: "Admin",
                 tenantId: platformTenant.Id);
-
-            // Assign platform-level custom role mapping (scoped role claim)
             await AssignScopedRoleAsync(serviceProvider, user, "PlatformAdmin", tenantId: 0);
         }
 
         public static async Task SeedTestUsersAsync(IServiceProvider serviceProvider) {
             await SeedScopedRolesAsync(serviceProvider);
-
-            // Test users: do not assign Identity roles in full policy mode
             var peter = await SeedUserIfNotExists(serviceProvider, email: "peter@specialist.com", password: "Letmeinnow1_", firstName: "Peter", lastName: "Specialist");
             var jeffS = await SeedUserIfNotExists(serviceProvider, email: "jeff@specialist.com", password: "Letmeinnow1_", firstName: "Jeff", lastName: "Specialist");
             var jeffU = await SeedUserIfNotExists(serviceProvider, email: "jeff@user.com", password: "Letmeinnow1_", firstName: "Jeff", lastName: "User");
             var jason = await SeedUserIfNotExists(serviceProvider, email: "jason@user.com", password: "Letmeinnow1_", firstName: "Jason", lastName: "User");
-
-            // Assign scoped roles based on typical responsibilities
             if (peter != null) await AssignScopedRoleAsync(serviceProvider, peter, "TenantSpecialist", peter.TenantId);
             if (jeffS != null) await AssignScopedRoleAsync(serviceProvider, jeffS, "TenantSpecialist", jeffS.TenantId);
             if (jeffU != null) await AssignScopedRoleAsync(serviceProvider, jeffU, "TenantViewer", jeffU.TenantId);
             if (jason != null) await AssignScopedRoleAsync(serviceProvider, jason, "TenantViewer", jason.TenantId);
         }
 
-        /// <summary>
-        /// Ensure platform tenant exists only.
-        /// </summary>
         public static async Task SeedTenantsAndAdminsAsync(IServiceProvider serviceProvider) {
             await SeedScopedRolesAsync(serviceProvider);
             using var scope = serviceProvider.CreateScope();
@@ -88,7 +81,6 @@ namespace CRS.Data {
             } catch {
                 db = sp.GetRequiredService<ApplicationDbContext>();
             }
-
             await using (db.ConfigureAwait(false)) {
                 await EnsureTenantAsync(serviceProvider, subdomain: "platform", name: "Platform", isActive: true);
             }
@@ -117,12 +109,8 @@ namespace CRS.Data {
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var logger = serviceProvider.GetRequiredService<ILogger<SeedManager>>();
             var existing = await userManager.FindByEmailAsync(email);
-            if (existing != null) {
-                logger.LogInformation($"User with email {email} already exists.");
-                return existing;
-            }
+            if (existing != null) { logger.LogInformation("User {Email} already exists.", email); return existing; }
 
-            // Fallback tenant: platform
             var assignedTenantId = tenantId;
             if (!assignedTenantId.HasValue) {
                 var factory = serviceProvider.GetService<IDbContextFactory<ApplicationDbContext>>();
@@ -145,10 +133,9 @@ namespace CRS.Data {
             var result = await userManager.CreateAsync(user, password);
             if (!result.Succeeded) {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                logger.LogError($"Error seeding user {email}: {errors}");
+                logger.LogError("Error seeding user {Email}: {Errors}", email, errors);
             }
 
-            // Auto-assign TenantOwner if this is the first user for that tenant (excluding platform tenant id= platformTenant.Id?)
             try {
                 var factory = serviceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
                 await using var db = await factory.CreateDbContextAsync();
@@ -166,7 +153,8 @@ namespace CRS.Data {
             await using var db = await factory.CreateDbContextAsync();
             var role = await db.Set<Role>().FirstOrDefaultAsync(r => r.Name == roleName);
             if (role == null) return;
-            if (!await db.UserRoleAssignments.AnyAsync(a => a.UserId == user.Id && a.RoleId == role.Id && a.TenantId == tenantId)) {
+            bool exists = await db.UserRoleAssignments.AnyAsync(a => a.UserId == user.Id && a.RoleId == role.Id && a.TenantId == tenantId);
+            if (!exists) {
                 db.UserRoleAssignments.Add(new UserRoleAssignment { UserId = user.Id, RoleId = role.Id, TenantId = tenantId });
                 await db.SaveChangesAsync();
             }

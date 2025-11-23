@@ -5,6 +5,7 @@ using CRS.Models;
 using CRS.Models.Security; // add
 using CRS.Models.Workflow; // add
 using CRS.Services.Tenant;
+using CRS.Models.Billing; // added for StripeEventLog
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -34,9 +35,11 @@ namespace CRS.Data {
                 optionsBuilder.UseSqlServer(_explicitConnection, sql => sql.EnableRetryOnFailure());
             }
 
+            // Register BOTH sync and async seeding delegates with correct signatures
             optionsBuilder
                 .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
-                .UseSeeding((context, _) => { SeedData(context); });
+                .UseSeeding((context, _) => { SeedData(context); })
+                .UseAsyncSeeding((context, _, ct) => { SeedData(context); return Task.CompletedTask; });
         }
 
         protected override void OnModelCreating(ModelBuilder builder) {
@@ -67,14 +70,10 @@ namespace CRS.Data {
             ApplyTenantQueryFilters(builder);
 
             // Matching filters on dependents to avoid EF warnings with required relationships
-            builder.Entity<ReserveStudyBuildingElement>().HasQueryFilter(e =>
- _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
- builder.Entity<ReserveStudyCommonElement>().HasQueryFilter(e =>
- _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
- builder.Entity<ReserveStudyAdditionalElement>().HasQueryFilter(e =>
- _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
- builder.Entity<ContactXContactGroup>().HasQueryFilter(e =>
- _tenantContext.TenantId == null || (e.Contact != null && e.Contact.TenantId == _tenantContext.TenantId));
+            builder.Entity<ReserveStudyBuildingElement>().HasQueryFilter(e => _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
+            builder.Entity<ReserveStudyCommonElement>().HasQueryFilter(e => _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
+            builder.Entity<ReserveStudyAdditionalElement>().HasQueryFilter(e => _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
+            builder.Entity<ContactXContactGroup>().HasQueryFilter(e => _tenantContext.TenantId == null || (e.Contact != null && e.Contact.TenantId == _tenantContext.TenantId));
 
             // Fix1: Configure1:1 relationships using dependent FKs
             builder.Entity<ReserveStudy>()
@@ -294,6 +293,8 @@ namespace CRS.Data {
         // New security sets
         public DbSet<Role> Roles2 { get; set; }
         public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
+        // Billing log
+        public DbSet<StripeEventLog> StripeEventLogs { get; set; }
         #endregion
 
         #region Seed Data

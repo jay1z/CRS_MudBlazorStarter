@@ -14,7 +14,7 @@
 
 <MudLayout>
     <MudAppBar Elevation="25">
-        <MudText Typo="Typo.h5" Class="ml-3">Community Reserve Specialists</MudText>
+        <MudText Typo="Typo.h5" Class="ml-3">ALX Reserve Cloud</MudText>
         <MudSpacer />
         <AuthorizeView Context="auth">
             <Authorized>
@@ -26,10 +26,8 @@
                 </MudMenu>
             </Authorized>
             <NotAuthorized>
-                <MudButton Href="/tenant/find" Variant="Variant.Outlined" Size="Size.Large" Class="mx-2" StartIcon="@Icons.Material.Filled.Search">Find my tenant</MudButton>
-                <MudButton Href="/tenant/signup" Variant="Variant.Filled" Size="Size.Large" Color="Color.Primary" Class="mx-2" StartIcon="@Icons.Material.Filled.AppRegistration">Sign up</MudButton>
-                <MudButton Href="/Account/Register" Variant="Variant.Outlined" Size="Size.Large" Class="mx-2">Register</MudButton>
-                <MudButton Href="/Account/Login" Variant="Variant.Filled" Size="Size.Large" Class="mx-2">Login</MudButton>
+                <!-- Minimal header for anonymous users; hide full nav buttons -->
+                <MudButton Href="/Account/Login" Variant="Variant.Filled" Size="Size.Small" Class="mx-2">Login</MudButton>
             </NotAuthorized>
         </AuthorizeView>
     </MudAppBar>

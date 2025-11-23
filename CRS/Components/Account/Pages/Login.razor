@@ -3,12 +3,12 @@
 @page "/login"
 
 @using System.ComponentModel.DataAnnotations
+@using System.ComponentModel
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using CRS.Data
 @using CRS.Services.Tenant
 @using CRS.Services.License
-@using Microsoft.EntityFrameworkCore
 @using CRS.Services.MultiTenancy
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
@@ -18,9 +18,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ITenantContext TenantContext
 @inject ILicenseValidationService LicenseValidator
-@inject IDbContextFactory<ApplicationDbContext> DbFactory
-@inject ThemeService ThemeService
-@inject TenantService TenantService
+@inject CRS.Services.MultiTenancy.TenantService TenantService
 @inject IConfiguration Config
 
 <PageTitle>Log in</PageTitle>
@@ -30,37 +28,23 @@
 <MudGrid>
     <MudItem md="6">
         <StatusMessage Message="@errorMessage" />
-        <!-- Blazor handles submit in-circuit; do NOT set method/action here -->
-        <EditForm Model="Input" OnValidSubmit="LoginUser" FormName="login">
+        <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
             <DataAnnotationsValidator />
-
-            <MudText GutterBottom="true" Typo="Typo.body1">Use your account to log in.</MudText>
-
+            <MudText GutterBottom="true" Typo="Typo.body1">Use a local account to log in.</MudText>
             <MudGrid>
                 <MudItem md="12">
-                    <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email"
-                                        Label="Email" Placeholder="name@example.com"
-                                        UserAttributes="@(new() { { "autocomplete", "username" }, { "aria-required", "true" } } )" />
+                    <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email" Label="Email" Placeholder="name@example.com" UserAttributes="@(new() { { "autocomplete", "username" }, { "aria-required", "true" } } )" />
                 </MudItem>
                 <MudItem md="12">
-                    <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password"
-                                        Label="Password" InputType="InputType.Password" Placeholder="password"
-                                        UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } } )" />
+                    <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" Label="Password" InputType="InputType.Password" Placeholder="password" UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } } )" />
                 </MudItem>
-
-                <MudItem md="12">
-                    @if (!IsTenantFixed)
-                    {
-                        <MudAlert Severity="Severity.Warning" Variant="Variant.Text">
-                            Please log in on your tenant's subdomain (for example, https://tenant.@(Config["App:RootDomain"]) ).
-                        </MudAlert>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2">Tenant: <strong>@FixedTenantSlug</strong></MudText>
-                    }
-                </MudItem>
-
+                @if (!IsTenantFixed) {
+                    <MudItem md="12">
+                        <MudStaticTextField For="@(() => Input.TenantSlug)" @bind-Value="Input.TenantSlug" Label="Tenant" Placeholder="tenant subdomain (e.g. hoa1)" UserAttributes="@(new() { { "aria-required", "true" } })" />
+                    </MudItem>
+                } else {
+                    <MudItem md="12"><MudText Typo="Typo.body2">Tenant: <strong>@FixedTenantSlug</strong></MudText></MudItem>
+                }
                 <MudItem md="12">
                     <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Remember me</MudStaticCheckBox>
                 </MudItem>
@@ -69,7 +53,6 @@
                 </MudItem>
             </MudGrid>
         </EditForm>
-
         <MudGrid Class="mt-4">
             <MudItem md="12">
                 <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink><br />
@@ -80,7 +63,6 @@
     </MudItem>
     <MudItem md="6">
         <MudText GutterBottom="true" Typo="Typo.body1">Use another service to log in.</MudText>
-
         <ExternalLoginPicker />
     </MudItem>
 </MudGrid>
@@ -88,98 +70,51 @@
 @code {
     private string? errorMessage;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
-
-    [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
-
-    [SupplyParameterFromQuery]
-    private string? ReturnUrl { get; set; }
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
 
     private bool IsTenantFixed => !string.IsNullOrWhiteSpace(TenantContext.Subdomain);
     private string? FixedTenantSlug => TenantContext.Subdomain;
 
     protected override async Task OnInitializedAsync() {
         if (HttpMethods.IsGet(HttpContext.Request.Method)) {
-            // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         }
+        if (IsTenantFixed) Input.TenantSlug = FixedTenantSlug;
     }
 
     public async Task LoginUser() {
         errorMessage = null;
+        if (!IsTenantFixed && string.IsNullOrWhiteSpace(Input.TenantSlug)) { errorMessage = "Tenant is required."; return; }
+        var tenantSlug = IsTenantFixed ? FixedTenantSlug : Input.TenantSlug?.Trim().ToLowerInvariant();
 
-        // Require tenant to be resolved from subdomain
-        if (!IsTenantFixed) {
-            errorMessage = "Please login from your tenant subdomain (e.g., https://tenant." + (Config["App:RootDomain"] ?? "your-domain") + ").";
-            return;
-        }
-
-        // Resolve tenant from subdomain
-        CRS.Models.Tenant? hostTenant = null;
-        try {
-            hostTenant = await TenantService.FindBySubdomainAsync(FixedTenantSlug!);
-        } catch { /* ignore */ }
-        if (hostTenant == null) {
-            errorMessage = "Error: Invalid username, password, or tenant.";
-            return;
+        CRS.Models.Tenant? tenant = null;
+        if (!string.IsNullOrWhiteSpace(tenantSlug)) {
+            try { tenant = await TenantService.FindBySubdomainAsync(tenantSlug); } catch { }
         }
 
-        // Validate credentials without issuing cookie first
-        var user = await UserManager.FindByEmailAsync(Input.Email);
-        if (user is null) {
-            errorMessage = "Error: Invalid username, password, or tenant.";
-            return;
-        }
-        var pwd = await SignInManager.CheckPasswordSignInAsync(user, Input.Password, lockoutOnFailure: false);
-        if (pwd.RequiresTwoFactor) {
-            RedirectManager.RedirectTo("Account/LoginWith2fa", new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
-        }
-        if (!pwd.Succeeded) {
-            if (pwd.IsLockedOut) {
-                Logger.LogWarning("User account locked out.");
-                RedirectManager.RedirectTo("Account/Lockout");
-            }
-            errorMessage = "Error: Invalid username, password, or tenant.";
-            return;
+        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+        if (!result.Succeeded) {
+            if (result.RequiresTwoFactor) { RedirectManager.RedirectTo("Account/LoginWith2fa", new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe }); return; }
+            if (result.IsLockedOut) { RedirectManager.RedirectTo("Account/Lockout"); return; }
+            errorMessage = "Error: Invalid login attempt."; return;
         }
 
-        // Enforce user belongs to this tenant
-        if (user.TenantId != hostTenant.Id) {
-            errorMessage = "Error: Invalid username, password, or tenant.";
-            return;
+        if (tenant != null) {
+            var user = await UserManager.FindByEmailAsync(Input.Email);
+            if (user is null || user.TenantId != tenant.Id) { await SignInManager.SignOutAsync(); errorMessage = "Error: Invalid login attempt."; return; }
+            var active = await LicenseValidator.IsTenantActiveAsync(tenant.Id);
+            if (!active) { await SignInManager.SignOutAsync(); errorMessage = "Error: This tenant is inactive."; return; }
         }
 
-        // Issue auth cookie for current host (tenant subdomain)
-        await SignInManager.SignInAsync(user, isPersistent: Input.RememberMe);
-
-        // License check
-        var isActive = await LicenseValidator.IsTenantActiveAsync(hostTenant.Id);
-        if (!isActive) {
-            await SignInManager.SignOutAsync();
-            errorMessage = "Error: This tenant is inactive. Please contact support.";
-            return;
-        }
-
-        // Stay on this host; go to ReturnUrl or /Dashboard
-        if (!string.IsNullOrWhiteSpace(ReturnUrl) && Uri.IsWellFormedUriString(ReturnUrl, UriKind.Relative)) {
-            RedirectManager.RedirectTo(ReturnUrl);
-        } else {
-            RedirectManager.RedirectTo("/Dashboard");
-        }
+        RedirectManager.RedirectTo(ReturnUrl);
     }
 
     private sealed class InputModel {
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; } = "";
-
-        [Required]
-        [DataType(DataType.Password)]
-        public string Password { get; set; } = "";
-
-        [Display(Name = "Remember me?")]
+        [Required, EmailAddress] public string Email { get; set; } = "";
+        [Required, DataType(DataType.Password)] public string Password { get; set; } = "";
         public bool RememberMe { get; set; }
+        public string? TenantSlug { get; set; }
     }
 }

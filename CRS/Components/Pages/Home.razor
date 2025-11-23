@@ -4,216 +4,582 @@
 
 @using CRS.Components.Layout
 @using CRS.Services
+@using MudBlazor
 @inject ILogger<Home> Logger
 @inject UserStateService UserState
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Nav
 
-<PageTitle>Reserve Study - Community Reserve Specialists</PageTitle>
+<PageTitle>ALX Reserve Cloud - Reserve Study SaaS Platform</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
-    <!-- Hero Section -->
-    <MudContainer MaxWidth="MaxWidth.Medium">
-        <MudContainer MaxWidth="MaxWidth.ExtraSmall">
-            <MudCard Elevation="0">
-                <MudImage Src="//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/giftcard%20logo.jpg" Alt="Community Reserve Specialists" Height="120" Width="312" />
-            </MudCard>
-        </MudContainer>
-        <MudText Typo="Typo.h5" Align="Align.Center">
-            A LOCAL RESERVE STUDY PROVIDER
-        </MudText>
-        <MudPaper Height="650px" Width="100%" Square="true" Elevation="0">
-            <MudCard Elevation="25">
-                <MudCardMedia Image="//img1.wsimg.com/isteam/stock/1258/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=h:500,cg:true" Height="500" />
-                <MudCardContent>
-                    <MudText Typo="Typo.h5" Align="Align.Center">
-                        Preparing for tomorrow, today!
-                    </MudText>
-                    <MudText Typo="Typo.h6" Align="Align.Center">
-                        Find out more about what benefits a Reserve Study can bring to your Community.
-                    </MudText>
-                    <MudText Typo="Typo.body1" Align="Align.Center">
-                        (see below)
-                    </MudText>
-                    <div class="d-flex justify-center mt-4">
-                        <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Large" OnClick="@(() => Nav.NavigateTo("/tenant/signup"))" StartIcon="@Icons.Material.Filled.AppRegistration">Sign up your company</MudButton>
-                        <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Class="ml-2" Size="Size.Large" Href="#about">Learn more</MudButton>
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudPaper>
-    </MudContainer>
-
-    <!-- About Section -->
-    <MudContainer id="about" MaxWidth="MaxWidth.Large">
-        <MudPaper Elevation="0" Class="py-16">
-            <MudText Typo="Typo.h5">ABOUT US</MudText>
-            <MudDivider />
-            <MudCard Elevation="0">
-                <MudCardContent>
-                    <MudText Typo="Typo.h4" Align="Align.Center" Class="my-5">Community Reserve Planning</MudText>
-                    <MudText Typo="Typo.h6" Align="Align.Center">
-                        Helping hundreds of local Communities prepare for future capital replacement expenses using our Reserve Study as a guide.
-                    </MudText>
-                    <MudText Typo="Typo.h6" Align="Align.Center" Class="my-5">Facts:</MudText>
-                    <MudCard Elevation="0">
-                        <MudCardContent>
-                            <MudList T="string">
-                                @foreach (BulletPoint bulletPoint in bulletPoints) {
-                                    <MudListItem Icon="@MaterialSymbols.Outlined.ChipExtraction" Text="@bulletPoint.Text" />
-                                }
-                            </MudList>
-                        </MudCardContent>
-                    </MudCard>
-                </MudCardContent>
-            </MudCard>
-
-            <MudStack Row="true">
-                <MudCard Elevation="0">
-                    <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-5">Comprehensive Approach</MudText>
-                    <MudText Align="Align.Center">
-                        Community Reserve Specialists uses real time local costs from years of relationships with local contractors and vendors currently serving Communities throughout Ohio. Local and real time data helps ensure the most accurate financial projections vs the National "templates" used by many other, non-local Reserve Study providers. Having real-time local data ensures the highest level of accuracy.
-                    </MudText>
-                </MudCard>
-                <MudCard Elevation="0">
-                    <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-5">Committed To Service</MudText>
-                    <MudText Align="Align.Center">
-                        All aspects of the Community may be considered in order to educate the Board of Directors and Association Managers of any potential options for incorporating the plan into the Community. Our mission is to simply meet and exceed our client’s expectations. Call us today to find out how we can help plan long and short term strategies that will help your Community prepare for the future needs.
-                    </MudText>
-                </MudCard>
-            </MudStack>
-        </MudPaper>
-    </MudContainer>
-
-    <!-- Team Section -->
-    <MudContainer MaxWidth="MaxWidth.Large">
-        <MudPaper Elevation="0">
-            <MudText Typo="Typo.h5" Class="mb-8">Meet The CRS Staff</MudText>
-            <MudDivider />
-            <MudCarousel TData="TeamMember" Class="mud-width-full" ItemsSource="@teamMembers" Style="height:600px;" ShowArrows="true" ShowBullets="true" EnableSwipeGesture="true" AutoCycle="true">
-                <ItemTemplate>
-                    <div class="d-flex flex-column flex-column justify-center" style="height:100%">
-                        <MudImage Src="@context.Image" Elevation="0" Height="200" ObjectPosition="ObjectPosition.Center" ObjectFit="ObjectFit.Contain" Class="rounded-lg"></MudImage>
-                        <MudText Typo="Typo.h4" Align="@Align.Center" Class="my-8">@context.Name</MudText>
-                        <MudText Typo="Typo.body1" Align="@Align.Center" Class="mx-20">@context.Description</MudText>
-                    </div>
-                </ItemTemplate>
-            </MudCarousel>
-            <MudText Typo="Typo.h6" Class="mb-8">Feel free to call with any questions or click the button below to request a free quote for your Community Reserve Study.</MudText>
-            <div class="d-flex justify-center my-4">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AppRegistration" Size="Size.Large" OnClick="@(() => Nav.NavigateTo("/tenant/signup"))">Sign up your company</MudButton>
+<!-- Hero Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-12 mb-16">
+    <MudGrid AlignItems="AlignItems.Center">
+        <MudItem xs="12" md="6" Class="d-flex flex-column justify-center">
+            <MudText Typo="Typo.h2" Class="fw-bold mb-4">
+                The Reserve Study <span style="color:#FF8C00;">SaaS Platform</span>
+            </MudText>
+            <MudText Typo="Typo.h6" Class="mb-6" Style="color:#666;">
+                Streamline reserve studies with cloud-based tools built for Reserve Study firms, HOA managers, and property management professionals.
+            </MudText>
+            <div class="d-flex gap-3 mb-6">
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Large" OnClick="@(() => Nav.NavigateTo("/tenant/signup"))">
+                    Start Free Trial
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large">
+                    View Demo
+                </MudButton>
             </div>
-        </MudPaper>
-        <MudPaper Elevation="0">
-            <MudStack>
-                <MudText Typo="Typo.h5" Class="bold-text">Phone: 234.900.5501</MudText>
-                <MudText Typo="Typo.h6">3841 N. Santom Rd.</MudText>
-                <MudText Typo="Typo.h6">Stow, OH 44224</MudText>
-                <MudLink Href="mailto:jripple@neocrs.com">jripple@neocrs.com</MudLink>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Email" Size="Size.Large" Style="width: 200px; height: 60px;">FIND OUT MORE</MudButton>
-            </MudStack>
-        </MudPaper>
-    </MudContainer>
+        </MudItem>
+        <MudItem xs="12" md="6" Class="d-flex justify-center">
+            <MudPaper Elevation="0" Class="pa-4" Style="width:100%; max-width:450px; background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 20px;">
+                <div style="aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Style="font-size: 80px;"></MudIcon>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
 
-    <!-- Logo Section -->
-    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-10">
-        <MudGrid Justify="Justify.Center">
-            @foreach (var logo in logos) {
-                <MudItem xs="3">
-                    <MudCard Elevation="0">
-                        <MudImage Src="@logo.Src" Alt="@logo.Alt" Height="100" ObjectFit="ObjectFit.Contain" ObjectPosition="ObjectPosition.Center" />
-                    </MudCard>
-                </MudItem>
-            }
+<MudDivider Class="my-12" />
+
+<!-- Who It's For Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
+        Built for Everyone in the Reserve Study Ecosystem
+    </MudText>
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Business" Style="color: #FF8C00; font-size: 40px;" Class="mb-3"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Reserve Study Firms</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Streamline project workflows and automate complex calculations.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.People" Style="color: #6A3D9A; font-size: 40px;" Class="mb-3"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">HOA / Board Members</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Access funding levels and financial projections anytime, anywhere.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.RealEstateAgent" Style="color: #FF8C00; font-size: 40px;" Class="mb-3"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Property Managers</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Manage multiple communities and coordinate reserve planning.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Person" Style="color: #6A3D9A; font-size: 40px;" Class="mb-3"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Independent Specialists</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Build your practice with powerful tools and client collaboration.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Style="color: #FF8C00; font-size: 40px;" Class="mb-3"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Financial Teams</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Integrate reserve data with accounting and budgeting systems.</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Feature Highlights Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
+        Powerful Features for Professional Reserve Studies
+    </MudText>
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #f0f0f0; border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Calculate" Style="color: #FF8C00; font-size: 36px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Automated Calculations</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Intelligent funding analysis and projection modeling.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #f0f0f0; border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Apartment" Style="color: #6A3D9A; font-size: 36px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Multi-Tenant Support</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Manage multiple companies and client organizations.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #f0f0f0; border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.TaskAlt" Style="color: #FF8C00; font-size: 36px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Workflow Management</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Request → Site Visit → Drafting → Review → Delivery.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #f0f0f0; border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Security" Style="color: #6A3D9A; font-size: 36px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Client Portal</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Share studies and updates with HOA boards securely.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #f0f0f0; border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory" Style="color: #FF8C00; font-size: 36px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Component Inventory</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Dynamic tracking of building systems and assets.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #f0f0f0; border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.FileDownload" Style="color: #6A3D9A; font-size: 36px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Report Generation</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Professional PDF and Excel reports in seconds.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #f0f0f0; border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Notifications" Style="color: #FF8C00; font-size: 36px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Smart Alerts</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Lifecycle deadlines and maintenance notifications.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #f0f0f0; border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="color: #6A3D9A; font-size: 36px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Document Storage</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Centralized repository for photos and documentation.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #f0f0f0; border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.VpnKey" Style="color: #FF8C00; font-size: 36px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Role-Based Access</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Granular permissions and enterprise security.</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- CTA Section 1 -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudPaper Elevation="2" Class="pa-8" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 20px; text-align: center; color: white;">
+        <MudText Typo="Typo.h4" Class="fw-bold mb-4">Ready to Transform Your Reserve Study Process?</MudText>
+        <MudText Typo="Typo.body1" Class="mb-6" Style="max-width: 500px; margin: 0 auto;">Join leading reserve study firms and HOA managers already using ALX Reserve Cloud.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Surface" Size="Size.Large" OnClick="@(() => Nav.NavigateTo("/tenant/signup"))">
+            Start Your Free Trial
+        </MudButton>
+    </MudPaper>
+</MudContainer>
+
+<!-- Dashboard Preview Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
+        Dashboard Preview
+    </MudText>
+    <MudPaper Elevation="3" Class="pa-8" Style="border-radius: 20px; background: #f9f9f9;">
+        <MudGrid Spacing="4">
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="1" Class="pa-6 d-flex flex-column align-center" 
+                          Style="background:#FF8C00; color:white; border-radius:16px;">
+                    <MudIcon Icon="@Icons.Material.Filled.HomeWork" Style="font-size: 32px;" Class="mb-2"></MudIcon>
+                    <MudText Typo="Typo.body2">Total Properties</MudText>
+                    <MudText Typo="Typo.h3" Class="fw-bold mt-2">24</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="1" Class="pa-6 d-flex flex-column align-center" 
+                          Style="background:#6A3D9A; color:white; border-radius:16px;">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Style="font-size: 32px;" Class="mb-2"></MudIcon>
+                    <MudText Typo="Typo.body2">Funding Level</MudText>
+                    <MudText Typo="Typo.h3" Class="fw-bold mt-2">68%</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="1" Class="pa-6 d-flex flex-column align-center" 
+                          Style="background:#f0f0f0; color:#333; border-radius:16px;">
+                    <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Style="font-size: 32px; color: #FF8C00;" Class="mb-2"></MudIcon>
+                    <MudText Typo="Typo.body2">Annual Contribution</MudText>
+                    <MudText Typo="Typo.h3" Class="fw-bold mt-2">$125,000</MudText>
+                </MudPaper>
+            </MudItem>
         </MudGrid>
-        <MudBreakpointProvider>
-            @foreach (var logo in logos) {
-                <MudHidden Breakpoint="Breakpoint.Xl" Invert="true">
-                    <MudImage Src="@logo.Src" Alt="@logo.Alt" Height="100" />
-                </MudHidden>
-                <MudItem xs="3">
-                </MudItem>
-            }
-        </MudBreakpointProvider>
-    </MudContainer>
+        <MudGrid Spacing="4" Class="mt-4">
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-6" Elevation="0" Style="background: white; border-radius: 16px;">
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-4">Funding Status Projection</MudText>
+                    <MudChart ChartType="ChartType.Line"
+                              Labels="@labelsData"
+                              Data="@chartData" />
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-6" Elevation="0" Style="background: white; border-radius: 16px;">
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-4">Recent Studies</MudText>
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Description" IconColor="Color.Warning">
+                            <MudText>Capital Reserve Study</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">April 8, 2024</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Description" IconColor="Color.Warning">
+                            <MudText>Roof Analysis Report</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">March 22, 2024</MudText>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
 
-    <!-- Footer -->
-    <MudDivider />
-    <MudText Align="Align.Center" Class="my-10">
-        Copyright © @DateTime.Today.Year Community Reserve Specialists - All Rights Reserved.
+<MudDivider Class="my-12" />
+
+<!-- How It Works Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
+        How It Works
+    </MudText>
+    <MudGrid Spacing="6">
+        <MudItem xs="12" sm="6" md="4">
+            <div class="d-flex flex-column align-center">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #FF8C00 0%, #FFB84D 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; margin-bottom: 16px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size: 40px;"></MudIcon>
+                </div>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2" Align="Align.Center">1. Add Property</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Style="color: #666; max-width: 250px;">Input property details and basic information to get started.</MudText>
+            </div>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <div class="d-flex flex-column align-center">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #6A3D9A 0%, #8B5FCF 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; margin-bottom: 16px;">
+                    <MudIcon Icon="@Icons.Material.Filled.ListAlt" Style="font-size: 40px;"></MudIcon>
+                </div>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2" Align="Align.Center">2. Build Inventory</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Style="color: #666; max-width: 250px;">Create or import your component list with specifications.</MudText>
+            </div>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <div class="d-flex flex-column align-center">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #FF8C00 0%, #FFB84D 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; margin-bottom: 16px;">
+                    <MudIcon Icon="@Icons.Material.Filled.FileDownload" Style="font-size: 40px;"></MudIcon>
+                </div>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2" Align="Align.Center">3. Generate Report</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Style="color: #666; max-width: 250px;">Create professional PDF reports instantly with charts and analysis.</MudText>
+            </div>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Pricing Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
+        Simple, Transparent Pricing
+    </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 24px;">
+        Choose the plan that fits your business needs.
+    </MudText>
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border: 2px solid #f0f0f0;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Starter</MudText>
+                <MudText Typo="Typo.h4" Class="fw-bold mb-6">
+                    <span style="color: #FF8C00;">$199</span><span Style="color: #999; font-size: 16px;">/mo</span>
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Up to 10 properties" />
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Basic reporting" />
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Community support" />
+                </MudList>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 16px; background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); color: white;">
+                <div style="position: absolute; top: -12px; left: 20px; background: white; color: #FF8C00; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 12px;">POPULAR</div>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Pro</MudText>
+                <MudText Typo="Typo.h4" Class="fw-bold mb-6">
+                    <span>$499</span><span Style="font-size: 16px;">/mo</span>
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Up to 50 properties" />
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Advanced analytics" />
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Priority support" />
+                </MudList>
+                <MudButton Variant="Variant.Filled" Color="Color.Surface" FullWidth="true" Class="mt-4">Get Started</MudButton>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border: 2px solid #f0f0f0;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Enterprise</MudText>
+                <MudText Typo="Typo.h4" Class="fw-bold mb-6">
+                    <span style="color: #FF8C00;">Custom</span>
+                </MudText>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Unlimited properties" />
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Custom integrations" />
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Dedicated support" />
+                </MudList>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+    <div class="d-flex justify-center mt-8">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large">
+            See Full Pricing & Features
+        </MudButton>
+    </div>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- CTA Section 2 -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudPaper Elevation="0" Class="pa-8" Style="background: #f5f5f5; border-radius: 20px; text-align: center;">
+        <MudText Typo="Typo.h5" Class="fw-bold mb-4">See ALX in Action</MudText>
+        <MudText Typo="Typo.body1" Class="mb-6" Style="color: #666;">Watch a live demo and see how reserve study firms save 20+ hours per study.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large">
+            Book a Live Demo
+        </MudButton>
+    </MudPaper>
+</MudContainer>
+
+<!-- Compliance & Standards Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
+        Industry Standards & Compliance
+    </MudText>
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; text-align: center;">
+                <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Style="color: #6A3D9A; font-size: 40px;" Class="mb-3"></MudIcon>
+                <MudText Typo="Typo.body2" Class="fw-bold">CAI Standards</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;">Compliant with Community Association Institute guidelines.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; text-align: center;">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #FF8C00; font-size: 40px;" Class="mb-3"></MudIcon>
+                <MudText Typo="Typo.body2" Class="fw-bold">Fannie Mae / Freddie Mac</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;">Meets GSE financing requirements and guidelines.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; text-align: center;">
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Style="color: #6A3D9A; font-size: 40px;" Class="mb-3"></MudIcon>
+                <MudText Typo="Typo.body2" Class="fw-bold">Accurate Projections</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;">Long-term financial forecasting backed by data.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; text-align: center;">
+                <MudIcon Icon="@Icons.Material.Filled.Assessment" Style="color: #FF8C00; font-size: 40px;" Class="mb-3"></MudIcon>
+                <MudText Typo="Typo.body2" Class="fw-bold">Professional Grade</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;">Enterprise-quality reporting and analysis.</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Security Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
+        Enterprise Security & Reliability
+    </MudText>
+    <MudGrid AlignItems="AlignItems.Center">
+        <MudItem xs="12" md="6">
+            <MudStack Spacing="3">
+                <div class="d-flex gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Style="color: #FF8C00; font-size: 28px; flex-shrink: 0; margin-top: 4px;"></MudIcon>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="fw-bold">Encrypted Data</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">256-bit encryption for all data in transit and at rest.</MudText>
+                    </div>
+                </div>
+                <div class="d-flex gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Style="color: #6A3D9A; font-size: 28px; flex-shrink: 0; margin-top: 4px;"></MudIcon>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="fw-bold">Tenant Isolation</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Complete data separation between organizations.</MudText>
+                    </div>
+                </div>
+                <div class="d-flex gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Cloud" Style="color: #FF8C00; font-size: 28px; flex-shrink: 0; margin-top: 4px;"></MudIcon>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="fw-bold">Azure Infrastructure</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Hosted on Microsoft Azure with 99.99% uptime SLA.</MudText>
+                    </div>
+                </div>
+                <div class="d-flex gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Backup" Style="color: #6A3D9A; font-size: 28px; flex-shrink: 0; margin-top: 4px;"></MudIcon>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="fw-bold">Automated Backups</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Continuous backup with disaster recovery capabilities.</MudText>
+                    </div>
+                </div>
+                <div class="d-flex gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.VpnKey" Style="color: #FF8C00; font-size: 28px; flex-shrink: 0; margin-top: 4px;"></MudIcon>
+                    <div>
+                        <MudText Typo="Typo.h6" Class="fw-bold">Role-Based Access Control</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Granular permission management for all user types.</MudText>
+                    </div>
+                </div>
+            </MudStack>
+        </MudItem>
+        <MudItem xs="12" md="6" Class="d-flex justify-center">
+            <MudPaper Elevation="0" Class="pa-4" Style="width:100%; max-width:350px; background: linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%); border-radius: 20px; border: 2px solid #e0e0e0;">
+                <div style="aspect-ratio: 1; display: flex; align-items: center; justify-content: center; color: #999; font-size: 18px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Style="font-size: 100px; opacity: 0.3;"></MudIcon>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Testimonials Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
+        Trusted by Reserve Study Professionals
+    </MudText>
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border-left: 4px solid #FF8C00;">
+                <MudText Typo="Typo.body2" Class="mb-4" Style="font-style: italic; color: #333;">
+                    "ALX Reserve Cloud has transformed how we manage our client relationships. We've cut report generation time by 75% and our clients love the portal access."
+                </MudText>
+                <MudText Typo="Typo.body2" Class="fw-bold">Sarah Miller</MudText>
+                <MudText Typo="Typo.caption" Style="color: #999;">Miller Reserve Studies, Ohio</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border-left: 4px solid #6A3D9A;">
+                <MudText Typo="Typo.body2" Class="mb-4" Style="font-style: italic; color: #333;">
+                    "Managing 150+ properties was overwhelming. Now we track everything in one place, and our board has instant access to funding data."
+                </MudText>
+                <MudText Typo="Typo.body2" Class="fw-bold">James Chen</MudText>
+                <MudText Typo="Typo.caption" Style="color: #999;">ClearView Property Management</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border-left: 4px solid #FF8C00;">
+                <MudText Typo="Typo.body2" Class="mb-4" Style="font-style: italic; color: #333;">
+                    "The compliance features are exceptional. Fannie Mae requirements, CAI standards—everything is built in. It's a game-changer for our firm."
+                </MudText>
+                <MudText Typo="Typo.body2" Class="fw-bold">Dr. Rachel Wong</MudText>
+                <MudText Typo="Typo.caption" Style="color: #999;">Wong & Associates, Reserve Specialists</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Integrations Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
+        Integrations & Connectivity
+    </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 32px;">
+        ALX connects with the tools your team already uses.
+    </MudText>
+    <MudGrid Spacing="4" Justify="Justify.Center">
+        <MudItem xs="12" sm="6" md="3" Class="d-flex justify-center">
+            <MudPaper Elevation="1" Class="pa-6 d-flex flex-column align-center" Style="border-radius: 16px; width: 100%; max-width: 200px;">
+                <MudIcon Icon="@Icons.Material.Filled.Extension" Style="color: #FF8C00; font-size: 48px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.body2" Class="fw-bold" Align="Align.Center">QuickBooks</MudText>
+                <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #999;">Planned Integration</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3" Class="d-flex justify-center">
+            <MudPaper Elevation="1" Class="pa-6 d-flex flex-column align-center" Style="border-radius: 16px; width: 100%; max-width: 200px;">
+                <MudIcon Icon="@Icons.Material.Filled.TableChart" Style="color: #6A3D9A; font-size: 48px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.body2" Class="fw-bold" Align="Align.Center">Excel Import/Export</MudText>
+                <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #999;">Available Now</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3" Class="d-flex justify-center">
+            <MudPaper Elevation="1" Class="pa-6 d-flex flex-column align-center" Style="border-radius: 16px; width: 100%; max-width: 200px;">
+                <MudIcon Icon="@Icons.Material.Filled.Cloud" Style="color: #FF8C00; font-size: 48px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.body2" Class="fw-bold" Align="Align.Center">Google Workspace</MudText>
+                <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #999;">Available Now</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3" Class="d-flex justify-center">
+            <MudPaper Elevation="1" Class="pa-6 d-flex flex-column align-center" Style="border-radius: 16px; width: 100%; max-width: 200px;">
+                <MudIcon Icon="@Icons.Material.Filled.Map" Style="color: #6A3D9A; font-size: 48px;" Class="mb-4"></MudIcon>
+                <MudText Typo="Typo.body2" Class="fw-bold" Align="Align.Center">GIS Mapping</MudText>
+                <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #999;">Planned Integration</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- CTA Section 3 -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudPaper Elevation="2" Class="pa-8" Style="background: linear-gradient(135deg, #FF8C00 0%, #FFB84D 100%); border-radius: 20px; text-align: center; color: white;">
+        <MudText Typo="Typo.h4" Class="fw-bold mb-4">Free Trial - No Credit Card Required</MudText>
+        <MudText Typo="Typo.body1" Class="mb-6">Get instant access to ALX Reserve Cloud and experience the difference.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Surface" Size="Size.Large" OnClick="@(() => Nav.NavigateTo("/tenant/signup"))">
+            Start Your Free 14-Day Trial
+        </MudButton>
+    </MudPaper>
+</MudContainer>
+
+<!-- Footer CTA Section -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-8">
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; background: #f9f9f9;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Questions?</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666; margin-bottom: 12px;">Our team is here to help. Chat with a specialist.</MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+                    Start a Conversation
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; background: #f9f9f9;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Want a Sample Report?</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666; margin-bottom: 12px;">Download a sample reserve study report to see our quality.</MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+                    Download Sample
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<!-- Footer -->
+<MudDivider Class="my-8" />
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-8">
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudText Typo="Typo.h6" Class="fw-bold">ALX Reserve Cloud</MudText>
+            <MudText Typo="Typo.body2" Style="color: #999;">The modern platform for reserve study professionals.</MudText>
+        </MudItem>
+        <MudItem xs="12" sm="6" Class="d-flex justify-end gap-4">
+            <MudText Typo="Typo.body2"><MudLink Href="#" Underline="Underline.None" Color="Color.Inherit" Style="color: #666;">Privacy Policy</MudLink></MudText>
+            <MudText Typo="Typo.body2"><MudLink Href="#" Underline="Underline.None" Color="Color.Inherit" Style="color: #666;">Terms of Service</MudLink></MudText>
+            <MudText Typo="Typo.body2"><MudLink Href="#" Underline="Underline.None" Color="Color.Inherit" Style="color: #666;">Contact</MudLink></MudText>
+        </MudItem>
+    </MudGrid>
+    <MudText Typo="Typo.caption" Align="Align.Center" Class="mt-4" Style="color: #999;">
+        © @DateTime.Today.Year ALX Reserve Cloud. All rights reserved.
     </MudText>
 </MudContainer>
 
 @code {
+    private string[] labelsData = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
+    private double[][] chartData = new[] { new double[] { 30, 35, 32, 50, 62, 68 } };
+
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
     }
-
-    private class BulletPoint {
-        public string Text { get; set; }
-    }
-    private IEnumerable<BulletPoint> bulletPoints = new List<BulletPoint>()            {
-        new BulletPoint() { Text = "The State of Ohio Condominium Association (O.R.C. 5311) and Homeowner Association (O.R.C. 5312) laws require the Board of Directors to collect and hold reserves sufficient to cover the future costs of all Community Capital Assets in order to avoid the need for Special Assessments. In order for the Board to comply with these statutes, it must have a complete list of Community Assets, know/obtain their current replacement values for short term expected expenditures, and project long term expected expenditures to ensure an accurate plan going forward. Per Ohio Law, the Board is not required to obtain a firm to provide a Reserve Study (NEW: see next bullet point), however, most reputable Law Firms familiar with Association Law will strongly recommend the Board hire a properly credentialed and qualified specialist to provide a Reserve Study." },
-        new BulletPoint() { Text = "As of September 2023, Fannie Mae and Freddie Mac now require Boards to hire a professional provider (R.S., P.R.A., or C.P.A. who specializes in Reserve Studies) to perform the Reserve Study in order to qualify for approval. The Association must also maintain a \"Fully Funding\" status by following the recommended contributions each year, and the study must be no older than 36 months. Fannie and Freddie own approximately 70% of the paper (loans) currently servicing Condominium Owners and Homeowners throughout the U.S. They will now require documentation from the loan originators to ensure these standards are met. If the Board/Manager cannot provide the required documents, Loan Originators may not be able to sell the loan and therefore may decline funding to applicants trying to purchase within the unqualified Communities. This can obviously effect property values and potentially drop otherwise qualified buyers from being able to purchase within these Communities." },
-        new BulletPoint() { Text = "The standards set by the C.A.I. (Community Association Institute) and N.R.S.S. (National Reserve Study Standards) require  a Reserve Study contain not only the information required by the State of Ohio, but also additional information and data (that may meet other state statutes) as these are National Standards. These additional Reserve Study standards are a basic reason the term \"Reserve Study\" is not used within the Ohio Revised Code." },
-        new BulletPoint() { Text = "A Reserve Study is a financial report, not an engineering report. The Board/Managers do not need to know how to install the components within the Community or how they are designed. The goal of the study should be to financially prepare each Board/Manager with data that reflects real time local costs and accurate actual useful life projections from a local historical database right here in Ohio, not nationally averaged numbers. Ohio Law requires Boards collect and maintain funds sufficient to replace/repair capital elements without the need for special assessments, not to install these components on their own." },
-        new BulletPoint() { Text = "A Reserve Study can often be \"Personalized\" to fit the unique needs of the Community. Many times we find Communities have folks on a fixed income and fear increasing the fees to meet the fully funding requirements. We can implement custom planning that allows for maximum considerations given to these folks without jeopardizing Community property values." },
-        new BulletPoint() { Text = "A CRS Reserve Study meets and exceeds all the requirements set by the State of Ohio, the N.R.S.S., the C.A.I. and the A.P.R.A. (Association of Professional Reserve Analysts)." },
-        new BulletPoint() { Text = "CRS is a local Ohio Reserve Study provider and carries all available Reserve Study credentials (Reserve Specialist, Professional Reserve Analyst) from the C.A.I./N.R.S.S., and the A.P.R.A." },
-        new BulletPoint() { Text = "CRS has an A+ rating with the BBB, is a Business Partner with the C.A.I., a Member in good standing with the C.A.I., the A.P.R.A., the Stow-Monroe Falls Chamber of Commerce, and is a Veteran Owned and Operated Ohio Company." },
-        new BulletPoint() { Text = "We find most Boards/Managers look for 3 primary features/benefits when considering a Reserve Study provider, cost, qualifications, and locality. CRS very rarely is underbid, but if we are, we will do our best to work with a Community/Manager should they wish to work with us. Per the CAI and APRA websites, there is no other individual with both credentials (R.S. and P.R.A.) residing in the State of Ohio, Jeff appears to be the only one. We have performed hundreds of Reserve Studies throughout Ohio, it's all we do. We are located in Northeast Ohio, this makes it very easy to visit properties without the time constraints, costs, time and expenses of flying, hotels, rental cars etc. when coming in from out of state.  Living in Ohio and building relationships with local contractors gives us real time local costs vs companies using national templates. This ensures the highest level of accuracy in your financial projections." },
-        new BulletPoint() { Text = "CRS does not maintain fancy websites, and we spend nothing on advertising. We find these things don't make the report any better, just more expensive.  We continue to rely solely on word of mouth as we feel it is the best way to continue growing our business as well as keep our, and therefore your costs down. Every dollar counts when it comes out of Community Members pockets." }
-    };
-
-    private class TeamMember {
-        public string Name { get; set; }
-        public string Image { get; set; }
-        public string Description { get; set; }
-    }
-    private IEnumerable<TeamMember> teamMembers = new List<TeamMember>() {
-         new TeamMember() { Name = "Lian Velasco", Image = "Images/headshot.jpg", Description="Lian is our Narrative Coordinator. Lian is helping develop and maintain our new, more efficient report processing. She attended Kent Roosevelt High School where she played on the Varsity Tennis team for 2 years and graduated Magna Cum Laude in 2021. Lian enjoys traveling and art, and since coming to the US in 2015 from the Philippines, has visited many cities throughout Canada and cruised into many ports along the Eastern US Coast. Lian is currently attending Kent State University pursuing a degree in the Aviation field." },
-         new TeamMember() { Name = "John Stojak, R.A.", Image = "Images/headshot.jpg", Description="John is our Research Analyst, he has over 20 years of experience as a Board President for a Condominium Owners Association in northeast Ohio and 20+ years as a managing partner in a Sales and Marketing company in the automotive and truck aftermarket. This experience has helped to foster a sense of attention to detail, project planning and understanding association documents. Personally, John is happily married with two children and two grandchildren residing in Northeast and Central Ohio. John graduated from the Illinois Institute of Technology with B.S. in Economics and a background in architectural studies. Hobbies include volunteering for youth Ice hockey programs in northeast Ohio for ages 5 through High School." },
-         new TeamMember() { Name = "Pete Zurowski, S.R.A.", Image = "Images/headshot.jpg", Description="Pete is our Senior Research Analyst (S.R.A.). With over 15 years of expertise as an Association Manager and over 30 years in the construction field, his professional background and experience make him a well-rounded, valuable asset to CRS. Pete is a family man, with his wife of 44 years, 4 children, and 15 grandchildren. He was born, raised, and still resides in Northeast Ohio. Growing up, he was active in the Boy Scouts and went on to play on the golf team in high school. Pete studied at Cuyahoga Community College as he transitioned into Association Management. When he is not working, he enjoys his favorite pastime of golfing and cherishes quality time with family and loved ones." },
-         new TeamMember() { Name = "Ben Sullivan, AMS, CMCA, R.A.", Image = "Images/headshot.jpg", Description="Research Analyst. Ben has over 12 years of experience in Community Association Management and Property Management with prior experience in the Banking industry. His knowledge of Community Associations and Reserve Studies is an asset to the company and he looks to grow his role within CRS. Ben is currently working on obtaining his R.S. designation through the Community Association Institute. He attended Rocky River High School and Ohio State University and enjoys golfing, watching Cleveland/Ohio sports teams, and spending time with his family and pets in Northeast Ohio. " },
-         new TeamMember() { Name = "Jeff Ripple, R.S., P.R.A.", Image = "Images/headshot.jpg", Description="Jeff is our Reserve Specialist (RS), Professional Reserve Analyst (PRA), and Owner of Community Reserve Specialists. Jeff brings with him over 25 years of Business Management experience and has achieved such designations in the Financial Services and Wealth Management  industry as Certified Senior Advisor (CSA), Registered Tax Preparer (RTP), Investment Advisor Representative (IAR) and Licensed P&C Agent. Jeff proudly served in the United States Marine Corps during Desert Shield/Desert Storm and is a decorated Veteran.  With a Criminal Justice degree from the University of Akron, he served as a Law Enforcement Officer upon separation from the Military. He was the youngest to achieve Eagle Scout in the State of Ohio at the time of appointment and was the founder of Mysterious Ways, a small not for profit organization that acquires, repairs and anonymously donates power wheelchairs to those who otherwise could not afford or obtain them. Jeff has performed hundreds of Reserve Studies throughout Ohio." }
-    };
-
-    private class Logo {
-        public string Src { get; set; }
-        public string Alt { get; set; }
-    }
-    private List<Logo> logos = new() {
-        new Logo {
-            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/BBB%20A%2B%20logo.jpeg",
-            Alt = "BBB A+ Rating"
-        },
-        new Logo {
-            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/blob-0010.png",
-            Alt = "Business Partner Community Associations Institue"
-        },
-        new Logo {
-            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/Stow%20Chamber-0001.jpg",
-            Alt = ""
-        },
-        new Logo {
-            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/blob-0009.png",
-            Alt = ""
-        },
-        new Logo {
-            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/RS%20designation.png",
-            Alt = ""
-        },
-        new Logo {
-            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/blob-0003.png",
-            Alt = ""
-        },
-        new Logo {
-            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/vetran-owned-operated%20252-0002.png",
-            Alt = ""
-        },
-        new Logo {
-            Src = "//img1.wsimg.com/isteam/ip/addbf9ae-3a68-4e01-9950-b735952c55b8/PRA%20Seal.jpg",
-            Alt = ""
-        },
-    };
 }

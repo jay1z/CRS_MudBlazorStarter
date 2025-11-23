@@ -1,0 +1,32 @@
+﻿@page "/billing/success"
+@inject NavigationManager Nav
+@inject IHttpClientFactory ClientFactory
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@using System.Text.Json
+
+<MudPaper Class="pa-4" Elevation="6">
+    <MudText Typo="Typo.h5" Class="mb-2">Subscription Success</MudText>
+    @if (_checking) {
+        <MudProgressCircular Indeterminate="true" />
+    } else if (_active) {
+        <MudAlert Severity="Severity.Success">Your subscription is active.</MudAlert>
+    } else {
+        <MudAlert Severity="Severity.Info">Processing subscription. Please refresh in a moment.</MudAlert>
+    }
+</MudPaper>
+
+@code {
+    bool _checking = true;
+    bool _active = false;
+
+    protected override async Task OnInitializedAsync() {
+        if (TenantContext.TenantId is not int tenantId) { _checking = false; return; }
+        var client = ClientFactory.CreateClient();
+        var resp = await client.GetAsync($"api/billing/status/{tenantId}");
+        if (resp.IsSuccessStatusCode) {
+            var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+            _active = json.TryGetProperty("active", out var act) && act.GetBoolean();
+        }
+        _checking = false;
+    }
+}

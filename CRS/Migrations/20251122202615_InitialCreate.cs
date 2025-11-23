@@ -359,6 +359,27 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "StripeEventLogs",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EventId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ReceivedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Processed = table.Column<bool>(type: "bit", nullable: false),
+                    SubscriptionId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CustomerId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RawJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Error = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StripeEventLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TenantHomepages",
                 schema: "crs",
                 columns: table => new
@@ -394,7 +415,19 @@ namespace CRS.Migrations
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     BrandingJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    PublicId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()")
+                    PublicId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWSEQUENTIALID()"),
+                    ProvisioningStatus = table.Column<int>(type: "int", nullable: false),
+                    ProvisionedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ProvisioningError = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Tier = table.Column<int>(type: "int", nullable: true),
+                    StripeCustomerId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StripeSubscriptionId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MaxCommunities = table.Column<int>(type: "int", nullable: false),
+                    MaxSpecialistUsers = table.Column<int>(type: "int", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SubscriptionStatus = table.Column<int>(type: "int", nullable: false),
+                    SubscriptionActivatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SubscriptionCanceledAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1622,6 +1655,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Settings",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "StripeEventLogs",
                 schema: "crs");
 
             migrationBuilder.DropTable(

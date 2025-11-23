@@ -1,0 +1,72 @@
+﻿@page "/pricing"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using CRS.Models
+@using CRS.Services.Billing
+@inject NavigationManager Nav
+@inject CRS.Services.Billing.IBillingService Billing
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject ISnackbar Snackbar
+@using System.Text.Json
+
+<h3 class="mb-4">Choose Your Plan</h3>
+<MudToggleGroup T="BillingInterval" @bind-Value="_interval" Exclusive="true" Class="mb-4">
+    <MudToggleItem T="BillingInterval" Value="BillingInterval.Monthly">Monthly</MudToggleItem>
+    <MudToggleItem T="BillingInterval" Value="BillingInterval.Yearly">Yearly</MudToggleItem>
+</MudToggleGroup>
+
+<MudGrid>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="8">
+            <MudText Typo="Typo.h5">Startup</MudText>
+            <MudText Class="mb-2">@(_interval == BillingInterval.Monthly ? "$49 / month" : "$499 / year")</MudText>
+            <MudList T="string" Dense="true">
+                <MudListItem T="string">Up to @SubscriptionTierDefaults.StartupMaxCommunities communities</MudListItem>
+                <MudListItem T="string">Up to @SubscriptionTierDefaults.StartupMaxSpecialistUsers specialist users</MudListItem>
+            </MudList>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="() => Subscribe(SubscriptionTier.Startup)" Disabled="@(!CanSubscribe || _posting)">Subscribe</MudButton>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="8">
+            <MudText Typo="Typo.h5">Pro</MudText>
+            <MudText Class="mb-2">@(_interval == BillingInterval.Monthly ? "$129 / month" : "$1290 / year")</MudText>
+            <MudList T="string" Dense="true">
+                <MudListItem T="string">Up to @SubscriptionTierDefaults.ProMaxCommunities communities</MudListItem>
+                <MudListItem T="string">Up to @SubscriptionTierDefaults.ProMaxSpecialistUsers specialist users</MudListItem>
+            </MudList>
+            <MudButton Color="Color.Secondary" Variant="Variant.Filled" OnClick="() => Subscribe(SubscriptionTier.Pro)" Disabled="@(!CanSubscribe || _posting)">Subscribe</MudButton>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="8">
+            <MudText Typo="Typo.h5">Enterprise</MudText>
+            <MudText Class="mb-2">@(_interval == BillingInterval.Monthly ? "$299+ / month" : "$2990+ / year")</MudText>
+            <MudList T="string" Dense="true">
+                <MudListItem T="string">100+ communities (configurable)</MudListItem>
+                <MudListItem T="string">20+ specialist users (configurable)</MudListItem>
+            </MudList>
+            <MudButton Color="Color.Info" Variant="Variant.Filled" OnClick="() => Subscribe(SubscriptionTier.Enterprise)" Disabled="@(!CanSubscribe || _posting)">Contact Sales</MudButton>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    BillingInterval _interval = BillingInterval.Monthly;
+    bool CanSubscribe => TenantContext?.TenantId is int; // require resolved tenant
+    bool _posting;
+
+    async Task Subscribe(SubscriptionTier tier) {
+        if (_posting) return;
+        if (TenantContext.TenantId is not int tenantId) { Snackbar.Add("Tenant not resolved.", Severity.Error); return; }
+        _posting = true;
+        try {
+            var url = await Billing.CreateCheckoutSessionAsync(tenantId, tier, _interval);
+            if (string.IsNullOrWhiteSpace(url)) { Snackbar.Add("Checkout URL missing.", Severity.Error); return; }
+            Nav.NavigateTo(url, forceLoad: true);
+        } catch (Exception ex) {
+            Snackbar.Add($"Failed to start checkout: {ex.Message}", Severity.Error);
+        } finally {
+            _posting = false;
+        }
+    }
+}

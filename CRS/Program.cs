@@ -13,6 +13,8 @@ using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 using CRS.Services.MultiTenancy;
 using CRS.Models.Workflow; // Added for workflow example
+using CRS.Services.License; // add
+using CRS.Services.Billing; // added billing services
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
@@ -124,8 +126,11 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.Interfaces.IMessageService, CRS.Services.MessageService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IAppNotificationService, CRS.Services.AppNotificationService>();
 
-    // Optionally enable this recurring validator later
-    // builder.Services.AddHostedService<CRS.Services.License.LicenseValidationBackgroundService>();
+    // License validation service (required by Login.razor)
+    builder.Services.AddScoped<ILicenseValidationService, LicenseValidationService>();
+
+    // Optionally enable background validator later
+    // builder.Services.AddHostedService<LicenseValidationBackgroundService>();
 
     // Register homepage service
     builder.Services.AddScoped<TenantHomepageService>();
@@ -201,6 +206,13 @@ void ConfigureServices(WebApplicationBuilder builder) {
             .AllowCredentials();
         });
     });
+
+    // Billing configuration (Stripe + URLs)
+    builder.Services.Configure<StripeOptions>(builder.Configuration.GetSection("Stripe"));
+    builder.Services.Configure<BillingUrlOptions>(builder.Configuration.GetSection("Billing:Urls"));
+    builder.Services.AddSingleton<IStripeClientFactory, StripeClientFactory>();
+    builder.Services.AddScoped<IBillingService, BillingService>();
+    builder.Services.AddScoped<IFeatureGuardService, FeatureGuardService>();
 
 }
 
@@ -386,36 +398,26 @@ async Task ConfigurePipeline(WebApplication app) {
 
 async Task SeedDatabase(WebApplication app) {
     using var scope = app.Services.CreateScope();
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
     try {
-        var services = scope.ServiceProvider;
-        var logger = services.GetRequiredService<ILogger<Program>>();
         var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        logger.LogInformation("[Seed] Migrating database...");
+        await dbContext.Database.MigrateAsync();
 
-        var canConnect = await dbContext.Database.CanConnectAsync();
-        bool hasAppliedMigrations = false;
-        try { hasAppliedMigrations = dbContext.Database.GetAppliedMigrations().Any(); } catch (Exception ex) { logger.LogWarning(ex, "Unable to determine applied migrations."); }
-
-        if (canConnect && !hasAppliedMigrations) {
-            logger.LogInformation("Applying migrations.");
-            dbContext.Database.Migrate();
-        }
-
-        // Ensure core scoped roles before users/tenants so claims resolve correctly
+        logger.LogInformation("[Seed] Seeding roles...");
         await SeedManager.SeedScopedRolesAsync(services);
-
+        logger.LogInformation("[Seed] Ensuring platform tenant...");
+        await SeedManager.SeedTenantsAndAdminsAsync(services);
+        logger.LogInformation("[Seed] Seeding platform admin user...");
+        await SeedManager.SeedAdminUserAsync(services);
         if (app.Environment.IsDevelopment()) {
-            await SeedManager.SeedTenantsAndAdminsAsync(services); // ensure platform tenant
-            await SeedManager.SeedAdminUserAsync(services);
+            logger.LogInformation("[Seed] Seeding test users...");
             await SeedManager.SeedTestUsersAsync(services);
-        } else {
-            await SeedManager.SeedTenantsAndAdminsAsync(services);
-            await SeedManager.SeedAdminUserAsync(services);
         }
-
-        // Removed per-tenant provisioning loop
+        logger.LogInformation("[Seed] Completed.");
     } catch (Exception ex) {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        logger.LogError(ex, "Error during database seeding");
     }
 }
 

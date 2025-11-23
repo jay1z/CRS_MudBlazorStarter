@@ -7,6 +7,7 @@ using CRS.Models;
 using CRS.Models.Emails;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
+using CRS.Services.Billing; // feature guard
 
 using Microsoft.EntityFrameworkCore;
 
@@ -16,12 +17,14 @@ namespace CRS.Services {
         private readonly IDispatcher _dispatcher;
         private readonly string _baseUrl;
         private readonly ITenantContext _tenantContext;
+        private readonly IFeatureGuardService _featureGuard;
 
-        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext) {
+        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext, IFeatureGuardService featureGuard) {
             _dbFactory = dbFactory;
             _dispatcher = dispatcher;
             _baseUrl = configuration["Application:BaseUrl"] ?? "https://yourdomain.com";
             _tenantContext = tenantContext;
+            _featureGuard = featureGuard;
         }
 
         public async Task<ReserveStudy> CreateReserveStudyAsync(ReserveStudy reserveStudy) {
@@ -29,6 +32,13 @@ namespace CRS.Services {
 
             var tenantId = _tenantContext.TenantId ?? 1;
             if (reserveStudy.TenantId == 0) reserveStudy.TenantId = tenantId;
+
+            // Guard: if creating a new community, enforce limits
+            var creatingNewCommunity = reserveStudy.CommunityId == Guid.Empty && reserveStudy.Community != null && reserveStudy.Community.Id == Guid.Empty;
+            if (creatingNewCommunity) {
+                var canAdd = await _featureGuard.CanAddCommunityAsync(tenantId);
+                if (!canAdd) throw new InvalidOperationException("Community limit reached or subscription inactive. Upgrade required.");
+            }
 
             reserveStudy.IsActive = true;
             reserveStudy.IsApproved = false;

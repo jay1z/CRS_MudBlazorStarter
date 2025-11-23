@@ -1,0 +1,67 @@
+﻿@page "/account/billing"
+@using CRS.Models
+@inject IHttpClientFactory ClientFactory
+@inject NavigationManager Nav
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject ISnackbar Snackbar
+@inject IDialogService Dialogs
+@using System.Text.Json
+
+<MudPaper Class="pa-4" Elevation="6">
+    <MudText Typo="Typo.h5">Billing</MudText>
+    <MudDivider Class="my-2" />
+    <MudText>Plan: @_planText</MudText>
+    <MudText>Subscription Status: @_status</MudText>
+    <MudText>Community Usage: @_communitiesUsed / @_communitiesLimit</MudText>
+    <MudText>Specialist Users: @_specialistsUsed / @_specialistsLimit</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ManageBilling" Disabled="@(!CanManage)">Manage Billing</MudButton>
+    @if (ShowUpgradeBanner) {
+        <MudAlert Severity="Severity.Warning" Class="mt-4">
+            Limits reached or subscription inactive. <MudButton Variant="Variant.Text" OnClick="OpenUpgradeDialog">Upgrade Now</MudButton>
+        </MudAlert>
+    }
+</MudPaper>
+
+@code {
+    string _planText = "-";
+    string _status = "-";
+    int _communitiesUsed = 0;
+    int _communitiesLimit = 0;
+    int _specialistsUsed = 0;
+    int _specialistsLimit = 0;
+    bool ShowUpgradeBanner => !_active || _communitiesUsed >= _communitiesLimit || _specialistsUsed >= _specialistsLimit;
+    bool _active = false;
+
+    bool CanManage => TenantContext?.TenantId is int;
+
+    protected override async Task OnInitializedAsync() {
+        await LoadStatus();
+    }
+
+    private async Task LoadStatus() {
+        if (TenantContext.TenantId is not int tenantId) return;
+        var client = ClientFactory.CreateClient();
+        var resp = await client.GetAsync($"api/billing/status/{tenantId}");
+        if (!resp.IsSuccessStatusCode) { Snackbar.Add("Failed to load billing status", Severity.Error); return; }
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        _planText = json.TryGetProperty("tier", out var tier) ? tier.GetString() ?? "-" : "-";
+        _status = json.TryGetProperty("status", out var st) ? st.GetString() ?? "-" : "-";
+        _communitiesUsed = json.TryGetProperty("communitiesUsed", out var cu) ? cu.GetInt32() : 0;
+        _communitiesLimit = json.TryGetProperty("maxCommunities", out var mc) ? mc.GetInt32() : 0;
+        _specialistsUsed = json.TryGetProperty("specialistsUsed", out var su) ? su.GetInt32() : 0;
+        _specialistsLimit = json.TryGetProperty("maxSpecialists", out var ms) ? ms.GetInt32() : 0;
+        _active = json.TryGetProperty("active", out var act) && act.GetBoolean();
+    }
+
+    async Task ManageBilling() {
+        if (TenantContext.TenantId is not int tenantId) return;
+        var client = ClientFactory.CreateClient();
+        var response = await client.PostAsJsonAsync("api/billing/portal-session", new { tenantId });
+        if (!response.IsSuccessStatusCode) { Snackbar.Add("Failed to create portal session", Severity.Error); return; }
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var url = payload.GetProperty("portalUrl").GetString();
+        if (!string.IsNullOrWhiteSpace(url)) Nav.NavigateTo(url, forceLoad: true);
+    }
+
+    void OpenUpgradeDialog() => Dialogs.Show<CRS.Components.Billing.UpgradePrompt>("Upgrade Required");
+}

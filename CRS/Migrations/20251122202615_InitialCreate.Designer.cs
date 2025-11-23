@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251120115108_InitialCreate")]
+    [Migration("20251122202615_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -267,6 +267,45 @@ namespace CRS.Migrations
                     b.HasIndex("ApplicationUserId");
 
                     b.ToTable("AuditLogs", "crs");
+                });
+
+            modelBuilder.Entity("CRS.Models.Billing.StripeEventLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("CustomerId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("Processed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RawJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SubscriptionId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StripeEventLogs", "crs");
                 });
 
             modelBuilder.Entity("CRS.Models.BuildingElement", b =>
@@ -1570,18 +1609,54 @@ namespace CRS.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<int>("MaxCommunities")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxSpecialistUsers")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ProvisionedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProvisioningError")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ProvisioningStatus")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("PublicId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier")
                         .HasDefaultValueSql("NEWSEQUENTIALID()");
 
+                    b.Property<string>("StripeCustomerId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StripeSubscriptionId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Subdomain")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("SubscriptionActivatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SubscriptionCanceledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SubscriptionStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Tier")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 

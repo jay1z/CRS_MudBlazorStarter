@@ -1,0 +1,26 @@
+﻿@namespace CRS.Components.Billing
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@using CRS.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h5" Class="mb-2">Upgrade Required</MudText>
+        <MudText Class="mb-4">Your current plan limits have been reached or your subscription is inactive. Upgrade to unlock more capacity.</MudText>
+        <MudList T="string" Dense="true">
+            <MudListItem T="string">Startup: @SubscriptionTierDefaults.StartupMaxCommunities communities / @SubscriptionTierDefaults.StartupMaxSpecialistUsers specialists</MudListItem>
+            <MudListItem T="string">Pro: @SubscriptionTierDefaults.ProMaxCommunities communities / @SubscriptionTierDefaults.ProMaxSpecialistUsers specialists</MudListItem>
+            <MudListItem T="string">Enterprise: Custom scalable limits</MudListItem>
+        </MudList>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="Close">Close</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GoToPricing">View Plans</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    void Close() => MudDialog.Close();
+    void GoToPricing() { MudDialog.Close(); Nav.NavigateTo("/pricing"); }
+}
