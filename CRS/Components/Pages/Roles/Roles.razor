@@ -110,6 +110,8 @@
             var result = await UserManager.AddToRoleAsync(user, roleName);
             if (result.Succeeded)
             {
+                // Sync custom role table and assignment
+                await SyncCustomRoleAssignmentAsync(user, roleName, add: true);
                 message = "User added to role successfully!";
                 await LoadUsers(); // Refresh the user list
             }
@@ -129,6 +131,7 @@
         var result = await UserManager.RemoveFromRoleAsync(user, role);
         if (result.Succeeded)
         {
+            await SyncCustomRoleAssignmentAsync(user, role, add: false);
             message = "User removed from role successfully!";
             await LoadUsers(); // Refresh the user list
         }
@@ -169,6 +172,7 @@
             var result = await UserManager.AddToRoleAsync(selectedUser, selectedRoleName);
             if (result.Succeeded)
             {
+                await SyncCustomRoleAssignmentAsync(selectedUser, selectedRoleName, add: true);
                 message = "Role added to user successfully!";
                 await LoadUsers(); // Refresh the user list
                 isAddRoleDialogVisible = false;
@@ -184,5 +188,42 @@
     {
         // Logic to open Remove Role from User dialog
         Snackbar.Add($"OpenRemoveRoleFromUserDialog for {user.UserName}", Severity.Success);
+    }
+
+    private async Task SyncCustomRoleAssignmentAsync(ApplicationUser user, string roleName, bool add) {
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            // Find or create custom role in Roles2
+            var customRole = await db.Roles2.FirstOrDefaultAsync(r => r.Name == roleName);
+            if (customRole == null && add) {
+                customRole = new CRS.Models.Security.Role { Name = roleName, Scope = CRS.Models.Security.RoleScope.Platform };
+                db.Roles2.Add(customRole);
+                await db.SaveChangesAsync();
+            }
+            if (customRole == null) return;
+
+            // Ensure user exists/attached in this context
+            var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+            if (existingUser == null) {
+                db.Users.Attach(new ApplicationUser { Id = user.Id, UserName = user.UserName, Email = user.Email, TenantId = user.TenantId });
+            }
+
+            if (add) {
+                bool exists = await db.UserRoleAssignments.AnyAsync(a => a.UserId == user.Id && a.RoleId == customRole.Id && a.TenantId == (user.TenantId == 0 ? null : user.TenantId));
+                if (!exists) {
+                    db.UserRoleAssignments.Add(new CRS.Models.Security.UserRoleAssignment { UserId = user.Id, RoleId = customRole.Id, TenantId = user.TenantId == 0 ? null : user.TenantId });
+                    await db.SaveChangesAsync();
+                }
+            } else {
+                var assignments = await db.UserRoleAssignments.Where(a => a.UserId == user.Id && a.RoleId == customRole.Id).ToListAsync();
+                if (assignments.Any()) {
+                    db.UserRoleAssignments.RemoveRange(assignments);
+                    await db.SaveChangesAsync();
+                }
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Sync failed: {ex.Message}", Severity.Error);
+        }
     }
 }

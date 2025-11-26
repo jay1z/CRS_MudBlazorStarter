@@ -1,4 +1,5 @@
-﻿using CRS.Data;
+﻿using System.Linq;
+using CRS.Data;
 using CRS.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,8 @@ namespace CRS.Services.Billing {
         Task<string> CreateCheckoutSessionAsync(int tenantId, SubscriptionTier tier, BillingInterval interval, CancellationToken ct = default);
         Task<string> CreateBillingPortalSessionAsync(int tenantId, CancellationToken ct = default);
         Task ApplySubscriptionUpdateAsync(string subscriptionId, string customerId, SubscriptionTier? tier, SubscriptionStatus status, CancellationToken ct = default);
+        Task<string> CreateDeferredTenantCheckoutSessionAsync(string companyName, string subdomain, string adminEmail, SubscriptionTier tier, BillingInterval interval, CancellationToken ct = default);
+        Task<IReadOnlyList<InvoiceDto>> GetRecentInvoicesAsync(int tenantId, int max = 10, CancellationToken ct = default);
     }
 
     public class BillingService : IBillingService {
@@ -27,6 +30,36 @@ namespace CRS.Services.Billing {
             _stripeOptions = stripeOptions.Value;
             _urlOptions = urlOptions.Value;
             _logger = logger;
+        }
+
+        public async Task<IReadOnlyList<InvoiceDto>> GetRecentInvoicesAsync(int tenantId, int max = 10, CancellationToken ct = default) {
+            var tenant = await _db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.StripeCustomerId)) return Array.Empty<InvoiceDto>();
+            var client = _clientFactory.CreateClient();
+            var invoiceService = new InvoiceService(client);
+            var options = new InvoiceListOptions { Limit = max, Customer = tenant.StripeCustomerId };
+            var list = await invoiceService.ListAsync(options, null, ct);
+            var results = new List<InvoiceDto>(list.Data.Count);
+            foreach (var i in list.Data) {
+                long amount = 0L;
+                try {
+                    if (i.AmountPaid != null && i.AmountPaid > 0) amount = Convert.ToInt64(i.AmountPaid);
+                    else if (i.AmountDue != null && i.AmountDue > 0) amount = Convert.ToInt64(i.AmountDue);
+                } catch { amount = 0L; }
+
+                DateTime created;
+                try {
+                    object createdObj = (object)i.Created!;
+                    if (createdObj is long l) created = DateTimeOffset.FromUnixTimeSeconds(l).UtcDateTime;
+                    else if (createdObj is DateTime dt) created = dt.ToUniversalTime();
+                    else created = DateTime.UtcNow;
+                } catch {
+                    created = DateTime.UtcNow;
+                }
+
+                results.Add(new InvoiceDto(i.Id, amount, i.Currency ?? "USD", created, i.Status ?? "unknown", i.HostedInvoiceUrl));
+            }
+            return results;
         }
 
         public async Task<CRS.Models.Tenant> EnsureStripeCustomerAsync(int tenantId, CancellationToken ct = default) {
@@ -58,10 +91,10 @@ namespace CRS.Services.Billing {
             var session = await sessionService.CreateAsync(new SessionCreateOptions {
                 Mode = "subscription",
                 Customer = tenant.StripeCustomerId,
-                SuccessUrl = _urlOptions.SuccessUrl?.Replace("{CHECKOUT_SESSION_ID}", "{CHECKOUT_SESSION_ID}") ?? "https://localhost:5001/billing/success?session_id={CHECKOUT_SESSION_ID}",
+                SuccessUrl = (_urlOptions.SuccessUrl ?? "https://localhost:5001/billing/success") + ( _urlOptions.SuccessUrl?.Contains("?") == true ? "&" : "?" ) + "tenantId=" + tenant.Id + "&token=" + tenant.SignupToken + "&session_id={CHECKOUT_SESSION_ID}",
                 CancelUrl = _urlOptions.CancelUrl ?? "https://localhost:5001/pricing",
                 LineItems = new List<SessionLineItemOptions> { new() { Price = priceId, Quantity = 1 } },
-                Metadata = new Dictionary<string, string> { ["tenant_id"] = tenant.Id.ToString(), ["tier"] = tier.ToString(), ["interval"] = interval.ToString() }
+                Metadata = new Dictionary<string, string> { ["tenant_id"] = tenant.Id.ToString(), ["tier"] = tier.ToString(), ["interval"] = interval.ToString(), ["admin_email"] = tenant.PendingOwnerEmail ?? string.Empty }
             }, null, ct);
             _logger.LogInformation("Created checkout session {SessionId} for tenant {TenantId} tier {Tier} interval {Interval}", session.Id, tenant.Id, tier, interval);
             return session.Url;
@@ -100,6 +133,57 @@ namespace CRS.Services.Billing {
             tenant.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation("Applied subscription update {SubscriptionId} status {Status} to tenant {TenantId}", subscriptionId, status, tenant.Id);
+        }
+
+        public async Task<string> CreateDeferredTenantCheckoutSessionAsync(string companyName, string subdomain, string adminEmail, SubscriptionTier tier, BillingInterval interval, CancellationToken ct = default) {
+            var priceId = _stripeOptions.GetPriceId(tier, interval);
+            if (string.IsNullOrWhiteSpace(priceId)) throw new InvalidOperationException($"No Stripe price id configured for {tier} {interval}");
+            var client = _clientFactory.CreateClient();
+            var sessionService = new SessionService(client);
+
+            // Redirect directly to tenant homepage (root path) after successful checkout.
+            // The tenant is created via webhook; homepage will subsequently allow owner setup via email link.
+            var successBase = _urlOptions.SuccessUrl ?? "https://localhost:5001"; // fallback
+            // Replace host with subdomain if successBase contains a root domain; otherwise use current pattern
+            // Build success URL targeting subdomain root
+            try {
+                var successUri = new Uri(successBase);
+                var hostParts = successUri.Host.Split('.');
+                // form subdomain.fullroot (strip any leading www from base)
+                if (hostParts.Length >= 2) {
+                    var rootDomain = string.Join('.', hostParts.Skip(hostParts.Length - 2));
+                    successBase = $"{successUri.Scheme}://{subdomain}.{rootDomain}";
+                }
+            } catch { /* ignore host manipulation errors */ }
+            var successUrl = successBase + "/?deferred=1&session_id={CHECKOUT_SESSION_ID}";
+
+            var session = await sessionService.CreateAsync(new SessionCreateOptions {
+                Mode = "subscription",
+                SuccessUrl = successUrl,
+                CancelUrl = _urlOptions.CancelUrl ?? "https://localhost:5001/tenant/signup?canceled=1",
+                LineItems = new List<SessionLineItemOptions> { new() { Price = priceId, Quantity = 1 } },
+                CustomerEmail = adminEmail,
+                Metadata = new Dictionary<string, string> {
+                    ["company_name"] = companyName,
+                    ["subdomain"] = subdomain,
+                    ["admin_email"] = adminEmail,
+                    ["tier"] = tier.ToString(),
+                    ["interval"] = interval.ToString(),
+                    ["deferred_tenant"] = "true"
+                },
+                SubscriptionData = new SessionSubscriptionDataOptions {
+                    Metadata = new Dictionary<string, string> {
+                        ["company_name"] = companyName,
+                        ["subdomain"] = subdomain,
+                        ["admin_email"] = adminEmail,
+                        ["tier"] = tier.ToString(),
+                        ["interval"] = interval.ToString(),
+                        ["deferred_tenant"] = "true"
+                    }
+                }
+            }, null, ct);
+            _logger.LogInformation("Created deferred checkout session {SessionId} for subdomain {Subdomain}", session.Id, subdomain);
+            return session.Url;
         }
     }
 }

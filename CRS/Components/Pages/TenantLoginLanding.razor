@@ -1,0 +1,13 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Nav
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-12">
+    <MudPaper Elevation="4" Class="pa-6">
+        <MudText Typo="Typo.h5" Class="mb-2">@TenantContext.TenantName</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Sign in to access your tenant dashboard.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="@(()=> Nav.NavigateTo("/Account/Login"))">Login</MudButton>
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.caption" Class="mud-secondary-text">Need an account? Contact your administrator.</MudText>
+    </MudPaper>
+</MudContainer>

@@ -50,6 +50,13 @@ namespace CRS.Controllers {
                 } catch { }
             }
 
+            var ownerRole = await _db.Roles2.FirstOrDefaultAsync(r => r.Name == "TenantOwner", ct);
+            bool ownerExists = false;
+            if (ownerRole != null) {
+                ownerExists = await _db.UserRoleAssignments.AnyAsync(a => a.TenantId == tenantId && a.RoleId == ownerRole.Id, ct);
+            }
+            var pendingOwnerEmail = tenant.PendingOwnerEmail;
+
             return Ok(new {
                 tenantId = tenant.Id,
                 tier = tenant.Tier?.ToString() ?? "None",
@@ -61,7 +68,9 @@ namespace CRS.Controllers {
                 specialistsUsed,
                 stripeCustomerId = tenant.StripeCustomerId,
                 stripeSubscriptionId = tenant.StripeSubscriptionId,
-                active = tenant.IsActive
+                active = tenant.IsActive,
+                pendingOwnerEmail,
+                ownerExists
             });
         }
 
@@ -79,6 +88,17 @@ namespace CRS.Controllers {
                 return Ok(new { canceled = true, subId = sub.Id, status = sub.Status });
             } catch (StripeException ex) {
                 return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpGet("invoices/{tenantId:int}")]
+        public async Task<IActionResult> GetInvoices([FromRoute] int tenantId, CancellationToken ct) {
+            try {
+                var invoices = await _billing.GetRecentInvoicesAsync(tenantId, 10, ct);
+                return Ok(invoices);
+            } catch (Exception ex) {
+                return StatusCode(500, ex.Message);
             }
         }
 

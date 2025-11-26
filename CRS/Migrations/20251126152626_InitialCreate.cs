@@ -203,6 +203,28 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CustomerAccounts",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomerAccounts", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ElementMeasurementOptions",
                 schema: "crs",
                 columns: table => new
@@ -380,6 +402,29 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SupportTickets",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ResolvedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SupportTickets", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TenantHomepages",
                 schema: "crs",
                 columns: table => new
@@ -427,7 +472,10 @@ namespace CRS.Migrations
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     SubscriptionStatus = table.Column<int>(type: "int", nullable: false),
                     SubscriptionActivatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    SubscriptionCanceledAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    SubscriptionCanceledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PendingOwnerEmail = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SignupToken = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    LastStripeCheckoutSessionId = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -768,7 +816,7 @@ namespace CRS.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TenantId = table.Column<int>(type: "int", nullable: false)
+                    TenantId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1298,6 +1346,12 @@ namespace CRS.Migrations
                 column: "ContactId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CustomerAccounts_TenantId",
+                schema: "crs",
+                table: "CustomerAccounts",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_FinancialInfos_ReserveStudyId",
                 schema: "crs",
                 table: "FinancialInfos",
@@ -1529,6 +1583,12 @@ namespace CRS.Migrations
                 columns: new[] { "TenantId", "ToStatus", "ChangedAt" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_SupportTickets_TenantId",
+                schema: "crs",
+                table: "SupportTickets",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TenantHomepages_TenantId",
                 schema: "crs",
                 table: "TenantHomepages",
@@ -1618,6 +1678,10 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
+                name: "CustomerAccounts",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
                 name: "FinancialInfos",
                 schema: "crs");
 
@@ -1663,6 +1727,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "StudyStatusHistories",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "SupportTickets",
                 schema: "crs");
 
             migrationBuilder.DropTable(

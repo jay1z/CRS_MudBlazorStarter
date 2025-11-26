@@ -108,7 +108,43 @@
             if (!active) { await SignInManager.SignOutAsync(); errorMessage = "Error: This tenant is inactive."; return; }
         }
 
+        // Tenant-aware redirect logic simplified: always land on root '/' for tenant sites
+        if (tenant != null) {
+            if (TenantContext.IsPlatformHost) {
+                var rootDomain = Config["App:RootDomain"]?.Trim('.') ?? DeriveRootDomain();
+                var target = $"https://{tenant.Subdomain}.{rootDomain}/app";
+                NavigationManager.NavigateTo(target, forceLoad: true);
+                return;
+            } else {
+                RedirectManager.RedirectTo("/app");
+                return;
+            }
+        }
+
         RedirectManager.RedirectTo(ReturnUrl);
+    }
+
+    private string CoerceTenantReturnUrl(string? returnUrl) {
+        if (string.IsNullOrWhiteSpace(returnUrl)) return "/";
+        var lowered = returnUrl.ToLowerInvariant();
+        if (lowered.StartsWith("/account/login")) return "/";
+        if (!Uri.IsWellFormedUriString(returnUrl, UriKind.Relative)) {
+            var relative = NavigationManager.ToBaseRelativePath(returnUrl);
+            if (string.IsNullOrEmpty(relative)) return "/";
+            return relative.StartsWith('/') ? relative : "/" + relative;
+        }
+        return returnUrl;
+    }
+
+    private string DeriveRootDomain() {
+        try {
+            var host = new Uri(NavigationManager.BaseUri).Host;
+            if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return host; // dev
+            var parts = host.Split('.');
+            if (parts.Length <= 2) return host;
+            // take last two labels
+            return string.Join('.', parts.Skip(parts.Length - 2));
+        } catch { return "localhost"; }
     }
 
     private sealed class InputModel {

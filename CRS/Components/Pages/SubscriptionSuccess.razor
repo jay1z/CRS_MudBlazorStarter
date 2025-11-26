@@ -2,7 +2,96 @@
 @inject NavigationManager Nav
 @inject IHttpClientFactory ClientFactory
 @inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject IConfiguration Config
 @using System.Text.Json
+
+@code {
+    [SupplyParameterFromQuery] public int? TenantId { get; set; }
+    [SupplyParameterFromQuery] public Guid? Token { get; set; }
+    [SupplyParameterFromQuery] public bool RequestContainsDeferred { get; set; }
+    [SupplyParameterFromQuery(Name="session_id")] public string? SessionId { get; set; }
+    bool _checking = true;
+    bool _active = false;
+    bool _ownerExists = false; // placeholder until API provides this
+    string? _pendingOwnerEmail = null;
+    int? _resolvedTenantId;
+    string? _resolvedSubdomain;
+
+    protected override async Task OnInitializedAsync() {
+        var tenantId = TenantId ?? TenantContext.TenantId;
+        if (RequestContainsDeferred && string.IsNullOrWhiteSpace(SessionId)) { _checking = false; return; }
+        if (RequestContainsDeferred && SessionId != null) {
+            // Poll resolve endpoint for up to 10 seconds
+            for (int i = 0; i < 10; i++) {
+                var client = ClientFactory.CreateClient();
+                var resolveResp = await client.GetAsync($"api/signup/resolve?sessionId={SessionId}");
+                if (resolveResp.IsSuccessStatusCode) {
+                    var json = await resolveResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                    _resolvedTenantId = json.TryGetProperty("tenantId", out var tidEl) ? tidEl.GetInt32() : (int?)null;
+                    _active = json.TryGetProperty("active", out var actEl) && actEl.GetBoolean();
+                    _pendingOwnerEmail = json.TryGetProperty("ownerEmail", out var oeEl) ? oeEl.GetString() : null;
+                    _resolvedSubdomain = json.TryGetProperty("subdomain", out var sdEl) ? sdEl.GetString() : null;
+                    if (_active) {
+                        // Navigate to tenant subdomain root when active
+                        NavigateToSubdomain(_resolvedSubdomain, _resolvedTenantId);
+                        break;
+                    }
+                }
+                await Task.Delay(1000);
+            }
+            _checking = false;
+            return;
+        }
+        if (tenantId is not int id) { _checking = false; return; }
+        var client2 = ClientFactory.CreateClient();
+        var resp = await client2.GetAsync($"api/billing/status/{id}");
+        if (resp.IsSuccessStatusCode) {
+            var json = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+            _active = json.TryGetProperty("active", out var act) && act.GetBoolean();
+            _ownerExists = json.TryGetProperty("ownerExists", out var oex) && oex.GetBoolean();
+            _pendingOwnerEmail = json.TryGetProperty("pendingOwnerEmail", out var poe) ? poe.GetString() : null;
+            // Try to read subdomain if API returns it
+            _resolvedSubdomain = json.TryGetProperty("subdomain", out var sdel) ? sdel.GetString() : TenantContext.Subdomain;
+            if (_active) NavigateToSubdomain(_resolvedSubdomain, tenantId);
+        }
+        _checking = false;
+    }
+
+    private void NavigateToSubdomain(string? subdomain, int? tenantIdParam)
+    {
+        var sub = subdomain ?? TenantContext.Subdomain;
+        if (!string.IsNullOrWhiteSpace(sub)) {
+            // Determine root host to compose tenant subdomain URL
+            try {
+                var baseUri = Nav.BaseUri.TrimEnd('/');
+                var uri = new Uri(baseUri);
+                var host = uri.Host; // e.g., www.alxreservecloud.com or localhost
+                var configuredRoot = Config["App:RootDomain"]?.Trim().Trim('.');
+
+                if (!string.IsNullOrWhiteSpace(configuredRoot)) {
+                    host = configuredRoot;
+                } else {
+                    if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase)) host = host.Substring(4);
+                    var parts = host.Split('.');
+                    if (parts.Length > 2) host = string.Join('.', parts.Skip(parts.Length - 2));
+                }
+
+                // Preserve scheme and port
+                var scheme = uri.Scheme;
+                var portSegment = uri.IsDefaultPort ? string.Empty : $":{uri.Port}";
+
+                var target = $"{scheme}://{sub}.{host}{portSegment}/";
+                Nav.NavigateTo(target, forceLoad: true);
+                return;
+            } catch {
+                // fallback to root navigation
+            }
+        }
+
+        // fallback: navigate to platform root
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+}
 
 <MudPaper Class="pa-4" Elevation="6">
     <MudText Typo="Typo.h5" Class="mb-2">Subscription Success</MudText>
@@ -11,22 +100,21 @@
     } else if (_active) {
         <MudAlert Severity="Severity.Success">Your subscription is active.</MudAlert>
     } else {
-        <MudAlert Severity="Severity.Info">Processing subscription. Please refresh in a moment.</MudAlert>
+        <MudAlert Severity="Severity.Info">
+            Processing subscription. You can also go to your tenant homepage.
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-2" OnClick="() => NavigateToSubdomain(_resolvedSubdomain, _resolvedTenantId)">Go to tenant home</MudButton>
+        </MudAlert>
+    }
+
+    @if (!_checking && !_ownerExists && TenantId.HasValue && Token.HasValue) {
+        <MudAlert Severity="Severity.Info" Class="mt-4">Finish creating your owner account.
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-2" Href="@($"/signup/owner?tenantId={TenantId.Value}&token={Token.Value}")">Finish Owner Setup</MudButton>
+        </MudAlert>
+    }
+
+    @if (!_checking && RequestContainsDeferred && !_ownerExists) {
+        <MudAlert Severity="Severity.Info" Class="mt-4">Payment complete. Your tenant is being provisioned. You can try visiting your tenant homepage below while provisioning continues.
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-2" OnClick="() => NavigateToSubdomain(_resolvedSubdomain, _resolvedTenantId)">Go to tenant home</MudButton>
+        </MudAlert>
     }
 </MudPaper>
-
-@code {
-    bool _checking = true;
-    bool _active = false;
-
-    protected override async Task OnInitializedAsync() {
-        if (TenantContext.TenantId is not int tenantId) { _checking = false; return; }
-        var client = ClientFactory.CreateClient();
-        var resp = await client.GetAsync($"api/billing/status/{tenantId}");
-        if (resp.IsSuccessStatusCode) {
-            var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-            _active = json.TryGetProperty("active", out var act) && act.GetBoolean();
-        }
-        _checking = false;
-    }
-}

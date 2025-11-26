@@ -33,6 +33,9 @@ namespace CRS.Models {
         public SubscriptionStatus SubscriptionStatus { get; set; } = SubscriptionStatus.None;
         public DateTime? SubscriptionActivatedAt { get; set; }
         public DateTime? SubscriptionCanceledAt { get; set; }
+        public string? PendingOwnerEmail { get; set; } // captured during signup; used to create owner after payment
+        public Guid SignupToken { get; set; } = Guid.NewGuid(); // used to finalize owner setup securely
+        public string? LastStripeCheckoutSessionId { get; set; } // set when created via post-payment flow
     }
 
     public enum TenantProvisioningStatus {

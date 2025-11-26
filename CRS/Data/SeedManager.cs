@@ -149,13 +149,39 @@ namespace CRS.Data {
         }
 
         private static async Task AssignScopedRoleAsync(IServiceProvider sp, ApplicationUser user, string roleName, int tenantId) {
+            // Use DbContextFactory to get a fresh context for assignments
             var factory = sp.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
             await using var db = await factory.CreateDbContextAsync();
-            var role = await db.Set<Role>().FirstOrDefaultAsync(r => r.Name == roleName);
-            if (role == null) return;
-            bool exists = await db.UserRoleAssignments.AnyAsync(a => a.UserId == user.Id && a.RoleId == role.Id && a.TenantId == tenantId);
+
+            // Ensure the tenant exists when tenantId != 0
+            if (tenantId != 0) {
+                var tenantExists = await db.Tenants.AnyAsync(t => t.Id == tenantId);
+                if (!tenantExists) {
+                    var logger = sp.GetRequiredService<ILogger<SeedManager>>();
+                    logger.LogWarning("AssignScopedRoleAsync: Tenant {TenantId} not found. Skipping assignment of role {RoleName} for user {UserId}.", tenantId, roleName, user.Id);
+                    return;
+                }
+            }
+
+            // Look up role in custom Roles2 table
+            var role = await db.Roles2.FirstOrDefaultAsync(r => r.Name == roleName);
+            if (role == null) {
+                // As a fallback, create the custom role if missing
+                role = new Role { Name = roleName, Scope = tenantId == 0 ? RoleScope.Platform : RoleScope.Tenant };
+                db.Roles2.Add(role);
+                await db.SaveChangesAsync();
+            }
+
+            // Ensure user is attached to this DbContext so FK uses same identity
+            var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+            if (existingUser == null) {
+                // Attempt to attach a minimal user stub to satisfy FK constraints
+                db.Users.Attach(new ApplicationUser { Id = user.Id, UserName = user.UserName, Email = user.Email, TenantId = user.TenantId });
+            }
+
+            bool exists = await db.UserRoleAssignments.AnyAsync(a => a.UserId == user.Id && a.RoleId == role.Id && a.TenantId == (tenantId == 0 ? null : tenantId));
             if (!exists) {
-                db.UserRoleAssignments.Add(new UserRoleAssignment { UserId = user.Id, RoleId = role.Id, TenantId = tenantId });
+                db.UserRoleAssignments.Add(new UserRoleAssignment { UserId = user.Id, RoleId = role.Id, TenantId = tenantId == 0 ? null : tenantId });
                 await db.SaveChangesAsync();
             }
         }

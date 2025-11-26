@@ -1,0 +1,90 @@
+﻿@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject ILogger<W7PropertiesOverview> Logger
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudText Typo="Typo.h6">Properties Overview</MudText>
+    @if (!TenantContext?.TenantId.HasValue ?? true)
+    {
+        <MudAlert Severity="Severity.Warning">Properties unavailable: tenant context not resolved.</MudAlert>
+    }
+    else if (_loading)
+    {
+        <MudProgressCircular Indeterminate Size="Size.Small" Class="my-2" />
+    }
+    else if (!_rows.Any())
+    {
+        <div>
+            <MudText Typo="Typo.caption">No properties found for this tenant.</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateProperty">Create first property</MudButton>
+        </div>
+    }
+    else
+    {
+        <MudTable Items="_rows" Dense="true" Hover="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Address</MudTh>
+                <MudTh>Last Study</MudTh>
+                <MudTh>Next Due (est)</MudTh>
+            </HeaderContent>
+            <RowTemplate Context="r">
+                <MudTd>@r.Name</MudTd>
+                <MudTd>@r.Address</MudTd>
+                <MudTd>@(r.LastStudy?.ToString("MM/yyyy") ?? "-")</MudTd>
+                <MudTd>@(r.NextDue?.ToString("MM/yyyy") ?? "-")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    private bool _loading = true;
+    private List<RowVm> _rows = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!TenantContext.TenantId.HasValue) { _loading = false; return; }
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            // Load communities and their reserve studies (tenant filter applied globally)
+            var studies = await db.ReserveStudies
+                .AsNoTracking()
+                .Include(s => s.Community)
+                .Where(s => s.Community != null)
+                .ToListAsync();
+            var byCommunity = studies
+                .GroupBy(s => s.Community!)
+                .Select(g => new {
+                    Community = g.Key,
+                    LastStudy = g.Where(s => s.IsComplete && s.DateCreated.HasValue).OrderByDescending(s => s.DateCreated).FirstOrDefault()?.DateCreated,
+                })
+                .ToList();
+            foreach (var c in byCommunity)
+            {
+                var addr = c.Community.Addresses?.FirstOrDefault();
+                var addressStr = addr == null ? string.Empty : string.Join(", ", new[]{addr.Street, addr.City, addr.State, addr.Zip}.Where(x => !string.IsNullOrWhiteSpace(x)));
+                var last = c.LastStudy;
+                var nextDue = last?.AddYears(3); // placeholder cycle
+                _rows.Add(new RowVm { Name = c.Community.Name ?? "(Unnamed)", Address = addressStr, LastStudy = last, NextDue = nextDue });
+            }
+        }
+        catch (Exception ex) { Logger.LogWarning(ex, "Failed to load properties overview for tenant {TenantId}", TenantContext.TenantId); }
+        _loading = false;
+    }
+
+    private void CreateProperty() {
+        // TODO: Navigate to property create flow or open dialog in future
+        Logger.LogInformation("CTA: Create first property clicked for tenant {TenantId}", TenantContext.TenantId);
+    }
+
+    private sealed class RowVm
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public DateTime? LastStudy { get; set; }
+        public DateTime? NextDue { get; set; }
+    }
+}

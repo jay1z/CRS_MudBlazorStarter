@@ -1,0 +1,62 @@
+﻿@page "/app"
+@attribute [Authorize]
+@using CRS.Services.Tenant
+@using CRS.Components.AppHome.Widgets
+@inject ITenantContext Tenant
+@inject ITenantUserRoleService RoleService
+@inject ILogger<TenantDashboard> Logger
+
+<PageTitle>Dashboard</PageTitle>
+
+@if (!Tenant.TenantId.HasValue)
+{
+    <MudText Typo="Typo.body1">Tenant context missing.</MudText>
+}
+else if (!_initialized)
+{
+    <MudProgressCircular Indeterminate Color="Color.Primary" />
+}
+else
+{
+    <W1HeroHeader />
+    <W2GlobalNotifications />
+
+    <MudPaper Elevation="0" Class="mb-4 pa-2">
+        <MudText Typo="Typo.caption">DEBUG: TenantId=@Tenant.TenantId TenantName='@Tenant.TenantName' Role='@_primaryRole'</MudText>
+    </MudPaper>
+
+    @switch (_primaryRole)
+    {
+        case "PlatformAdmin": @PlatformAdminSections break;
+        case "PlatformSupport": @PlatformSupportSections break;
+        case "TenantOwner": @TenantOwnerSections break;
+        case "TenantSpecialist": @TenantSpecialistSections break;
+        case "TenantViewer": @TenantViewerSections break;
+        case "HOAUser": @HOAUserSections break;
+        case "HOAAuditor": @HOAAuditorSections break;
+        default: <MudText Typo="Typo.body1">Role not mapped.</MudText> break;
+    }
+    <W15HelpfulLinksAndDocs />
+}
+
+@code {
+    private string? _primaryRole;
+    private bool _initialized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Tenant.TenantId.HasValue) return;
+        await RoleService.InitializeAsync();
+        _primaryRole = RoleService.EffectivePrimaryRole;
+        Logger.LogDebug("Dashboard initialized for tenant {TenantId} name {TenantName} role {Role}", Tenant.TenantId, Tenant.TenantName, _primaryRole);
+        _initialized = true;
+    }
+
+    private RenderFragment PlatformAdminSections => b => { b.OpenComponent(0, typeof(W3TenantKpisSummary)); b.CloseComponent(); b.OpenComponent(1, typeof(W4UsageAndBillingPanel)); b.CloseComponent(); b.OpenComponent(2, typeof(W5TenantPipelineBoard)); b.CloseComponent(); b.OpenComponent(3, typeof(W10ActivityFeed)); b.CloseComponent(); b.OpenComponent(4, typeof(W7PropertiesOverview)); b.CloseComponent(); b.OpenComponent(5, typeof(W8CustomerAccountsOverview)); b.CloseComponent(); b.OpenComponent(6, typeof(W11SupportTicketsPanel)); b.CloseComponent(); b.OpenComponent(7, typeof(W13QuickActionsAdmin)); b.CloseComponent(); };
+    private RenderFragment PlatformSupportSections => b => { b.OpenComponent(0, typeof(W3TenantKpisSummary)); b.CloseComponent(); b.OpenComponent(1, typeof(W5TenantPipelineBoard)); b.CloseComponent(); b.OpenComponent(2, typeof(W10ActivityFeed)); b.CloseComponent(); b.OpenComponent(3, typeof(W11SupportTicketsPanel)); b.CloseComponent(); b.OpenComponent(4, typeof(W7PropertiesOverview)); b.CloseComponent(); };
+    private RenderFragment TenantOwnerSections => b => { b.OpenComponent(0, typeof(W3TenantKpisSummary)); b.CloseComponent(); b.OpenComponent(1, typeof(W5TenantPipelineBoard)); b.CloseComponent(); b.OpenComponent(2, typeof(W7PropertiesOverview)); b.CloseComponent(); b.OpenComponent(3, typeof(W8CustomerAccountsOverview)); b.CloseComponent(); b.OpenComponent(4, typeof(W12ComplianceOverviewPanel)); b.CloseComponent(); b.OpenComponent(5, typeof(W4UsageAndBillingPanel)); b.CloseComponent(); b.OpenComponent(6, typeof(W13QuickActionsAdmin)); b.CloseComponent(); b.OpenComponent(7, typeof(W11SupportTicketsPanel)); b.CloseComponent(); };
+    private RenderFragment TenantSpecialistSections => b => { b.OpenComponent(0, typeof(W6MyWorkQueue)); b.CloseComponent(); b.OpenComponent(1, typeof(W14QuickActionsSpecialist)); b.CloseComponent(); b.OpenComponent(2, typeof(W5TenantPipelineBoard)); b.CloseComponent(); b.OpenComponent(3, typeof(W7PropertiesOverview)); b.CloseComponent(); b.OpenComponent(4, typeof(W10ActivityFeed)); b.CloseComponent(); };
+    private RenderFragment TenantViewerSections => b => { b.OpenComponent(0, typeof(W3TenantKpisSummary)); b.CloseComponent(); b.OpenComponent(1, typeof(W7PropertiesOverview)); b.CloseComponent(); b.OpenComponent(2, typeof(W5TenantPipelineBoard)); b.CloseComponent(); b.OpenComponent(3, typeof(W9ReportsAccessPanel)); b.CloseComponent(); b.OpenComponent(4, typeof(W10ActivityFeed)); b.CloseComponent(); };
+    private RenderFragment HOAUserSections => b => { b.OpenComponent(0, typeof(W16HOAAccountSummary)); b.CloseComponent(); b.OpenComponent(1, typeof(W9ReportsAccessPanel)); b.CloseComponent(); b.OpenComponent(2, typeof(W17HOAMilestonesTimeline)); b.CloseComponent(); b.OpenComponent(3, typeof(W11SupportTicketsPanel)); b.CloseComponent(); };
+    private RenderFragment HOAAuditorSections => b => { b.OpenComponent(0, typeof(W12ComplianceOverviewPanel)); b.CloseComponent(); b.OpenComponent(1, typeof(W9ReportsAccessPanel)); b.CloseComponent(); b.OpenComponent(2, typeof(W7PropertiesOverview)); b.CloseComponent(); b.OpenComponent(3, typeof(W10ActivityFeed)); b.CloseComponent(); };
+}

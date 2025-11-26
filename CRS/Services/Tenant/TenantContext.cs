@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace CRS.Services.Tenant {
     // SaaS Refactor: Scoped context holding current tenant information
@@ -9,6 +9,7 @@ namespace CRS.Services.Tenant {
         private bool _isActive = true;
         private string? _brandingJson;
         private bool _isResolvedByLogin = false;
+        private bool _isPlatformHost = true;
 
         public int? TenantId { get => _tenantId; set { _tenantId = value; NotifyChanged(); } }
         public string? TenantName { get => _tenantName; set { _tenantName = value; NotifyChanged(); } }
@@ -17,6 +18,7 @@ namespace CRS.Services.Tenant {
         public string? BrandingJson { get => _brandingJson; set { _brandingJson = value; NotifyChanged(); } }
         // Track whether tenant was set from user login
         public bool IsResolvedByLogin { get => _isResolvedByLogin; set { _isResolvedByLogin = value; NotifyChanged(); } }
+        public bool IsPlatformHost { get => _isPlatformHost; set { _isPlatformHost = value; NotifyChanged(); } }
 
         public event Action? OnTenantChanged;
 

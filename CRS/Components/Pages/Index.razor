@@ -1,0 +1,38 @@
+﻿@page "/"
+@attribute [AllowAnonymous]
+@layout CRS.Components.Layout.HomeLayout
+@using MudBlazor
+@inject ILogger<Index> Logger
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager Nav
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+
+<PageTitle>ALX Reserve Cloud - Reserve Study SaaS Platform</PageTitle>
+
+@if (_hostIsTenant) {
+    if (TenantContext.TenantId == null) {
+        <MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+            <MudProgressCircular Indeterminate Color="Color.Warning" Size="Size.Large" />
+            <MudText Typo="Typo.caption" Class="mt-2">Resolving tenant...</MudText>
+        </MudContainer>
+    } else {
+        <TenantHome />
+    }
+} else {
+    <MarketingHome />
+}
+
+@code {
+    private bool _hostIsTenant => !TenantContext.IsPlatformHost;
+    protected override async Task OnInitializedAsync() {
+        TenantContext.OnTenantChanged += StateHasChanged;
+        Logger.LogDebug("Index: hostIsTenant={HostIsTenant} tenantId={TenantId} platform={Platform}", _hostIsTenant, TenantContext.TenantId, TenantContext.IsPlatformHost);
+        if (_hostIsTenant && TenantContext.TenantId != null) {
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            if (!(authState.User?.Identity?.IsAuthenticated ?? false)) {
+                Nav.NavigateTo($"/Account/Login?returnUrl={Uri.EscapeDataString(Nav.Uri)}", forceLoad:true);
+            }
+        }
+    }
+    public void Dispose() => TenantContext.OnTenantChanged -= StateHasChanged;
+}

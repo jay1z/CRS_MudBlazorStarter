@@ -1,0 +1,116 @@
+﻿@inject CRS.Services.Tickets.ITicketService TicketService
+@inject CRS.Services.Tenant.ITenantUserRoleService RoleService
+@inject ISnackbar Snackbar
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject ILogger<W11SupportTicketsPanel> Logger
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudText Typo="Typo.h6">Support Tickets</MudText>
+    @if (!TenantContext?.TenantId.HasValue ?? true)
+    {
+        <MudAlert Severity="Severity.Warning">Tickets unavailable: tenant context not resolved.</MudAlert>
+    }
+    else if (_loading)
+    {
+        <MudProgressCircular Indeterminate Size="Size.Small" Class="my-2" />
+    }
+    else if (!_tickets.Any())
+    {
+        <MudText Typo="Typo.caption">No open tickets for this tenant.</MudText>
+        @if (CanCreate)
+        {
+            <MudText Typo="Typo.body2">You can create a support ticket below or contact support if you expect to see tickets.</MudText>
+        }
+    }
+    else
+    {
+        <MudList T="CRS.Models.SupportTicket">
+            @foreach (var t in _tickets)
+            {
+                <MudListItem T="CRS.Models.SupportTicket">
+                    <div class="d-flex align-center" style="width:100%">
+                        <div>
+                            <div class="mud-typography-body1">@t.Title</div>
+                            <div class="mud-typography-caption mud-text-secondary">@t.Description</div>
+                        </div>
+                        <MudSpacer />
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => Close(t.Id)">Close</MudButton>
+                    </div>
+                </MudListItem>
+            }
+        </MudList>
+    }
+
+    @if (CanCreate)
+    {
+        <MudDivider Class="my-2" />
+        <MudTextField @bind-Value="_newTitle" Placeholder="Ticket title" />
+        <MudTextField @bind-Value="_newDescription" Placeholder="Description" Lines="3" />
+        <MudButton OnClick="Create" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2">Create Ticket</MudButton>
+    }
+</MudPaper>
+
+@code {
+    private bool _loading = true;
+    private List<CRS.Models.SupportTicket> _tickets = new();
+    private string _newTitle = string.Empty;
+    private string _newDescription = string.Empty;
+
+    private bool CanCreate => RoleService.IsTenantOwner || RoleService.IsPlatformSupport || RoleService.IsPlatformAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RoleService.InitializeAsync();
+        if (!TenantContext?.TenantId.HasValue ?? true) { _loading = false; return; }
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        _loading = true;
+        try
+        {
+            var items = await TicketService.GetOpenTicketsAsync();
+            _tickets = items.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load tickets for tenant {TenantId}", TenantContext.TenantId);
+            Snackbar.Add("Failed to load tickets", Severity.Error);
+        }
+        _loading = false;
+    }
+
+    private async Task Create()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_newTitle)) { Snackbar.Add("Title required", Severity.Warning); return; }
+            var t = new CRS.Models.SupportTicket { Title = _newTitle, Description = _newDescription };
+            await TicketService.CreateTicketAsync(t);
+            _newTitle = _newDescription = string.Empty;
+            await Load();
+            Snackbar.Add("Ticket created", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create ticket for tenant {TenantId}", TenantContext.TenantId);
+            Snackbar.Add("Failed to create ticket", Severity.Error);
+        }
+    }
+
+    private async Task Close(Guid id)
+    {
+        try
+        {
+            var ok = await TicketService.CloseTicketAsync(id);
+            if (ok) { Snackbar.Add("Ticket closed", Severity.Success); await Load(); }
+            else { Snackbar.Add("Failed to close ticket", Severity.Error); Logger.LogWarning("Close ticket returned false for {TicketId}", id); }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to close ticket {TicketId} for tenant {TenantId}", id, TenantContext.TenantId);
+            Snackbar.Add("Failed to close ticket", Severity.Error);
+        }
+    }
+}

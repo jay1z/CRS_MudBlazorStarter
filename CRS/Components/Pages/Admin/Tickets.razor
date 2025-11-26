@@ -1,0 +1,89 @@
+﻿@page "/admin/tickets"
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
+@using MudBlazor
+@using System.Text.Json
+@inject IHttpClientFactory ClientFactory
+@inject ISnackbar Snackbar
+
+<PageTitle>Admin - Tickets & Customers</PageTitle>
+
+<MudTabs>
+    <MudTabPanel Text="Support Tickets">
+        <MudTable Items="_tickets" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>Title</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate Context="t">
+                <MudTd>@t.Title</MudTd>
+                <MudTd>@t.Status</MudTd>
+                <MudTd>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => CloseTicket(t.Id)">Close</MudButton>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => AssignTicket(t.Id)">Assign</MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+        <MudButton OnClick="LoadTickets" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2">Refresh</MudButton>
+    </MudTabPanel>
+    <MudTabPanel Text="Customers">
+        <MudTable Items="_customers" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate Context="c">
+                <MudTd>@c.Name</MudTd>
+                <MudTd>@c.Email</MudTd>
+                <MudTd>
+                    <MudButton Variant="Variant.Text" Size="Size.Small">Edit</MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+        <MudButton OnClick="LoadCustomers" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2">Refresh</MudButton>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<CRS.Models.SupportTicket> _tickets = new();
+    private List<CRS.Models.CustomerAccount> _customers = new();
+
+    protected override async Task OnInitializedAsync() {
+        await LoadTickets();
+        await LoadCustomers();
+    }
+
+    private async Task LoadTickets() {
+        var client = ClientFactory.CreateClient();
+        var resp = await client.GetAsync("api/tickets/open");
+        if (resp.IsSuccessStatusCode) {
+            _tickets = await resp.Content.ReadFromJsonAsync<List<CRS.Models.SupportTicket>>() ?? new();
+        }
+    }
+
+    private async Task LoadCustomers() {
+        var client = ClientFactory.CreateClient();
+        var resp = await client.GetAsync("api/customers?page=1&pageSize=50");
+        if (resp.IsSuccessStatusCode) {
+            var data = await resp.Content.ReadFromJsonAsync<JsonElement>();
+            if (data.TryGetProperty("customers", out var customersProp)) {
+                _customers = JsonSerializer.Deserialize<List<CRS.Models.CustomerAccount>>(customersProp.GetRawText()) ?? new();
+            }
+        }
+    }
+
+    private async Task CloseTicket(Guid id) {
+        var client = ClientFactory.CreateClient();
+        var resp = await client.PostAsync($"api/tickets/{id}/close", null);
+        if (resp.IsSuccessStatusCode) {
+            Snackbar.Add("Ticket closed", Severity.Success);
+            await LoadTickets();
+        }
+    }
+
+    private async Task AssignTicket(Guid id) {
+        // Placeholder: open dialog or assign to current user
+        Snackbar.Add("Assign feature placeholder", Severity.Info);
+    }
+}

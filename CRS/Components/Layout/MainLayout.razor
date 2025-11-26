@@ -23,7 +23,7 @@
 @inject UserStateService UserState
 @inject IMessageService MessageService
 
-<!-- MudBlazor providers: present once per layout (supports prerendering) -->
+<!-- Unified MudBlazor providers -->
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -32,7 +32,11 @@
 <MudLayout>
     <MudAppBar Elevation="25">
         <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
-        <MudText Typo="Typo.h5" Class="ml-3">ALX Reserve Cloud</MudText>
+        <MudText Typo="Typo.h5" Class="ml-3">@(TenantContext?.TenantName ?? "ALX Reserve Cloud")</MudText>
+        @if (TenantContext?.TenantId != null)
+        {
+            <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Class="ml-3">Sub: @TenantContext.Subdomain</MudChip>
+        }
         <MudSpacer />
         @if (_authResolved && TenantContext?.TenantId != null
             && TenantContext.IsResolvedByLogin == false
@@ -116,7 +120,7 @@
         ThemeService.OnThemeChanged += StateHasChanged;
         ThemeService.SetTheme(new Default().Theme!);
 
-        // Hydrate TenantContext and cache claim-based flags for stable nav
+        // Hydrate tenant context for logged in users
         try {
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
@@ -126,7 +130,7 @@
                 _isPlatformAdmin = user.IsInRole("PlatformAdmin");
 
                 if (_claimTenantId > 0) {
-                    _hasTenant = true; // sticky once true
+                    _hasTenant = true;
                     TenantContext!.TenantId = _claimTenantId;
                     TenantContext.IsResolvedByLogin = true;
                     try {
@@ -141,14 +145,12 @@
                         }
                     } catch { }
                 }
-                else if (TenantContext?.TenantId != null)
-                {
-                    _hasTenant = true; // sticky from context
+                else if (TenantContext?.TenantId != null) {
+                    _hasTenant = true;
                 }
             }
         } catch { }
 
-        // Init user state and unread count
         try {
             await UserState.InitializeAsync();
             UserState.OnChange += RefreshUserFlagsOnChange;
@@ -167,18 +169,13 @@
                 var claimTenant = user.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
                 _ = int.TryParse(claimTenant, out _claimTenantId);
                 _isPlatformAdmin = user.IsInRole("PlatformAdmin");
-                if (_claimTenantId > 0 || TenantContext?.TenantId != null)
-                {
-                    _hasTenant = true; // keep sticky once acquired
+                if (_claimTenantId > 0 || TenantContext?.TenantId != null) {
+                    _hasTenant = true;
                 }
             } else {
-                // Do NOT clear sticky flags here to avoid flicker during transient auth state changes
                 _isPlatformAdmin = false;
-                // _hasTenant remains as-is; it will reset on explicit logout/navigation
             }
-        } catch {
-            // keep existing flags on transient error
-        }
+        } catch { }
         await RefreshUnreadCountAsync();
         StateHasChanged();
     }

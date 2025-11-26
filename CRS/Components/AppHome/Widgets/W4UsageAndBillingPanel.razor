@@ -1,0 +1,142 @@
+﻿@using CRS.Services.Billing
+@inject IHttpClientFactory ClientFactory
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject CRS.Services.Tenant.ITenantUserRoleService RoleService
+@inject ILogger<W4UsageAndBillingPanel> Logger
+
+<MudCard Class="mb-4" Elevation="2">
+    <MudCardContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.h6">Usage & Billing</MudText>
+            @if (CanManageBilling)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Href="/account/billing">Manage</MudButton>
+            }
+            else if (_loaded && _status != "-" && RoleService.IsPlatformSupport)
+            {
+                <MudChip T="string" Color="Color.Info" Size="Size.Small">Read-only</MudChip>
+            }
+        </MudStack>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate Color="Color.Primary" Class="my-2" />
+        }
+        else if (!_loaded)
+        {
+            <MudText Typo="Typo.caption">Not available.</MudText>
+            @if (!string.IsNullOrEmpty(_error)) { <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert> }
+        }
+        else
+        {
+            <MudGrid>
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.subtitle2">Plan</MudText>
+                    <MudText>@_tier</MudText>
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.subtitle2">Status</MudText>
+                    <MudText>@_status</MudText>
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.subtitle2">Communities</MudText>
+                    <MudText>@_communitiesUsed / @_communitiesLimit</MudText>
+                </MudItem>
+                <MudItem xs="6" md="3">
+                    <MudText Typo="Typo.subtitle2">Specialists</MudText>
+                    <MudText>@_specialistsUsed / @_specialistsLimit</MudText>
+                </MudItem>
+            </MudGrid>
+            @if (_showUpgrade)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-2">Upgrade recommended.</MudAlert>
+            }
+
+            @if (_invoices?.Any() == true)
+            {
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.subtitle2">Recent Invoices</MudText>
+                <MudList T="InvoiceDto">
+                    @foreach (var inv in _invoices)
+                    {
+                        <MudListItem T="InvoiceDto">
+                            <div class="d-flex align-center" style="width:100%">
+                                <div>
+                                    <div class="mud-typography-body1">@inv.Id</div>
+                                    <div class="mud-typography-caption mud-text-secondary">@((inv.AmountCents/100).ToString("C")) @inv.Currency • @inv.Status</div>
+                                </div>
+                                <MudSpacer />
+                                @if (!string.IsNullOrWhiteSpace(inv.HostedInvoiceUrl)) {
+                                    <MudButton Href="@inv.HostedInvoiceUrl" Target="_blank" Variant="Variant.Text" Size="Size.Small">View</MudButton>
+                                }
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private bool _loading = true;
+    private bool _loaded;
+    private string _tier = "-";
+    private string _status = "-";
+    private int _communitiesUsed;
+    private int _communitiesLimit;
+    private int _specialistsUsed;
+    private int _specialistsLimit;
+    private bool _showUpgrade;
+    private string? _error;
+    private IReadOnlyList<InvoiceDto>? _invoices;
+
+    private bool CanManageBilling => RoleService.IsPlatformAdmin || RoleService.IsTenantOwner;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RoleService.InitializeAsync();
+        if (TenantContext.TenantId is not int tenantId)
+        {
+            _loading = false; return;
+        }
+        try
+        {
+            var client = ClientFactory.CreateClient();
+            var resp = await client.GetAsync($"api/billing/status/{tenantId}");
+            if (resp.IsSuccessStatusCode)
+            {
+                var json = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                _tier = json.TryGetProperty("tier", out var tier) ? tier.GetString() ?? "-" : "-";
+                _status = json.TryGetProperty("status", out var st) ? st.GetString() ?? "-" : "-";
+                _communitiesUsed = json.TryGetProperty("communitiesUsed", out var cu) ? cu.GetInt32() : 0;
+                _communitiesLimit = json.TryGetProperty("maxCommunities", out var mc) ? mc.GetInt32() : 0;
+                _specialistsUsed = json.TryGetProperty("specialistsUsed", out var su) ? su.GetInt32() : 0;
+                _specialistsLimit = json.TryGetProperty("maxSpecialists", out var ms) ? ms.GetInt32() : 0;
+                var active = json.TryGetProperty("active", out var act) && act.GetBoolean();
+                _showUpgrade = !active || _communitiesUsed >= _communitiesLimit || _specialistsUsed >= _specialistsLimit;
+                _loaded = true;
+            }
+            else
+            {
+                _error = $"Billing status request failed ({(int)resp.StatusCode}).";
+                Logger.LogWarning("Billing status request failed for tenant {TenantId} code {StatusCode}", tenantId, resp.StatusCode);
+            }
+
+            // Fetch invoices (anonymous endpoint)
+            try {
+                var invResp = await client.GetAsync($"api/billing/invoices/{tenantId}");
+                if (invResp.IsSuccessStatusCode) {
+                    _invoices = await invResp.Content.ReadFromJsonAsync<IReadOnlyList<InvoiceDto>>();
+                }
+            } catch (Exception ex) {
+                Logger.LogDebug(ex, "Failed to load invoices");
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "Error loading billing status.";
+            Logger.LogError(ex, "Error loading billing status for tenant {TenantId}", tenantId);
+        }
+        _loading = false;
+    }
+}

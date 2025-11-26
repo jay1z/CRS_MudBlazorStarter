@@ -31,8 +31,8 @@ namespace CRS.Services.Billing {
     }
 
     public class BillingUrlOptions {
-        public string? SuccessUrl { get; set; } // e.g. https://app.alxreservecloud.com/billing/success?session_id={CHECKOUT_SESSION_ID}
-        public string? CancelUrl { get; set; }  // e.g. https://app.alxreservecloud.com/pricing/canceled
+        public string? SuccessUrl { get; set; } // e.g. https://tenant.alxreservecloud.com/billing/success?session_id={CHECKOUT_SESSION_ID}
+        public string? CancelUrl { get; set; }  // e.g. https://tenant.alxreservecloud.com/pricing/canceled
         public string? PortalReturnUrl { get; set; } // where Stripe Billing Portal returns
     }
 

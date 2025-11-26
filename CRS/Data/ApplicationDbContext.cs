@@ -117,7 +117,8 @@ namespace CRS.Data {
                 entity.HasOne(a => a.Tenant)
                       .WithMany()
                       .HasForeignKey(a => a.TenantId)
-                      .OnDelete(DeleteBehavior.NoAction);
+                      .OnDelete(DeleteBehavior.NoAction)
+                      .IsRequired(false);
             });
         }
 
@@ -130,7 +131,7 @@ namespace CRS.Data {
 
             foreach (var type in tenantScopedTypes) {
                 // Skip Tenants, Settings, AccessToken (global tables) if they implement the interface by accident
-                if (type == typeof(Tenant) || type == typeof(Settings) || type == typeof(AccessToken)) continue;
+                if (type == typeof(Tenant) || type == typeof(Settings) || type == typeof(AccessToken) || type == typeof(UserRoleAssignment)) continue;
 
                 var method = typeof(ApplicationDbContext).GetMethod(nameof(ApplyTenantFilterGeneric), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                     ?.MakeGenericMethod(type);
@@ -200,6 +201,48 @@ namespace CRS.Data {
                 entity.Property(h => h.DraftHtml).HasColumnType("nvarchar(max)");
                 entity.Property(h => h.PublishedHtml).HasColumnType("nvarchar(max)");
             });
+
+            // CustomerAccount
+            builder.Entity<CRS.Models.CustomerAccount>(entity => {
+                entity.ToTable("CustomerAccounts");
+                entity.HasIndex(e => e.TenantId);
+                entity.Property(e => e.Name).HasMaxLength(256);
+                entity.Property(e => e.Email).HasMaxLength(256);
+            });
+
+            // SupportTicket
+            builder.Entity<CRS.Models.SupportTicket>(entity => {
+                entity.ToTable("SupportTickets");
+                entity.HasIndex(e => e.TenantId);
+                entity.Property(e => e.Title).HasMaxLength(256);
+                entity.Property(e => e.Status).HasMaxLength(64);
+            });
+        }
+
+        // Apply owned type configurations
+        private void ApplyOwnedConfigurations(ModelBuilder builder) {
+            // Omit Id properties from tenant-scoped owned types (to use owner PK)
+            var ownedTypes = builder.Model.GetEntityTypes()
+                .SelectMany(t => t.GetForeignKeys())
+                .Where(fk => fk.PrincipalEntityType.ClrType == typeof(Tenant))
+                .Select(fk => fk.DependentToPrincipal?.DeclaringEntityType)
+                .Where(et => et != null)
+                .Select(et => et!.ClrType)
+                .ToList();
+
+            foreach (var type in ownedTypes) {
+                var method = typeof(ApplicationDbContext).GetMethod(nameof(ConfigOwnsMany), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    ?.MakeGenericMethod(type);
+                method?.Invoke(this, new object[] { builder });
+            }
+        }
+
+        private void ConfigOwnsMany<TEntity>(ModelBuilder builder) where TEntity : class {
+            builder.Entity<TEntity>()
+                .Property("Id")
+                .HasColumnName("OwnerId")
+                .IsRequired()
+                .ValueGeneratedNever();
         }
 
         public override int SaveChanges() {
@@ -295,6 +338,10 @@ namespace CRS.Data {
         public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
         // Billing log
         public DbSet<StripeEventLog> StripeEventLogs { get; set; }
+
+        // New tenant-scoped entities
+        public DbSet<CRS.Models.CustomerAccount> CustomerAccounts { get; set; }
+        public DbSet<CRS.Models.SupportTicket> SupportTickets { get; set; }
         #endregion
 
         #region Seed Data

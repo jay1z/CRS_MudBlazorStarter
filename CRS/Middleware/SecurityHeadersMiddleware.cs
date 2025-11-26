@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
@@ -38,11 +38,17 @@ public class SecurityHeadersMiddleware
             "default-src 'self'",
             "base-uri 'self'",
             "frame-ancestors 'none'",
+            // Allow images from self, data URIs, and any https host (needed for some CDN images)
             "img-src 'self' data: https:",
+            // Allow styles from self, inline styles (for MudBlazor) and https hosts (CDNs)
             "style-src 'self' 'unsafe-inline' https:",
-            "script-src 'self' 'unsafe-inline'",
-            // allow secure websockets and https by default
+            // Allow scripts from self, inline (required by some libs), and Stripe's script domain
+            "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+            // Allow framing content from Stripe for pricing table / checkout widgets
+            "frame-src 'self' https://js.stripe.com https://checkout.stripe.com",
+            // allow secure websockets and https by default; connect-src can include Stripe API if needed
             "connect-src 'self' https: wss:",
+            // Fonts from self, data URIs, and https hosts
             "font-src 'self' data: https:"
         };
 

@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Components.Server.Circuits; // add for CircuitHandler
 
 using MudBlazor.Services;
 
@@ -72,6 +73,12 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddHttpClient();
     builder.Services.AddSignalR();
 
+    // Register tenant user role resolution service
+    builder.Services.AddScoped<ITenantUserRoleService, TenantUserRoleService>();
+    builder.Services.AddScoped<ITenantHomepageDataService, TenantHomepageDataService>();
+    builder.Services.AddScoped<CRS.Services.Tickets.ITicketService, CRS.Services.Tickets.TicketService>();
+    builder.Services.AddScoped<CRS.Services.Customers.ICustomerService, CRS.Services.Customers.CustomerService>();
+
     // Health checks
     builder.Services.AddHealthChecks();
 
@@ -111,6 +118,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // SaaS Refactor: register tenant services
     builder.Services.AddScoped<ITenantContext, TenantContext>();
     builder.Services.AddScoped<TenantService>();
+    builder.Services.AddScoped<CircuitHandler, CRS.Services.Tenant.TenantCircuitHandler>();
 
     // Remove Multi-tenant provisioning services and multi-DB resolvers
     // builder.Services.AddSingleton<ITenantDatabaseResolver, DefaultTenantDatabaseResolver>();
@@ -214,6 +222,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IBillingService, BillingService>();
     builder.Services.AddScoped<IFeatureGuardService, FeatureGuardService>();
 
+    builder.Services.AddScoped<CRS.Services.Provisioning.IOwnerProvisioningService, CRS.Services.Provisioning.OwnerProvisioningService>();
 }
 
 void ConfigureDatabases(WebApplicationBuilder builder) {
@@ -244,13 +253,8 @@ void ConfigureIdentity(WebApplicationBuilder builder) {
         options.Password.RequireLowercase = true;
         options.Password.RequiredUniqueChars = 1;
 
-        // Lockout policy
-        options.Lockout.AllowedForNewUsers = true;
-        options.Lockout.MaxFailedAccessAttempts = 5;
-        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
-
         // User settings
-        options.User.RequireUniqueEmail = true;
+        options.User.RequireUniqueEmail = true; // Keep unique emails
     })
         .AddRoles<IdentityRole<Guid>>()
         .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -296,7 +300,7 @@ void ConfigureIdentity(WebApplicationBuilder builder) {
     }
 
     builder.Services.AddScoped<UserManager<ApplicationUser>>();
-    builder.Services.AddScoped<IUserStore<ApplicationUser>, UserStore<ApplicationUser, IdentityRole<Guid>, ApplicationDbContext, Guid>>();
+    builder.Services.AddScoped<IUserStore<ApplicationUser>, CustomUserStore>();
 
     // Register RoleManager with Guid key type
     builder.Services.AddScoped<RoleManager<IdentityRole<Guid>>>(sp => {
@@ -317,6 +321,12 @@ async Task ConfigurePipeline(WebApplication app) {
 
     // Configure the HTTP request pipeline based on environment
     if (app.Environment.IsDevelopment()) {
+        // Dev helper: dump current principal claims for troubleshooting
+        app.MapGet("/dev/whoami", (System.Security.Claims.ClaimsPrincipal user) => {
+            var claims = user?.Claims.Select(c => new { c.Type, c.Value }) ?? Enumerable.Empty<object>();
+            return Results.Json(claims);
+        }).WithDisplayName("Dev: WhoAmI (claims)").RequireAuthorization();
+
         app.UseDeveloperExceptionPage();
     } else {
         app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -394,6 +404,16 @@ async Task ConfigurePipeline(WebApplication app) {
     app.MapAdditionalIdentityEndpoints();
 
     app.MapHealthChecks("/health");
+
+    var configuredRootDomain = builder.Configuration["App:RootDomain"];
+    if (!string.IsNullOrWhiteSpace(configuredRootDomain)) {
+        var sanitized = configuredRootDomain.Trim().Trim('.').Replace("http://", "", StringComparison.OrdinalIgnoreCase).Replace("https://", "", StringComparison.OrdinalIgnoreCase);
+        if (configuredRootDomain != sanitized) {
+            Serilog.Log.Warning("[Startup] App:RootDomain sanitized from '{Original}' to '{Sanitized}'", configuredRootDomain, sanitized);
+        } else {
+            Serilog.Log.Information("[Startup] App:RootDomain set to '{RootDomain}'", sanitized);
+        }
+    }
 }
 
 async Task SeedDatabase(WebApplication app) {
@@ -411,10 +431,10 @@ async Task SeedDatabase(WebApplication app) {
         await SeedManager.SeedTenantsAndAdminsAsync(services);
         logger.LogInformation("[Seed] Seeding platform admin user...");
         await SeedManager.SeedAdminUserAsync(services);
-        if (app.Environment.IsDevelopment()) {
-            logger.LogInformation("[Seed] Seeding test users...");
-            await SeedManager.SeedTestUsersAsync(services);
-        }
+        //if (app.Environment.IsDevelopment()) {
+        //    logger.LogInformation("[Seed] Seeding test users...");
+        //    await SeedManager.SeedTestUsersAsync(services);
+        //}
         logger.LogInformation("[Seed] Completed.");
     } catch (Exception ex) {
         logger.LogError(ex, "Error during database seeding");

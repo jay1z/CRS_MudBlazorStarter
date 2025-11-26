@@ -1,0 +1,88 @@
+﻿@model CRS.Models.Emails.OwnerWelcomeEmail
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Welcome to @Model.TenantName</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f7f7f7;
+            margin: 0;
+            padding: 0;
+        }
+
+        .wrapper {
+            max-width: 640px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg,#6A3D9A,#FF8C00);
+            padding: 24px;
+            color: #fff;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .content {
+            padding: 24px;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #FF8C00;
+            color: #fff !important;
+            text-decoration: none;
+            padding: 14px 22px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .footer {
+            font-size: 12px;
+            color: #888;
+            padding: 24px;
+            text-align: center;
+        }
+
+        a {
+            color: #FF8C00;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="header">
+            <h1>Welcome to @Model.TenantName</h1>
+        </div>
+        <div class="content">
+            <p>Thanks for starting your subscription on <strong>ALX Reserve Cloud</strong>.</p>
+            <p>Your account has been created. Please reset your password to finish activating owner access.</p>
+            <p style="text-align:center; margin:32px 0;">
+                <a href="@Model.PasswordResetLink" class="btn">Reset Password</a>
+            </p>
+            @if (!string.IsNullOrWhiteSpace(Model.SubdomainUrl)) {
+                <p>Login URL: <a href="@Model.SubdomainUrl">@Model.SubdomainUrl</a></p>
+            }
+            <p>If the button does not work, copy and paste this link into your browser:</p>
+            <p><code style="word-break:break-all; color:#555; font-size:13px;">@Model.PasswordResetLink</code></p>
+            <p>If you did not initiate this subscription please contact support immediately.</p>
+            @if (!string.IsNullOrWhiteSpace(Model.SupportEmail)) {
+                <p>Support: <a href="mailto:@Model.SupportEmail">@Model.SupportEmail</a></p>
+            }
+        </div>
+        <div class="footer">
+            <p>&copy; @DateTime.UtcNow.Year ALX Reserve Cloud. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

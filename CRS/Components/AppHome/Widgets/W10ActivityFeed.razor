@@ -1,0 +1,71 @@
+﻿@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject CRS.Services.Tenant.ITenantUserRoleService RoleService
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudText Typo="Typo.h6">Activity Feed</MudText>
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate Size="Size.Small" Class="my-2" />
+    }
+    else if (!_items.Any())
+    {
+        <MudText Typo="Typo.caption">No recent activity.</MudText>
+    }
+    else
+    {
+        <MudList T="ActivityItem">
+            @foreach (var it in _items)
+            {
+                <MudListItem T="ActivityItem">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2">@it.Text</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@it.When.ToLocalTime().ToString("MM/dd h:mm tt")</MudText>
+                    </MudStack>
+                </MudListItem>
+            }
+        </MudList>
+    }
+</MudPaper>
+
+@code {
+    private bool _loading = true;
+    private List<ActivityItem> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!TenantContext.TenantId.HasValue) { _loading = false; return; }
+        await RoleService.InitializeAsync();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var statusHist = await db.StudyStatusHistories
+                .AsNoTracking()
+                .OrderByDescending(h => h.ChangedAt)
+                .Take(40)
+                .ToListAsync();
+            _items.AddRange(statusHist.Select(h => new ActivityItem {
+                When = h.ChangedAt.DateTime,
+                Text = $"Study {h.RequestId} moved to {h.ToStatus}" }));
+
+            // If user has internal higher roles include audit logs
+            if (RoleService.IsTenantOwner || RoleService.IsTenantSpecialist || RoleService.IsPlatformAdmin)
+            {
+                var audits = await db.AuditLogs
+                    .AsNoTracking()
+                    .OrderByDescending(a => a.Id)
+                    .Take(40)
+                    .ToListAsync();
+                _items.AddRange(audits.Select(a => new ActivityItem {
+                    When = DateTime.UtcNow, // audit log lacks explicit timestamp fields in provided snippet
+                    Text = $"{a.Action} on {a.TableName}#{a.RecordId} column {a.ColumnName}" }));
+            }
+            _items = _items.OrderByDescending(i => i.When).Take(50).ToList();
+        }
+        catch { }
+        _loading = false;
+    }
+
+    private sealed class ActivityItem { public DateTime When { get; set; } public string Text { get; set; } = string.Empty; }
+}

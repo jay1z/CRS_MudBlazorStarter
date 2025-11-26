@@ -1,0 +1,61 @@
+﻿@inject CRS.Services.Tenant.ITenantUserRoleService RoleService
+@inject CRS.Services.Tenant.ITenantHomepageDataService DataService
+@inject CRS.Services.UserStateService UserState
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject ILogger<W6MyWorkQueue> Logger
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudText Typo="Typo.h6">My Work Queue</MudText>
+    @if (!TenantContext?.TenantId.HasValue ?? true)
+    {
+        <MudAlert Severity="Severity.Warning">Work queue unavailable: tenant context not resolved.</MudAlert>
+    }
+    else if (_loading)
+    {
+        <MudProgressLinear Indeterminate Color="Color.Primary" Class="my-2" />
+    }
+    else if (!_items.Any())
+    {
+        <MudText Typo="Typo.caption">No assigned items for your role.</MudText>
+    }
+    else
+    {
+        <MudTable Items="_items" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>Title</MudTh>
+                <MudTh>Property</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Due</MudTh>
+            </HeaderContent>
+            <RowTemplate Context="w">
+                <MudTd>@w.Title</MudTd>
+                <MudTd>@w.Property</MudTd>
+                <MudTd>@w.Status</MudTd>
+                <MudTd>@(w.DueDate?.ToString("MM/dd") ?? "-")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    private List<CRS.Components.AppHome.ViewModels.WorkItemVm> _items = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await RoleService.InitializeAsync();
+            if (!TenantContext?.TenantId.HasValue ?? true) { _loading = false; return; }
+            if (!RoleService.IsTenantSpecialist && !RoleService.IsTenantOwner) { _loading = false; return; }
+            await UserState.InitializeAsync();
+            var uid = UserState.CurrentUser?.Id;
+            _items = (await DataService.GetMyWorkAsync(uid)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load MyWorkQueue for tenant {TenantId}", TenantContext.TenantId);
+        }
+        finally { _loading = false; }
+    }
+}

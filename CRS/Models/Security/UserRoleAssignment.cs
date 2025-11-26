@@ -7,7 +7,7 @@ using CRS.Services.Tenant;
 namespace CRS.Models.Security
 {
     // Many-to-many user role assignments with optional tenant scope
-    public class UserRoleAssignment : ITenantScoped
+    public class UserRoleAssignment
     {
         [Key]
         public Guid Id { get; set; } = Guid.CreateVersion7();
@@ -19,7 +19,7 @@ namespace CRS.Models.Security
         public Guid RoleId { get; set; }
 
         // If null => platform-level role
-        public int TenantId { get; set; } // 0 means platform/global
+        public int? TenantId { get; set; }
 
         [ForeignKey(nameof(UserId))]
         public ApplicationUser? User { get; set; }

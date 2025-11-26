@@ -1,4 +1,4 @@
-namespace CRS.Services.Tenant {
+﻿namespace CRS.Services.Tenant {
     // SaaS Refactor: Provides access to the current request's tenant
     public interface ITenantContext {
         int? TenantId { get; set; }
@@ -9,6 +9,7 @@ namespace CRS.Services.Tenant {
         string? BrandingJson { get; set; }
         // Indicates the tenant was adopted from a user's login (rather than resolved from middleware host)
         bool IsResolvedByLogin { get; set; }
+        bool IsPlatformHost { get; set; }
 
         // Event raised when tenant properties change so UI components can update immediately
         event Action? OnTenantChanged;

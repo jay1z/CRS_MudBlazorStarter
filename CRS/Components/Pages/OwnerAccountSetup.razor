@@ -1,0 +1,79 @@
+﻿@page "/signup/owner"
+@attribute [AllowAnonymous]
+@using CRS.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Set Up Owner Account</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
+    <MudPaper Class="pa-6">
+        <MudText Typo="Typo.h5" Class="mb-4">Finalize Owner Account</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Enter the email you used during subscription and set a password to activate your owner login.</MudText>
+        <EditForm Model="model" OnValidSubmit="OnSubmitAsync">
+            <MudTextField @bind-Value="model.Email" Label="Owner email" Required="true" Immediate="true" />
+            <MudTextField @bind-Value="model.Password" Label="Password" InputType="InputType.Password" Required="true" Immediate="true" />
+            <MudTextField @bind-Value="model.Confirm" Label="Confirm password" InputType="InputType.Password" Required="true" Immediate="true" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" ButtonType="ButtonType.Submit" Disabled="_submitting">Create Account</MudButton>
+        </EditForm>
+        @if (!string.IsNullOrEmpty(_error)) { <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert> }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery] public int? TenantId { get; set; }
+    [SupplyParameterFromQuery] public Guid? Token { get; set; }
+
+    private SetupModel model = new();
+    private bool _submitting = false;
+    private string? _error;
+
+    class SetupModel {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Confirm { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync() {
+        if (!TenantId.HasValue || !Token.HasValue) { _error = "Missing tenantId or token."; return; }
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == TenantId.Value);
+        if (tenant == null) { _error = "Tenant not found."; return; }
+        if (tenant.SignupToken != Token.Value) { _error = "Invalid signup token."; return; }
+        if (tenant.IsActive == false) { _error = "Subscription not active yet."; return; }
+        if (!string.IsNullOrWhiteSpace(tenant.PendingOwnerEmail)) model.Email = tenant.PendingOwnerEmail; // prefill
+    }
+
+    private async Task OnSubmitAsync() {
+        if (!TenantId.HasValue || !Token.HasValue) { _error = "Invalid request."; return; }
+        // ... existing password checks ...
+        if (model.Password.Length < 8) { _error = "Password must be at least 8 characters."; return; }
+        if (model.Password != model.Confirm) { _error = "Passwords do not match."; return; }
+        _submitting = true;
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == TenantId.Value);
+            if (tenant == null) { _error = "Tenant not found."; _submitting = false; return; }
+            if (tenant.SignupToken != Token.Value) { _error = "Invalid signup token."; _submitting = false; return; }
+            var existingUser = await UserManager.FindByEmailAsync(model.Email.Trim());
+            if (existingUser != null) { _error = "Account already exists. Please log in."; _submitting = false; return; }
+            var user = new ApplicationUser { Email = model.Email.Trim(), UserName = model.Email.Trim(), EmailConfirmed = true, TenantId = tenant.Id };
+            var create = await UserManager.CreateAsync(user, model.Password);
+            if (!create.Succeeded) { _error = string.Join(", ", create.Errors.Select(e => e.Description)); _submitting = false; return; }
+            var ownerRole = await db.Roles2.FirstOrDefaultAsync(r => r.Name == "TenantOwner");
+            if (ownerRole != null && !await db.UserRoleAssignments.AnyAsync(a => a.UserId == user.Id && a.RoleId == ownerRole.Id && a.TenantId == tenant.Id)) {
+                db.UserRoleAssignments.Add(new CRS.Models.Security.UserRoleAssignment { UserId = user.Id, RoleId = ownerRole.Id, TenantId = tenant.Id });
+                await db.SaveChangesAsync();
+            }
+            await SignInManager.SignInAsync(user, false);
+            Snackbar.Add("Owner account created.", Severity.Success);
+            Nav.NavigateTo("/");
+        } catch (Exception ex) { _error = ex.Message; }
+        _submitting = false;
+    }
+}

@@ -1,0 +1,63 @@
+﻿@inject CRS.Services.Tenant.ITenantHomepageDataService DataService
+@inject CRS.Services.Tenant.ITenantUserRoleService RoleService
+@inject CRS.Services.UserStateService UserState
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject ILogger<W5TenantPipelineBoard> Logger
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudText Typo="Typo.h6">Pipeline Board</MudText>
+
+    @if (!TenantContext?.TenantId.HasValue ?? true)
+    {
+        <MudAlert Severity="Severity.Warning">Pipeline unavailable: tenant context not resolved.</MudAlert>
+    }
+    else if (_loading)
+    {
+        <MudProgressCircular Indeterminate Size="Size.Small" Class="my-2" />
+    }
+    else if (!_stages.Any())
+    {
+        <MudText Typo="Typo.caption">No studies found for this tenant.</MudText>
+    }
+    else
+    {
+        <MudGrid Class="mt-2">
+            @foreach (var s in _stages)
+            {
+                <MudItem xs="6" md="3">
+                    <MudPaper Elevation="0" Class="pa-3">
+                        <MudText Typo="Typo.subtitle2">@s.Stage</MudText>
+                        <MudText Typo="Typo.h5">@s.Count</MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+
+    <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">@_filterNote</MudText>
+</MudPaper>
+
+@code {
+    private List<CRS.Components.AppHome.ViewModels.PipelineStageVm> _stages = new();
+    private bool _loading = true;
+    private string _filterNote = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await RoleService.InitializeAsync();
+            await UserState.InitializeAsync();
+            if (!TenantContext?.TenantId.HasValue ?? true) { _loading = false; return; }
+            var specialistFiltered = RoleService.IsTenantSpecialist && !RoleService.IsTenantOwner;
+            var uid = UserState.CurrentUser?.Id;
+            _stages = (await DataService.GetPipelineAsync(specialistFiltered, uid)).ToList();
+            _filterNote = specialistFiltered ? "Filtered to your assignments" : "Full tenant view";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load pipeline for tenant {TenantId}", TenantContext.TenantId);
+        }
+        finally { _loading = false; }
+    }
+}

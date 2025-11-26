@@ -1,0 +1,38 @@
+﻿@using CRS.Services.Tenant
+@inject ITenantContext TenantContext
+@inject NavigationManager Nav
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+    <MudText Typo="Typo.h4" Class="mb-2">Welcome to @TenantContext.TenantName</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">Your tenant dashboard landing page. Quick access to key modules.</MudText>
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.subtitle2">Communities</MudText>
+                <MudText Typo="Typo.caption" Class="mb-2">Manage properties and assets.</MudText>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(()=> Nav.NavigateTo("/Communities"))">Open</MudButton>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.subtitle2">Studies</MudText>
+                <MudText Typo="Typo.caption" Class="mb-2">Reserve studies workflow.</MudText>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(()=> Nav.NavigateTo("/ReserveStudies"))">Open</MudButton>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.subtitle2">Reports</MudText>
+                <MudText Typo="Typo.caption" Class="mb-2">Generate professional outputs.</MudText>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(()=> Nav.NavigateTo("/Reports"))">Open</MudButton>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.subtitle2">Billing</MudText>
+                <MudText Typo="Typo.caption" Class="mb-2">Subscription & usage.</MudText>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(()=> Nav.NavigateTo("/account/billing"))">Open</MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>

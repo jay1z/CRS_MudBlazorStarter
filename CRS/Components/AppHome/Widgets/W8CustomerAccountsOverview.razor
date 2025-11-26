@@ -1,0 +1,51 @@
+﻿@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
+@inject CRS.Services.Customers.ICustomerService CustomerService
+@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject ILogger<W8CustomerAccountsOverview> Logger
+
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudText Typo="Typo.h6">Customer Accounts</MudText>
+    @if (!TenantContext?.TenantId.HasValue ?? true)
+    {
+        <MudAlert Severity="Severity.Warning">Customer accounts unavailable: tenant context not resolved.</MudAlert>
+    }
+    else if (_loading)
+    {
+        <MudProgressCircular Indeterminate Size="Size.Small" Class="my-2" />
+    }
+    else
+    {
+        @if (_active == 0)
+        {
+            <MudText Typo="Typo.caption">No active customer accounts.</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateCustomer">Create Customer Account</MudButton>
+        }
+        else
+        {
+            <MudText Typo="Typo.subtitle2">Active Accounts</MudText>
+            <MudText Typo="Typo.h5">@_active</MudText>
+            <MudText Typo="Typo.caption">Total accounts for tenant</MudText>
+        }
+    }
+</MudPaper>
+
+@code {
+    private bool _loading = true;
+    private int _active = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!TenantContext.TenantId.HasValue) { _loading = false; return; }
+        try
+        {
+            _active = await CustomerService.GetActiveCustomerCountAsync();
+        }
+        catch (Exception ex) { Logger.LogWarning(ex, "Failed to load customer accounts for tenant {TenantId}", TenantContext.TenantId); }
+        _loading = false;
+    }
+
+    private void CreateCustomer() {
+        Logger.LogInformation("CTA: Create Customer clicked for tenant {TenantId}", TenantContext.TenantId);
+    }
+}
