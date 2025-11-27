@@ -12,11 +12,22 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject NavigationManager NavigationManager
 @inject ILogger<Routes> Logger
+@inject CRS.Services.Layout.ILayoutService LayoutService
+@using CRS.Components.Layout
 
 <CascadingAuthenticationState>
     <CascadingValue Value="this">
         <Router AppAssembly="typeof(Program).Assembly">
             <Found Context="routeData">
+                @{ 
+                    // Inspect the page type for HideNavAttribute and inform the layout service
+                    var pageType = routeData.PageType;
+                    var hide = false;
+                    if (pageType != null) {
+                        hide = pageType.GetCustomAttributes(typeof(HideNavAttribute), true).Length > 0;
+                    }
+                    LayoutService.SetHideNav(hide);
+                }
                 <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                     <NotAuthorized>
                         @{

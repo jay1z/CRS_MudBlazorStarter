@@ -22,6 +22,9 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserStateService UserState
 @inject IMessageService MessageService
+@inject CRS.Services.Layout.ILayoutService LayoutService
+
+<!-- Layout uses MudBlazor defaults for styling; custom CSS removed per request. -->
 
 <!-- Unified MudBlazor providers -->
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" />
@@ -30,9 +33,12 @@
 <MudPopoverProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="25">
-        <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
-        <MudText Typo="Typo.h5" Class="ml-3">@(TenantContext?.TenantName ?? "ALX Reserve Cloud")</MudText>
+    <MudAppBar Class="top-appbar" Elevation="25">
+        @if (!_hideNav)
+        {
+            <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
+        }
+        <MudText Typo="Typo.h5" Class="ml-3" Style="font-weight:600;letter-spacing:0.2px">@(TenantContext?.TenantName ?? "ALX Reserve Cloud")</MudText>
         @if (TenantContext?.TenantId != null)
         {
             <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Class="ml-3">Sub: @TenantContext.Subdomain</MudChip>
@@ -66,26 +72,34 @@
         </MudMenu>
     </MudAppBar>
 
-    <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="25">
-        @if (!_authResolved)
-        {
-            <MudStack Class="pa-4" Spacing="2">
-                <MudSkeleton Width="60%" Height="28px" />
-                <MudSkeleton Width="80%" />
-                <MudSkeleton Width="40%" />
-            </MudStack>
-        }
-        else
-        {
-            <NavMenu />
-        }
-    </MudDrawer>
+    @if (!_hideNav)
+    {
+        <MudDrawer id="nav-drawer" Class="left-drawer-dark" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="25">
+            @if (!_authResolved)
+            {
+                <MudStack Class="pa-4" Spacing="2">
+                    <MudSkeleton Width="60%" Height="28px" />
+                    <MudSkeleton Width="80%" />
+                    <MudSkeleton Width="40%" />
+                </MudStack>
+            }
+            else
+            {
+                <NavMenu />
+            }
+        </MudDrawer>
+    }
 
-    <MudMainContent id="main-content" Class="mt-16 pa-4">
-        <ErrorBoundary>
-            @Body
-        </ErrorBoundary>
-    </MudMainContent>
+    <!-- Centered content card like screenshot -->
+    <div class="content-stage">
+        <div class="content-card">
+            <MudMainContent id="main-content" Class="pa-0">
+                <ErrorBoundary>
+                    @Body
+                </ErrorBoundary>
+            </MudMainContent>
+        </div>
+    </div>
 
     <MudScrollToTop TopOffset="100" Selector="#main-content">
         <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowUpward">Go to top</MudButton>
@@ -112,6 +126,8 @@
     private int _claimTenantId = 0;
     private bool _isPlatformAdmin = false;
     private bool _hasTenant = false; // sticky tenant presence
+    private bool _hideNav = false;
+    private bool _isAuthenticated = false;
 
     protected override async Task OnInitializedAsync() {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
@@ -120,11 +136,12 @@
         ThemeService.OnThemeChanged += StateHasChanged;
         ThemeService.SetTheme(new Default().Theme!);
 
-        // Hydrate tenant context for logged in users
+        // Hydrate tenant context for logged in users and track auth state
         try {
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            _isAuthenticated = authState.User?.Identity?.IsAuthenticated ?? false;
             var user = authState.User;
-            if (user?.Identity?.IsAuthenticated == true) {
+            if (_isAuthenticated) {
                 var claimTenant = user.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
                 _ = int.TryParse(claimTenant, out _claimTenantId);
                 _isPlatformAdmin = user.IsInRole("PlatformAdmin");
@@ -158,7 +175,31 @@
         } catch { }
 
         _authResolved = true;
+        // subscribe to layout service for runtime toggles
+        LayoutService.OnChange += LayoutChanged;
+        // subscribe to auth changes so anonymous users also hide the nav
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        UpdateHideNavEffective();
         StateHasChanged();
+    }
+
+    private void LayoutChanged() {
+        UpdateHideNavEffective();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task) {
+        try {
+            var authState = await task;
+            _isAuthenticated = authState.User?.Identity?.IsAuthenticated ?? false;
+            UpdateHideNavEffective();
+            await InvokeAsync(StateHasChanged);
+        } catch { }
+    }
+
+    private void UpdateHideNavEffective() {
+        // Hide nav if either the page explicitly requests it or the user is not authenticated
+        _hideNav = LayoutService.HideNav || !_isAuthenticated;
     }
 
     private async void RefreshUserFlagsOnChange() {
@@ -177,6 +218,7 @@
             }
         } catch { }
         await RefreshUnreadCountAsync();
+        UpdateHideNavEffective();
         StateHasChanged();
     }
 
@@ -200,6 +242,8 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
         ThemeService.OnThemeChanged -= StateHasChanged;
         UserState.OnChange -= RefreshUserFlagsOnChange;
+        try { LayoutService.OnChange -= LayoutChanged; } catch { }
+        try { AuthenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged; } catch { }
     }
 }
 

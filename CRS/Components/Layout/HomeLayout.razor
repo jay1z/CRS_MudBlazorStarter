@@ -26,8 +26,7 @@
                 </MudMenu>
             </Authorized>
             <NotAuthorized>
-                <!-- Minimal header for anonymous users; hide full nav buttons -->
-                <MudButton Href="/Account/Login" Variant="Variant.Filled" Size="Size.Small" Class="mx-2">Login</MudButton>
+                @* Intentionally left blank: login must happen from tenant-specific pages only *@
             </NotAuthorized>
         </AuthorizeView>
     </MudAppBar>

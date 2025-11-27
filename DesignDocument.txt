@@ -1,0 +1,214 @@
+PROJECT OVERVIEW:
+Title: Extraction Protocol: Neon Veil
+Engine: Unity6.2 (URP)
+Genre: Top-down auto-shooter roguelite inspired by Vampire Survivors.
+Theme: Post-apocalyptic fusion of technology, mutation, and magic.
+Goal: The player must enter corrupted zones, survive waves, complete objectives, and extract artifacts to help cure the global mutation outbreak.
+Perspective: Top-down3D.
+Control: Player movement only (auto-aim and auto-fire at nearest enemies).
+Art Direction: Synty Polygon Apocalypse and similar low-poly packs.
+Platform: PC (Single Player only)
+
+IMPORTANT NOTE:
+Before creating or coding any system, FIRST check if an existing Unity asset already covers that functionality.
+Owned assets to integrate:
+- Opsive Ultimate Character Controller (movement only; combat separate)
+- Easy Save3 (3.5.24)
+- Opsive Ultimate Inventory System
+- Opsive Behavior Tree (Movement + Tactical)
+- Lean Pool
+- A* Pathfinding Project
+- Ultimate Spawner2.0 + Waves Add-on
+- Cinemachine
+- Unity Input System (new)
+- uGUI (Synty UI assets)
+- Zenject (DI)
+- Odin Inspector (editor tooling)
+Do NOT recreate these unless explicitly confirmed they’re missing or need modification.
+
+---
+
+ARCHITECTURE GOALS:
+Use modular, event-driven architecture. Each manager has one responsibility and communicates via C# events. Avoid tight coupling. Use ScriptableObjects for data-driven definitions. Maintain a clean folder structure and serialized fields for tuning. Prefer DI for wiring (Zenject) and central event bus for cross-feature events.
+
+---
+
+CORE SYSTEMS TO CREATE OR INTEGRATE:
+
+1. GameManager – Controls overall game state (Loading → Playing → Extraction → End).
+ - Subscribes to MissionManager, EnemyManager.
+ - Broadcasts events for mission completion, extraction readiness, and run completion.
+ - Saves run summary via Easy Save.
+
+2. AddressableManager – Handles async loading/unloading of maps, player, enemies, weapons, VFX, and UI (Addressables).
+ - Loads a random map prefab and the Player prefab.
+ - Initializes A* (loads graph cache if available, else single scan).
+ - Warms Lean Pool pools (projectiles/VFX).
+
+3. MissionManager – Loads a ScriptableObject mission definition per-map.
+ - Time-limited missions.
+ - Can require: collect an item and/or eliminate a target.
+ - Fires OnMissionCompleted/OnMissionFailed and updates remaining time.
+ - On success, activates an ExtractionPoint.
+
+4. ExtractionPoint – Predefined locations on each map.
+ - Randomly selects one of several predefined spawn locations for extraction.
+ - Activates when mission complete.
+ - Completes run when player reaches it.
+
+5. EnemyManager + Spawning – Wave pacing and enemy pools.
+ - Uses Ultimate Spawner2.0 + Waves add-on embedded per map.
+ - Enemies navigate with A* Pathfinding Project.
+ - Broadcasts OnWaveCleared for mission updates.
+
+6. PlayerController / AutoAimWeapon / UpgradeManager – Modular player system.
+ - Player movement via Opsive UCC only.
+ - AutoAimWeapon (separate component) targets nearest enemy within range, requires line-of-sight, per-weapon fire rate. Bullet-hell friendly.
+ - UpgradeManager manages stat upgrades and modifiers (details TBD), broadcasts OnUpgradeApplied.
+
+7. RogueModifierManager – Placeholder for per-map modifiers.
+ - ScriptableObjects for definitions (TBD).
+ - Will broadcast modifier effects to EnemyManager, Player, and UI when defined.
+
+8. UIManager – Displays health, XP, wave, objectives, extraction status, and upgrades.
+ - Subscribes to GameManager and MissionManager events.
+ - Uses uGUI with Synty UI assets.
+ - Upgrade selection is modal and pauses the game.
+
+9. AudioManager – Plays adaptive music and effects (TBD specifics).
+ - Uses Addressables for per-map soundscapes.
+ - Responds to events like OnExtractionAvailable and OnRunCompleted.
+
+10. SaveManager / MetaProgression – Handles persistent player unlocks, upgrades, and lore logs.
+ - Integrates with Easy Save3.
+ - Initial per-run persistence: run success, duration, kills, collected artifacts, currency.
+
+---
+
+MAP AND ROGUE SYSTEM:
+Each map is an Addressable prefab with its own environmental theme (e.g., bio-tech ruins, corrupted labs, cyber-cathedral).
+Each run loads a random map and (later) applies1–2 RogueModifiers that alter gameplay globally.
+
+Example modifiers (TBD implementation):
+- "Toxic Fog" (periodic AoE damage zones)
+- "Frenzied Enemies" (increased speed but reduced HP)
+- "Power Surge" (temporary weapon overcharge after kills)
+
+---
+
+GAMEPLAY LOOP:
+1. Load map and player via Addressables.
+2. Spawn player and assign mission objective; start mission timer.
+3. Survive waves and complete mission requirements (collect and/or eliminate).
+4. Unlock extraction point (random among predefined locations).
+5. Reach extraction to complete run.
+6. Save progress and return to base.
+
+---
+
+TECHNICAL REQUIREMENTS:
+- C# (latest syntax)
+- URP rendering
+- Cinemachine for camera
+- New Input System for movement
+- Addressables for content (maps, player, enemies, weapons, VFX, UI, audio)
+- Event-driven design (no hard-coded cross-references)
+- ScriptableObjects for mission and modifier data
+- Async/await for loading sequences
+- A* Pathfinding Project for AI navigation
+- Ultimate Spawner2.0 for waves/spawning
+- Lean Pool for pooling projectiles/VFX
+- Zenject for DI where helpful
+- Single Player only, no localization (for now)
+
+---
+
+FOLDER STRUCTURE (suggested but use your own discretion):
+
+Assets/ExtractionProtocol/
+ Scripts/
+ Managers/
+ Player/
+ Enemies/
+ Missions/
+ Systems/
+ UI/
+ Audio/
+ Core/
+ ScriptableObjects/
+ Missions/
+ Upgrades/
+ RogueModifiers/
+ Addressables/
+ Maps/
+ Enemies/
+ Weapons/
+ UI/
+ Audio/
+ GraphCache/
+ Waves/
+
+---
+
+STYLE GUIDE:
+- Clean, modular C# with comments explaining each class’s responsibility.
+- Serialized fields for Inspector tuning.
+- Use events for state changes, with a small EventBus for global hooks where needed.
+- Avoid monolithic controllers; favor small, purpose-driven components.
+- Assembly Definitions per area (Managers, Systems, Player, Enemies, Missions, UI, Audio, Core).
+
+---
+
+SCENE/MAP LOADING PLAN:
+- Scenes In Build: Bootstrap only.
+- Bootstrap scene contents:
+ - GameManager, AddressableManager, MissionManager, UIManager, AudioManager, SaveManager, RogueModifierManager
+ - EventSystem, CinemachineBrain
+ - Minimal HUD root (mission timer slider, extraction available panel)
+- Addressables Groups:
+ - Maps, Player, Enemies, Weapons, VFX, UI, Audio, GraphCache (A*), Waves (Ultimate Spawner sets)
+- Load flow:
+1) GameManager → LoadRandomMapAsync → instantiate map prefab under MapRoot
+2) MapContext exposes: PlayerSpawn (Transform), ExtractionPoints (Transform[]), AstarPath root, Ultimate Spawner controller
+3) Initialize A*: load graph cache from Addressables if available, else run a one-time Scan
+4) Load Player prefab via Addressables, place at PlayerSpawn, bind Cinemachine VCam
+5) Warm Lean Pool (projectiles/VFX)
+6) Begin mission (start timer), start waves via Ultimate Spawner
+7) On mission complete, MapContext activates random ExtractionPoint; UI shows indicator
+8) On player reach extraction, complete run; save summary; unload Addressables
+- Targeting and LOS:
+ - AutoAimWeapon targets nearest enemy within range; requires line-of-sight (raycast). Upgrades can change targeting later.
+- Combat cadence:
+ - Per-weapon fire rate; bullet-hell volume via pooling.
+
+---
+
+BUILD AND TOOLING:
+- Addressables Profiles:
+ - Dev: Local Build/Load Path for fast iteration
+ - Prod: Local paths for single-player PC (remote optional later)
+- Pre-Build checks:
+ - Validate Bootstrap is first scene in build
+ - Addressables content build
+ - Validate MapContext instances (PlayerSpawn assigned, ≥2 ExtractionPoints, A* root present, Ultimate Spawner configured)
+ - Optional: generate Build ID into a RunConfig asset
+- Enter Play Mode Options:
+ - Enable to reduce iteration time; managers reset statics with RuntimeInitializeOnLoadMethod
+- Code Quality:
+ - .editorconfig + basic analyzers; optional StyleCop
+ - PlayMode tests for AddressableManager load path, MissionManager timer, MapContext validation
+- Version Control:
+ - Commit Addressables settings/groups; do not commit built ServerData for Dev profile
+ - Commit A* graph caches if pre-baked and shipped as Addressables
+
+---
+
+NEXT STEPS FOR COPILOT:
+- Wire AddressableManager to real Addressables keys/labels (maps, player, graph cache, waves)
+- Create Bootstrap scene and place required managers + UI
+- Create MissionDefinition examples per map
+- Author Map prefabs with MapContext, ExtractionPoints, A* root, and Ultimate Spawner components
+- Configure Player prefab (UCC + AutoAimWeapon + Cinemachine binding + Input)
+- Hook Ultimate Spawner wave events into EnemyManager and MissionManager as needed
+- Expand SaveManager for per-run stats (kills, artifacts, currency)
+- Plan RogueModifiers data format and integration points (TBD)

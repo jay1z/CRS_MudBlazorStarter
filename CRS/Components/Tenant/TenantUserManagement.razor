@@ -10,6 +10,7 @@
 @inject NavigationManager Nav
 @inject ILogger<TenantUserManagement> Logger
 @inject IServiceProvider Services
+@inject ITenantUserService TenantUserService
 
 <PageTitle>Manage Users</PageTitle>
 
@@ -121,22 +122,9 @@ else
         try {
             await using var db = await DbFactory.CreateDbContextAsync();
             if (await db.Users.AnyAsync(u => u.Email == _inviteEmail && u.TenantId == TenantContext.TenantId)) return;
-            var userManager = Services.GetRequiredService<UserManager<ApplicationUser>>();
-            var newUser = new ApplicationUser {
-                Email = _inviteEmail,
-                UserName = _inviteEmail,
-                FirstName = _firstName,
-                LastName = _lastName,
-                EmailConfirmed = true,
-                TenantId = TenantContext.TenantId.Value
-            };
-            var result = await userManager.CreateAsync(newUser, "Temp1!Password");
-            if (result.Succeeded) {
-                var role = await db.Roles2.FirstOrDefaultAsync(r => r.Name == _initialRole);
-                if (role != null) {
-                    db.UserRoleAssignments.Add(new UserRoleAssignment { UserId = newUser.Id, RoleId = role.Id, TenantId = TenantContext.TenantId.Value });
-                    await db.SaveChangesAsync();
-                }
+            // Use central service: creates user with EmailConfirmed=false, assigns roles, sends confirmation & reset links
+            var created = await TenantUserService.CreateTenantUserAsync(_inviteEmail, "Letmeinnow1_", _firstName, _lastName, TenantContext.TenantId.Value, _initialRole);
+            if (created != null) {
                 _inviteEmail = _firstName = _lastName = string.Empty;
                 _initialRole = "TenantViewer";
                 await LoadUsersAsync();

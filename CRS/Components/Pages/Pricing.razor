@@ -1,29 +1,327 @@
 ﻿@page "/pricing"
+@attribute [CRS.Components.Layout.HideNav]
 @* @attribute [Authorize(Policy = "RequireTenantOwner")] *@
 @inject CRS.Services.Tenant.ITenantContext TenantContext
 @inject ISnackbar Snackbar
+@inject NavigationManager Nav
 
 <PageTitle>Pricing</PageTitle>
 
-@* @if (TenantContext?.TenantId is null)
-{
-    <MudAlert Severity="Severity.Warning">Tenant context not resolved. Please reload.</MudAlert>
-}
-else
-{
- *@    
-    <!-- Stripe Hosted Pricing Table Embed -->
-    <MudText Typo="Typo.h5" Class="mb-2">Choose Your Plan</MudText>
-    <MudText Typo="Typo.body2" Class="mb-4">Secure billing powered by Stripe.</MudText>
-    <div class="stripe-pricing-wrapper">
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-10">
+
+    <!-- Hero -->
+    <MudGrid GutterSize="3" Class="mb-8" AlignItems="Center">
+        <MudItem xs="12" md="7">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h3" Class="fw-600">
+                    Transparent pricing for modern reserve study firms.
+                </MudText>
+
+                <MudText Typo="Typo.subtitle1" Class="mud-text-secondary">
+                    Whether you manage 5 communities or 500, ALX Reserve Cloud scales with your team.
+                    Start on Startup, grow into Pro, and unlock Enterprise when you're ready.
+                </MudText>
+
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    No setup fees. No hidden charges. Cancel anytime.
+                </MudText>
+            </MudStack>
+        </MudItem>
+
+        <MudItem xs="12" md="5">
+            <MudPaper Class="pa-4" Elevation="3">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.subtitle1" Class="fw-500">
+                        Perfect for HOAs and reserve study firms:
+                    </MudText>
+                    <MudList T="string" Dense="true">
+                        <MudListItem>
+                            <MudIcon Icon="@Icons.Material.Filled.HomeWork" Class="mr-2" />
+                            Centralize all reserve studies in one place
+                        </MudListItem>
+                        <MudListItem>
+                            <MudIcon Icon="@Icons.Material.Filled.PeopleOutline" Class="mr-2" />
+                            Collaborate with specialists and boards securely
+                        </MudListItem>
+                        <MudListItem>
+                            <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" />
+                            Generate consistent, professional reports
+                        </MudListItem>
+                        <MudListItem>
+                            <MudIcon Icon="@Icons.Material.Filled.CloudDone" Class="mr-2" />
+                            Hosted in Azure with built-in security
+                        </MudListItem>
+                    </MudList>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Stripe pricing table (hosted embed) -->
+    <div class="stripe-pricing-wrapper mb-4" style="overflow:auto;">
         <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
         <stripe-pricing-table pricing-table-id="prctbl_1SWSG3FAahdrKyJ2fTWBsGZz"
-            publishable-key="pk_test_51SW20SFAahdrKyJ2AgEYEQLjcPLCWNlNVMaGgadZGWxwUL9yoX5AkhUco40Cha7h3ufLMWNkiVIVPTRBKaZesIqe00zvr6Dzgz">
+                              publishable-key="pk_test_51SW20SFAahdrKyJ2AgEYEQLjcPLCWNlNVMaGgadZGWxwUL9yoX5AkhUco40Cha7h3ufLMWNkiVIVPTRBKaZesIqe00zvr6Dzgz">
         </stripe-pricing-table>
     </div>
-@* }
- *@
+
+    <!-- Pricing comparison table -->
+
+    <div class="pricing-comparison py-6">
+        <!-- Header / Switch -->
+        <MudStack Spacing="2" Class="mb-4">
+            <MudText Typo="Typo.h4">
+                Full Plan Comparison
+            </MudText>
+            <MudText Typo="Typo.subtitle1" Class="mud-text-secondary">
+                Compare Startup, Pro, and Enterprise to see which plan fits your reserve study firm.
+            </MudText>
+        </MudStack>
+
+        <!-- Comparison table -->
+        <div class="html-pricing-wrapper mb-4" style="overflow:auto;">
+            <table class="pricing-html" style="width:100%;min-width:680px;border-collapse:collapse;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;">
+                <thead style="background:#fff;">
+                    <tr>
+                        <th style="text-align:left;padding:16px 12px;width:40%;font-weight:600;">Feature</th>
+                        <th style="text-align:center;padding:12px;vertical-align:top;width:20%;">Startup</th>
+                        <th style="text-align:center;padding:12px;vertical-align:top;width:20%;">Pro</th>
+                        <th style="text-align:center;padding:12px;vertical-align:top;width:20%;">Enterprise</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in _rows) {
+                        if (r.IsSectionHeader) {
+                            <tr style="background:#fafafa;border-top:1px solid #eee;"><td colspan="4" style="padding:10px 12px;font-weight:700;color:#3f51b5">@r.Section</td></tr>
+                        } else {
+                            <tr style="border-top:1px solid #f0f0f0">
+                                <td style="padding:12px 12px;color:#444">@r.Feature</td>
+                                <td style="text-align:center;padding:12px">
+                                    @if (r.Startup == Check()) {
+                                        <span style="color:#3f51b5;font-weight:700">✓</span>
+                                    } else if (r.Startup == Dash()) {
+
+                                        <span>—</span>
+                                    } else {
+
+                                        @r.Startup
+                                    }
+                                </td>
+                                <td style="text-align:center;padding:12px">
+                                    @if (r.Pro == Check()) {
+                                        <span style="color:#3f51b5;font-weight:700">✓</span>
+                                    } else if (r.Pro == Dash()) {
+
+                                        <span>—</span>
+                                    } else {
+
+                                        @r.Pro
+                                    }
+                                </td>
+                                <td style="text-align:center;padding:12px">
+                                    @if (r.Enterprise == Check()) {
+                                        <span style="color:#3f51b5;font-weight:700">✓</span>
+                                    } else if (r.Enterprise == Dash()) {
+
+                                        <span>—</span>
+                                    } else {
+
+                                        @r.Enterprise
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <MudStack AlignItems="AlignItems.Center" Spacing="1" Class="mt-4">
+            <MudText Typo="Typo.body2" Class="mud-text-secondary" Align="Align.Center">
+                Not sure which plan to choose? Tell us about your portfolio and we’ll recommend a tier.
+            </MudText>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@GoToContact">
+                Talk with our team
+            </MudButton>
+        </MudStack>
+    </div>
+
+
+
+    <!-- Secondary reassurance / bullets -->
+    <MudGrid GutterSize="3" Class="mb-8">
+        <MudItem xs="12" md="4">
+            <MudStack Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" />
+                <MudText Typo="Typo.subtitle1" Class="fw-500">Secure by design</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    Hosted on Microsoft Azure with role-based access, 2FA, and audit trails to keep your
+                    community and financial data protected.
+                </MudText>
+            </MudStack>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudStack Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.SupportAgent" Size="Size.Large" />
+                <MudText Typo="Typo.subtitle1" Class="fw-500">Support that understands HOAs</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    We work specifically with reserve study providers, so our support, roadmap, and features
+                    stay aligned with your real-world workflows.
+                </MudText>
+            </MudStack>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudStack Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" />
+                <MudText Typo="Typo.subtitle1" Class="fw-500">Grow without switching tools</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    Start on Startup, upgrade to Pro as you hire, and move into Enterprise as you expand into
+                    new regions – without migrating data.
+                </MudText>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+
+    <!-- FAQ -->
+    <MudStack Spacing="2" Class="mb-4">
+        <MudText Typo="Typo.h5">
+            Frequently asked questions
+        </MudText>
+
+        <MudExpansionPanels Elevation="0">
+            <MudExpansionPanel Text="Can I change plans later?">
+                Yes. You can upgrade or downgrade between Startup, Pro, and Enterprise at any time.
+                Changes are prorated based on your billing cycle.
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Do you offer a free trial?">
+                You can start on any plan with a time-limited trial. We won't start billing until the trial
+                ends, and you can cancel before that with no charge.
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="How are communities and users counted?">
+                A community is typically an HOA, condo association, or similar entity. Specialist users are
+                your internal staff who log in to manage studies and reports.
+            </MudExpansionPanel>
+
+            <MudExpansionPanel Text="Can you handle custom requirements or large portfolios?">
+                Yes. Enterprise plans can be tailored for larger portfolios, custom workflows, integrations,
+                and specific compliance needs.
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    </MudStack>
+
+    <MudDivider Class="my-6" />
+
+    <!-- Final CTA -->
+    <MudStack AlignItems="AlignItems.Center" Spacing="1">
+        <MudText Typo="Typo.h6" Align="Align.Center">
+            Not sure which plan fits your firm?
+        </MudText>
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mud-text-secondary mb-2">
+            Tell us how many communities you manage and how many specialists you have, and we’ll recommend a plan.
+        </MudText>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@GoToContact">
+            Talk with our team
+        </MudButton>
+    </MudStack>
+
+</MudContainer>
+
 @code {
-    // No server-side checkout logic needed; Stripe pricing table handles redirection.
-    // Ensure success & cancel URLs plus products/prices are configured in Stripe Dashboard.
+    private List<FeatureRow> _rows = new();
+
+    protected override void OnInitialized() {
+        _rows = new()
+        {
+            // Platform & Usage
+            FeatureRow.CreateSection("Platform & Usage"),
+            new("Communities",          "Up to 10",                 "Up to 50",                       "100+ (scalable)"),
+            new("Specialist users",     "Up to 2",                  "Up to 10",                       "20+ (by agreement)"),
+            new("Storage",              "5 GB",                     "25 GB",                          "100 GB+"),
+            new("Reserve study dashboard", Check(),                 Check(),                          Check()),
+            new("HOA / client portal",  Check(),                    Check(),                          Check()),
+
+            // Workflows & Automation
+            FeatureRow.CreateSection("Workflows & Automation"),
+            new("Basic request → review → finalize workflow", Check(), Check(), Check()),
+            new("Advanced workflow stages",                    Dash(),  Check(),                         "Customizable"),
+            new("Priority processing queue",                   Dash(),  Check(),                         Check()),
+            new("Automated client reminders",                  "Basic", "Advanced",                      "Advanced + rules"),
+            new("Calendar & scheduling tools",                 Dash(),  Check(),                         Check()),
+
+            // Reporting & Analytics
+            FeatureRow.CreateSection("Reporting & Analytics"),
+            new("Automated report generation",                 Check(), Check(),                        Check()),
+            new("Custom report sections",                      Dash(),  Check(),                        "Advanced"),
+            new("Analytics dashboard",                         "Standard", "Enhanced",                  "Advanced + forecasting"),
+            new("Audit logs",                                  Dash(),  "30 days",                      "1 year"),
+
+            // Branding & Integrations
+            FeatureRow.CreateSection("Branding & Integrations"),
+            new("Custom branding (logo on reports & portal)",  Dash(),  Check(),                        "White-label"),
+            new("Email integration (custom domain)",           Dash(),  Check(),                        Check()),
+            new("API access",                                  Dash(),  "Limited (read)",               "Full (read/write)"),
+            new("SSO (Azure AD / Google)",                     Dash(),  Dash(),                         Check()),
+            new("CRM / ERP integrations",                      Dash(),  Dash(),                         "Available on request"),
+
+            // Security & Support
+            FeatureRow.CreateSection("Security & Support"),
+            new("Hosted on Microsoft Azure",                   Check(), Check(),                        Check()),
+            new("Two-factor authentication",                   Check(), Check(),                        Check()),
+            new("Permission controls",                         "Standard roles", "Enhanced permissions","Granular matrix"),
+            new("Email support",                               "48-hour response", "24-hour response",  "Same-day response"),
+            new("Dedicated account manager",                   Dash(),  Dash(),                         Check())
+        };
+    }
+
+    private void GoToContact() => Nav.NavigateTo("/contact");
+
+    // Helpers to render cells with checkmarks vs text
+    private RenderFragment RenderCell(string value) => builder => {
+        if (value == Check()) {
+            builder.OpenComponent<MudIcon>(0);
+            builder.AddAttribute(1, "Color", Color.Primary);
+            builder.AddAttribute(2, "Icon", Icons.Material.Filled.CheckCircle);
+            builder.CloseComponent();
+        } else if (value == Dash()) {
+            builder.OpenComponent<MudText>(3);
+            builder.AddAttribute(4, "Typo", Typo.body2);
+            builder.AddContent(5, "—");
+            builder.CloseComponent();
+        } else {
+            builder.OpenComponent<MudText>(6);
+            builder.AddAttribute(7, "Typo", Typo.body2);
+            builder.AddContent(8, value);
+            builder.CloseComponent();
+        }
+    };
+
+    private static string Check() => "CHECK";
+    private static string Dash() => "DASH";
+
+    private class FeatureRow {
+        public bool IsSectionHeader { get; set; }
+        public string Section { get; set; } = string.Empty;
+        public string Feature { get; set; } = string.Empty;
+        public string Startup { get; set; } = string.Empty;
+        public string Pro { get; set; } = string.Empty;
+        public string Enterprise { get; set; } = string.Empty;
+
+        public FeatureRow() { }
+
+        public FeatureRow(string feature, string startup, string pro, string enterprise) {
+            Feature = feature;
+            Startup = startup;
+            Pro = pro;
+            Enterprise = enterprise;
+        }
+
+        public static FeatureRow CreateSection(string name) =>
+            new() { IsSectionHeader = true, Section = name };
+    }
+
+    [Parameter] public EventCallback<string> OnSelectPlan { get; set; }
 }

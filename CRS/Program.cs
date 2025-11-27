@@ -75,6 +75,8 @@ void ConfigureServices(WebApplicationBuilder builder) {
 
     // Register tenant user role resolution service
     builder.Services.AddScoped<ITenantUserRoleService, TenantUserRoleService>();
+    // Service for tenant owners to create/manage tenant employees
+    builder.Services.AddScoped<ITenantUserService, TenantUserService>();
     builder.Services.AddScoped<ITenantHomepageDataService, TenantHomepageDataService>();
     builder.Services.AddScoped<CRS.Services.Tickets.ITicketService, CRS.Services.Tickets.TicketService>();
     builder.Services.AddScoped<CRS.Services.Customers.ICustomerService, CRS.Services.Customers.CustomerService>();
@@ -119,6 +121,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<ITenantContext, TenantContext>();
     builder.Services.AddScoped<TenantService>();
     builder.Services.AddScoped<CircuitHandler, CRS.Services.Tenant.TenantCircuitHandler>();
+
+    // Layout service for controlling layout state (hide nav, etc.)
+    builder.Services.AddScoped<CRS.Services.Layout.ILayoutService, CRS.Services.Layout.LayoutService>();
 
     // Remove Multi-tenant provisioning services and multi-DB resolvers
     // builder.Services.AddSingleton<ITenantDatabaseResolver, DefaultTenantDatabaseResolver>();

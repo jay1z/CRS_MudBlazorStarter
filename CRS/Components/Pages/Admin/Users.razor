@@ -8,6 +8,9 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@using CRS.Services.Tenant
+@inject ITenantUserService TenantUserService
+@inject ITenantContext TenantContext
 
 <PageTitle>Manage Users</PageTitle>
 
@@ -17,6 +20,19 @@
             <MudText Typo="Typo.h5">Tenant Users</MudText>
             <MudTextField @bind-Value="searchValue" Placeholder="Search users..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Class="w-50" />
         </MudStack>
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.subtitle1">Create Tenant Employee</MudText>
+            <MudStack Row="true" Spacing="2">
+                <MudTextField @bind-Value="newEmail" Placeholder="email" />
+                <MudTextField @bind-Value="newFirst" Placeholder="First name" />
+                <MudTextField @bind-Value="newLast" Placeholder="Last name" />
+                <MudSelect @bind-Value="newRole">
+                    <MudSelectItem Value='@("TenantSpecialist")'>TenantSpecialist</MudSelectItem>
+                    <MudSelectItem Value='@("TenantViewer")'>TenantViewer</MudSelectItem>
+                </MudSelect>
+                <MudButton OnClick="CreateTenantUser">Create</MudButton>
+            </MudStack>
+        </MudPaper>
 
         <MudTable T="ApplicationUser" Items="filteredUsers" Hover="true" Dense="true" Bordered="true">
             <HeaderContent>
@@ -38,6 +54,7 @@
                 <MudTd>@context.Status</MudTd>
                 <MudTd align="right">
                     <MudIconButton Icon="@Icons.Material.Filled.GroupAdd" OnClick="() => OpenAddRoleToUserDialog(context)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.GroupRemove" Color="Color.Error" Disabled="@(context.Roles==null || context.Roles.Count==0)" OnClick="() => RemovePrimaryRoleAsync(context)" />
                 </MudTd>
             </RowTemplate>
         </MudTable>
@@ -63,8 +80,13 @@
     {
         try
         {
+            var tenantId = TenantContext.TenantId;
             await using var db = await DbFactory.CreateDbContextAsync();
-            users = await UserManager.Users.OrderBy(u => u.UserName).ToListAsync();
+            var query = UserManager.Users.AsQueryable();
+            if (tenantId.HasValue) {
+                query = query.Where(u => u.TenantId == tenantId.Value);
+            }
+            users = await query.OrderBy(u => u.UserName).ToListAsync();
             foreach (var user in users)
             {
                 user.Roles = await UserManager.GetRolesAsync(user);
@@ -73,6 +95,35 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private string newEmail;
+    private string newFirst;
+    private string newLast;
+    private string newRole = "TenantViewer";
+
+    private async Task CreateTenantUser()
+    {
+        if (TenantContext.TenantId == null) { Snackbar.Add("No tenant selected.", Severity.Error); return; }
+        var created = await TenantUserService.CreateTenantUserAsync(newEmail, "Letmeinnow1_", newFirst, newLast, TenantContext.TenantId.Value, newRole);
+        if (created != null) {
+            Snackbar.Add($"User {created.Email} created.", Severity.Success);
+            await LoadUsers();
+        } else {
+            Snackbar.Add($"Failed creating user {newEmail}", Severity.Error);
+        }
+    }
+
+    private async Task RemovePrimaryRoleAsync(ApplicationUser user) {
+        if (user.Roles == null || user.Roles.Count == 0) { Snackbar.Add("User has no roles.", Severity.Info); return; }
+        var role = user.Roles.First();
+        var result = await UserManager.RemoveFromRoleAsync(user, role);
+        if (result.Succeeded) {
+            Snackbar.Add($"Removed role {role} from {user.Email}", Severity.Success);
+            await LoadUsers();
+        } else {
+            Snackbar.Add($"Failed removing role: {string.Join(',', result.Errors.Select(e => e.Description))}", Severity.Error);
         }
     }
 
