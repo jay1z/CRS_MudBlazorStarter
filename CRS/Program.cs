@@ -138,6 +138,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Messaging
     builder.Services.AddScoped<CRS.Services.Interfaces.IMessageService, CRS.Services.MessageService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IAppNotificationService, CRS.Services.AppNotificationService>();
+    
+    // System-wide settings
+    builder.Services.AddScoped<CRS.Services.Interfaces.ISystemSettingsService, CRS.Services.SystemSettingsService>();
 
     // License validation service (required by Login.razor)
     builder.Services.AddScoped<ILicenseValidationService, LicenseValidationService>();
@@ -228,6 +231,16 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IFeatureGuardService, FeatureGuardService>();
 
     builder.Services.AddScoped<CRS.Services.Provisioning.IOwnerProvisioningService, CRS.Services.Provisioning.OwnerProvisioningService>();
+
+    // Azure Blob Storage for logo uploads
+    var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
+    if (!string.IsNullOrWhiteSpace(azureStorageConnectionString)) {
+        builder.Services.AddSingleton(x => new Azure.Storage.Blobs.BlobServiceClient(azureStorageConnectionString));
+        builder.Services.AddScoped<CRS.Services.Storage.ILogoStorageService, CRS.Services.Storage.LogoStorageService>();
+    } else {
+        // Fallback to null service if no connection string (development)
+        builder.Services.AddScoped<CRS.Services.Storage.ILogoStorageService, CRS.Services.Storage.NullLogoStorageService>();
+    }
 }
 
 void ConfigureDatabases(WebApplicationBuilder builder) {
@@ -343,6 +356,9 @@ async Task ConfigurePipeline(WebApplication app) {
 
     // Security headers
     app.UseSecurityHeaders();
+
+    // Coming Soon mode (if enabled)
+    app.UseComingSoon();
 
     // SaaS Refactor: resolve tenant before auth
     app.UseMiddleware<TenantResolverMiddleware>();

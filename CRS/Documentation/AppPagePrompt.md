@@ -4,8 +4,8 @@
 
 - Multitenant SaaS.
 - Each **tenant is mapped to a subdomain**: e.g. `tenant1.alxreservecloud.com`.
-- Each tenant has a **single app homepage** at `/app`.
-- The same `/app` route is used for all tenants; behavior and visible content are **role-based**.
+- Each tenant has a **single app homepage** at `/dashboard`.
+- The same `/dashboard` route is used for all tenants; behavior and visible content are **role-based**.
 - Data model includes entities like: Tenant, Properties, ReserveStudies, Reports, CustomerAccounts, CustomerUsers, etc.
 - Roles are:
 
@@ -24,9 +24,9 @@
 - **No tenant impersonation** yet.  
   Do not design or implement impersonation tools/UI.
 
-### General UX Rules for `/app`
+### General UX Rules for `/dashboard`
 
-1. `/app` is role-aware:
+1. `/dashboard` is role-aware:
    - Same route and overall layout shell for all roles.
    - Actual **widgets, data, and actions** vary by the user's role within that tenant.
 2. Always display:
@@ -80,7 +80,7 @@ Notes:
 
 ## Page Section Proposals by Role
 
-Structure the `/app` homepage into **vertically stacked sections**, each composed of one or more widgets from above. Ordering is important for UX.
+Structure the `/dashboard` homepage into **vertically stacked sections**, each composed of one or more widgets from above. Ordering is important for UX.
 
 ### 1. PlatformAdmin Homepage Layout
 
@@ -270,7 +270,7 @@ Read-only only. No ability to change data.
 ## Implementation Guidance for You (Copilot)
 
 1. **Do not generate any tenant picker or impersonation UI.**
-2. Implement the `/app` page as a single route that:
+2. Implement the `/dashboard` page as a single route that:
    - Resolves the current tenant from the subdomain.
    - Resolves the user’s **effective role** in that tenant.
    - Selects and composes the appropriate widgets per the matrix and layouts above.
@@ -282,4 +282,4 @@ Read-only only. No ability to change data.
    - The layout degrades gracefully on smaller screens but keeps the same logical grouping.
 5. Use clear naming (e.g., `TenantHomeHeroHeader`, `TenantHomeMyWorkQueueSection`, etc.) and keep role-based visibility logic easy to follow and test.
 
-Use this specification to design and implement the role-aware `/app` homepage UX, strictly following the widget matrix and layout definitions above, while respecting the constraints of **no tenant picker** and **no impersonation**.
+Use this specification to design and implement the role-aware `/dashboard` homepage UX, strictly following the widget matrix and layout definitions above, while respecting the constraints of **no tenant picker** and **no impersonation**.

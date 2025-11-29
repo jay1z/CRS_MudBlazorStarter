@@ -1,0 +1,162 @@
+﻿@using CRS.Services.Demo
+@inject IDemoAccountService DemoService
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
+
+@if (isDemoMode && !dismissed)
+{
+    <MudAlert Severity="Severity.Info" 
+              Elevation="3"
+              Class="demo-banner"
+              Style="border-radius: 0; border-left: 6px solid #FF8C00; position: sticky; top: 0; z-index: 9999;"
+              CloseIconClicked="DismissBanner">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="flex-wrap">
+            <div class="d-flex align-center gap-3">
+                <MudIcon Icon="@Icons.Material.Filled.Science" Color="Color.Warning" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.body1" Class="fw-bold">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" /> Demo Mode
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="opacity: 0.9;">
+                        You're exploring a sample account. 
+                        @if (timeRemaining.HasValue)
+                        {
+                            <span>Session expires in: <strong>@GetTimeRemainingText()</strong></span>
+                        }
+                        Your changes won't be saved after the session ends.
+                    </MudText>
+                </div>
+            </div>
+            
+            <MudStack Row="true" Spacing="2" Class="flex-nowrap">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Warning" 
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.RocketLaunch"
+                           OnClick="ConvertToRealAccount"
+                           Style="text-transform: none; font-weight: 600; white-space: nowrap;">
+                    Create Free Account
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudAlert>
+}
+
+@code {
+    [Parameter] public string? SessionId { get; set; }
+    
+    private bool isDemoMode = false;
+    private bool dismissed = false;
+    private Timer? updateTimer;
+    private TimeSpan? timeRemaining;
+    private DateTime? expiresAt;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                isDemoMode = await DemoService.IsDemoModeAsync(user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+                
+                if (isDemoMode && !string.IsNullOrEmpty(SessionId))
+                {
+                    var session = await DemoService.GetDemoSessionAsync(SessionId);
+                    if (session != null)
+                    {
+                        expiresAt = session.ExpiresAt;
+                        CalculateTimeRemaining();
+                        
+                        // Update every minute
+                        updateTimer = new Timer(_ =>
+                        {
+                            CalculateTimeRemaining();
+                            InvokeAsync(StateHasChanged);
+                        }, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't crash the component
+            Console.WriteLine($"Error checking demo mode: {ex.Message}");
+        }
+    }
+    
+    private void CalculateTimeRemaining()
+    {
+        if (expiresAt.HasValue)
+        {
+            timeRemaining = expiresAt.Value - DateTime.UtcNow;
+            if (timeRemaining < TimeSpan.Zero)
+            {
+                timeRemaining = TimeSpan.Zero;
+            }
+        }
+    }
+    
+    private string GetTimeRemainingText()
+    {
+        if (!timeRemaining.HasValue)
+            return "";
+            
+        var remaining = timeRemaining.Value;
+        
+        if (remaining.TotalHours >= 1)
+        {
+            return $"{(int)remaining.TotalHours}h {remaining.Minutes}m";
+        }
+        else if (remaining.TotalMinutes >= 1)
+        {
+            return $"{(int)remaining.TotalMinutes} minutes";
+        }
+        else
+        {
+            return "Less than 1 minute";
+        }
+    }
+    
+    private void ConvertToRealAccount()
+    {
+        Nav.NavigateTo("/tenant/signup?from=demo");
+    }
+    
+    private void DismissBanner()
+    {
+        dismissed = true;
+    }
+    
+    public void Dispose()
+    {
+        updateTimer?.Dispose();
+    }
+}
+
+<style>
+    .demo-banner {
+        animation: slideDown 0.3s ease;
+    }
+    
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @@media (max-width: 960px) {
+        .demo-banner .mud-stack-row {
+            flex-direction: column;
+            gap: 16px;
+        }
+    }
+</style>

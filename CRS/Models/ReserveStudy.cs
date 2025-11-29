@@ -120,5 +120,20 @@ namespace CRS.Models {
         // Concurrency token
         [Timestamp]
         public byte[]? RowVersion { get; set; }
+        
+        // Demo Mode
+        public bool IsDemo { get; set; } = false;
+        
+        // Additional fields for demo data
+        public string? Name { get; set; }
+        public DateTime? StudyDate { get; set; }
+        public DateTime? FiscalYearEnd { get; set; }
+        public decimal? CurrentReserveFunds { get; set; }
+        public decimal? MonthlyReserveContribution { get; set; }
+        public decimal? AnnualInflationRate { get; set; }
+        public decimal? AnnualInterestRate { get; set; }
+        public string? StudyType { get; set; }
+        public string? PreparedBy { get; set; }
+        public string? Notes { get; set; }
     }
 }

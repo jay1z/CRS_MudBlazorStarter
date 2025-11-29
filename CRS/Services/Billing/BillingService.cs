@@ -143,24 +143,35 @@ namespace CRS.Services.Billing {
 
             // Redirect directly to tenant homepage (root path) after successful checkout.
             // The tenant is created via webhook; homepage will subsequently allow owner setup via email link.
-            var successBase = _urlOptions.SuccessUrl ?? "https://localhost:5001"; // fallback
-            // Replace host with subdomain if successBase contains a root domain; otherwise use current pattern
+            var successBase = _urlOptions.SuccessUrl ?? "https://localhost:7056"; // fallback
+            
             // Build success URL targeting subdomain root
             try {
                 var successUri = new Uri(successBase);
-                var hostParts = successUri.Host.Split('.');
-                // form subdomain.fullroot (strip any leading www from base)
-                if (hostParts.Length >= 2) {
-                    var rootDomain = string.Join('.', hostParts.Skip(hostParts.Length - 2));
-                    successBase = $"{successUri.Scheme}://{subdomain}.{rootDomain}";
+                var host = successUri.Host;
+                
+                // Skip subdomain manipulation for localhost
+                if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase) || host.StartsWith("127.0.0.1")) {
+                    // For localhost, just use the base URL as-is (subdomain routing handled by middleware)
+                    successBase = $"{successUri.Scheme}://{host}:{successUri.Port}";
+                } else {
+                    // Production: form subdomain.fullroot (strip any leading www from base)
+                    var hostParts = host.Split('.');
+                    if (hostParts.Length >= 2) {
+                        var rootDomain = string.Join('.', hostParts.Skip(hostParts.Length - 2));
+                        successBase = $"{successUri.Scheme}://{subdomain}.{rootDomain}";
+                    }
                 }
-            } catch { /* ignore host manipulation errors */ }
+            } catch (Exception ex) {
+                _logger.LogWarning(ex, "Error manipulating success URL for subdomain {Subdomain}; using default", subdomain);
+            }
+            
             var successUrl = successBase + "/?deferred=1&session_id={CHECKOUT_SESSION_ID}";
 
             var session = await sessionService.CreateAsync(new SessionCreateOptions {
                 Mode = "subscription",
                 SuccessUrl = successUrl,
-                CancelUrl = _urlOptions.CancelUrl ?? "https://localhost:5001/tenant/signup?canceled=1",
+                CancelUrl = _urlOptions.CancelUrl ?? "https://localhost:7056/tenant/signup?canceled=1",
                 LineItems = new List<SessionLineItemOptions> { new() { Price = priceId, Quantity = 1 } },
                 CustomerEmail = adminEmail,
                 Metadata = new Dictionary<string, string> {

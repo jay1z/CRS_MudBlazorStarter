@@ -1,0 +1,311 @@
+﻿@* Smart Plan Recommendation Quiz *@
+
+<MudPaper Elevation="3" Class="pa-8" Style="border-radius: 20px; background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);">
+    @if (!quizStarted)
+    {
+        <!-- Quiz intro -->
+        <div style="text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.Quiz" Style="color: #FF8C00; font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h4" Class="fw-bold mb-3">
+                Find Your Perfect Plan
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666; max-width: 500px; margin: 0 auto;">
+                Answer 4 quick questions and we'll recommend the best plan for your needs. Takes less than 30 seconds!
+            </MudText>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Warning" 
+                       Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                       OnClick="StartQuiz"
+                       Style="text-transform: none; font-weight: 600;">
+                Start Quiz
+            </MudButton>
+        </div>
+    }
+    else if (currentQuestion < questions.Count)
+    {
+        <!-- Quiz questions -->
+        <div>
+            <!-- Progress -->
+            <div class="d-flex gap-2 mb-6">
+                @for (int i = 0; i < questions.Count; i++)
+                {
+                    <div style="flex: 1; height: 4px; background: @(i <= currentQuestion ? "#FF8C00" : "#e0e0e0"); border-radius: 2px;"></div>
+                }
+            </div>
+            
+            <MudText Typo="Typo.caption" Style="color: #FF8C00; font-weight: 600; text-transform: uppercase;" Class="mb-2">
+                Question @(currentQuestion + 1) of @questions.Count
+            </MudText>
+            
+            <MudText Typo="Typo.h5" Class="fw-bold mb-6">
+                @questions[currentQuestion].Text
+            </MudText>
+            
+            <MudStack Spacing="3">
+                @foreach (var option in questions[currentQuestion].Options)
+                {
+                    <MudPaper Elevation="0" 
+                              Class="pa-4 quiz-option" 
+                              Style="@GetOptionStyle(option)"
+                              @onclick="@(() => SelectOption(option))">
+                        <MudText Typo="Typo.body1" Class="fw-bold mb-1">@option.Label</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">@option.Description</MudText>
+                    </MudPaper>
+                }
+            </MudStack>
+            
+            @if (currentQuestion > 0)
+            {
+                <div class="d-flex justify-center mt-4">
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Default"
+                               OnClick="PreviousQuestion"
+                               Style="text-transform: none;">
+                        ← Back
+                    </MudButton>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Results -->
+        <div style="text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #28a745; font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h4" Class="fw-bold mb-3">
+                We Recommend: @recommendedPlan
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mb-6" Style="color: #666; max-width: 600px; margin: 0 auto;">
+                @GetRecommendationText()
+            </MudText>
+            
+            <MudStack Spacing="3" Class="mb-6" AlignItems="AlignItems.Center">
+                @foreach (var benefit in GetPlanBenefits())
+                {
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                        <MudText Typo="Typo.body2">@benefit</MudText>
+                    </div>
+                }
+            </MudStack>
+            
+            <MudStack Row="true" Justify="Justify.Center" Spacing="3" Class="flex-wrap">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Warning" 
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.RocketLaunch"
+                           OnClick="@(() => OnStartTrial.InvokeAsync())"
+                           Style="text-transform: none; font-weight: 600;">
+                    Start Free Trial
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           Size="Size.Large"
+                           OnClick="RestartQuiz"
+                           Style="text-transform: none;">
+                    Retake Quiz
+                </MudButton>
+            </MudStack>
+        </div>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public EventCallback OnStartTrial { get; set; }
+    
+    private bool quizStarted = false;
+    private int currentQuestion = 0;
+    private string recommendedPlan = "Professional";
+    private int starterScore = 0;
+    private int professionalScore = 0;
+    private int enterpriseScore = 0;
+    
+    private class QuizOption
+    {
+        public string Label { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string PlanWeight { get; set; } = ""; // starter, professional, enterprise
+    }
+    
+    private class QuizQuestion
+    {
+        public string Text { get; set; } = "";
+        public List<QuizOption> Options { get; set; } = new();
+    }
+    
+    private List<QuizQuestion> questions = new()
+    {
+        new QuizQuestion
+        {
+            Text = "How many properties do you manage?",
+            Options = new List<QuizOption>
+            {
+                new() { Label = "1-10 properties", Description = "Small portfolio or independent specialist", PlanWeight = "starter" },
+                new() { Label = "11-50 properties", Description = "Growing firm with multiple clients", PlanWeight = "professional" },
+                new() { Label = "51+ properties", Description = "Large organization or enterprise", PlanWeight = "enterprise" }
+            }
+        },
+        new QuizQuestion
+        {
+            Text = "How many team members need access?",
+            Options = new List<QuizOption>
+            {
+                new() { Label = "Just me", Description = "Solo practitioner", PlanWeight = "starter" },
+                new() { Label = "2-10 people", Description = "Small to medium team", PlanWeight = "professional" },
+                new() { Label = "11+ people", Description = "Large team or multiple departments", PlanWeight = "enterprise" }
+            }
+        },
+        new QuizQuestion
+        {
+            Text = "What features are most important to you?",
+            Options = new List<QuizOption>
+            {
+                new() { Label = "Basic reporting", Description = "Simple reports and calculations", PlanWeight = "starter" },
+                new() { Label = "Client portals & API", Description = "Advanced features and integrations", PlanWeight = "professional" },
+                new() { Label = "Custom integrations", Description = "Enterprise features and dedicated support", PlanWeight = "enterprise" }
+            }
+        },
+        new QuizQuestion
+        {
+            Text = "What level of support do you need?",
+            Options = new List<QuizOption>
+            {
+                new() { Label = "Email support", Description = "Basic support is fine", PlanWeight = "starter" },
+                new() { Label = "24/7 priority support", Description = "Fast response times matter", PlanWeight = "professional" },
+                new() { Label = "Dedicated account manager", Description = "White-glove service required", PlanWeight = "enterprise" }
+            }
+        }
+    };
+    
+    private void StartQuiz()
+    {
+        quizStarted = true;
+        currentQuestion = 0;
+        starterScore = 0;
+        professionalScore = 0;
+        enterpriseScore = 0;
+    }
+    
+    private void SelectOption(QuizOption option)
+    {
+        // Update scores based on selection
+        switch (option.PlanWeight.ToLower())
+        {
+            case "starter":
+                starterScore += 3;
+                professionalScore += 1;
+                break;
+            case "professional":
+                professionalScore += 3;
+                starterScore += 1;
+                enterpriseScore += 1;
+                break;
+            case "enterprise":
+                enterpriseScore += 3;
+                professionalScore += 1;
+                break;
+        }
+        
+        if (currentQuestion < questions.Count - 1)
+        {
+            currentQuestion++;
+        }
+        else
+        {
+            CalculateRecommendation();
+            currentQuestion++; // Move to results
+        }
+    }
+    
+    private void PreviousQuestion()
+    {
+        if (currentQuestion > 0)
+        {
+            currentQuestion--;
+        }
+    }
+    
+    private void RestartQuiz()
+    {
+        quizStarted = false;
+        currentQuestion = 0;
+        starterScore = 0;
+        professionalScore = 0;
+        enterpriseScore = 0;
+    }
+    
+    private void CalculateRecommendation()
+    {
+        if (enterpriseScore >= professionalScore && enterpriseScore >= starterScore)
+        {
+            recommendedPlan = "Enterprise";
+        }
+        else if (professionalScore >= starterScore)
+        {
+            recommendedPlan = "Professional";
+        }
+        else
+        {
+            recommendedPlan = "Starter";
+        }
+    }
+    
+    private string GetRecommendationText()
+    {
+        return recommendedPlan switch
+        {
+            "Starter" => "Based on your answers, our Starter plan is perfect for you. It's ideal for independent specialists managing up to 10 properties with essential features and email support.",
+            "Professional" => "Based on your answers, our Professional plan is the best fit. It includes unlimited team members, advanced analytics, client portals, API access, and 24/7 priority support—perfect for growing reserve study firms.",
+            "Enterprise" => "Based on your answers, our Enterprise plan is designed for your needs. With unlimited properties, custom integrations, dedicated account manager, and white-label options, it's perfect for large organizations.",
+            _ => ""
+        };
+    }
+    
+    private List<string> GetPlanBenefits()
+    {
+        return recommendedPlan switch
+        {
+            "Starter" => new List<string>
+            {
+                "Up to 10 properties",
+                "2 team members",
+                "Basic reporting & templates",
+                "5 GB storage",
+                "Email support"
+            },
+            "Professional" => new List<string>
+            {
+                "Up to 50 properties",
+                "Unlimited team members",
+                "Advanced analytics & reporting",
+                "Client portals & API access",
+                "24/7 priority support",
+                "50 GB storage"
+            },
+            "Enterprise" => new List<string>
+            {
+                "Unlimited properties & users",
+                "Custom integrations",
+                "Dedicated account manager",
+                "Unlimited storage",
+                "White-label options",
+                "Custom SLA"
+            },
+            _ => new List<string>()
+        };
+    }
+    
+    private string GetOptionStyle(QuizOption option)
+    {
+        return "border: 2px solid #e0e0e0; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; background: white;";
+    }
+}
+
+<style>
+    .quiz-option:hover {
+        border-color: #FF8C00 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 140, 0, 0.2) !important;
+    }
+</style>

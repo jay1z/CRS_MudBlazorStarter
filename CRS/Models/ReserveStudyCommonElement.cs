@@ -38,5 +38,16 @@ namespace CRS.Models {
 
         [NotMapped]
         public bool ShowDetails { get; set; } = false;
+        
+        // Additional fields for demo data (when CommonElement is null)
+        public string? ElementName { get; set; }
+        public string? Description { get; set; }
+        public decimal? Quantity { get; set; }
+        public string? Unit { get; set; }
+        public int? UsefulLife { get; set; }
+        public int? RemainingLife { get; set; }
+        public decimal? ReplacementCost { get; set; }
+        public string? Category { get; set; }
+        public string? Notes { get; set; }
     }
 }

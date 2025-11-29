@@ -1,0 +1,10 @@
+﻿@page "/Compliance"
+@attribute [Authorize(Policy = "RequireTenantViewer")]
+
+@using CRS.Components.AppHome.Widgets
+
+<PageTitle>Compliance</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <W12ComplianceOverviewPanel />
+</MudContainer>

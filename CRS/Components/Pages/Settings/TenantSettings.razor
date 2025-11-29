@@ -1,0 +1,344 @@
+﻿@page "/Admin/Settings"
+@page "/Settings"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Forms
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
+@inject ThemeService ThemeService
+@inject ISnackbar Snackbar
+@inject IWebHostEnvironment Env
+@inject NavigationManager Nav
+@inject CRS.Services.Storage.ILogoStorageService LogoStorage
+
+<PageTitle>Tenant Settings</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" Class="mb-4">Tenant Settings</MudText>
+        
+        @if (tenant == null) {
+            <MudAlert Severity="Severity.Warning">No tenant context available.</MudAlert>
+        } else {
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+                <MudTabPanel Text="General" Icon="@Icons.Material.Filled.Info">
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="tenant.Name" Label="Tenant Name" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField Value="@tenant.Subdomain" Label="Subdomain" Variant="Variant.Outlined" ReadOnly="true" HelperText="Contact support to change subdomain" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudSwitch T="bool" @bind-Checked="tenant.IsActive" Color="Color.Primary" Label="Active" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Branding & Theme" Icon="@Icons.Material.Filled.Palette">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h6" Class="mb-2">Theme Preset</MudText>
+                            <MudSelect T="string" @bind-Value="selectedPreset" Label="Choose Preset" Variant="Variant.Outlined" Dense="true" Class="mb-4">
+                                <MudSelectItem Value='@("")'>Custom</MudSelectItem>
+                                @foreach (var name in presetNames) {
+                                    <MudSelectItem Value="@name">@name</MudSelectItem>
+                                }
+                            </MudSelect>
+                            @if (!string.IsNullOrWhiteSpace(selectedPreset)) {
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ApplyPreset" Class="mb-4">Apply Preset</MudButton>
+                            }
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Light Theme Colors</MudText>
+                            <MudColorPicker @bind-Text="branding.Primary" Label="Primary" Class="mb-2" />
+                            <MudColorPicker @bind-Text="branding.Secondary" Label="Secondary" Class="mb-2" />
+                            <MudColorPicker @bind-Text="branding.Background" Label="Background" Class="mb-2" />
+                            <MudColorPicker @bind-Text="branding.AppbarBackground" Label="Appbar Background" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Dark Theme Colors</MudText>
+                            <MudColorPicker @bind-Text="branding.DarkPrimary" Label="Dark Primary" Class="mb-2" />
+                            <MudColorPicker @bind-Text="branding.DarkSecondary" Label="Dark Secondary" Class="mb-2" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudSwitch T="bool" @bind-Checked="useDarkMode" Color="Color.Primary" Label="Use Dark Mode by Default" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="PreviewTheme" Class="mr-2">Preview Theme</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetTheme">Reset to Default</MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Logo" Icon="@Icons.Material.Filled.Image">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            @if (!string.IsNullOrWhiteSpace(logoUrl)) {
+                                <MudPaper Class="pa-4 mb-4" Elevation="2">
+                                    <MudText Typo="Typo.subtitle1" Class="mb-2">Current Logo</MudText>
+                                    <MudImage Src="@logoUrl" Alt="Tenant Logo" Width="200" Class="mb-2" />
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="RemoveLogo" StartIcon="@Icons.Material.Filled.Delete">Remove Logo</MudButton>
+                                </MudPaper>
+                            } else {
+                                <MudAlert Severity="Severity.Info" Class="mb-4">No logo uploaded yet.</MudAlert>
+                            }
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Upload New Logo</MudText>
+                            <InputFile OnChange="HandleLogoUpload" accept="image/png,image/jpeg,image/svg+xml,image/webp" class="form-control mb-2" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Recommended: 400×400px, PNG/SVG, under 500KB (max 2MB)
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Info">
+                                Images over 400px will be automatically resized and optimized
+                            </MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Advanced" Icon="@Icons.Material.Filled.Code">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Custom Branding JSON</MudText>
+                            <MudTextField @bind-Value="tenant.BrandingJson" Lines="8" Label="Branding JSON" Variant="Variant.Outlined" HelperText="Advanced: Edit JSON directly" />
+                            @if (!string.IsNullOrWhiteSpace(jsonError)) {
+                                <MudAlert Severity="Severity.Error" Class="mt-2">@jsonError</MudAlert>
+                            }
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+
+            <MudDivider Class="my-4" />
+            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveSettings" Disabled="@(!string.IsNullOrWhiteSpace(jsonError))">Save Settings</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="LoadTenant">Cancel</MudButton>
+            </MudStack>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private Tenant? tenant;
+    private BrandingModel branding = new();
+    private bool useDarkMode;
+    private string? selectedPreset;
+    private IReadOnlyList<string> presetNames = Array.Empty<string>();
+    private string? logoUrl;
+    private string? jsonError;
+
+    protected override async Task OnInitializedAsync() {
+        presetNames = ThemeService.GetPresetNames();
+        await LoadTenant();
+    }
+
+    private async Task LoadTenant() {
+        if (!TenantContext.TenantId.HasValue) return;
+        
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
+            
+            if (tenant != null) {
+                ParseBranding();
+                await LoadLogoUrl();
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading tenant: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ParseBranding() {
+        if (string.IsNullOrWhiteSpace(tenant?.BrandingJson)) {
+            branding = new BrandingModel();
+            useDarkMode = false;
+            return;
+        }
+
+        try {
+            var payload = JsonSerializer.Deserialize<ThemeService.BrandingPayload>(tenant.BrandingJson);
+            if (payload != null) {
+                branding.Primary = payload.Primary;
+                branding.Secondary = payload.Secondary;
+                branding.AppbarBackground = payload.AppbarBackground;
+                branding.Background = payload.Background;
+                branding.DarkPrimary = payload.DarkPrimary;
+                branding.DarkSecondary = payload.DarkSecondary;
+                useDarkMode = payload.UseDarkMode ?? false;
+                selectedPreset = payload.Preset;
+            }
+            jsonError = null;
+        } catch (Exception ex) {
+            jsonError = $"Invalid JSON: {ex.Message}";
+        }
+    }
+
+    private void ApplyPreset() {
+        if (string.IsNullOrWhiteSpace(selectedPreset)) return;
+        
+        var preset = ThemeService.GetPresetByName(selectedPreset);
+        if (preset == null) return;
+
+        branding.Primary = preset.PaletteLight.Primary.ToString();
+        branding.Secondary = preset.PaletteLight.Secondary.ToString();
+        branding.AppbarBackground = preset.PaletteLight.AppbarBackground?.ToString();
+        branding.Background = preset.PaletteLight.Background?.ToString();
+        branding.DarkPrimary = preset.PaletteDark?.Primary?.ToString();
+        branding.DarkSecondary = preset.PaletteDark?.Secondary?.ToString();
+        
+        SerializeBranding();
+        Snackbar.Add($"Applied preset: {selectedPreset}", Severity.Success);
+    }
+
+    private void PreviewTheme() {
+        SerializeBranding();
+        TenantContext.BrandingJson = tenant?.BrandingJson;
+        ThemeService.ApplyTenantBrandingIfAvailable();
+        Snackbar.Add("Theme preview applied. Save to persist changes.", Severity.Info);
+    }
+
+    private void ResetTheme() {
+        branding = new BrandingModel();
+        useDarkMode = false;
+        selectedPreset = null;
+        if (tenant != null) tenant.BrandingJson = null;
+        TenantContext.BrandingJson = null;
+        ThemeService.SetTheme(new MudBlazor.MudTheme());
+        Snackbar.Add("Theme reset to default", Severity.Info);
+    }
+
+    private void SerializeBranding() {
+        if (tenant == null) return;
+
+        var payload = new ThemeService.BrandingPayload(
+            branding.Primary,
+            branding.Secondary,
+            branding.AppbarBackground,
+            branding.Background,
+            branding.DarkPrimary,
+            branding.DarkSecondary,
+            null, // Tertiary
+            null, // Info
+            null, // Success
+            null, // Warning
+            null, // Error
+            null, // TextPrimary
+            null, // TextSecondary
+            useDarkMode,
+            selectedPreset
+        );
+
+        try {
+            tenant.BrandingJson = JsonSerializer.Serialize(payload);
+            jsonError = null;
+        } catch (Exception ex) {
+            jsonError = $"Serialization error: {ex.Message}";
+        }
+    }
+
+    private async Task SaveSettings() {
+        if (tenant == null || !TenantContext.TenantId.HasValue) return;
+
+        SerializeBranding();
+        
+        if (!string.IsNullOrWhiteSpace(jsonError)) {
+            Snackbar.Add("Cannot save: Invalid branding JSON", Severity.Error);
+            return;
+        }
+
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var existing = await db.Tenants.FirstOrDefaultAsync(t => t.Id == tenant.Id);
+            if (existing == null) {
+                Snackbar.Add("Tenant not found", Severity.Error);
+                return;
+            }
+
+            existing.Name = tenant.Name;
+            existing.IsActive = tenant.IsActive;
+            existing.BrandingJson = tenant.BrandingJson;
+            existing.UpdatedAt = DateTime.UtcNow;
+            
+            await db.SaveChangesAsync();
+            
+            // Update context
+            TenantContext.TenantName = existing.Name;
+            TenantContext.BrandingJson = existing.BrandingJson;
+            TenantContext.IsActive = existing.IsActive;
+            ThemeService.ApplyTenantBrandingIfAvailable();
+            
+            Snackbar.Add("Settings saved successfully!", Severity.Success);
+        } catch (Exception ex) {
+            Snackbar.Add($"Error saving: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadLogoUrl() {
+        if (tenant == null || !TenantContext.TenantId.HasValue) return;
+        try {
+            logoUrl = await LogoStorage.GetLogoUrlAsync(TenantContext.TenantId.Value);
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading logo: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    private async Task HandleLogoUpload(InputFileChangeEventArgs e) {
+        if (tenant == null || !TenantContext.TenantId.HasValue) return;
+
+        var file = e.File;
+
+        // Validate
+        var (valid, error) = await LogoStorage.ValidateLogoAsync(file);
+        if (!valid) {
+            Snackbar.Add(error, Severity.Warning);
+            return;
+        }
+
+        // Warn if large
+        if (file.Size > CRS.Services.Storage.LogoUploadConfig.OptimalSizeBytes) {
+            Snackbar.Add($"Large file ({file.Size / 1024}KB). Optimizing...", Severity.Info);
+        }
+
+        try {
+            logoUrl = await LogoStorage.UploadLogoAsync(TenantContext.TenantId.Value, file);
+            Snackbar.Add("Logo uploaded successfully!", Severity.Success);
+        } catch (Exception ex) {
+            Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RemoveLogo() {
+        if (tenant == null || string.IsNullOrWhiteSpace(logoUrl) || !TenantContext.TenantId.HasValue) return;
+
+        try {
+            var deleted = await LogoStorage.DeleteLogoAsync(TenantContext.TenantId.Value);
+            if (deleted) {
+                logoUrl = null;
+                Snackbar.Add("Logo removed", Severity.Info);
+            } else {
+                Snackbar.Add("Logo not found", Severity.Warning);
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error removing logo: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private class BrandingModel {
+        public string? Primary { get; set; }
+        public string? Secondary { get; set; }
+        public string? AppbarBackground { get; set; }
+        public string? Background { get; set; }
+        public string? DarkPrimary { get; set; }
+        public string? DarkSecondary { get; set; }
+    }
+}

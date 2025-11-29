@@ -1,0 +1,74 @@
+﻿@page "/comingsoon"
+@attribute [AllowAnonymous]
+@attribute [CRS.Components.Layout.HideNav]
+@layout CRS.Components.Layout.HomeLayout
+@inject NavigationManager Nav
+
+<PageTitle>Coming Soon - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="d-flex flex-column justify-center align-center" Style="min-height: 100vh;">
+    <MudPaper Class="pa-8 d-flex flex-column align-center" Elevation="3" Style="border-radius: 20px; text-align: center;">
+        
+        @* Logo *@
+        <MudImage Src="images/logo.png" Alt="ALX Reserve Cloud" Width="200" Height="200" Class="mb-6" />
+        
+        @* Heading *@
+        <MudText Typo="Typo.h2" Class="fw-bold mb-4" Style="color: #FF8C00;">
+            Coming Soon
+        </MudText>
+        
+        @* Subheading *@
+        <MudText Typo="Typo.h5" Class="mb-4" Style="color: #666;">
+            We're preparing something amazing!
+        </MudText>
+        
+        @* Description *@
+        <MudText Typo="Typo.body1" Class="mb-6" Style="color: #666; max-width: 500px;">
+            ALX Reserve Cloud is currently under development. We're working hard to bring you the most advanced reserve study platform for HOAs, property managers, and reserve study professionals.
+        </MudText>
+        
+        @* Progress indicator *@
+        <MudProgressLinear Color="Color.Warning" Size="Size.Large" Indeterminate="true" Class="mb-6" Style="max-width: 400px;" />
+        
+        @* Features preview *@
+        <MudGrid Spacing="3" Class="mb-6">
+            <MudItem xs="12" sm="4">
+                <div class="d-flex flex-column align-center pa-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Calculate" Style="color: #FF8C00; font-size: 48px;" Class="mb-2" />
+                    <MudText Typo="Typo.body2" Class="fw-bold">Automated Calculations</MudText>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <div class="d-flex flex-column align-center pa-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Apartment" Style="color: #6A3D9A; font-size: 48px;" Class="mb-2" />
+                    <MudText Typo="Typo.body2" Class="fw-bold">Multi-Tenant Support</MudText>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <div class="d-flex flex-column align-center pa-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Style="color: #FF8C00; font-size: 48px;" Class="mb-2" />
+                    <MudText Typo="Typo.body2" Class="fw-bold">Enterprise Security</MudText>
+                </div>
+            </MudItem>
+        </MudGrid>
+        
+        @* Contact info *@
+        <MudText Typo="Typo.body2" Style="color: #999;">
+            Have questions? Contact us at <MudLink Href="mailto:info@alxsoftwaresolutions.com" Style="color: #FF8C00;">info@alxsoftwaresolutions.com</MudLink>
+        </MudText>
+        
+        @* Admin Login hint *@
+        <MudDivider Class="my-4" Style="width: 100%; max-width: 400px;" />
+        <MudText Typo="Typo.caption" Style="color: #999;">
+            Administrator? <MudLink Href="/Account/Login" Style="color: #6A3D9A;">Sign in here</MudLink>
+        </MudText>
+        
+    </MudPaper>
+</MudContainer>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+}

@@ -1,4 +1,4 @@
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 @using MudBlazor
 @using Microsoft.AspNetCore.Components.Authorization
 @using CRS.Services.Tenant
@@ -40,7 +40,7 @@
     </MudMainContent>
 </MudLayout>
 
-<EnvironmentBanner />
+@* <EnvironmentBanner /> *@
 
 @code {
     private string GetTitle() => string.IsNullOrWhiteSpace(TenantContext?.TenantName) ? "Reserve Studies" : TenantContext.TenantName!;

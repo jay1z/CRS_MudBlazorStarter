@@ -1,0 +1,168 @@
+﻿@* Exit Intent Popup - Triggered when user is about to leave *@
+
+@if (isVisible)
+{
+    <div @onclick="Close" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.3s ease;">
+        <div @onclick:stopPropagation="true" style="max-width: 600px; width: 90%; margin: 20px;">
+            <MudPaper Class="pa-8" Elevation="24" Style="border-radius: 24px; position: relative; animation: slideUp 0.4s ease;">
+                <!-- Close button -->
+                <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                               OnClick="Close"
+                               Style="position: absolute; top: 16px; right: 16px; color: #999;" />
+                
+                <div style="text-align: center;">
+                    <!-- Icon -->
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #FF8C00 0%, #FFB84D 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+                        <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Style="font-size: 40px; color: white;" />
+                    </div>
+                    
+                    <!-- Headline -->
+                    <MudText Typo="Typo.h4" Class="fw-bold mb-3" Style="color: #333;">
+                        Wait! Before You Go...
+                    </MudText>
+                    
+                    <!-- Subheading -->
+                    <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666; line-height: 1.6;">
+                        Join <strong>527+ reserve study professionals</strong> who are already saving 75% of their time with automated workflows.
+                    </MudText>
+                    
+                    <!-- Offer -->
+                    <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="mb-4">
+                        <MudText Typo="Typo.body1" Class="fw-bold">
+                            🎁 Special Offer: Start your 14-day free trial today
+                        </MudText>
+                        <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.95);">
+                            No credit card required • Full access • Cancel anytime
+                        </MudText>
+                    </MudAlert>
+                    
+                    <!-- Benefits -->
+                    <div style="text-align: left; margin-bottom: 24px;">
+                        <MudStack Spacing="2">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                <MudText Typo="Typo.body2">Complete access to all features</MudText>
+                            </div>
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                <MudText Typo="Typo.body2">Generate your first report in 5 minutes</MudText>
+                            </div>
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                <MudText Typo="Typo.body2">Priority email support included</MudText>
+                            </div>
+                        </MudStack>
+                    </div>
+                    
+                    <!-- CTA Buttons -->
+                    <MudStack Spacing="2">
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Warning" 
+                                   Size="Size.Large"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.RocketLaunch"
+                                   OnClick="OnStartTrial"
+                                   Class="pulse-animation"
+                                   Style="font-weight: 600; text-transform: none;">
+                            Yes, Start My Free Trial!
+                        </MudButton>
+                        
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Default"
+                                   Size="Size.Small"
+                                   OnClick="Close"
+                                   Style="text-transform: none; color: #999;">
+                            No thanks, I'll pass on this opportunity
+                        </MudButton>
+                    </MudStack>
+                    
+                    <!-- Trust signals -->
+                    <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center" Spacing="3" Class="mt-4">
+                        <MudText Typo="Typo.caption" Style="color: #999;">
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Color="Color.Warning" />
+                            4.9/5 Rating
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color: #999;">•</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #999;">
+                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Style="color: #28a745;" />
+                            Secure & Private
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color: #999;">•</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #999;">
+                            <MudIcon Icon="@Icons.Material.Filled.CreditCard" Size="Size.Small" Style="color: #999;" />
+                            No Card Required
+                        </MudText>
+                    </MudStack>
+                </div>
+            </MudPaper>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback OnStartTrialClick { get; set; }
+    
+    private bool isVisible = false;
+    private bool hasBeenShown = false;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasBeenShown)
+        {
+            // Set up exit intent detection
+            await JSRuntime.InvokeVoidAsync("setupExitIntent", DotNetObjectReference.Create(this));
+        }
+    }
+    
+    [JSInvokable]
+    public void Show()
+    {
+        if (!hasBeenShown)
+        {
+            isVisible = true;
+            hasBeenShown = true;
+            StateHasChanged();
+        }
+    }
+    
+    private void Close()
+    {
+        isVisible = false;
+        StateHasChanged();
+    }
+    
+    private async Task OnStartTrial()
+    {
+        Close();
+        await OnStartTrialClick.InvokeAsync();
+    }
+    
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+}
+
+<style>
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @@keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    
+    @@keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+    }
+</style>

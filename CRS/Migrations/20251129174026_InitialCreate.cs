@@ -425,6 +425,75 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SystemSettings",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ShowGlobalBanner = table.Column<bool>(type: "bit", nullable: false),
+                    GlobalBannerMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    GlobalBannerSeverity = table.Column<int>(type: "int", nullable: false),
+                    GlobalBannerStartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    GlobalBannerEndDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    MaintenanceModeEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    MaintenanceMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MaintenanceStartTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    MaintenanceEndTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AllowNewTenantSignups = table.Column<bool>(type: "bit", nullable: false),
+                    AllowNewUserRegistrations = table.Column<bool>(type: "bit", nullable: false),
+                    EnableEmailNotifications = table.Column<bool>(type: "bit", nullable: false),
+                    EnableSmsNotifications = table.Column<bool>(type: "bit", nullable: false),
+                    MaxTenantsAllowed = table.Column<int>(type: "int", nullable: false),
+                    MaxUsersPerTenant = table.Column<int>(type: "int", nullable: false),
+                    MaxCommunitiesPerTenant = table.Column<int>(type: "int", nullable: false),
+                    SupportEmail = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SupportPhone = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SupportUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SystemVersion = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AnnouncementUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DocumentationUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StatusPageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ShowAnnouncementBanner = table.Column<bool>(type: "bit", nullable: false),
+                    AnnouncementTitle = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AnnouncementMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AnnouncementStartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AnnouncementEndDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DefaultMaxCommunities = table.Column<int>(type: "int", nullable: false),
+                    DefaultMaxUsers = table.Column<int>(type: "int", nullable: false),
+                    DefaultTrialDays = table.Column<int>(type: "int", nullable: false),
+                    RequirePaymentForSignup = table.Column<bool>(type: "bit", nullable: false),
+                    SessionTimeoutMinutes = table.Column<int>(type: "int", nullable: false),
+                    InactivityWarningMinutes = table.Column<int>(type: "int", nullable: false),
+                    RequireReauthenticationForSensitiveActions = table.Column<bool>(type: "bit", nullable: false),
+                    EnableApiRateLimiting = table.Column<bool>(type: "bit", nullable: false),
+                    ApiRequestsPerMinute = table.Column<int>(type: "int", nullable: false),
+                    ApiRequestsPerHour = table.Column<int>(type: "int", nullable: false),
+                    EnableAutomatedBackups = table.Column<bool>(type: "bit", nullable: false),
+                    BackupIntervalHours = table.Column<int>(type: "int", nullable: false),
+                    BackupRetentionDays = table.Column<int>(type: "int", nullable: false),
+                    AuditLogRetentionDays = table.Column<int>(type: "int", nullable: false),
+                    DeletedDataRetentionDays = table.Column<int>(type: "int", nullable: false),
+                    EnableGdprCompliance = table.Column<bool>(type: "bit", nullable: false),
+                    AllowDataExport = table.Column<bool>(type: "bit", nullable: false),
+                    AllowAccountDeletion = table.Column<bool>(type: "bit", nullable: false),
+                    PrivacyPolicyUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TermsOfServiceUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DataRetentionYears = table.Column<int>(type: "int", nullable: false),
+                    EnableAutomatedReports = table.Column<bool>(type: "bit", nullable: false),
+                    DefaultReportFormat = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DefaultReportLogoUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IncludeWatermarkOnReports = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastUpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SystemSettings", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TenantHomepages",
                 schema: "crs",
                 columns: table => new
@@ -1731,6 +1800,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "SupportTickets",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "SystemSettings",
                 schema: "crs");
 
             migrationBuilder.DropTable(

@@ -20,7 +20,7 @@ namespace CRS.Services
         }
 
         // Override FindByEmailAsync to find by email and current tenant if set
-        public override async Task<ApplicationUser> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default)
+        public override async Task<ApplicationUser?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default)
         {
             if (_tenantContext.TenantId.HasValue)
             {

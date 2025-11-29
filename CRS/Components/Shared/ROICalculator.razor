@@ -1,0 +1,140 @@
+﻿@* ROI Calculator Component *@
+
+<MudPaper Class="pa-6" Elevation="3" Style="border-radius: 20px; background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);">
+    <MudText Typo="Typo.h5" Class="fw-bold mb-2" Style="color: #FF8C00;">
+        <MudIcon Icon="@Icons.Material.Filled.Calculate" Class="mr-2" />
+        Calculate Your Savings
+    </MudText>
+    <MudText Typo="Typo.body2" Class="mb-4" Style="color: #666;">
+        See how much time and money you could save with ALX Reserve Cloud
+    </MudText>
+    
+    <MudDivider Class="my-4" />
+    
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="6">
+            <MudNumericField @bind-Value="studiesPerMonth" 
+                             Label="Reserve Studies per Month" 
+                             Variant="Variant.Outlined"
+                             Min="1"
+                             Max="100"
+                             Step="1"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.Description" />
+        </MudItem>
+        
+        <MudItem xs="12" md="6">
+            <MudNumericField @bind-Value="hoursPerStudy" 
+                             Label="Hours per Study (Manual)" 
+                             Variant="Variant.Outlined"
+                             Min="1"
+                             Max="100"
+                             Step="1"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.AccessTime" />
+        </MudItem>
+        
+        <MudItem xs="12" md="6">
+            <MudNumericField @bind-Value="hourlyRate" 
+                             Label="Your Hourly Rate ($)" 
+                             Variant="Variant.Outlined"
+                             Min="10"
+                             Max="500"
+                             Step="5"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                             Format="C0" />
+        </MudItem>
+        
+        <MudItem xs="12" md="6">
+            <MudSelect @bind-Value="selectedPlan" 
+                       Label="Select Plan" 
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter">
+                <MudSelectItem Value="@("Starter")">Starter - $199/mo</MudSelectItem>
+                <MudSelectItem Value="@("Professional")">Professional - $499/mo</MudSelectItem>
+                <MudSelectItem Value="@("Enterprise")">Enterprise - Custom</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+    
+    <MudDivider Class="my-4" />
+    
+    <!-- Results -->
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4" Elevation="0" Style="background: #FFF5E6; border-radius: 12px; text-align: center;">
+                <MudText Typo="Typo.caption" Style="color: #666;">Time Saved / Month</MudText>
+                <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #FF8C00;">@TimeSaved hrs</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;">(@TimeSavedPercent% faster)</MudText>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4" Elevation="0" Style="background: #F3E8FF; border-radius: 12px; text-align: center;">
+                <MudText Typo="Typo.caption" Style="color: #666;">Money Saved / Month</MudText>
+                <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #6A3D9A;">$@MoneySaved</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;">in labor costs</MudText>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4" Elevation="0" Style="background: #E8F5E9; border-radius: 12px; text-align: center;">
+                <MudText Typo="Typo.caption" Style="color: #666;">Net Savings / Year</MudText>
+                <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #28a745;">$@NetSavings</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;">after subscription</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+    
+    <MudDivider Class="my-4" />
+    
+    <!-- ROI Summary -->
+    <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mb-3">
+        <MudText Typo="Typo.body2" Class="fw-bold">
+            ROI: @ROIPercentage% return on investment in the first year
+        </MudText>
+        <MudText Typo="Typo.caption">
+            You'll recoup your subscription cost in @PaybackMonths months
+        </MudText>
+    </MudAlert>
+    
+    <MudButton Variant="Variant.Filled" 
+               Color="Color.Warning" 
+               FullWidth="true"
+               Size="Size.Large"
+               StartIcon="@Icons.Material.Filled.RocketLaunch"
+               OnClick="OnStartTrial">
+        Start Free Trial — See Results Yourself
+    </MudButton>
+</MudPaper>
+
+@code {
+    [Parameter] public EventCallback OnStartTrialClick { get; set; }
+    
+    private int studiesPerMonth = 10;
+    private int hoursPerStudy = 20;
+    private decimal hourlyRate = 75;
+    private string selectedPlan = "Professional";
+    
+    private int TimeSaved => (int)(studiesPerMonth * hoursPerStudy * 0.75); // 75% time saved
+    private int TimeSavedPercent => 75;
+    private int MoneySaved => (int)(TimeSaved * hourlyRate);
+    
+    private int SubscriptionCost => selectedPlan switch
+    {
+        "Starter" => 199,
+        "Professional" => 499,
+        "Enterprise" => 999,
+        _ => 499
+    };
+    
+    private int NetSavings => (MoneySaved * 12) - (SubscriptionCost * 12);
+    private int ROIPercentage => SubscriptionCost > 0 ? (int)((NetSavings / (decimal)(SubscriptionCost * 12)) * 100) : 0;
+    private int PaybackMonths => MoneySaved > 0 ? (int)Math.Ceiling((decimal)SubscriptionCost / MoneySaved) : 0;
+    
+    private async Task OnStartTrial()
+    {
+        await OnStartTrialClick.InvokeAsync();
+    }
+}

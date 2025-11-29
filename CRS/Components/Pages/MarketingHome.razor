@@ -1,31 +1,233 @@
-﻿@inject NavigationManager Nav
+﻿@page "/marketing"
+@using CRS.Components.Shared
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
 
-<PageTitle>ALX Reserve Cloud - Reserve Study SaaS Platform</PageTitle>
+<PageTitle>ALX Reserve Cloud - Cut Report Time by 75%</PageTitle>
+
+<!-- Phase 4 Components -->
+<ProductTour @ref="productTour" OnTourComplete="OnTourComplete" />
+<ExitIntentPopup OnStartTrialClick="@(() => Nav.NavigateTo("/tenant/signup"))" />
+<SocialProofWidget />
+
+<!-- Tour Start Button (Floating) -->
+@if (!tourCompleted)
+{
+    <MudFab Color="Color.Warning" 
+            StartIcon="@Icons.Material.Filled.Tour" 
+            OnClick="@(() => productTour?.StartTour())"
+            Style="position: fixed; bottom: 90px; right: 20px; z-index: 1000;"
+            Title="Take a Product Tour" />
+}
+
+<!-- Sticky Navigation Bar (appears after scroll) -->
+<div id="stickyNav" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; transition: all 0.3s ease;">
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-3">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudImage Src="images/logo.png" Alt="ALX Reserve Cloud" Width="40" Height="40" />
+                <MudText Typo="Typo.h6" Style="color: #FF8C00; font-weight: 600;">ALX Reserve Cloud</MudText>
+            </MudStack>
+            
+            <MudStack Row="true" Spacing="3" Class="d-none d-md-flex">
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#features" Style="text-transform: none;">Features</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#pricing" Style="text-transform: none;">Pricing</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/customers/miller-reserve-studies" Style="text-transform: none;">Case Studies</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#faq" Style="text-transform: none;">FAQ</MudButton>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Warning" 
+                           Size="Size.Small" 
+                           OnClick="@(() => Nav.NavigateTo("/tenant/signup"))"
+                           Style="text-transform: none; font-weight: 600;">
+                    Start Free Trial
+                </MudButton>
+            </MudStack>
+            
+            <!-- Mobile menu button -->
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Primary" Class="d-flex d-md-none" />
+        </MudStack>
+    </MudContainer>
+</div>
 
 <!-- Hero Section -->
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-12 mb-16">
     <MudGrid AlignItems="AlignItems.Center">
         <MudItem xs="12" md="6" Class="d-flex flex-column justify-center">
-            <MudText Typo="Typo.h2" Class="fw-bold mb-4">
-                The Reserve Study <span style="color:#FF8C00;">SaaS Platform</span>
+            <!-- Trust Badge -->
+            <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" Class="mb-3" Style="width: fit-content;">
+                <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Size="Size.Small" Class="mr-1" />
+                Trusted by 500+ Reserve Study Professionals
+            </MudChip>
+            
+            <!-- Enhanced Headline -->
+            <MudText Typo="Typo.h1" Class="fw-bold mb-4" Style="font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.1;">
+                Cut Report Time by 75%.<br/>
+                <span style="color:#FF8C00;">Start in 5 Minutes.</span>
             </MudText>
-            <MudText Typo="Typo.h6" Class="mb-6" Style="color:#666;">
-                Streamline reserve studies with cloud-based tools built for Reserve Study firms, HOA managers, and property management professionals.
+            
+            <!-- Value Proposition -->
+            <MudText Typo="Typo.h6" Class="mb-4" Style="color:#666; line-height: 1.6; font-weight: 400;">
+                Automate complex calculations, generate professional reports instantly, and give clients 24/7 access—all in one powerful platform.
             </MudText>
-            <div class="d-flex gap-3 mb-6">
-                <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Large" OnClick="@(() => Nav.NavigateTo("/tenant/signup"))">
+            
+            <!-- Social Proof -->
+            <MudStack Row="true" Class="mb-6" AlignItems="AlignItems.Center" Spacing="2">
+                <MudRating ReadOnly="true" SelectedValue="5" Size="Size.Small" Color="Color.Warning" />
+                <MudText Typo="Typo.body2" Style="color: #666;">
+                    4.9/5 from 200+ reviews
+                </MudText>
+            </MudStack>
+            
+            <!-- CTA Buttons -->
+            <MudStack Row="true" Spacing="3" Class="mb-6 d-none d-sm-flex">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Warning" 
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.RocketLaunch"
+                           OnClick="@(() => Nav.NavigateTo("/tenant/signup"))"
+                           Style="text-transform: none; font-weight: 600;">
+                    Start Free Trial — No Card Required
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.PlayCircle"
+                           Style="text-transform: none;">
+                    Watch Demo (2 min)
+                </MudButton>
+            </MudStack>
+            
+            <!-- Mobile CTA Buttons (stacked) -->
+            <MudStack Spacing="2" Class="mb-6 d-flex d-sm-none">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Warning" 
+                           Size="Size.Large"
+                           FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.RocketLaunch"
+                           OnClick="@(() => Nav.NavigateTo("/tenant/signup"))"
+                           Style="text-transform: none; font-weight: 600;">
                     Start Free Trial
                 </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large">
-                    View Demo
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           Size="Size.Large"
+                           FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.PlayCircle"
+                           Style="text-transform: none;">
+                    Watch Demo (2 min)
                 </MudButton>
+            </MudStack>
+            
+            <!-- Trust Signals -->
+            <MudText Typo="Typo.caption" Style="color: #999;">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" /> No credit card required  
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" /> 14-day free trial  
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" /> Cancel anytime
+            </MudText>
+        </MudItem>
+        
+        <MudItem xs="12" md="6" Class="d-flex justify-center">
+            <!-- Enhanced Image with Shadow and Floating Elements -->
+            <div style="position: relative; width: 100%; max-width: 600px;">
+                <MudPaper Elevation="8" Class="pa-2" Style="border-radius: 20px; background: linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%); position: relative;">
+                    <MudImage Src="https://placehold.co/1200x800" 
+                              Alt="ALX Reserve Cloud Dashboard Preview" 
+                              Class="rounded-lg"
+                              Style="width: 100%; border-radius: 16px; display: block;" 
+                              ObjectFit="ObjectFit.Cover"/>
+                    
+                    <!-- Floating Badge -->
+                    <div style="position: absolute; top: 20px; right: 20px;">
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Class="mr-1" />
+                        Live Data
+                    </MudChip>
+                    </div>
+                </MudPaper>
+                
+                <!-- Decorative Elements -->
+                <div style="position: absolute; top: -20px; left: -20px; width: 100px; height: 100px; background: rgba(255, 140, 0, 0.1); border-radius: 50%; z-index: -1;"></div>
+                <div style="position: absolute; bottom: -30px; right: -30px; width: 150px; height: 150px; background: rgba(106, 61, 154, 0.1); border-radius: 50%; z-index: -1;"></div>
             </div>
         </MudItem>
-        <MudItem xs="12" md="6" Class="d-flex justify-center">
-            <MudPaper Elevation="0" Class="pa-4" Style="width:100%; max-width:450px; background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 20px;">
-                <div style="aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
-                    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Style="font-size: 80px;"></MudIcon>
-                </div>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Stats Banner -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+    <MudPaper Elevation="0" Class="pa-6 pa-md-8" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 20px;">
+        <MudGrid Justify="Justify.SpaceAround" Spacing="4">
+            <MudItem xs="6" sm="3" Class="text-center">
+                <MudText Typo="Typo.h3" Class="fw-bold" Style="color: white; font-size: clamp(2rem, 4vw, 3rem);">527</MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.95); font-weight: 500;">Active Professionals</MudText>
+            </MudItem>
+            <MudItem xs="6" sm="3" Class="text-center">
+                <MudText Typo="Typo.h3" Class="fw-bold" Style="color: white; font-size: clamp(2rem, 4vw, 3rem);">12,458</MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.95); font-weight: 500;">Reports Generated</MudText>
+            </MudItem>
+            <MudItem xs="6" sm="3" Class="text-center">
+                <MudText Typo="Typo.h3" Class="fw-bold" Style="color: white; font-size: clamp(2rem, 4vw, 3rem);">75%</MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.95); font-weight: 500;">Average Time Saved</MudText>
+            </MudItem>
+            <MudItem xs="6" sm="3" Class="text-center">
+                <MudText Typo="Typo.h3" Class="fw-bold" Style="color: white; font-size: clamp(2rem, 4vw, 3rem);">99.9%</MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.95); font-weight: 500;">Uptime SLA</MudText>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Pain Points Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
+        Sound Familiar?
+    </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; max-width: 600px; margin: 0 auto 48px;">
+        These are the top challenges reserve study professionals face every day
+    </MudText>
+    
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-6 feature-card" Elevation="0" Style="background: #FFF5E6; border-radius: 16px; border-left: 4px solid #FF8C00; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.AccessTime" Style="color: #FF8C00; font-size: 40px;" Class="mb-3" />
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Manual Calculations Take Forever</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-3">
+                    Spending 20+ hours per study on spreadsheets, formulas, and manual data entry?
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: #FF8C00; font-weight: 600;">
+                    → Automate calculations in seconds
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-6 feature-card" Elevation="0" Style="background: #F3E8FF; border-radius: 16px; border-left: 4px solid #6A3D9A; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.FolderOff" Style="color: #6A3D9A; font-size: 40px;" Class="mb-3" />
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Lost Documents & Version Control</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-3">
+                    Email threads, scattered files, and outdated versions causing confusion and delays?
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: #6A3D9A; font-weight: 600;">
+                    → Centralized document management
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-6 feature-card" Elevation="0" Style="background: #FFF5E6; border-radius: 16px; border-left: 4px solid #FF8C00; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Groups" Style="color: #FF8C00; font-size: 40px;" Class="mb-3" />
+                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Client Communication Gaps</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-3">
+                    HOA boards constantly asking for updates and struggling to access their reserve data?
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: #FF8C00; font-weight: 600;">
+                    → Real-time client portals
+                </MudText>
             </MudPaper>
         </MudItem>
     </MudGrid>
@@ -33,8 +235,44 @@
 
 <MudDivider Class="my-12" />
 
+<!-- Customer Logos / Social Proof -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #999; margin-bottom: 32px; text-transform: uppercase; letter-spacing: 2px; font-size: 0.875rem;">
+        Trusted by Leading Organizations
+    </MudText>
+    <MudGrid Justify="Justify.Center" Spacing="6">
+        <MudItem xs="6" sm="4" md="2" Class="d-flex justify-center align-center">
+            <div style="opacity: 0.6; transition: opacity 0.3s ease;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                <MudText Typo="Typo.h6" Style="color: #666; font-weight: 600;">CAI Member</MudText>
+            </div>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2" Class="d-flex justify-center align-center">
+            <div style="opacity: 0.6; transition: opacity 0.3s ease;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                <MudText Typo="Typo.h6" Style="color: #666; font-weight: 600;">HOA Certified</MudText>
+            </div>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2" Class="d-flex justify-center align-center">
+            <div style="opacity: 0.6; transition: opacity 0.3s ease;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                <MudText Typo="Typo.h6" Style="color: #666; font-weight: 600;">PCAM Partner</MudText>
+            </div>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2" Class="d-flex justify-center align-center">
+            <div style="opacity: 0.6; transition: opacity 0.3s ease;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                <MudText Typo="Typo.h6" Style="color: #666; font-weight: 600;">CMCA Approved</MudText>
+            </div>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2" Class="d-flex justify-center align-center">
+            <div style="opacity: 0.6; transition: opacity 0.3s ease;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+                <MudText Typo="Typo.h6" Style="color: #666; font-weight: 600;">RS Specialist</MudText>
+            </div>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
 <!-- Who It's For Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
     <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
         Built for Everyone in the Reserve Study Ecosystem
     </MudText>
@@ -80,7 +318,7 @@
 <MudDivider Class="my-12" />
 
 <!-- Feature Highlights Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16" id="features">
     <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
         Powerful Features for Professional Reserve Studies
     </MudText>
@@ -165,7 +403,7 @@
 </MudContainer>
 
 <!-- Dashboard Preview Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
     <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
         Dashboard Preview
     </MudText>
@@ -226,8 +464,65 @@
 
 <MudDivider Class="my-12" />
 
+<!-- Video Demo Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudPaper Elevation="3" Class="pa-8" Style="background: #f9f9f9; border-radius: 20px;">
+        <MudGrid AlignItems="AlignItems.Center">
+            <MudItem xs="12" md="5">
+                <MudText Typo="Typo.h4" Class="fw-bold mb-4">
+                    See It In Action
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666; line-height: 1.6;">
+                    Watch how reserve study professionals complete reports in half the time 
+                    with automated workflows, intelligent calculations, and seamless collaboration.
+                </MudText>
+                <MudStack Spacing="2" Class="mb-4">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                        <MudText Typo="Typo.body2">No installation required</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                        <MudText Typo="Typo.body2">Access from any device</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                        <MudText Typo="Typo.body2">Up and running in 5 minutes</MudText>
+                    </div>
+                </MudStack>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.CalendarMonth">
+                    Schedule Live Demo
+                </MudButton>
+            </MudItem>
+            
+            <MudItem xs="12" md="7">
+                <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+                    <!-- Placeholder for video - Replace with actual YouTube/Vimeo embed -->
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); display: flex; align-items: center; justify-content: center;">
+                        <div style="text-align: center; color: white;">
+                            <MudIcon Icon="@Icons.Material.Filled.PlayCircle" Style="font-size: 80px; margin-bottom: 16px;" />
+                            <MudText Typo="Typo.h6" Class="fw-bold">Product Demo Video</MudText>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">(2 minutes)</MudText>
+                        </div>
+                    </div>
+                    <!-- Uncomment and replace with your video URL:
+                    <iframe src="https://www.youtube.com/embed/YOUR_VIDEO_ID" 
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+                            allowfullscreen></iframe>
+                    -->
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
 <!-- How It Works Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
     <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
         How It Works
     </MudText>
@@ -265,61 +560,395 @@
 <MudDivider Class="my-12" />
 
 <!-- Pricing Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16" id="pricing">
+    <!-- Countdown Timer -->
+    <div class="d-flex justify-center mb-6">
+        <div style="max-width: 600px; width: 100%;">
+            <CountdownTimer HeadlineText="Limited Time: Save 20% on Annual Plans!"
+                           SubheadlineText="Special pricing ends in:"
+                           CtaText="Claim Your Discount Now"
+                           DisclaimerText="* Offer auto-renews daily. Start your trial anytime."
+                           CtaClick="@(() => Nav.NavigateTo("/tenant/signup"))"
+                           Evergreen="true"
+                           EvergreenHours="24"
+                           ShowDays="false" />
+        </div>
+    </div>
+    
     <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
-        Simple, Transparent Pricing
+        Pricing That Scales With Your Business
     </MudText>
     <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 24px;">
-        Choose the plan that fits your business needs.
+        All plans include 14-day free trial. No credit card required.
     </MudText>
+    
+    <!-- Annual/Monthly Toggle -->
+    <div class="d-flex justify-center align-center mb-8 gap-3">
+        <MudText Typo="Typo.body1" Class="@(isAnnual ? "" : "fw-bold")" Style="color: #666;">Monthly</MudText>
+        <MudSwitch @bind-Value="isAnnual" Color="Color.Primary" />
+        <MudText Typo="Typo.body1" Class="@(isAnnual ? "fw-bold" : "")" Style="color: #666;">
+            Annual <MudChip T="string" Size="Size.Small" Color="Color.Success" Style="margin-left: 8px;">Save 20%</MudChip>
+        </MudText>
+    </div>
+    
     <MudGrid Spacing="4">
+        <!-- Starter Plan -->
         <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border: 2px solid #f0f0f0;">
-                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Starter</MudText>
-                <MudText Typo="Typo.h4" Class="fw-bold mb-6">
-                    <span style="color: #FF8C00;">$199</span><span Style="color: #999; font-size: 16px;">/mo</span>
+            <MudPaper Elevation="2" Class="pa-6 feature-card" Style="border-radius: 20px; border: 2px solid #f0f0f0; height: 100%;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-1">Starter</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;" Class="mb-4">
+                    Perfect for independent specialists
                 </MudText>
-                <MudList T="string" Dense="true">
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Up to 10 properties" />
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Basic reporting" />
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Community support" />
+                <MudText Typo="Typo.h3" Class="fw-bold mb-1">
+                    <span style="color: #FF8C00;">$@(isAnnual ? "159" : "199")</span>
+                    <span Style="color: #999; font-size: 16px;">/mo</span>
+                </MudText>
+                @if (isAnnual) {
+                    <MudText Typo="Typo.caption" Style="color: #28a745; font-weight: 600;" Class="mb-4">
+                        Save $480/year
+                    </MudText>
+                } else {
+                    <div style="height: 19px;" Class="mb-4"></div>
+                }
+                
+                <MudDivider Class="my-4" />
+                
+                <MudList T="string" Dense="true" Class="mb-4">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Up to 10</strong> properties</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>2</strong> team members</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">Basic reporting & templates</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">Email support</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">5 GB storage</MudText>
+                    </MudListItem>
                 </MudList>
+                
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           FullWidth="true" 
+                           Size="Size.Large"
+                           Style="text-transform: none;"
+                           OnClick="@(() => Nav.NavigateTo("/tenant/signup"))">
+                    Start Free Trial
+                </MudButton>
             </MudPaper>
         </MudItem>
+        
+        <!-- Pro Plan (Popular) -->
         <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 16px; background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); color: white;">
-                <div style="position: absolute; top: -12px; left: 20px; background: white; color: #FF8C00; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 12px;">POPULAR</div>
-                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Pro</MudText>
-                <MudText Typo="Typo.h4" Class="fw-bold mb-6">
-                    <span>$499</span><span Style="font-size: 16px;">/mo</span>
+            <MudPaper Elevation="8" Class="pa-6" Style="border-radius: 20px; background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); color: white; transform: scale(1.02); position: relative;">
+                <MudChip T="string" Size="Size.Small" 
+                         Style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: white; color: #FF8C00; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                    MOST POPULAR
+                </MudChip>
+                
+                <MudText Typo="Typo.h6" Class="fw-bold mb-1" Style="margin-top: 12px;">Professional</MudText>
+                <MudText Typo="Typo.caption" Class="mb-4" Style="color: rgba(255,255,255,0.9);">
+                    For growing reserve study firms
                 </MudText>
-                <MudList T="string" Dense="true">
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Up to 50 properties" />
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Advanced analytics" />
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Priority support" />
+                <MudText Typo="Typo.h3" Class="fw-bold mb-1">
+                    <span>$@(isAnnual ? "399" : "499")</span>
+                    <span Style="font-size: 16px; opacity: 0.9;">/mo</span>
+                </MudText>
+                @if (isAnnual) {
+                    <MudText Typo="Typo.caption" Style="color: #90EE90; font-weight: 600;" Class="mb-4">
+                        Save $1,200/year
+                    </MudText>
+                } else {
+                    <div style="height: 19px;" Class="mb-4"></div>
+                }
+                
+                <MudDivider Class="my-4" Style="border-color: rgba(255,255,255,0.3);" />
+                
+                <MudList T="string" Dense="true" Class="mb-4">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Up to 50</strong> properties</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Unlimited</strong> team members</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">Advanced analytics & reporting</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">Priority support (24/7)</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">50 GB storage</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">Client portals</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">API access</MudText>
+                    </MudListItem>
                 </MudList>
-                <MudButton Variant="Variant.Filled" Color="Color.Surface" FullWidth="true" Class="mt-4">Get Started</MudButton>
+                
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Surface" 
+                           FullWidth="true" 
+                           Size="Size.Large"
+                           Style="text-transform: none; color: #FF8C00; font-weight: 600;"
+                           OnClick="@(() => Nav.NavigateTo("/tenant/signup"))">
+                    Start Free Trial
+                </MudButton>
             </MudPaper>
         </MudItem>
+        
+        <!-- Enterprise Plan -->
         <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border: 2px solid #f0f0f0;">
-                <MudText Typo="Typo.h6" Class="fw-bold mb-2">Enterprise</MudText>
-                <MudText Typo="Typo.h4" Class="fw-bold mb-6">
+            <MudPaper Elevation="2" Class="pa-6 feature-card" Style="border-radius: 20px; border: 2px solid #f0f0f0; height: 100%;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-1">Enterprise</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;" Class="mb-4">
+                    For large organizations
+                </MudText>
+                <MudText Typo="Typo.h3" Class="fw-bold mb-6">
                     <span style="color: #FF8C00;">Custom</span>
                 </MudText>
-                <MudList T="string" Dense="true">
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Unlimited properties" />
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Custom integrations" />
-                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success" Text="Dedicated support" />
+                
+                <MudDivider Class="my-4" />
+                
+                <MudList T="string" Dense="true" Class="mb-4">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Unlimited</strong> properties</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Unlimited</strong> users</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">Custom integrations</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">Dedicated account manager</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">Unlimited storage</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">Custom SLA</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2">White-label options</MudText>
+                    </MudListItem>
                 </MudList>
+                
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           FullWidth="true" 
+                           Size="Size.Large"
+                           Style="text-transform: none;">
+                    Contact Sales
+                </MudButton>
             </MudPaper>
         </MudItem>
     </MudGrid>
+    
+    <!-- Pricing FAQ Link -->
     <div class="d-flex justify-center mt-8">
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large">
-            See Full Pricing & Features
-        </MudButton>
+        <MudText Typo="Typo.body2" Style="color: #666;">
+            Questions about pricing? <MudLink Href="#faq" Style="color: #FF8C00; font-weight: 600;">View FAQ</MudLink> or <MudLink Href="/contact" Style="color: #FF8C00; font-weight: 600;">Contact Sales</MudLink>
+        </MudText>
     </div>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- ROI Calculator Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
+        Calculate Your ROI
+    </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 48px;">
+        See exactly how much time and money you'll save
+    </MudText>
+    
+    <ROICalculator OnStartTrialClick="@(() => Nav.NavigateTo("/tenant/signup"))" />
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Feature Comparison Table -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16" id="compare">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
+        Compare Plans
+    </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 48px;">
+        Find the perfect plan for your organization
+    </MudText>
+    
+    <MudPaper Elevation="2" Style="border-radius: 20px; overflow: hidden;">
+        <MudSimpleTable Hover="true" Dense="false" Style="background: white;">
+            <thead>
+                <tr style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%);">
+                    <th style="padding: 20px; color: white; font-weight: 600; width: 40%;">
+                        <MudText Typo="Typo.h6">Feature</MudText>
+                    </th>
+                    <th style="padding: 20px; text-align: center; color: white; font-weight: 600;">
+                        <MudText Typo="Typo.body1">Starter</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity: 0.9;">$199/mo</MudText>
+                    </th>
+                    <th style="padding: 20px; text-align: center; background: rgba(255,255,255,0.15); color: white; font-weight: 600; position: relative;">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Surface" Style="position: absolute; top: -8px; right: 10px; font-weight: bold; color: #FF8C00;">POPULAR</MudChip>
+                        <MudText Typo="Typo.body1">Professional</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity: 0.9;">$499/mo</MudText>
+                    </th>
+                    <th style="padding: 20px; text-align: center; color: white; font-weight: 600;">
+                        <MudText Typo="Typo.body1">Enterprise</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity: 0.9;">Custom</MudText>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500; background: #f9f9f9;">
+                        <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" Class="mr-2" Style="color: #FF8C00;" />
+                        Properties
+                    </td>
+                    <td style="padding: 16px; text-align: center;">Up to 10</td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6; font-weight: 600;">Up to 50</td>
+                    <td style="padding: 16px; text-align: center;">Unlimited</td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500;">
+                        <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Class="mr-2" Style="color: #6A3D9A;" />
+                        Team Members
+                    </td>
+                    <td style="padding: 16px; text-align: center;">2</td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6; font-weight: 600;">Unlimited</td>
+                    <td style="padding: 16px; text-align: center;">Unlimited</td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500; background: #f9f9f9;">
+                        <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Class="mr-2" Style="color: #FF8C00;" />
+                        Storage
+                    </td>
+                    <td style="padding: 16px; text-align: center;">5 GB</td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6; font-weight: 600;">50 GB</td>
+                    <td style="padding: 16px; text-align: center;">Unlimited</td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500;">
+                        <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-2" Style="color: #6A3D9A;" />
+                        Reports & Templates
+                    </td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500; background: #f9f9f9;">
+                        <MudIcon Icon="@Icons.Material.Filled.Calculate" Size="Size.Small" Class="mr-2" Style="color: #FF8C00;" />
+                        Automated Calculations
+                    </td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500;">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" Class="mr-2" Style="color: #6A3D9A;" />
+                        Client Portal
+                    </td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Remove" Style="color: #ccc;" /></td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500; background: #f9f9f9;">
+                        <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small" Class="mr-2" Style="color: #FF8C00;" />
+                        Advanced Analytics
+                    </td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Remove" Style="color: #ccc;" /></td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500;">
+                        <MudIcon Icon="@Icons.Material.Filled.Api" Size="Size.Small" Class="mr-2" Style="color: #6A3D9A;" />
+                        API Access
+                    </td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Remove" Style="color: #ccc;" /></td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500; background: #f9f9f9;">
+                        <MudIcon Icon="@Icons.Material.Filled.SupportAgent" Size="Size.Small" Class="mr-2" Style="color: #FF8C00;" />
+                        Support
+                    </td>
+                    <td style="padding: 16px; text-align: center;">Email</td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6; font-weight: 600;">24/7 Priority</td>
+                    <td style="padding: 16px; text-align: center; font-weight: 600;">Dedicated Manager</td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500;">
+                        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Class="mr-2" Style="color: #6A3D9A;" />
+                        Custom Integrations
+                    </td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Remove" Style="color: #ccc;" /></td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6;"><MudIcon Icon="@Icons.Material.Filled.Remove" Style="color: #ccc;" /></td>
+                    <td style="padding: 16px; text-align: center;"><MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" /></td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px; font-weight: 500; background: #f9f9f9;">
+                        <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Small" Class="mr-2" Style="color: #FF8C00;" />
+                        Training & Onboarding
+                    </td>
+                    <td style="padding: 16px; text-align: center;">Self-service</td>
+                    <td style="padding: 16px; text-align: center; background: #FFF5E6;">Video tutorials</td>
+                    <td style="padding: 16px; text-align: center; font-weight: 600;">Hands-on training</td>
+                </tr>
+                <tr style="background: #f0f0f0;">
+                    <td style="padding: 20px; font-weight: 600;"></td>
+                    <td style="padding: 20px; text-align: center;">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary"
+                                   OnClick="@(() => Nav.NavigateTo("/tenant/signup"))"
+                                   Style="text-transform: none;">
+                            Start Free Trial
+                        </MudButton>
+                    </td>
+                    <td style="padding: 20px; text-align: center; background: #FFF5E6;">
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Warning"
+                                   OnClick="@(() => Nav.NavigateTo("/tenant/signup"))"
+                                   Style="text-transform: none; font-weight: 600;">
+                            Start Free Trial
+                        </MudButton>
+                    </td>
+                    <td style="padding: 20px; text-align: center;">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary"
+                                   Style="text-transform: none;">
+                            Contact Sales
+                        </MudButton>
+                    </td>
+                </tr>
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Plan Recommendation Quiz -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
+        Not Sure Which Plan to Choose?
+    </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 48px;">
+        Take our quick 30-second quiz and get a personalized recommendation
+    </MudText>
+    
+    <PlanQuiz OnStartTrial="@(() => Nav.NavigateTo("/tenant/signup"))" />
 </MudContainer>
 
 <MudDivider Class="my-12" />
@@ -336,7 +965,7 @@
 </MudContainer>
 
 <!-- Compliance & Standards Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
     <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
         Industry Standards & Compliance
     </MudText>
@@ -375,7 +1004,7 @@
 <MudDivider Class="my-12" />
 
 <!-- Security Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
     <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
         Enterprise Security & Reliability
     </MudText>
@@ -431,37 +1060,122 @@
 
 <MudDivider Class="my-12" />
 
-<!-- Testimonials Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
-    <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
-        Trusted by Reserve Study Professionals
+<!-- Case Study Showcase -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
+        Real Results from Real Customers
     </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 48px;">
+        See how reserve study professionals are transforming their businesses with ALX Reserve Cloud
+    </MudText>
+    
     <MudGrid Spacing="4">
+        <!-- Miller Reserve Studies -->
         <MudItem xs="12" md="4">
-            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border-left: 4px solid #FF8C00;">
-                <MudText Typo="Typo.body2" Class="mb-4" Style="font-style: italic; color: #333;">
-                    "ALX Reserve Cloud has transformed how we manage our client relationships. We've cut report generation time by 75% and our clients love the portal access."
+            <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px; cursor: pointer; height: 100%; transition: transform 0.3s ease;"
+                      @onclick="@(() => Nav.NavigateTo("/customers/miller-reserve-studies"))"
+                      @onmouseover="@((MouseEventArgs e) => { })"
+                      @onmouseout="@((MouseEventArgs e) => { })">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="mb-3">
+                    Independent Specialist
+                </MudChip>
+                <MudText Typo="Typo.h5" Class="fw-bold mb-3">
+                    Miller Reserve Studies
                 </MudText>
-                <MudText Typo="Typo.body2" Class="fw-bold">Sarah Miller</MudText>
-                <MudText Typo="Typo.caption" Style="color: #999;">Miller Reserve Studies, Ohio</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-4">
+                    Reduced report time from 20 hours to 5 hours, increasing capacity by 30% without adding staff.
+                </MudText>
+                
+                <MudStack Spacing="2" Class="mb-4">
+                    <div class="d-flex align-center gap-2">
+                        <div style="width: 40px; height: 40px; background: #FFF5E6; border-radius: 50%; display: flex; align-items: center; justify-center;">
+                            <MudText Typo="Typo.h6" Style="color: #FF8C00; font-weight: bold;">75%</MudText>
+                        </div>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Time Savings</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <div style="width: 40px; height: 40px; background: #E8F5E9; border-radius: 50%; display: flex; align-items: center; justify-center;">
+                            <MudText Typo="Typo.body1" Style="color: #28a745; font-weight: bold;">$45K</MudText>
+                        </div>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Annual Savings</MudText>
+                    </div>
+                </MudStack>
+                
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Primary" 
+                           FullWidth="true"
+                           EndIcon="@Icons.Material.Filled.ArrowForward"
+                           Style="text-transform: none; font-weight: 600;">
+                    Read Full Story
+                </MudButton>
             </MudPaper>
         </MudItem>
+        
+        <!-- ClearView Property Management (Coming Soon) -->
         <MudItem xs="12" md="4">
-            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border-left: 4px solid #6A3D9A;">
-                <MudText Typo="Typo.body2" Class="mb-4" Style="font-style: italic; color: #333;">
-                    "Managing 150+ properties was overwhelming. Now we track everything in one place, and our board has instant access to funding data."
+            <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px; height: 100%; opacity: 0.7;">
+                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Class="mb-3">
+                    Property Management
+                </MudChip>
+                <MudText Typo="Typo.h5" Class="fw-bold mb-3">
+                    ClearView Property Management
                 </MudText>
-                <MudText Typo="Typo.body2" Class="fw-bold">James Chen</MudText>
-                <MudText Typo="Typo.caption" Style="color: #999;">ClearView Property Management</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-4">
+                    Managing 150+ properties with centralized reserve tracking and instant client access.
+                </MudText>
+                
+                <MudStack Spacing="2" Class="mb-4">
+                    <div class="d-flex align-center gap-2">
+                        <div style="width: 40px; height: 40px; background: #F3E8FF; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <MudText Typo="Typo.body1" Style="color: #6A3D9A; font-weight: bold;">150+</MudText>
+                        </div>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Properties Managed</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <div style="width: 40px; height: 40px; background: #FFF5E6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <MudText Typo="Typo.h6" Style="color: #FF8C00; font-weight: bold;">90%</MudText>
+                        </div>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Less Client Calls</MudText>
+                    </div>
+                </MudStack>
+                
+                <MudChip T="string" Color="Color.Info" Size="Size.Small" FullWidth="true">
+                    Case Study Coming Soon
+                </MudChip>
             </MudPaper>
         </MudItem>
+        
+        <!-- Wong & Associates (Coming Soon) -->
         <MudItem xs="12" md="4">
-            <MudPaper Elevation="1" Class="pa-6" Style="border-radius: 16px; border-left: 4px solid #FF8C00;">
-                <MudText Typo="Typo.body2" Class="mb-4" Style="font-style: italic; color: #333;">
-                    "The compliance features are exceptional. Fannie Mae requirements, CAI standards—everything is built in. It's a game-changer for our firm."
+            <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px; height: 100%; opacity: 0.7;">
+                <MudChip T="string" Size="Size.Small" Color="Color.Tertiary" Class="mb-3">
+                    Compliance Focus
+                </MudChip>
+                <MudText Typo="Typo.h5" Class="fw-bold mb-3">
+                    Wong & Associates
                 </MudText>
-                <MudText Typo="Typo.body2" Class="fw-bold">Dr. Rachel Wong</MudText>
-                <MudText Typo="Typo.caption" Style="color: #999;">Wong & Associates, Reserve Specialists</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-4">
+                    Achieving 100% CAI compliance with zero audit issues using automated standards checking.
+                </MudText>
+                
+                <MudStack Spacing="2" Class="mb-4">
+                    <div class="d-flex align-center gap-2">
+                        <div style="width: 40px; height: 40px; background: #E8F5E9; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <MudText Typo="Typo.body1" Style="color: #28a745; font-weight: bold;">100%</MudText>
+                        </div>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Compliance Rate</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <div style="width: 40px; height: 40px; background: #F3E8FF; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <MudText Typo="Typo.body1" Style="color: #6A3D9A; font-weight: bold;">Zero</MudText>
+                        </div>
+                        <MudText Typo="Typo.body2" Style="color: #666;">Audit Issues</MudText>
+                    </div>
+                </MudStack>
+                
+                <MudChip T="string" Color="Color.Info" Size="Size.Small" FullWidth="true">
+                    Case Study Coming Soon
+                </MudChip>
             </MudPaper>
         </MudItem>
     </MudGrid>
@@ -469,8 +1183,89 @@
 
 <MudDivider Class="my-12" />
 
+<!-- Testimonials Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
+        Trusted by Reserve Study Professionals
+    </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 48px;">
+        Real stories from real customers
+    </MudText>
+    <MudGrid Spacing="4">
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="2" Class="pa-6 feature-card" Style="border-radius: 16px; border-left: 4px solid #FF8C00; height: 100%;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                    <MudAvatar Color="Color.Primary" Size="Size.Large">SM</MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.body1" Class="fw-bold">Sarah Miller</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #999;">Miller Reserve Studies, Ohio</MudText>
+                    </div>
+                </MudStack>
+                <MudRating ReadOnly="true" SelectedValue="5" Size="Size.Small" Color="Color.Warning" Class="mb-3" />
+                <MudText Typo="Typo.body2" Class="mb-3" Style="font-style: italic; color: #333; line-height: 1.6;">
+                    "ALX Reserve Cloud has transformed how we manage our client relationships. We've cut report generation time by 75% and our clients love the portal access."
+                </MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Verified Customer</MudChip>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="2" Class="pa-6 feature-card" Style="border-radius: 16px; border-left: 4px solid #6A3D9A; height: 100%;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                    <MudAvatar Color="Color.Secondary" Size="Size.Large">JC</MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.body1" Class="fw-bold">James Chen</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #999;">ClearView Property Management</MudText>
+                    </div>
+                </MudStack>
+                <MudRating ReadOnly="true" SelectedValue="5" Size="Size.Small" Color="Color.Warning" Class="mb-3" />
+                <MudText Typo="Typo.body2" Class="mb-3" Style="font-style: italic; color: #333; line-height: 1.6;">
+                    "Managing 150+ properties was overwhelming. Now we track everything in one place, and our board has instant access to funding data."
+                </MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Verified Customer</MudChip>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="2" Class="pa-6 feature-card" Style="border-radius: 16px; border-left: 4px solid #FF8C00; height: 100%;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                    <MudAvatar Color="Color.Warning" Size="Size.Large">RW</MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.body1" Class="fw-bold">Dr. Rachel Wong</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #999;">Wong & Associates, Reserve Specialists</MudText>
+                    </div>
+                </MudStack>
+                <MudRating ReadOnly="true" SelectedValue="5" Size="Size.Small" Color="Color.Warning" Class="mb-3" />
+                <MudText Typo="Typo.body2" Class="mb-3" Style="font-style: italic; color: #333; line-height: 1.6;">
+                    "The compliance features are exceptional. Fannie Mae requirements, CAI standards—everything is built in. It's a game-changer for our firm."
+                </MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Verified Customer</MudChip>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+    
+    <!-- Trust indicators -->
+    <div class="d-flex justify-center align-center gap-6 mt-8 flex-wrap">
+        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #FF8C00;">4.9/5</MudText>
+            <MudRating ReadOnly="true" SelectedValue="5" Size="Size.Small" Color="Color.Warning" />
+            <MudText Typo="Typo.caption" Style="color: #666;">200+ Reviews</MudText>
+        </MudStack>
+        <MudDivider Vertical="true" FlexItem="true" Class="d-none d-sm-flex" />
+        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #6A3D9A;">98%</MudText>
+            <MudText Typo="Typo.caption" Style="color: #666;">Customer Satisfaction</MudText>
+        </MudStack>
+        <MudDivider Vertical="true" FlexItem="true" Class="d-none d-sm-flex" />
+        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #FF8C00;">24/7</MudText>
+            <MudText Typo="Typo.caption" Style="color: #666;">Support Available</MudText>
+        </MudStack>
+    </div>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
 <!-- Integrations Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-16">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
     <MudText Typo="Typo.h4" Class="fw-bold mb-10" Align="Align.Center">
         Integrations & Connectivity
     </MudText>
@@ -511,6 +1306,210 @@
 
 <MudDivider Class="my-12" />
 
+<!-- FAQ Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16" id="faq">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
+        Frequently Asked Questions
+    </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 48px;">
+        Everything you need to know about ALX Reserve Cloud
+    </MudText>
+    
+    <MudExpansionPanels Elevation="2" MultiExpansion="true">
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.AccessTime" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">How long does it take to set up ALX Reserve Cloud?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    Most users are up and running within <strong>5 minutes</strong>. Simply sign up, add your first property, 
+                    and start building your component inventory. No installation, no IT support required, and no complicated configuration. 
+                    Our intuitive interface guides you through every step.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Upload" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Can I import data from my existing system?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    <strong>Yes!</strong> ALX supports Excel and CSV imports for property data, component inventories, and historical records. 
+                    You can easily migrate your existing spreadsheets without starting from scratch. For Enterprise clients, 
+                    our support team provides hands-on assistance with bulk migrations and data validation.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Is my data secure and backed up?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    <strong>Absolutely.</strong> We use industry-standard 256-bit encryption for all data in transit and at rest. 
+                    Automated daily backups run continuously, and we host on Microsoft Azure with a 99.99% uptime SLA. 
+                    Your data is actually <em>more secure</em> in the cloud than on local servers or personal computers. 
+                    We're also compliant with SOC 2 and GDPR standards.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.CreditCard" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Can I try before I buy?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    <strong>Yes!</strong> All plans include a <strong>14-day free trial</strong> with full access to all features—no credit card required. 
+                    You can explore the platform, create studies, and even generate reports during your trial. 
+                    If you decide it's not for you, simply let the trial expire. No obligations, no hassles.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">What happens if I exceed my plan limits?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    We'll notify you when you're <strong>approaching 80% of your limits</strong> so you're never caught off guard. 
+                    You can upgrade your plan anytime with a single click, and we'll pro-rate the difference. 
+                    There's no data loss, no service interruption, and no need to migrate—everything stays exactly where it is.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.SupportAgent" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">What kind of support do you offer?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    <strong>Starter plans</strong> include email support with responses within 24 hours. 
+                    <strong>Pro and Enterprise plans</strong> get priority 24/7 support via email, phone, and live chat. 
+                    Enterprise clients also receive a dedicated account manager for onboarding and ongoing assistance. 
+                    Plus, we have extensive documentation, video tutorials, and webinars available to all users.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+    
+    <div class="d-flex justify-center mt-8">
+        <MudText Typo="Typo.body1" Style="color: #666;">
+            Still have questions? <MudLink Href="/contact" Style="color: #FF8C00; font-weight: 600;">Contact our team →</MudLink>
+        </MudText>
+    </div>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
+<!-- Email Capture Section -->
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mb-16">
+    <MudPaper Class="pa-8" Elevation="6" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 24px; text-align: center; position: relative; overflow: hidden;">
+        <!-- Decorative background circles -->
+        <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+        <div style="position: absolute; bottom: -30px; left: -30px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+        
+        <div style="position: relative; z-index: 1;">
+            <MudIcon Icon="@Icons.Material.Filled.Mail" Style="color: white; font-size: 56px;" Class="mb-3" />
+            <MudText Typo="Typo.h4" Class="fw-bold mb-3" Style="color: white;">
+                Get Reserve Study Tips & Product Updates
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mb-6" Style="color: rgba(255,255,255,0.95); max-width: 500px; margin: 0 auto;">
+                Join <strong>527+ professionals</strong> receiving industry insights, best practices, and exclusive product updates every week.
+            </MudText>
+            
+            <MudGrid Justify="Justify.Center">
+                <MudItem xs="12" sm="10" md="8">
+                    <MudStack Row="true" Spacing="2" Class="d-none d-sm-flex">
+                        <MudTextField @bind-Value="emailCapture" 
+                                      Variant="Variant.Filled" 
+                                      Placeholder="Enter your email address" 
+                                      Style="background: white; border-radius: 8px; flex: 1;"
+                                      InputType="InputType.Email"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Email"
+                                      OnKeyPress="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await Task.Run(SubscribeToNewsletter); })" />
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Surface" 
+                                   Size="Size.Large"
+                                   Style="white-space: nowrap; color: #FF8C00; font-weight: 600;"
+                                   StartIcon="@Icons.Material.Filled.Send"
+                                   OnClick="SubscribeToNewsletter"
+                                   Disabled="@subscribeLoading">
+                            @if (subscribeLoading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <span>Subscribe</span>
+                            }
+                        </MudButton>
+                    </MudStack>
+                    
+                    <!-- Mobile Stack -->
+                    <MudStack Spacing="2" Class="d-flex d-sm-none">
+                        <MudTextField @bind-Value="emailCapture" 
+                                      Variant="Variant.Filled" 
+                                      Placeholder="Enter your email address" 
+                                      Style="background: white; border-radius: 8px;"
+                                      InputType="InputType.Email"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Email"
+                                      OnKeyPress="@(async (KeyboardEventArgs e) => { if (e.Key == "Enter") await Task.Run(SubscribeToNewsletter); })" />
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Surface" 
+                                   Size="Size.Large"
+                                   FullWidth="true"
+                                   Style="color: #FF8C00; font-weight: 600;"
+                                   StartIcon="@Icons.Material.Filled.Send"
+                                   OnClick="SubscribeToNewsletter"
+                                   Disabled="@subscribeLoading">
+                            @if (subscribeLoading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <span>Subscribe</span>
+                            }
+                        </MudButton>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+            
+            <MudText Typo="Typo.caption" Class="mt-4" Style="color: rgba(255,255,255,0.9);">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Style="vertical-align: middle;" /> 
+                We respect your privacy. Unsubscribe anytime. No spam, ever.
+            </MudText>
+        </div>
+    </MudPaper>
+</MudContainer>
+
+<MudDivider Class="my-12" />
+
 <!-- CTA Section 3 -->
 <MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
     <MudPaper Elevation="2" Class="pa-8" Style="background: linear-gradient(135deg, #FF8C00 0%, #FFB84D 100%); border-radius: 20px; text-align: center; color: white;">
@@ -523,7 +1522,7 @@
 </MudContainer>
 
 <!-- Footer CTA Section -->
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-8">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-8">
     <MudGrid>
         <MudItem xs="12" sm="6">
             <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 16px; background: #f9f9f9;">
@@ -548,7 +1547,7 @@
 
 <!-- Footer -->
 <MudDivider Class="my-8" />
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-8">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-8">
     <MudGrid>
         <MudItem xs="12" sm="6">
             <MudText Typo="Typo.h6" Class="fw-bold">ALX Reserve Cloud</MudText>
@@ -568,8 +1567,194 @@
 @code {
     private string[] labelsData = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
     private double[][] chartData = new[] { new double[] { 30, 35, 32, 50, 62, 68 } };
+    private bool isAnnual = false;
+    private string emailCapture = "";
+    private bool subscribeLoading = false;
+    private ProductTour? productTour;
+    private bool tourCompleted = false;
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
     }
+    
+    private void OnTourComplete()
+    {
+        tourCompleted = true;
+        Snackbar.Add("Thanks for taking the tour! Ready to get started?", Severity.Success);
+    }
+    
+    private async Task SubscribeToNewsletter()
+    {
+        if (string.IsNullOrWhiteSpace(emailCapture) || !emailCapture.Contains("@"))
+        {
+            Snackbar.Add("Please enter a valid email address.", Severity.Warning);
+            return;
+        }
+        
+        subscribeLoading = true;
+        StateHasChanged();
+        
+        // Simulate API call delay
+        await Task.Delay(1000);
+        
+        try
+        {
+            // TODO: Integrate with your email service provider (e.g., Mailchimp, SendGrid, SendInBlue)
+            // Example:
+            // await EmailService.SubscribeAsync(emailCapture);
+            
+            Snackbar.Add("🎉 Successfully subscribed! Check your email for confirmation.", Severity.Success);
+            emailCapture = "";
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Oops! Something went wrong. Please try again.", Severity.Error);
+        }
+        finally
+        {
+            subscribeLoading = false;
+            StateHasChanged();
+        }
+    }
 }
+
+<style>
+    /* Feature card hover effects */
+    .feature-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.12) !important;
+    }
+    
+    /* Smooth scrolling for anchor links */
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    /* Responsive font sizing */
+    @@media (max-width: 600px) {
+        .mud-typography-h1 {
+            font-size: 2rem !important;
+        }
+        
+        .mud-typography-h3 {
+            font-size: 1.75rem !important;
+        }
+    }
+    
+    /* Fade-in animation */
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-on-scroll {
+        opacity: 0;
+        animation: fadeInUp 0.6s ease forwards;
+    }
+    
+    /* CTA button pulse animation */
+    @@keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+    }
+    
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+</style>
+
+<script>
+    // Sticky navigation
+    window.addEventListener('scroll', () => {
+        const nav = document.getElementById('stickyNav');
+        if (nav) {
+            if (window.scrollY > 100) {
+                nav.style.display = 'block';
+            } else {
+                nav.style.display = 'none';
+            }
+        }
+    });
+    
+    // Exit intent detection
+    let exitIntentTriggered = false;
+    window.setupExitIntent = (dotNetHelper) => {
+        document.addEventListener('mouseleave', (e) => {
+            if (e.clientY < 10 && !exitIntentTriggered) {
+                exitIntentTriggered = true;
+                dotNetHelper.invokeMethodAsync('Show');
+            }
+        });
+        
+        // Also trigger on tab switch intent (not leaving but switching)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && !exitIntentTriggered) {
+                exitIntentTriggered = true;
+                dotNetHelper.invokeMethodAsync('Show');
+            }
+        });
+    };
+    
+    // Product tour spotlight highlighting
+    window.highlightTourElement = (selector) => {
+        const element = document.querySelector(selector);
+        if (!element) return;
+        
+        const rect = element.getBoundingClientRect();
+        const spotlight = document.getElementById('tourSpotlight');
+        
+        if (spotlight) {
+            spotlight.style.top = (rect.top + window.scrollY) + 'px';
+            spotlight.style.left = rect.left + 'px';
+            spotlight.style.width = rect.width + 'px';
+            spotlight.style.height = rect.height + 'px';
+            
+            // Scroll element into view
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    };
+    
+    // Intersection Observer for scroll animations
+    document.addEventListener('DOMContentLoaded', () => {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-on-scroll');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { 
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        });
+        
+        // Observe all sections
+        document.querySelectorAll('.mud-container').forEach(el => {
+            observer.observe(el);
+        });
+    });
+    
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+</script>

@@ -342,6 +342,12 @@ namespace CRS.Data {
         // New tenant-scoped entities
         public DbSet<CRS.Models.CustomerAccount> CustomerAccounts { get; set; }
         public DbSet<CRS.Models.SupportTicket> SupportTickets { get; set; }
+        
+        // System-wide settings
+        public DbSet<CRS.Models.SystemSettings> SystemSettings { get; set; }
+        
+        // Demo environment
+        public DbSet<CRS.Models.Demo.DemoSession> DemoSessions { get; set; }
         #endregion
 
         #region Seed Data

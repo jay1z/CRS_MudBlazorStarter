@@ -1,0 +1,506 @@
+﻿@page "/customers/{CompanySlug}"
+@inject NavigationManager Nav
+
+<PageTitle>@CustomerName - Customer Success Story | ALX Reserve Cloud</PageTitle>
+
+<!-- Hero Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8 mb-12">
+    <MudGrid>
+        <MudItem xs="12" md="8">
+            <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
+                Customer Success Story
+            </MudChip>
+            
+            <MudText Typo="Typo.h2" Class="fw-bold mb-4">
+                @Headline
+            </MudText>
+            
+            <MudText Typo="Typo.h6" Style="color: #666;" Class="mb-4">
+                @ContactName, @ContactTitle | @CustomerName, @Location
+            </MudText>
+            
+            <MudText Typo="Typo.body1" Style="color: #666; line-height: 1.8;">
+                @Summary
+            </MudText>
+        </MudItem>
+        
+        <MudItem xs="12" md="4">
+            <!-- Stats Card -->
+            <MudPaper Class="pa-6" Elevation="8" Style="border-radius: 20px; border: 2px solid #FF8C00;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-4">
+                    Results at a Glance
+                </MudText>
+                <MudStack Spacing="3">
+                    @foreach (var metric in Metrics)
+                    {
+                        <div>
+                            <MudText Typo="Typo.h3" Class="fw-bold" Style="@($"color: {metric.Color};" )">
+                                @metric.Value
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="color: #666;">
+                                @metric.Label
+                            </MudText>
+                        </div>
+                        @if (metric != Metrics.Last())
+                        {
+                            <MudDivider />
+                        }
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-8" />
+
+<!-- The Challenge -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-12">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-6" Style="color: #6A3D9A;">
+        The Challenge
+    </MudText>
+    <MudText Typo="Typo.body1" Style="line-height: 1.8; color: #666;" Class="mb-6">
+        @ChallengeDescription
+    </MudText>
+    
+    <!-- Challenge Bullet Points -->
+    <MudList T="string" Dense="false" Class="mt-4">
+        @foreach (var challenge in ChallengePoints)
+        {
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Error" IconColor="Color.Error">
+                <MudText Typo="Typo.body1" Style="color: #666;">@challenge</MudText>
+            </MudListItem>
+        }
+    </MudList>
+</MudContainer>
+
+<MudDivider Class="my-8" />
+
+<!-- The Solution -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-12">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-6" Style="color: #6A3D9A;">
+        The Solution
+    </MudText>
+    <MudText Typo="Typo.body1" Style="line-height: 1.8; color: #666;" Class="mb-6">
+        @SolutionDescription
+    </MudText>
+    
+    <!-- Solution Steps -->
+    <MudGrid Spacing="4" Class="mt-6">
+        @foreach (var (step, index) in SolutionSteps.Select((s, i) => (s, i)))
+        {
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-6" Elevation="2" Style="border-radius: 16px; border-left: 4px solid #FF8C00; height: 100%;">
+                    <div style="width: 48px; height: 48px; background: #FF8C00; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; margin-bottom: 16px;">
+                        @(index + 1)
+                    </div>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">
+                        @step.Title
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        @step.Description
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-8" />
+
+<!-- The Results -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-12">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-6" Style="color: #6A3D9A;">
+        The Results
+    </MudText>
+    
+    <!-- Before/After Comparison -->
+    <MudGrid Spacing="4" Class="mb-8">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius: 16px; background: #FFF5E6;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-4" Style="color: #FF8C00;">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingDown" Class="mr-2" />
+                    Before ALX Reserve Cloud
+                </MudText>
+                <MudList T="string" Dense="false">
+                    @foreach (var before in BeforeMetrics)
+                    {
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Remove" IconColor="Color.Default">
+                            <MudText Typo="Typo.body2">@before</MudText>
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius: 16px; background: #E8F5E9;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-4" Style="color: #28a745;">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" />
+                    After ALX Reserve Cloud
+                </MudText>
+                <MudList T="string" Dense="false">
+                    @foreach (var after in AfterMetrics)
+                    {
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">@after</MudText>
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+    
+    <!-- Detailed Results -->
+    <MudText Typo="Typo.body1" Style="line-height: 1.8; color: #666;">
+        @ResultsDescription
+    </MudText>
+</MudContainer>
+
+<MudDivider Class="my-8" />
+
+<!-- Testimonial Quote -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-12">
+    <MudPaper Class="pa-8" Elevation="3" Style="border-radius: 20px; background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%); border-left: 6px solid #FF8C00;">
+        <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start">
+            <MudIcon Icon="@Icons.Material.Filled.FormatQuote" Style="font-size: 64px; color: #FF8C00; opacity: 0.3;" />
+            <div style="flex: 1;">
+                <MudText Typo="Typo.h5" Style="font-style: italic; color: #333; line-height: 1.6;" Class="mb-4">
+                    "@TestimonialQuote"
+                </MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudAvatar Color="Color.Primary" Size="Size.Large">@GetInitials(ContactName)</MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.body1" Class="fw-bold">@ContactName</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">@ContactTitle, @CustomerName</MudText>
+                    </div>
+                </MudStack>
+            </div>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@if (HasVideoTestimonial)
+{
+    <MudDivider Class="my-8" />
+    
+    <!-- Video Testimonial -->
+    <MudContainer MaxWidth="MaxWidth.Large" Class="my-12">
+        <MudText Typo="Typo.h4" Class="fw-bold mb-6" Align="Align.Center">
+            Hear From @ContactName Directly
+        </MudText>
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+            <!-- Placeholder for video - Replace with actual YouTube/Vimeo embed -->
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); display: flex; align-items: center; justify-content: center;">
+                <div style="text-align: center; color: white;">
+                    <MudIcon Icon="@Icons.Material.Filled.PlayCircle" Style="font-size: 80px; margin-bottom: 16px;" />
+                    <MudText Typo="Typo.h6" Class="fw-bold">Video Testimonial</MudText>
+                    <MudText Typo="Typo.body2" Style="opacity: 0.9;">(3 minutes)</MudText>
+                </div>
+            </div>
+            <!-- Uncomment and replace with your video URL:
+            <iframe src="@VideoUrl" 
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+                    allowfullscreen></iframe>
+            -->
+        </div>
+    </MudContainer>
+}
+
+<MudDivider Class="my-8" />
+
+<!-- Features Used -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-12">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2" Align="Align.Center">
+        Key Features That Made a Difference
+    </MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #666; margin-bottom: 48px;">
+        The ALX Reserve Cloud features that powered @CustomerName's success
+    </MudText>
+    
+    <MudGrid Spacing="4">
+        @foreach (var feature in FeaturesUsed)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudPaper Class="pa-6" Elevation="2" Style="border-radius: 16px; height: 100%;">
+                    <MudIcon Icon="@feature.Icon" 
+                             Style="@($"color: {feature.Color}; font-size: 48px;")" 
+                             Class="mb-4" />
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">
+                        @feature.Name
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        @feature.Impact
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+<MudDivider Class="my-8" />
+
+<!-- CTA Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-16">
+    <MudPaper Class="pa-12" Elevation="8" 
+              Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); 
+                     border-radius: 24px; text-align: center; color: white;">
+        <MudText Typo="Typo.h3" Class="fw-bold mb-4">
+            Ready to Achieve Similar Results?
+        </MudText>
+        <MudText Typo="Typo.h6" Class="mb-8" Style="max-width: 700px; margin: 0 auto;">
+            Join @CustomerName and 527+ other reserve study professionals who are saving 75% of their time with ALX Reserve Cloud.
+        </MudText>
+        <MudStack Row="true" Justify="Justify.Center" Spacing="3" Class="mb-6 flex-wrap">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Surface" 
+                       Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.RocketLaunch"
+                       OnClick="@(() => Nav.NavigateTo("/tenant/signup"))"
+                       Style="text-transform: none; color: #FF8C00; font-weight: 600; padding: 16px 32px;">
+                Start Your Free Trial
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Surface" 
+                       Size="Size.Large"
+                       Href="/marketing#features"
+                       Style="text-transform: none; border: 2px solid white; padding: 16px 32px;">
+                Explore Features
+            </MudButton>
+        </MudStack>
+        <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.95);">
+            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" /> 14-day free trial  
+            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" /> No credit card required  
+            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" /> Cancel anytime
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+<!-- Related Case Studies -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-16">
+    <MudText Typo="Typo.h5" Class="fw-bold mb-8" Align="Align.Center">
+        More Customer Success Stories
+    </MudText>
+    
+    <MudGrid Spacing="4">
+        @foreach (var related in RelatedCaseStudies)
+        {
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-6" Elevation="2" Style="border-radius: 16px; cursor: pointer; height: 100%;"
+                          @onclick="@(() => Nav.NavigateTo($"/customers/{related.Slug}"))">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="mb-3">
+                        @related.Industry
+                    </MudChip>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">
+                        @related.CompanyName
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-3">
+                        @related.ShortDescription
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color: #FF8C00; font-weight: 600;">
+                        Read Case Study →
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [Parameter] public string CompanySlug { get; set; } = "";
+    
+    // Hero section
+    private string CustomerName = "";
+    private string Headline = "";
+    private string ContactName = "";
+    private string ContactTitle = "";
+    private string Location = "";
+    private string Summary = "";
+    
+    // Metrics
+    private List<MetricData> Metrics = new();
+    
+    // Challenge
+    private string ChallengeDescription = "";
+    private List<string> ChallengePoints = new();
+    
+    // Solution
+    private string SolutionDescription = "";
+    private List<SolutionStep> SolutionSteps = new();
+    
+    // Results
+    private List<string> BeforeMetrics = new();
+    private List<string> AfterMetrics = new();
+    private string ResultsDescription = "";
+    
+    // Testimonial
+    private string TestimonialQuote = "";
+    
+    // Video
+    private bool HasVideoTestimonial = false;
+    private string VideoUrl = "";
+    
+    // Features
+    private List<FeatureUsed> FeaturesUsed = new();
+    
+    // Related case studies
+    private List<RelatedCaseStudy> RelatedCaseStudies = new();
+    
+    protected override void OnInitialized()
+    {
+        LoadCaseStudyData();
+    }
+    
+    private void LoadCaseStudyData()
+    {
+        // This is where you'd load case study data based on CompanySlug
+        // For now, load sample data for Miller Reserve Studies
+        
+        if (CompanySlug.ToLower() == "miller-reserve-studies")
+        {
+            LoadMillerReserveStudiesData();
+        }
+        else
+        {
+            // Default/template data
+            LoadTemplateData();
+        }
+    }
+    
+    private void LoadMillerReserveStudiesData()
+    {
+        CustomerName = "Miller Reserve Studies";
+        Headline = "How Miller Reserve Studies Cut Report Time by 75%";
+        ContactName = "Sarah Miller";
+        ContactTitle = "Principal";
+        Location = "Ohio";
+        Summary = "Managing 45 properties manually was overwhelming. After implementing ALX Reserve Cloud, we reduced report generation time from 20 hours to just 5 hours per study—and our clients love the real-time portal access.";
+        
+        Metrics = new()
+        {
+            new() { Value = "75%", Label = "Time Savings per Report", Color = "#FF8C00" },
+            new() { Value = "$45K", Label = "Annual Labor Cost Savings", Color = "#28a745" },
+            new() { Value = "3 mo", Label = "Time to Full ROI", Color = "#6A3D9A" }
+        };
+        
+        ChallengeDescription = "Miller Reserve Studies was managing 45 HOA properties across Ohio using a combination of Excel spreadsheets, manual calculations, and email communication. Sarah Miller and her small team were spending an average of 20 hours per reserve study—most of that time on repetitive calculations, formatting reports, and answering client questions about study status.";
+        
+        ChallengePoints = new()
+        {
+            "Manual calculations taking 20+ hours per study with frequent formula errors",
+            "Clients calling constantly for updates on study progress and funding status",
+            "Version control nightmares with multiple spreadsheet revisions",
+            "Unable to scale business without hiring more staff",
+            "No consistent report formatting or professional presentation"
+        };
+        
+        SolutionDescription = "Sarah implemented ALX Reserve Cloud in January 2024. The onboarding took just 2 hours, and within a week, her team was fully operational. They started by migrating their existing property data, then began using the platform for all new reserve studies.";
+        
+        SolutionSteps = new()
+        {
+            new() { Title = "Quick Onboarding", Description = "2-hour setup with video tutorials and sample data. No technical expertise required." },
+            new() { Title = "Data Migration", Description = "Imported 45 properties with existing component data in under 3 hours using Excel templates." },
+            new() { Title = "Team Training", Description = "All team members trained and productive within one week using built-in walkthroughs." }
+        };
+        
+        BeforeMetrics = new()
+        {
+            "20 hours per reserve study",
+            "Limited to 2-3 studies per month",
+            "Clients frustrated with lack of visibility",
+            "Calculation errors causing rework",
+            "No standardized report format"
+        };
+        
+        AfterMetrics = new()
+        {
+            "5 hours per reserve study",
+            "Capacity for 8-10 studies per month",
+            "24/7 client portal access",
+            "Zero calculation errors",
+            "Professional, branded reports every time"
+        };
+        
+        ResultsDescription = "In the first 6 months with ALX Reserve Cloud, Miller Reserve Studies completed 42 reserve studies—30% more than the entire previous year. The time savings allowed Sarah to take on 3 new property management company clients without adding staff. Client satisfaction scores improved from 3.8 to 4.9 out of 5, with clients specifically praising the real-time portal access. The firm recovered its software investment in just 3 months through increased productivity.";
+        
+        TestimonialQuote = "ALX Reserve Cloud transformed how we work. What used to take us 20 hours now takes 5, and our clients are happier than ever with instant access to their data. It's not just a time-saver—it's allowed us to grow our business without the growing pains.";
+        
+        HasVideoTestimonial = false;
+        
+        FeaturesUsed = new()
+        {
+            new() { Name = "Automated Calculations", Icon = Icons.Material.Filled.Calculate, Color = "#FF8C00", Impact = "Reduced calculation time from hours to seconds with zero errors" },
+            new() { Name = "Client Portal", Icon = Icons.Material.Filled.Security, Color = "#6A3D9A", Impact = "Eliminated 90% of status update calls with 24/7 client access" },
+            new() { Name = "Report Generation", Icon = Icons.Material.Filled.Description, Color = "#FF8C00", Impact = "Professional PDF reports in minutes instead of manual formatting" },
+            new() { Name = "Component Inventory", Icon = Icons.Material.Filled.Inventory, Color = "#6A3D9A", Impact = "Centralized asset tracking with lifecycle management" },
+            new() { Name = "Document Management", Icon = Icons.Material.Filled.CloudUpload, Color = "#FF8C00", Impact = "All photos and documents in one secure location" },
+            new() { Name = "Team Collaboration", Icon = Icons.Material.Filled.People, Color = "#6A3D9A", Impact = "Seamless handoffs between team members with full audit trail" }
+        };
+        
+        RelatedCaseStudies = new()
+        {
+            new() { Slug = "clearview-property-management", CompanyName = "ClearView Property Management", Industry = "Property Management", ShortDescription = "Managing 150+ properties with centralized reserve tracking" },
+            new() { Slug = "wong-associates", CompanyName = "Wong & Associates", Industry = "Compliance Focus", ShortDescription = "100% CAI compliance with zero audit issues" }
+        };
+    }
+    
+    private void LoadTemplateData()
+    {
+        // Template data for demonstration
+        CustomerName = "[Customer Name]";
+        Headline = "How [Customer Name] Achieved [Key Result]";
+        ContactName = "[Contact Name]";
+        ContactTitle = "[Contact Title]";
+        Location = "[Location]";
+        Summary = "[1-2 sentence summary of the challenge and outcome]";
+        
+        Metrics = new()
+        {
+            new() { Value = "[%]", Label = "[Metric Label]", Color = "#FF8C00" },
+            new() { Value = "[$]", Label = "[Metric Label]", Color = "#28a745" },
+            new() { Value = "[X]", Label = "[Metric Label]", Color = "#6A3D9A" }
+        };
+        
+        TestimonialQuote = "[Customer testimonial quote here]";
+    }
+    
+    private string GetInitials(string name)
+    {
+        var parts = name.Split(' ');
+        if (parts.Length >= 2)
+        {
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        }
+        return name.Substring(0, Math.Min(2, name.Length)).ToUpper();
+    }
+    
+    private class MetricData
+    {
+        public string Value { get; set; } = "";
+        public string Label { get; set; } = "";
+        public string Color { get; set; } = "";
+    }
+    
+    private class SolutionStep
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+    
+    private class FeatureUsed
+    {
+        public string Name { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Color { get; set; } = "";
+        public string Impact { get; set; } = "";
+    }
+    
+    private class RelatedCaseStudy
+    {
+        public string Slug { get; set; } = "";
+        public string CompanyName { get; set; } = "";
+        public string Industry { get; set; } = "";
+        public string ShortDescription { get; set; } = "";
+    }
+}

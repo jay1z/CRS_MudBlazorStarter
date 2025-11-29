@@ -1,0 +1,193 @@
+﻿@* Countdown Timer Component - Creates Urgency *@
+@implements IDisposable
+
+<MudPaper Class="pa-4" Elevation="2" Style="@($"background: {BackgroundGradient}; border-radius: 12px; text-align: center; border: 2px solid {BorderColor};")">
+    <MudStack Spacing="2" AlignItems="AlignItems.Center">
+        <MudIcon Icon="@Icons.Material.Filled.Alarm" Style="color: white; font-size: 32px;" />
+        
+        <MudText Typo="Typo.h6" Class="fw-bold" Style="color: white;">
+            @HeadlineText
+        </MudText>
+        
+        <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.95);">
+            @SubheadlineText
+        </MudText>
+        
+        <!-- Countdown display -->
+        <div class="d-flex gap-3 my-2">
+            @if (showDays && days > 0)
+            {
+                <div class="countdown-unit">
+                    <MudText Typo="Typo.h4" Class="fw-bold" Style="color: white;">@days.ToString("00")</MudText>
+                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9);">DAYS</MudText>
+                </div>
+            }
+            
+            <div class="countdown-unit">
+                <MudText Typo="Typo.h4" Class="fw-bold" Style="color: white;">@hours.ToString("00")</MudText>
+                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9);">HRS</MudText>
+            </div>
+            
+            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: white;">:</MudText>
+            
+            <div class="countdown-unit">
+                <MudText Typo="Typo.h4" Class="fw-bold" Style="color: white;">@minutes.ToString("00")</MudText>
+                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9);">MIN</MudText>
+            </div>
+            
+            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: white;">:</MudText>
+            
+            <div class="countdown-unit">
+                <MudText Typo="Typo.h4" Class="fw-bold" Style="color: white;">@seconds.ToString("00")</MudText>
+                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9);">SEC</MudText>
+            </div>
+        </div>
+        
+        @if (!string.IsNullOrEmpty(CtaText) && CtaClick.HasDelegate)
+        {
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Surface" 
+                       Size="Size.Medium"
+                       OnClick="@(() => CtaClick.InvokeAsync())"
+                       Class="pulse-animation"
+                       Style="text-transform: none; font-weight: 600; color: #FF8C00;">
+                @CtaText
+            </MudButton>
+        }
+        
+        @if (!string.IsNullOrEmpty(DisclaimerText))
+        {
+            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); font-size: 0.75rem;">
+                @DisclaimerText
+            </MudText>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public string HeadlineText { get; set; } = "Limited Time Offer!";
+    [Parameter] public string SubheadlineText { get; set; } = "Special pricing ends in:";
+    [Parameter] public string CtaText { get; set; } = "";
+    [Parameter] public string DisclaimerText { get; set; } = "";
+    [Parameter] public EventCallback CtaClick { get; set; }
+    [Parameter] public DateTime? EndTime { get; set; }
+    [Parameter] public bool ShowDays { get; set; } = false;
+    [Parameter] public bool Evergreen { get; set; } = true; // Resets daily
+    [Parameter] public int EvergreenHours { get; set; } = 24; // Hours until reset
+    
+    private Timer? timer;
+    private int days;
+    private int hours;
+    private int minutes;
+    private int seconds;
+    private bool showDays => ShowDays;
+    
+    private string BackgroundGradient => "linear-gradient(135deg, #FF8C00 0%, #FFB84D 100%)";
+    private string BorderColor => "#FF8C00";
+    
+    protected override void OnInitialized()
+    {
+        CalculateEndTime();
+        UpdateCountdown();
+        
+        // Update every second
+        timer = new Timer(_ =>
+        {
+            UpdateCountdown();
+            InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+    
+    private void CalculateEndTime()
+    {
+        if (EndTime.HasValue)
+            return;
+            
+        if (Evergreen)
+        {
+            // Evergreen timer - resets daily at midnight + specified hours
+            var now = DateTime.Now;
+            var endOfDay = now.Date.AddDays(1).AddHours(EvergreenHours);
+            
+            // If we're past the end time, calculate for tomorrow
+            if (now >= endOfDay)
+            {
+                endOfDay = endOfDay.AddDays(1);
+            }
+            
+            EndTime = endOfDay;
+        }
+        else
+        {
+            // Default: 24 hours from now
+            EndTime = DateTime.Now.AddHours(24);
+        }
+    }
+    
+    private void UpdateCountdown()
+    {
+        if (!EndTime.HasValue)
+        {
+            CalculateEndTime();
+        }
+        
+        var timeRemaining = EndTime.Value - DateTime.Now;
+        
+        if (timeRemaining <= TimeSpan.Zero)
+        {
+            // Timer expired - reset if evergreen
+            if (Evergreen)
+            {
+                EndTime = null;
+                CalculateEndTime();
+                timeRemaining = EndTime.Value - DateTime.Now;
+            }
+            else
+            {
+                days = 0;
+                hours = 0;
+                minutes = 0;
+                seconds = 0;
+                return;
+            }
+        }
+        
+        days = timeRemaining.Days;
+        hours = timeRemaining.Hours;
+        minutes = timeRemaining.Minutes;
+        seconds = timeRemaining.Seconds;
+    }
+    
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+}
+
+<style>
+    .countdown-unit {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 60px;
+    }
+    
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    
+    @@keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    @@media (max-width: 600px) {
+        .countdown-unit {
+            min-width: 50px;
+        }
+        
+        .countdown-unit .mud-typography-h4 {
+            font-size: 1.5rem !important;
+        }
+    }
+</style>

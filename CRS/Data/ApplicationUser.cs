@@ -10,6 +10,9 @@ namespace CRS.Data {
 
         // SaaS Refactor: Tenant association for identity
         public int TenantId { get; set; } = 0; // no default tenant; must be assigned on signup
+        
+        // Demo Mode: Mark demo users
+        public bool IsDemo { get; set; } = false;
 
         public string FullName {
             get {

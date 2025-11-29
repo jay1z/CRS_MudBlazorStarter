@@ -1,445 +1,281 @@
 ﻿@page "/Dashboard"
 @attribute [Authorize]
-
-@using CRS.Components.Dialogs
-@using CRS.Components.Pages.Dashboard.Dialogs
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services
+@using MudBlazor
 @using CRS.Services.Interfaces
-@using System.Security.Claims
-@implements IDisposable
-@inject UserStateService UserState
-@inject ISnackbar Snackbar
-@inject IDashboardService DashboardService
-@inject IReserveStudyService ReserveStudyService
-@inject IJSRuntime JSRuntime
-@inject NavigationManager NavigationManager
-@inject IDialogService DialogService
+@using CRS.Models
+@inject ISystemSettingsService SystemSettingsService
 
-<PageTitle>Dashboard</PageTitle>
+<PageTitle>@TenantName</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    @if (_isLoading) {
-        <MudPaper Elevation="0" Class="pa-8">
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-            <MudText Typo="Typo.h5" Class="mt-4">Loading Dashboard...</MudText>
-        </MudPaper>
-    } else {
-        <MudCard Elevation="0" Outlined="false">
-            <MudCardHeader>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h5" Class="mb-4">Dashboard</MudText>
-                </CardHeaderContent>
-                <CardHeaderActions>
-                    <MudTooltip Text="Refresh Dashboard">
-                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" OnClick="@(() => RefreshData())" Disabled="_isRefreshing" />
-                    </MudTooltip>
-                </CardHeaderActions>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudGrid>
-                    <MudItem xs="12" Class="mb-2">
-                        @if (_reserveStudies.Count > 0) {
-                            <MudSelect T="string" Label="Select Reserve Study" Variant="Variant.Outlined" Value="_selectedReserveStudy" ValueChanged="OnReserveStudyChanged">
-                                @if (UserState.IsInRole("Admin")) {
-                                    <MudSelectItem Value="@("all")">All Reserve Studies</MudSelectItem>
-                                }
-                                @foreach (var study in _reserveStudies) {
-                                    <MudSelectItem Value="@study.Id.ToString()">
-                                        @(GetStudyDisplayName(study))
-                                    </MudSelectItem>
-                                }
-                            </MudSelect>
-                        } else {
-                            <MudAlert Severity="Severity.Info" Class="mb-4">No reserve studies available for your account.</MudAlert>
-                        }
-                    </MudItem>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-20">
+<MudCard Elevation="4" Class="pa-4">
 
-                    @if (!string.IsNullOrEmpty(_selectedReserveStudy)) {
-                        <!-- Study Status Information -->
-                        @if (_selectedReserveStudy != "all") {
-                            <MudItem xs="12" Class="mb-3">
-                                <MudPaper Elevation="0" Class="pa-3 d-flex align-center">
-                                    <MudIcon Icon="@GetStudyStatusIcon()" Color="@GetStudyStatusColor()" Class="mr-3" />
-                                    <div class="flex-grow-1">
-                                        <MudText Typo="Typo.subtitle1">Study Status: @GetStudyStatusText()</MudText>
-                                        <MudText Typo="Typo.caption">@GetStudyStatusDescription()</MudText>
-                                    </div>
-                                    @if (_shouldShowGenerateTasksButton) {
-                                        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="GenerateTasksForCurrentStudy" StartIcon="@Icons.Material.Filled.Autorenew" Disabled="_isTaskGenerating">
-                                            Generate Tasks
-                                        </MudButton>
-                                    }
-                                </MudPaper>
-                            </MudItem>
-                        } else {
-                            <MudItem xs="12" Class="mb-3">
-                                <MudPaper Elevation="0" Class="pa-3 d-flex align-center">
-                                    <MudIcon Icon="@Icons.Material.Filled.ViewList" Color="Color.Info" Class="mr-3" />
-                                    <div class="flex-grow-1">
-                                        <MudText Typo="Typo.subtitle1">Viewing All Reserve Studies</MudText>
-                                        <MudText Typo="Typo.caption">Select a specific study to view detailed progress</MudText>
-                                    </div>
-                                </MudPaper>
-                            </MudItem>
-                        }
-
-                        <!-- Workflow Status Chart Section -->
-                        <MudItem xs="12">
-                            @if (_selectedReserveStudy == "all") {
-                                <MudAlert Severity="Severity.Info" Class="mb-4">
-                                    Please select a specific reserve study to view its timeline chart.
-                                </MudAlert>
-                            } else if (_currentStudy != null) {
-                                <WorkflowStatusChart ReserveStudy="_currentStudy" ChartId="@($"chart-{_currentStudy.Id}")" />
-                            }
-                        </MudItem>
-
-                        <!-- Task Summary Cards -->
-                        <MudItem xs="12">
-                            <MudGrid>
-                                <MudItem xs="12" md="6" lg="3">
-                                    <MudCard Elevation="2">
-                                        <MudCardHeader>
-                                            <CardHeaderAvatar>
-                                                <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Error" />
-                                            </CardHeaderAvatar>
-                                            <CardHeaderContent>
-                                                <MudText Typo="Typo.body1">Tasks To Do</MudText>
-                                                <MudText Typo="Typo.h5">@(_currentStudy != null ? GetTaskCountByStatus(KanbanStatus.Todo) : 0)</MudText>
-                                            </CardHeaderContent>
-                                        </MudCardHeader>
-                                    </MudCard>
-                                </MudItem>
-                                <MudItem xs="12" md="6" lg="3">
-                                    <MudCard Elevation="2">
-                                        <MudCardHeader>
-                                            <CardHeaderAvatar>
-                                                <MudIcon Icon="@Icons.Material.Filled.Autorenew" Color="Color.Warning" />
-                                            </CardHeaderAvatar>
-                                            <CardHeaderContent>
-                                                <MudText Typo="Typo.body1">In Progress</MudText>
-                                                <MudText Typo="Typo.h5">@(_currentStudy != null ? GetTaskCountByStatus(KanbanStatus.InProgress) : 0)</MudText>
-                                            </CardHeaderContent>
-                                        </MudCardHeader>
-                                    </MudCard>
-                                </MudItem>
-                                <MudItem xs="12" md="6" lg="3">
-                                    <MudCard Elevation="2">
-                                        <MudCardHeader>
-                                            <CardHeaderAvatar>
-                                                <MudIcon Icon="@Icons.Material.Filled.RateReview" Color="Color.Info" />
-                                            </CardHeaderAvatar>
-                                            <CardHeaderContent>
-                                                <MudText Typo="Typo.body1">In Review</MudText>
-                                                <MudText Typo="Typo.h5">@(_currentStudy != null ? GetTaskCountByStatus(KanbanStatus.Review) : 0)</MudText>
-                                            </CardHeaderContent>
-                                        </MudCardHeader>
-                                    </MudCard>
-                                </MudItem>
-                                <MudItem xs="12" md="6" lg="3">
-                                    <MudCard Elevation="2">
-                                        <MudCardHeader>
-                                            <CardHeaderAvatar>
-                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
-                                            </CardHeaderAvatar>
-                                            <CardHeaderContent>
-                                                <MudText Typo="Typo.body1">Completed</MudText>
-                                                <MudText Typo="Typo.h5">@(_currentStudy != null ? GetTaskCountByStatus(KanbanStatus.Done) : 0)</MudText>
-                                            </CardHeaderContent>
-                                        </MudCardHeader>
-                                    </MudCard>
-                                </MudItem>
-                            </MudGrid>
-                        </MudItem>
-                    }
-                </MudGrid>
-            </MudCardContent>
-        </MudCard>
+    <!-- GLOBAL NOTIFICATIONS BANNER -->
+    @if (globalBanner != null)
+    {
+        <MudAlert Severity="@GetMudSeverity(globalBanner.Severity)" Variant="Variant.Filled" Elevation="1" Dense="false" Class="mb-4" CloseIcon="@Icons.Material.Filled.Close" CloseIconClicked="@(() => HideBanner())">
+            @globalBanner.Message
+            @if (globalBanner.EndDate.HasValue)
+            {
+                <br />
+                <small>This notice will be active until @globalBanner.EndDate.Value.ToLocalTime().ToString("g")</small>
+            }
+        </MudAlert>
     }
+
+        <!-- KPI CARDS -->
+        <MudGrid Class="mb-4" GutterSize="3">
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3 d-flex flex-column" Elevation="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Properties</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.HomeWork" />
+                    </MudStack>
+                    <MudText Typo="Typo.h4" Class="mt-2">@KpiProperties</MudText>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3 d-flex flex-column" Elevation="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Active Studies</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.Assessment" />
+                    </MudStack>
+                    <MudText Typo="Typo.h4" Class="mt-2">@KpiActiveStudies</MudText>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3 d-flex flex-column" Elevation="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Reports</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.Description" />
+                    </MudStack>
+                    <MudText Typo="Typo.h4" Class="mt-2">@KpiReports</MudText>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3 d-flex flex-column" Elevation="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.subtitle2">Customer Accounts</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.People" />
+                    </MudStack>
+                    <MudText Typo="Typo.h4" Class="mt-2">@KpiCustomerAccounts</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- PIPELINE BOARD + PROPERTIES / CUSTOMERS / LINKS -->
+        <MudGrid Class="mb-4" GutterSize="3">
+            <!-- PIPELINE BOARD -->
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6" Class="mb-3">Pipeline</MudText>
+
+                    <MudGrid GutterSize="2">
+                        <MudItem xs="12" sm="4">
+                            <MudPaper Class="pa-3" Elevation="0">
+                                <MudText Typo="Typo.subtitle2">Screening</MudText>
+                                <MudText Typo="Typo.h5" Class="mt-1">@PipelineScreening</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudPaper Class="pa-3" Elevation="0">
+                                <MudText Typo="Typo.subtitle2">Enrollment</MudText>
+                                <MudText Typo="Typo.h5" Class="mt-1">@PipelineEnrollment</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudPaper Class="pa-3" Elevation="0">
+                                <MudText Typo="Typo.subtitle2">Complete</MudText>
+                                <MudText Typo="Typo.h5" Class="mt-1">@PipelineComplete</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
+
+            <!-- CUSTOMER ACCOUNTS + HELPFUL LINKS -->
+            <MudItem xs="12" md="4">
+                <MudStack Spacing="3">
+                    <MudPaper Class="pa-4" Elevation="1">
+                        <MudText Typo="Typo.h6">Customer Accounts</MudText>
+                        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
+                            You do not have any customer accounts yet.
+                        </MudText>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-4" Elevation="1">
+                        <MudText Typo="Typo.h6">Helpful Links</MudText>
+                        <MudList T="string" Dense="true" Class="mt-2">
+                            <MudListItem Href="https://alxreservecloud.com/docs" Target="_blank">
+                                Onboarding guide
+                            </MudListItem>
+                            <MudListItem Href="https://alxreservecloud.com/help/faq" Target="_blank">
+                                Frequently asked questions
+                            </MudListItem>
+                            <MudListItem Href="https://alxreservecloud.com/support" Target="_blank">
+                                Contact support
+                            </MudListItem>
+                            <MudListItem Href="https://alxreservecloud.com/status" Target="_blank">
+                                System status
+                            </MudListItem>
+                        </MudList>
+                    </MudPaper>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+
+        <!-- PROPERTIES TABLE + ACTIVITY + SUPPORT TICKETS -->
+        <MudGrid GutterSize="3">
+            <!-- PROPERTIES TABLE -->
+            <MudItem xs="12" md="7">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                        <MudText Typo="Typo.h6">Properties</MudText>
+                    </MudStack>
+
+                    @if (!Properties.Any()) {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">
+                            You have not added any properties yet.
+                        </MudText>
+                    } else {
+                        <MudTable Dense="true" Hover="true" Items="Properties">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Location</MudTh>
+                                <MudTh>Status</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Name">@context.Name</MudTd>
+                                <MudTd DataLabel="Location">@context.Location</MudTd>
+                                <MudTd DataLabel="Status">@context.Status</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- ACTIVITY + SUPPORT TICKETS -->
+            <MudItem xs="12" md="5">
+                <MudStack Spacing="3">
+                    <MudPaper Class="pa-4" Elevation="1">
+                        <MudText Typo="Typo.h6">Activity</MudText>
+
+                        @if (!Activity.Any()) {
+                            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
+                                No activity yet. As you create properties, studies, and reports, they will appear here.
+                            </MudText>
+                        } else {
+                            <MudList T="string" Dense="true" Class="mt-2">
+                                @foreach (var item in Activity) {
+                                    <MudListItem>
+                                        <MudText Typo="Typo.body2">@item.Description</MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                            @item.Timestamp.ToString("g")
+                                        </MudText>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudPaper>
+
+                    <MudPaper Class="pa-4" Elevation="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6">Support Tickets</MudText>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Add">
+                                New ticket
+                            </MudButton>
+                        </MudStack>
+
+                        @if (!Tickets.Any()) {
+                            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
+                                You do not have any open support tickets.
+                            </MudText>
+                        } else {
+                            <MudList T="string" Dense="true" Class="mt-2">
+                                @foreach (var ticket in Tickets) {
+                                    <MudListItem>
+                                        <MudStack>
+                                            <MudText Typo="Typo.body2">
+                                                #@ticket.Number - @ticket.Subject
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                                @ticket.Status • @ticket.Created.ToString("g")
+                                            </MudText>
+                                        </MudStack>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                    </MudPaper>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudCard>
 </MudContainer>
 
 @code {
-    private bool _isLoading = true;
-    private bool _isTaskGenerating = false;
-    private string _selectedReserveStudy = "";
-    private List<ReserveStudy> _reserveStudies = new();
-    private Timer? _refreshTimer;
-    private ReserveStudy? _currentStudy;
-    private bool _isRefreshing = false;
-    private bool _shouldShowGenerateTasksButton;
+private string TenantName => "Sample HOA Management Co.";
+private GlobalBannerInfo? globalBanner;
+private bool bannerDismissed = false;
 
-    // Simplified task tracking for status counts
-    private List<KanbanTask> kanbanTasks = new();
-    private Dictionary<Guid, string> _studyNameCache = new();
-    private const int MaxCacheSize = 200;
+private int KpiProperties => 0;
+private int KpiActiveStudies => 0;
+private int KpiReports => 0;
+private int KpiCustomerAccounts => 0;
 
-    protected override async Task OnInitializedAsync() {
-        try {
-            await LoadReserveStudiesAsync();
+private int PipelineScreening => 0;
+private int PipelineEnrollment => 0;
+private int PipelineComplete => 0;
 
-            // Set up periodic refresh as a fallback (every5 minutes)
-            _refreshTimer = new Timer(async _ => {
-                try {
-                    await InvokeAsync(async () => await RefreshData(showNotification: false));
-                } catch (Exception ex) {
-                    Console.WriteLine($"Error in refresh timer: {ex}");
-                }
-            }, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
-        } catch (Exception ex) {
-            Console.WriteLine($"Error in OnInitializedAsync: {ex}");
-            Snackbar.Add($"Error initializing dashboard: {ex.Message}", Severity.Error);
-        }
+private List<PropertyRow> Properties { get; set; } = new();
+
+private List<ActivityItem> Activity { get; set; } = new();
+private List<TicketItem> Tickets { get; set; } = new();
+
+protected override async Task OnInitializedAsync()
+{
+    // Load global banner from system settings
+    globalBanner = await SystemSettingsService.GetGlobalBannerInfoAsync();
+}
+
+private Severity GetMudSeverity(BannerSeverity severity)
+{
+    return severity switch
+    {
+        BannerSeverity.Success => Severity.Success,
+        BannerSeverity.Warning => Severity.Warning,
+        BannerSeverity.Error => Severity.Error,
+        _ => Severity.Info
+    };
+}
+
+private void HideBanner()
+{
+    globalBanner = null;
+    bannerDismissed = true;
+}
+
+public class PropertyRow {
+        public string Name { get; set; } = default!;
+        public string Location { get; set; } = default!;
+        public string Status { get; set; } = default!;
     }
 
-    private async Task LoadReserveStudiesAsync() {
-        try {
-            _isLoading = true;
-
-            // Ensure the user state is fresh and subscribe to auth state once in the service
-            await UserState.InitializeAsync();
-
-            // If not authenticated, bail out gracefully
-            if (!UserState.IsAuthenticated) {
-                _isLoading = false;
-                Snackbar.Add("No authenticated user available.", Severity.Error);
-                return;
-            }
-
-            // Resolve user id from claims (cheap, avoids DB lookup)
-            Guid userId = Guid.Empty;
-            if (!UserState.IsInRole("Admin")) {
-                var idClaim = UserState.ClaimsPrincipal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!Guid.TryParse(idClaim, out userId)) {
-                    _isLoading = false;
-                    Snackbar.Add("Unable to resolve current user id.", Severity.Error);
-                    return;
-                }
-            }
-
-            // Fetch studies based on role
-            if (UserState.IsInRole("Admin")) {
-                _reserveStudies = await ReserveStudyService.GetAllReserveStudiesAsync();
-            } else if (UserState.IsInRole("Specialist")) {
-                _reserveStudies = await ReserveStudyService.GetAssignedReserveStudiesAsync(userId);
-            } else {
-                _reserveStudies = await ReserveStudyService.GetOwnedReserveStudiesAsync(userId);
-            }
-
-            // Filter for active studies only
-            _reserveStudies = _reserveStudies.Where(s => s.IsActive).OrderBy(s => s.DateCreated).ToList();
-            PreloadStudyNameCache();
-
-            // Set default selection if we have studies
-            if (_reserveStudies.Count > 0) {
-                _selectedReserveStudy = _reserveStudies[0].Id.ToString();
-                await LoadDashboardDataAsync();
-            } else {
-                _isLoading = false;
-            }
-        } catch (Exception ex) {
-            _isLoading = false;
-            Snackbar.Add($"Error loading reserve studies: {ex.Message}", Severity.Error);
-        }
+    public class ActivityItem {
+        public string Description { get; set; } = default!;
+        public DateTime Timestamp { get; set; }
     }
 
-    private async Task LoadDashboardDataAsync() {
-        try {
-            if (string.IsNullOrEmpty(_selectedReserveStudy) || _selectedReserveStudy == "all") {
-                _isLoading = false;
-                return;
-            }
-
-            _isLoading = true;
-
-            if (!Guid.TryParse(_selectedReserveStudy, out var studyId)) {
-                throw new Exception("Invalid reserve study ID");
-            }
-
-            // Find the current study
-            _currentStudy = _reserveStudies.FirstOrDefault(s => s.Id == studyId);
-
-            // Load task data to update the summary cards
-            //await LoadKanbanTasksAsync(studyId);
-            //_shouldShowGenerateTasksButton = await ShouldShowGenerateTasksButton();
-
-            _isLoading = false;
-        } catch (Exception ex) {
-            _isLoading = false;
-            Snackbar.Add($"Error loading dashboard data: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task OnReserveStudyChanged(string value) {
-        _selectedReserveStudy = value;
-
-        if (value == "all") {
-            // Special case for "All Reserve Studies" option
-            _currentStudy = null;
-            kanbanTasks.Clear();
-            _isLoading = false;
-        } else {
-            await LoadDashboardDataAsync();
-        }
-    }
-
-    private async Task RefreshData(bool showNotification = true) {
-        if (_isRefreshing)
-            return;
-
-        try {
-            _isRefreshing = true;
-            ClearStudyCache();
-
-            if (!string.IsNullOrEmpty(_selectedReserveStudy) && Guid.TryParse(_selectedReserveStudy, out var studyId)) {
-                // Reload the current study to refresh the chart data
-                await LoadDashboardDataAsync();
-            }
-
-            if (showNotification) {
-                Snackbar.Add("Dashboard data refreshed", Severity.Success);
-            }
-        } catch (Exception ex) {
-            if (showNotification) {
-                Snackbar.Add($"Error refreshing data: {ex.Message}", Severity.Error);
-            }
-        } finally {
-            _isRefreshing = false;
-        }
-    }
-
-    //private async Task LoadKanbanTasksAsync(Guid studyId) {
-    // try {
-    // if (DashboardService.KanbanService != null)
-    // kanbanTasks = await DashboardService.KanbanService.GetTasksForReserveStudyAsync(studyId);
-    // else
-    // kanbanTasks = new List<KanbanTask>();
-    // } catch (Exception ex) {
-    // Snackbar.Add($"Error loading tasks: {ex.Message}", Severity.Error);
-    // kanbanTasks = new List<KanbanTask>();
-    // }
-    //}
-
-    private int GetTaskCountByStatus(KanbanStatus status) {
-        return kanbanTasks.Count(t => t.Status == status && !t.DateDeleted.HasValue);
-    }
-
-    private string GetStudyDisplayName(ReserveStudy study) {
-        // Cache the result for this study ID for future lookups
-        var result = string.Empty;
-
-        if (study.Community?.Name != null && study.DateCreated.HasValue) {
-            result = $"{study.Community.Name} - {study.DateCreated.Value.ToShortDateString()}";
-        } else if (study.Community?.Name != null) {
-            result = study.Community.Name;
-        } else if (study.DateCreated.HasValue) {
-            result = $"Study {study.Id} - {study.DateCreated.Value.ToShortDateString()}";
-        } else {
-            result = $"Study {study.Id}";
-        }
-
-        // Cache the result
-        _studyNameCache[study.Id] = result;
-        return result;
-    }
-
-    private void PreloadStudyNameCache() {
-        foreach (var study in _reserveStudies) {
-            _studyNameCache[study.Id] = GetStudyDisplayName(study);
-        }
-    }
-
-    private void ClearStudyCache() {
-        _studyNameCache.Clear();
-    }
-
-    private async Task<bool> ShouldShowGenerateTasksButton() {
-        // Show the generate tasks button if:
-        //1. Current study exists
-        //2. Study is not completed
-        //3. User has appropriate permissions (Admin or Specialist)
-        await UserState.InitializeAsync();
-        return _currentStudy != null &&
-        !_currentStudy.IsComplete &&
-        (UserState.IsInRole("Admin") || UserState.IsInRole("Specialist"));
-    }
-
-    private async Task GenerateTasksForCurrentStudy() {
-        if (_currentStudy == null || !Guid.TryParse(_selectedReserveStudy, out var studyId)) {
-            Snackbar.Add("No valid reserve study selected", Severity.Warning);
-            return;
-        }
-
-        try {
-            _isTaskGenerating = true;
-            var tasksToCreate = await DashboardService.GenerateTasksBasedOnStudyStatusAsync(studyId);
-
-            if (tasksToCreate.Count == 0) {
-                Snackbar.Add("All required tasks already exist for this study", Severity.Info);
-                return;
-            }
-
-            // Create tasks using the DashboardService
-            await DashboardService.CreateTasksForStudyAsync(tasksToCreate);
-
-            // Refresh the task data
-            //await LoadKanbanTasksAsync(studyId);
-            //StateHasChanged();
-
-            Snackbar.Add($"Successfully generated {tasksToCreate.Count} new tasks for this study", Severity.Success);
-        } catch (Exception ex) {
-            Snackbar.Add($"Error generating tasks: {ex.Message}", Severity.Error);
-        } finally {
-            _isTaskGenerating = false;
-        }
-    }
-
-    // Study status-related methods
-    private string GetStudyStatusText() {
-        if (_currentStudy == null) return "Unknown";
-
-        if (_currentStudy.IsComplete) return "Completed";
-        if (_currentStudy.IsApproved) return "Approved";
-        return "In Progress";
-    }
-
-    private string GetStudyStatusDescription() {
-        if (_currentStudy == null) return "";
-
-        if (_currentStudy.IsComplete) {
-            return $"This study was completed on {_currentStudy.LastModified?.ToString("MM/dd/yyyy") ?? "N/A"}";
-        }
-
-        if (_currentStudy.IsApproved) {
-            return $"This study was approved on {_currentStudy.DateApproved?.ToString("MM/dd/yyyy") ?? "N/A"}";
-        }
-
-        return "This study is currently in progress.";
-    }
-
-    private string GetStudyStatusIcon() {
-        if (_currentStudy == null) return Icons.Material.Filled.Help;
-
-        if (_currentStudy.IsComplete) return Icons.Material.Filled.CheckCircle;
-        if (_currentStudy.IsApproved) return Icons.Material.Filled.ThumbUp;
-        return Icons.Material.Filled.Build;
-    }
-
-    private Color GetStudyStatusColor() {
-        if (_currentStudy == null) return Color.Default;
-
-        if (_currentStudy.IsComplete) return Color.Success;
-        if (_currentStudy.IsApproved) return Color.Info;
-        return Color.Primary;
-    }
-
-    public void Dispose() {
-        try {
-            _refreshTimer?.Dispose();
-        } catch (Exception ex) {
-            // Log but don't throw from Dispose
-            Console.WriteLine($"Error in Dispose: {ex.Message}");
-        }
+    public class TicketItem {
+        public string Number { get; set; } = default!;
+        public string Subject { get; set; } = default!;
+        public string Status { get; set; } = default!;
+        public DateTime Created { get; set; }
     }
 }

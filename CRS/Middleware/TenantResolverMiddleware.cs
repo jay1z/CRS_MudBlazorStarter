@@ -108,7 +108,7 @@ namespace CRS.Middleware {
 
             // Redirect tenant subdomain root to app to avoid flicker on '/' landing
             if (!tenantContext.IsPlatformHost && tenantContext.TenantId != null && path == "/") {
-                context.Response.Redirect("/app");
+                context.Response.Redirect("/dashboard");
                 return;
             }
 

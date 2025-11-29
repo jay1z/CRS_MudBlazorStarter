@@ -1,0 +1,139 @@
+﻿@* Social Proof Notification Widget - Shows Recent Activity *@
+@implements IDisposable
+
+@if (showNotification && currentNotification != null)
+{
+    <div style="position: fixed; bottom: 20px; left: 20px; z-index: 9000; max-width: 350px; animation: slideInLeft 0.5s ease;">
+        <MudPaper Elevation="8" Class="pa-4" Style="border-radius: 12px; border-left: 4px solid #FF8C00; background: white;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudAvatar Color="@GetAvatarColor()" Size="Size.Medium">
+                    @GetInitials(currentNotification.Name)
+                </MudAvatar>
+                
+                <div style="flex: 1;">
+                    <MudText Typo="Typo.body2" Class="fw-bold" Style="color: #333;">
+                        @currentNotification.Name
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color: #666;">
+                        @currentNotification.Action
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color: #999; font-size: 0.7rem;">
+                        <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" Style="font-size: 12px;" />
+                        @currentNotification.TimeAgo
+                    </MudText>
+                </div>
+                
+                <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                               Size="Size.Small" 
+                               OnClick="HideNotification"
+                               Style="color: #999;" />
+            </MudStack>
+        </MudPaper>
+    </div>
+}
+
+@code {
+    private Timer? notificationTimer;
+    private bool showNotification = false;
+    private SocialProofNotification? currentNotification;
+    private int currentIndex = 0;
+    
+    private class SocialProofNotification
+    {
+        public string Name { get; set; } = "";
+        public string Action { get; set; } = "";
+        public string TimeAgo { get; set; } = "";
+        public string Location { get; set; } = "";
+    }
+    
+    private List<SocialProofNotification> notifications = new()
+    {
+        new() { Name = "Sarah M.", Action = "Started a free trial from Ohio", TimeAgo = "2 minutes ago", Location = "Ohio" },
+        new() { Name = "James C.", Action = "Upgraded to Professional plan", TimeAgo = "5 minutes ago", Location = "California" },
+        new() { Name = "Dr. Rachel W.", Action = "Generated 15th reserve study report", TimeAgo = "8 minutes ago", Location = "Texas" },
+        new() { Name = "Michael B.", Action = "Started a free trial from Florida", TimeAgo = "12 minutes ago", Location = "Florida" },
+        new() { Name = "Lisa P.", Action = "Invited 3 team members", TimeAgo = "18 minutes ago", Location = "New York" },
+        new() { Name = "David K.", Action = "Started a free trial from Washington", TimeAgo = "22 minutes ago", Location = "Washington" },
+        new() { Name = "Jennifer L.", Action = "Created first property", TimeAgo = "25 minutes ago", Location = "Arizona" },
+        new() { Name = "Robert H.", Action = "Upgraded to Professional plan", TimeAgo = "30 minutes ago", Location = "Georgia" },
+        new() { Name = "Amanda T.", Action = "Started a free trial from Michigan", TimeAgo = "35 minutes ago", Location = "Michigan" },
+        new() { Name = "Christopher D.", Action = "Generated 50th reserve study report", TimeAgo = "40 minutes ago", Location = "Colorado" }
+    };
+    
+    protected override void OnInitialized()
+    {
+        // Shuffle notifications for variety
+        Random rng = new Random();
+        notifications = notifications.OrderBy(x => rng.Next()).ToList();
+        
+        // Show first notification after 10 seconds, then every 15 seconds
+        notificationTimer = new Timer(_ =>
+        {
+            ShowNextNotification();
+        }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(15));
+    }
+    
+    private void ShowNextNotification()
+    {
+        currentNotification = notifications[currentIndex];
+        showNotification = true;
+        
+        currentIndex = (currentIndex + 1) % notifications.Count;
+        
+        InvokeAsync(StateHasChanged);
+        
+        // Auto-hide after 7 seconds
+        _ = Task.Delay(7000).ContinueWith(_ =>
+        {
+            HideNotification();
+        });
+    }
+    
+    private void HideNotification()
+    {
+        showNotification = false;
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private string GetInitials(string name)
+    {
+        var parts = name.Split(' ');
+        if (parts.Length >= 2)
+        {
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        }
+        return name.Substring(0, Math.Min(2, name.Length)).ToUpper();
+    }
+    
+    private Color GetAvatarColor()
+    {
+        var colors = new[] { Color.Primary, Color.Secondary, Color.Warning, Color.Info, Color.Success };
+        return colors[currentIndex % colors.Length];
+    }
+    
+    public void Dispose()
+    {
+        notificationTimer?.Dispose();
+    }
+}
+
+<style>
+    @@keyframes slideInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-100px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @@media (max-width: 600px) {
+        div[style*="bottom: 20px; left: 20px"] {
+            left: 10px !important;
+            right: 10px !important;
+            max-width: calc(100% - 20px) !important;
+        }
+    }
+</style>

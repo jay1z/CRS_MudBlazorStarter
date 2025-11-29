@@ -36,6 +36,13 @@ namespace CRS.Models {
         public string? PendingOwnerEmail { get; set; } // captured during signup; used to create owner after payment
         public Guid SignupToken { get; set; } = Guid.NewGuid(); // used to finalize owner setup securely
         public string? LastStripeCheckoutSessionId { get; set; } // set when created via post-payment flow
+        
+        // Demo Mode: Mark demo tenants and track soft delete
+        public bool IsDemo { get; set; } = false;
+        public DateTime? DateDeleted { get; set; }
+        
+        // Owner reference for demo cleanup
+        public string? OwnerId { get; set; }
     }
 
     public enum TenantProvisioningStatus {

@@ -1,0 +1,223 @@
+﻿@* Interactive Product Tour Component *@
+
+@if (isActive && currentStep < tourSteps.Count)
+{
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9998; animation: fadeIn 0.3s ease;">
+        <!-- Spotlight effect for highlighted element -->
+        <div id="tourSpotlight" style="position: absolute; box-shadow: 0 0 0 9999px rgba(0,0,0,0.7); border-radius: 8px; pointer-events: none; transition: all 0.3s ease;"></div>
+        
+        <!-- Tour tooltip -->
+        <div style="position: fixed; @GetTooltipPosition() max-width: 400px; background: white; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); z-index: 9999; animation: slideIn 0.4s ease;">
+            <MudPaper Class="pa-6" Elevation="0" Style="border-radius: 16px;">
+                <!-- Progress indicator -->
+                <div class="d-flex gap-2 mb-4">
+                    @for (int i = 0; i < tourSteps.Count; i++)
+                    {
+                        <div style="flex: 1; height: 4px; background: @(i <= currentStep ? "#FF8C00" : "#e0e0e0"); border-radius: 2px; transition: background 0.3s ease;"></div>
+                    }
+                </div>
+                
+                <!-- Step content -->
+                <div class="mb-4">
+                    <MudText Typo="Typo.caption" Style="color: #FF8C00; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;" Class="mb-2">
+                        Step @(currentStep + 1) of @tourSteps.Count
+                    </MudText>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">
+                        @tourSteps[currentStep].Title
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                        @tourSteps[currentStep].Description
+                    </MudText>
+                </div>
+                
+                <!-- Navigation buttons -->
+                <div class="d-flex justify-space-between align-center">
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               OnClick="SkipTour"
+                               Style="text-transform: none; color: #999;">
+                        Skip Tour
+                    </MudButton>
+                    
+                    <MudStack Row="true" Spacing="2">
+                        @if (currentStep > 0)
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       OnClick="PreviousStep"
+                                       Style="text-transform: none;">
+                                Back
+                            </MudButton>
+                        }
+                        
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Warning"
+                                   Size="Size.Small"
+                                   OnClick="NextStep"
+                                   Style="text-transform: none; font-weight: 600;">
+                            @(currentStep == tourSteps.Count - 1 ? "Finish" : "Next")
+                        </MudButton>
+                    </MudStack>
+                </div>
+            </MudPaper>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback OnTourComplete { get; set; }
+    
+    private bool isActive = false;
+    private int currentStep = 0;
+    
+    private class TourStep
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string TargetSelector { get; set; } = "";
+        public string Position { get; set; } = "bottom"; // top, bottom, left, right
+    }
+    
+    private List<TourStep> tourSteps = new()
+    {
+        new TourStep
+        {
+            Title = "Welcome to ALX Reserve Cloud!",
+            Description = "Let's take a quick 60-second tour to show you how our platform can save you 75% of your time. Click Next to continue.",
+            TargetSelector = "",
+            Position = "center"
+        },
+        new TourStep
+        {
+            Title = "Powerful Features",
+            Description = "Browse through our comprehensive feature set including automated calculations, client portals, and document management—all in one place.",
+            TargetSelector = "#features",
+            Position = "top"
+        },
+        new TourStep
+        {
+            Title = "Flexible Pricing",
+            Description = "Choose the plan that fits your needs. All plans include a 14-day free trial with no credit card required. Toggle between monthly and annual pricing to see your savings.",
+            TargetSelector = "#pricing",
+            Position = "top"
+        },
+        new TourStep
+        {
+            Title = "Calculate Your ROI",
+            Description = "See exactly how much time and money you'll save with our interactive calculator. Adjust the inputs to match your workflow and watch the savings add up!",
+            TargetSelector = "#pricing",
+            Position = "bottom"
+        },
+        new TourStep
+        {
+            Title = "Compare Plans Side-by-Side",
+            Description = "Not sure which plan is right for you? Our detailed comparison table shows exactly what's included in each tier, making your decision easy.",
+            TargetSelector = "#compare",
+            Position = "top"
+        },
+        new TourStep
+        {
+            Title = "Questions Answered",
+            Description = "Got questions? Check out our comprehensive FAQ section covering setup, data security, pricing, and support. Still need help? Our team is here for you.",
+            TargetSelector = "#faq",
+            Position = "top"
+        },
+        new TourStep
+        {
+            Title = "Ready to Get Started?",
+            Description = "Start your free 14-day trial now—no credit card required. Join 527+ reserve study professionals already saving time with ALX Reserve Cloud!",
+            TargetSelector = "",
+            Position = "center"
+        }
+    };
+    
+    public void StartTour()
+    {
+        isActive = true;
+        currentStep = 0;
+        StateHasChanged();
+        _ = HighlightCurrentStep();
+    }
+    
+    private void NextStep()
+    {
+        if (currentStep < tourSteps.Count - 1)
+        {
+            currentStep++;
+            StateHasChanged();
+            _ = HighlightCurrentStep();
+        }
+        else
+        {
+            CompleteTour();
+        }
+    }
+    
+    private void PreviousStep()
+    {
+        if (currentStep > 0)
+        {
+            currentStep--;
+            StateHasChanged();
+            _ = HighlightCurrentStep();
+        }
+    }
+    
+    private void SkipTour()
+    {
+        CompleteTour();
+    }
+    
+    private void CompleteTour()
+    {
+        isActive = false;
+        currentStep = 0;
+        StateHasChanged();
+        _ = OnTourComplete.InvokeAsync();
+    }
+    
+    private async Task HighlightCurrentStep()
+    {
+        if (string.IsNullOrEmpty(tourSteps[currentStep].TargetSelector))
+            return;
+            
+        await JSRuntime.InvokeVoidAsync("highlightTourElement", tourSteps[currentStep].TargetSelector);
+    }
+    
+    private string GetTooltipPosition()
+    {
+        var step = tourSteps[currentStep];
+        
+        return step.Position switch
+        {
+            "center" => "top: 50%; left: 50%; transform: translate(-50%, -50%);",
+            "top" => "bottom: 20px; left: 50%; transform: translateX(-50%);",
+            "bottom" => "top: 20px; left: 50%; transform: translateX(-50%);",
+            "left" => "top: 50%; right: 20px; transform: translateY(-50%);",
+            "right" => "top: 50%; left: 20px; transform: translateY(-50%);",
+            _ => "top: 50%; left: 50%; transform: translate(-50%, -50%);"
+        };
+    }
+    
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+}
+
+<style>
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+</style>

@@ -1691,6 +1691,187 @@ namespace CRS.Migrations
                     b.ToTable("SupportTickets", "crs");
                 });
 
+            modelBuilder.Entity("CRS.Models.SystemSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AllowAccountDeletion")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AllowDataExport")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AllowNewTenantSignups")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AllowNewUserRegistrations")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("AnnouncementEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AnnouncementMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("AnnouncementStartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AnnouncementTitle")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AnnouncementUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ApiRequestsPerHour")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ApiRequestsPerMinute")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AuditLogRetentionDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BackupIntervalHours")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BackupRetentionDays")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DataRetentionYears")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DefaultMaxCommunities")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DefaultMaxUsers")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DefaultReportFormat")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DefaultReportLogoUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DefaultTrialDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DeletedDataRetentionDays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DocumentationUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("EnableApiRateLimiting")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EnableAutomatedBackups")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EnableAutomatedReports")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EnableEmailNotifications")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EnableGdprCompliance")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EnableSmsNotifications")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("GlobalBannerEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GlobalBannerMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("GlobalBannerSeverity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GlobalBannerStartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("InactivityWarningMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IncludeWatermarkOnReports")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("MaintenanceEndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MaintenanceMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("MaintenanceModeEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("MaintenanceStartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxCommunitiesPerTenant")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxTenantsAllowed")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxUsersPerTenant")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PrivacyPolicyUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("RequirePaymentForSignup")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RequireReauthenticationForSensitiveActions")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SessionTimeoutMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("ShowAnnouncementBanner")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ShowGlobalBanner")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("StatusPageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SupportEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SupportPhone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SupportUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SystemVersion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TermsOfServiceUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SystemSettings", "crs");
+                });
+
             modelBuilder.Entity("CRS.Models.Tenant", b =>
                 {
                     b.Property<int>("Id")

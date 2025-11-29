@@ -117,10 +117,10 @@ You must support and clearly distinguish between the following UIs and flows.
        - Return the user to the login view with meaningful but secure error messages (no user or tenant enumeration).
     5. If everything is valid:
        - Consider the user authenticated for that tenant.
-       - Redirect the user to the tenant’s subdomain, to a protected area (for example, `/app` on that subdomain).
+       - Redirect the user to the tenant’s subdomain, to a protected area (for example, `/dashboard` on that subdomain).
 
 - Redirect behavior:
-  - The redirect target should be the tenant subdomain (for example `https://{tenant}.alxreservecloud.com/app`).
+  - The redirect target should be the tenant subdomain (for example `https://{tenant}.alxreservecloud.com/dashboard`).
   - After the redirect, the user should be considered logged in specifically for that tenant.
 
 ---
@@ -149,13 +149,13 @@ You must support and clearly distinguish between the following UIs and flows.
        - Show appropriate login errors without leaking sensitive information.
     5. If valid:
        - Treat the user as authenticated for this tenant.
-       - Redirect them to the tenant’s protected area on the same subdomain (for example `/app`).
+       - Redirect them to the tenant’s protected area on the same subdomain (for example `/dashboard`).
 
 ---
 
 ### 4.4 Tenant Dashboard / Protected Area
 
-- URL on tenant sites: `/app` (and related routes) on `{tenant}.alxreservecloud.com`
+- URL on tenant sites: `/dashboard` (and related routes) on `{tenant}.alxreservecloud.com`
 - Purpose:
   - Primary application area for the tenant.
 

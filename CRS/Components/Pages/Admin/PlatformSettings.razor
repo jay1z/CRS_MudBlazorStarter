@@ -1,0 +1,522 @@
+﻿@page "/Admin/SystemSettings"
+@attribute [Authorize(Roles = "PlatformAdmin")]
+@using CRS.Models
+@using CRS.Services.Interfaces
+@inject ISystemSettingsService SystemSettingsService
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>System Settings</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">System Settings</MudText>
+    <MudText Typo="Typo.body2" Class="mb-6 mud-text-secondary">
+        Configure system-wide settings that apply across all tenants and users.
+    </MudText>
+
+    @if (settings == null)
+    {
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            
+            <!-- Global Banner Tab -->
+            <MudTabPanel Text="Global Banner" Icon="@Icons.Material.Filled.Campaign">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Global Banner Configuration</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Display important messages to all users across the platform.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="settings.ShowGlobalBanner" Color="Color.Primary" Label="Enable Global Banner" Class="mb-4" />
+
+                    @if (settings.ShowGlobalBanner)
+                    {
+                        <MudTextField @bind-Value="settings.GlobalBannerMessage"
+                                      Label="Banner Message"
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      Class="mb-4"
+                                      Required="true" />
+
+                        <MudSelect @bind-Value="settings.GlobalBannerSeverity"
+                                   Label="Severity"
+                                   Variant="Variant.Outlined"
+                                   Class="mb-4">
+                            <MudSelectItem Value="BannerSeverity.Info">Info (Blue)</MudSelectItem>
+                            <MudSelectItem Value="BannerSeverity.Success">Success (Green)</MudSelectItem>
+                            <MudSelectItem Value="BannerSeverity.Warning">Warning (Orange)</MudSelectItem>
+                            <MudSelectItem Value="BannerSeverity.Error">Error (Red)</MudSelectItem>
+                        </MudSelect>
+
+                        <MudDatePicker @bind-Date="settings.GlobalBannerStartDate"
+                                       Label="Start Date (Optional)"
+                                       Variant="Variant.Outlined"
+                                       Class="mb-4"
+                                       Clearable="true" />
+
+                        <MudDatePicker @bind-Date="settings.GlobalBannerEndDate"
+                                       Label="End Date (Optional)"
+                                       Variant="Variant.Outlined"
+                                       Class="mb-4"
+                                       Clearable="true" />
+
+                        <MudAlert Severity="Severity.Info" Class="mt-4">
+                            <strong>Preview:</strong> The banner will appear on the Dashboard and other key pages. Users can dismiss it temporarily.
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Maintenance Mode Tab -->
+            <MudTabPanel Text="Maintenance Mode" Icon="@Icons.Material.Filled.Build">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Maintenance Mode</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Enable maintenance mode to restrict access during system updates.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="settings.MaintenanceModeEnabled" Color="Color.Warning" Label="Enable Maintenance Mode" Class="mb-4" />
+
+                    @if (settings.MaintenanceModeEnabled)
+                    {
+                        <MudTextField @bind-Value="settings.MaintenanceMessage"
+                                      Label="Maintenance Message"
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      Class="mb-4"
+                                      Placeholder="We're currently performing system maintenance. We'll be back shortly." />
+
+                        <MudDatePicker @bind-Date="settings.MaintenanceStartTime"
+                                       Label="Start Time (Optional)"
+                                       Variant="Variant.Outlined"
+                                       Class="mb-4"
+                                       Clearable="true" />
+
+                        <MudDatePicker @bind-Date="settings.MaintenanceEndTime"
+                                       Label="End Time (Optional)"
+                                       Variant="Variant.Outlined"
+                                       Class="mb-4"
+                                       Clearable="true" />
+
+                        <MudAlert Severity="Severity.Warning" Class="mt-4">
+                            <strong>Warning:</strong> When maintenance mode is active, non-admin users will be unable to access the system.
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Feature Flags Tab -->
+            <MudTabPanel Text="Feature Flags" Icon="@Icons.Material.Filled.Flag">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Feature Flags</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Control platform-wide features and capabilities.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="settings.AllowNewTenantSignups" Color="Color.Primary" Label="Allow New Tenant Signups" Class="mb-2" />
+                    <MudSwitch @bind-Value="settings.AllowNewUserRegistrations" Color="Color.Primary" Label="Allow New User Registrations" Class="mb-2" />
+                    <MudSwitch @bind-Value="settings.EnableEmailNotifications" Color="Color.Primary" Label="Enable Email Notifications" Class="mb-2" />
+                    <MudSwitch @bind-Value="settings.EnableSmsNotifications" Color="Color.Primary" Label="Enable SMS Notifications" Class="mb-4" />
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Platform Limits Tab -->
+            <MudTabPanel Text="Platform Limits" Icon="@Icons.Material.Filled.Speed">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Platform Limits</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Set maximum limits for platform resources.
+                    </MudText>
+
+                    <MudNumericField @bind-Value="settings.MaxTenantsAllowed"
+                                     Label="Max Tenants Allowed"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Class="mb-4" />
+
+                    <MudNumericField @bind-Value="settings.MaxUsersPerTenant"
+                                     Label="Max Users Per Tenant"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Class="mb-4" />
+
+                    <MudNumericField @bind-Value="settings.MaxCommunitiesPerTenant"
+                                     Label="Max Communities Per Tenant"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Class="mb-4" />
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Support & Contact Tab -->
+            <MudTabPanel Text="Support & Contact" Icon="@Icons.Material.Filled.Support">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Support & Contact Information</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Configure support contact details displayed to users.
+                    </MudText>
+
+                    <MudTextField @bind-Value="settings.SupportEmail"
+                                  Label="Support Email"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="support@example.com" />
+
+                    <MudTextField @bind-Value="settings.SupportPhone"
+                                  Label="Support Phone"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="+1 (555) 123-4567" />
+
+                    <MudTextField @bind-Value="settings.SupportUrl"
+                                  Label="Support URL"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="https://support.example.com" />
+
+                    <MudTextField @bind-Value="settings.DocumentationUrl"
+                                  Label="Documentation URL"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="https://docs.example.com" />
+
+                    <MudTextField @bind-Value="settings.StatusPageUrl"
+                                  Label="Status Page URL"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="https://status.example.com" />
+
+                    <MudTextField @bind-Value="settings.AnnouncementUrl"
+                                  Label="Announcement URL"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="https://announcements.example.com" />
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- System Info Tab -->
+            <MudTabPanel Text="System Info" Icon="@Icons.Material.Filled.Info">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">System Information</MudText>
+
+                    <MudTextField @bind-Value="settings.SystemVersion"
+                                  Label="System Version"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="1.0.0" />
+
+                    <MudDivider Class="my-4" />
+
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Audit Information</MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Created: @settings.CreatedAt.ToLocalTime().ToString("g")</MudText>
+                    @if (settings.UpdatedAt.HasValue)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Last Updated: @settings.UpdatedAt.Value.ToLocalTime().ToString("g")</MudText>
+                    }
+                    @if (!string.IsNullOrEmpty(settings.LastUpdatedBy))
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Last Updated By: @settings.LastUpdatedBy</MudText>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Announcements Tab -->
+            <MudTabPanel Text="Announcements" Icon="@Icons.Material.Filled.Announcement">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Platform Announcements</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Display news and updates to all users.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="settings.ShowAnnouncementBanner" Color="Color.Primary" Label="Enable Announcement Banner" Class="mb-4" />
+
+                    @if (settings.ShowAnnouncementBanner)
+                    {
+                        <MudTextField @bind-Value="settings.AnnouncementTitle"
+                                      Label="Announcement Title"
+                                      Variant="Variant.Outlined"
+                                      Class="mb-4"
+                                      Placeholder="New Feature Released!" />
+
+                        <MudTextField @bind-Value="settings.AnnouncementMessage"
+                                      Label="Announcement Message"
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      Class="mb-4" />
+
+                        <MudDatePicker @bind-Date="settings.AnnouncementStartDate"
+                                       Label="Start Date (Optional)"
+                                       Variant="Variant.Outlined"
+                                       Class="mb-4"
+                                       Clearable="true" />
+
+                        <MudDatePicker @bind-Date="settings.AnnouncementEndDate"
+                                       Label="End Date (Optional)"
+                                       Variant="Variant.Outlined"
+                                       Class="mb-4"
+                                       Clearable="true" />
+                    }
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Default Tenant Settings Tab -->
+            <MudTabPanel Text="Tenant Defaults" Icon="@Icons.Material.Filled.Business">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Default Tenant Settings</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Configure default limits for new tenant signups.
+                    </MudText>
+
+                    <MudNumericField @bind-Value="settings.DefaultMaxCommunities"
+                                     Label="Default Max Communities"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Class="mb-4" />
+
+                    <MudNumericField @bind-Value="settings.DefaultMaxUsers"
+                                     Label="Default Max Users"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Class="mb-4" />
+
+                    <MudNumericField @bind-Value="settings.DefaultTrialDays"
+                                     Label="Trial Period (Days)"
+                                     Variant="Variant.Outlined"
+                                     Min="0"
+                                     Class="mb-4" />
+
+                    <MudSwitch @bind-Value="settings.RequirePaymentForSignup" Color="Color.Primary" Label="Require Payment for Signup" Class="mb-4" />
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Session Management Tab -->
+            <MudTabPanel Text="Sessions" Icon="@Icons.Material.Filled.AccessTime">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Session Management</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Configure session timeout and security settings.
+                    </MudText>
+
+                    <MudNumericField @bind-Value="settings.SessionTimeoutMinutes"
+                                     Label="Session Timeout (Minutes)"
+                                     Variant="Variant.Outlined"
+                                     Min="5"
+                                     Max="1440"
+                                     Class="mb-4"
+                                     HelperText="Maximum duration of user sessions" />
+
+                    <MudNumericField @bind-Value="settings.InactivityWarningMinutes"
+                                     Label="Inactivity Warning (Minutes)"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Max="60"
+                                     Class="mb-4"
+                                     HelperText="Show warning before session expires" />
+
+                    <MudSwitch @bind-Value="settings.RequireReauthenticationForSensitiveActions" 
+                               Color="Color.Primary" 
+                               Label="Require Re-authentication for Sensitive Actions" 
+                               Class="mb-4" />
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- API & Rate Limiting Tab -->
+            <MudTabPanel Text="API Limits" Icon="@Icons.Material.Filled.Api">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">API & Rate Limiting</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Control API usage and rate limiting.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="settings.EnableApiRateLimiting" Color="Color.Primary" Label="Enable API Rate Limiting" Class="mb-4" />
+
+                    @if (settings.EnableApiRateLimiting)
+                    {
+                        <MudNumericField @bind-Value="settings.ApiRequestsPerMinute"
+                                         Label="Requests Per Minute"
+                                         Variant="Variant.Outlined"
+                                         Min="1"
+                                         Class="mb-4" />
+
+                        <MudNumericField @bind-Value="settings.ApiRequestsPerHour"
+                                         Label="Requests Per Hour"
+                                         Variant="Variant.Outlined"
+                                         Min="1"
+                                         Class="mb-4" />
+                    }
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Data Retention Tab -->
+            <MudTabPanel Text="Data & Backups" Icon="@Icons.Material.Filled.Storage">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Backup & Data Retention</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Configure automated backups and data retention policies.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="settings.EnableAutomatedBackups" Color="Color.Primary" Label="Enable Automated Backups" Class="mb-4" />
+
+                    @if (settings.EnableAutomatedBackups)
+                    {
+                        <MudNumericField @bind-Value="settings.BackupIntervalHours"
+                                         Label="Backup Interval (Hours)"
+                                         Variant="Variant.Outlined"
+                                         Min="1"
+                                         Class="mb-4" />
+
+                        <MudNumericField @bind-Value="settings.BackupRetentionDays"
+                                         Label="Backup Retention (Days)"
+                                         Variant="Variant.Outlined"
+                                         Min="1"
+                                         Class="mb-4" />
+                    }
+
+                    <MudDivider Class="my-4" />
+
+                    <MudText Typo="Typo.subtitle2" Class="mb-3">Data Retention Policies</MudText>
+
+                    <MudNumericField @bind-Value="settings.AuditLogRetentionDays"
+                                     Label="Audit Log Retention (Days)"
+                                     Variant="Variant.Outlined"
+                                     Min="30"
+                                     Class="mb-4" />
+
+                    <MudNumericField @bind-Value="settings.DeletedDataRetentionDays"
+                                     Label="Deleted Data Retention (Days)"
+                                     Variant="Variant.Outlined"
+                                     Min="0"
+                                     Class="mb-4"
+                                     HelperText="How long to keep soft-deleted records" />
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Compliance Tab -->
+            <MudTabPanel Text="Compliance" Icon="@Icons.Material.Filled.Gavel">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Compliance & Privacy</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Configure GDPR and privacy compliance settings.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="settings.EnableGdprCompliance" Color="Color.Primary" Label="Enable GDPR Compliance" Class="mb-2" />
+                    <MudSwitch @bind-Value="settings.AllowDataExport" Color="Color.Primary" Label="Allow Users to Export Their Data" Class="mb-2" />
+                    <MudSwitch @bind-Value="settings.AllowAccountDeletion" Color="Color.Primary" Label="Allow Users to Delete Their Accounts" Class="mb-4" />
+
+                    <MudDivider Class="my-4" />
+
+                    <MudTextField @bind-Value="settings.PrivacyPolicyUrl"
+                                  Label="Privacy Policy URL"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="https://example.com/privacy" />
+
+                    <MudTextField @bind-Value="settings.TermsOfServiceUrl"
+                                  Label="Terms of Service URL"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="https://example.com/terms" />
+
+                    <MudNumericField @bind-Value="settings.DataRetentionYears"
+                                     Label="Data Retention Period (Years)"
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Max="99"
+                                     Class="mb-4" />
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Reporting Tab -->
+            <MudTabPanel Text="Reporting" Icon="@Icons.Material.Filled.Assessment">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudText Typo="Typo.h6" Class="mb-4">Reporting Settings</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                        Configure default report generation settings.
+                    </MudText>
+
+                    <MudSwitch @bind-Value="settings.EnableAutomatedReports" Color="Color.Primary" Label="Enable Automated Reports" Class="mb-4" />
+
+                    <MudSelect @bind-Value="settings.DefaultReportFormat"
+                               Label="Default Report Format"
+                               Variant="Variant.Outlined"
+                               Class="mb-4">
+                        <MudSelectItem Value="@("PDF")">PDF</MudSelectItem>
+                        <MudSelectItem Value="@("Excel")">Excel</MudSelectItem>
+                        <MudSelectItem Value="@("CSV")">CSV</MudSelectItem>
+                        <MudSelectItem Value="@("Word")">Word</MudSelectItem>
+                    </MudSelect>
+
+                    <MudTextField @bind-Value="settings.DefaultReportLogoUrl"
+                                  Label="Default Report Logo URL"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Placeholder="https://example.com/logo.png" />
+
+                    <MudSwitch @bind-Value="settings.IncludeWatermarkOnReports" 
+                               Color="Color.Primary" 
+                               Label="Include Watermark on Reports" 
+                               Class="mb-4" />
+                </MudPaper>
+            </MudTabPanel>
+        </MudTabs>
+
+        <!-- Save Button (Fixed at bottom) -->
+        <MudPaper Class="pa-4 mt-4 d-flex justify-end" Elevation="0">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="SaveSettings"
+                       Disabled="isSaving">
+                @if (isSaving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Saving...</span>
+                }
+                else
+                {
+                    <span>Save Settings</span>
+                }
+            </MudButton>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private SystemSettings? settings;
+    private bool isSaving = false;
+    private string? currentUserEmail;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user email for audit
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUserEmail = authState.User.Identity?.Name;
+
+        // Load settings
+        settings = await SystemSettingsService.GetSettingsAsync();
+    }
+
+    private async Task SaveSettings()
+    {
+        if (settings == null) return;
+
+        isSaving = true;
+        try
+        {
+            settings.LastUpdatedBy = currentUserEmail;
+            await SystemSettingsService.UpdateSettingsAsync(settings);
+            Snackbar.Add("System settings saved successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

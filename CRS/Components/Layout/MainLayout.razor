@@ -25,7 +25,6 @@
 @inject CRS.Services.Layout.ILayoutService LayoutService
 
 <!-- Layout uses MudBlazor defaults for styling; custom CSS removed per request. -->
-
 <!-- Unified MudBlazor providers -->
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" />
 <MudDialogProvider />
@@ -34,36 +33,30 @@
 
 <MudLayout>
     <MudAppBar Class="top-appbar" Elevation="25">
-        @if (!_hideNav)
-        {
+        @if (!_hideNav) {
             <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
         }
         <MudText Typo="Typo.h5" Class="ml-3" Style="font-weight:600;letter-spacing:0.2px">@(TenantContext?.TenantName ?? "ALX Reserve Cloud")</MudText>
-        @if (TenantContext?.TenantId != null)
-        {
-            <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Class="ml-3">Sub: @TenantContext.Subdomain</MudChip>
-        }
         <MudSpacer />
-        @if (_authResolved && TenantContext?.TenantId != null
-            && TenantContext.IsResolvedByLogin == false
-            && _isPlatformAdmin) {
+        @if (_authResolved && TenantContext?.TenantId != null && TenantContext.IsResolvedByLogin == false && _isPlatformAdmin) {
             <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Class="mx-2" StartIcon="@Icons.Material.Filled.PersonSearch">
                 Impersonating: @(TenantContext.TenantName ?? ($"Tenant {TenantContext.TenantId}"))
             </MudChip>
-            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" Class="mx-2" OnClick="@(()=>NavigationManager.NavigateTo("/Admin/StopImpersonation"))" StartIcon="@Icons.Material.Filled.HighlightOff">Stop</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" Class="mx-2" OnClick="@(() => NavigationManager.NavigateTo("/Admin/StopImpersonation"))" StartIcon="@Icons.Material.Filled.HighlightOff">Stop</MudButton>
         }
         <AuthorizeView>
             <Authorized>
-                <MudBadge Color="Color.Error" Content="@((unreadCount > 0) ? unreadCount.ToString() : null)" MaxValue="99" Overlap="true">
+                @if (unreadCount > 0) {
+                    <MudBadge Color="Color.Error" Content="@unreadCount.ToString()" MaxValue="99" Overlap="true">
+                        <MudIconButton Color="Color.Inherit" Icon="@Icons.Material.Filled.Email" OnClick='() => NavigationManager.NavigateTo("/messages/inbox")' />
+                    </MudBadge>
+                } else {
                     <MudIconButton Color="Color.Inherit" Icon="@Icons.Material.Filled.Email" OnClick='() => NavigationManager.NavigateTo("/messages/inbox")' />
-                </MudBadge>
+                }
             </Authorized>
         </AuthorizeView>
         <AuthorizeView Context="auth">
             <MudText Typo="Typo.body1">@auth.User.Identity?.Name</MudText>
-            @foreach (var role in auth.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value)) {
-                <MudChip T="string" Color="Color.Primary" Class="ml-2">@role</MudChip>
-            }
         </AuthorizeView>
         <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
             <MudMenuItem Href="/Account/Manage" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary">Profile</MudMenuItem>
@@ -72,19 +65,15 @@
         </MudMenu>
     </MudAppBar>
 
-    @if (!_hideNav)
-    {
+    @if (!_hideNav) {
         <MudDrawer id="nav-drawer" Class="left-drawer-dark" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="25">
-            @if (!_authResolved)
-            {
+            @if (!_authResolved) {
                 <MudStack Class="pa-4" Spacing="2">
                     <MudSkeleton Width="60%" Height="28px" />
                     <MudSkeleton Width="80%" />
                     <MudSkeleton Width="40%" />
                 </MudStack>
-            }
-            else
-            {
+            } else {
                 <NavMenu />
             }
         </MudDrawer>
@@ -106,7 +95,7 @@
     </MudScrollToTop>
 </MudLayout>
 
-<EnvironmentBanner />
+@* <EnvironmentBanner /> *@
 
 <div id="blazor-error-ui" data-nosnippet>
     @if (HostEnvironment.IsProduction()) {
@@ -161,8 +150,7 @@
                             try { ThemeService.ApplyTenantBrandingIfAvailableAndChanged(); } catch { }
                         }
                     } catch { }
-                }
-                else if (TenantContext?.TenantId != null) {
+                } else if (TenantContext?.TenantId != null) {
                     _hasTenant = true;
                 }
             }
@@ -188,9 +176,14 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task) {
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> task) {
+        // Delegate signature must be void; run async work without surfacing exceptions
+        _ = HandleAuthStateChangedAsync(task);
+    }
+
+    private async Task HandleAuthStateChangedAsync(Task<AuthenticationState> task) {
         try {
-            var authState = await task;
+            var authState = await task.ConfigureAwait(false);
             _isAuthenticated = authState.User?.Identity?.IsAuthenticated ?? false;
             UpdateHideNavEffective();
             await InvokeAsync(StateHasChanged);
