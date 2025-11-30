@@ -43,6 +43,16 @@ ConfigureServices(builder);
 var app = builder.Build();
 await ConfigurePipeline(app);
 
+// Configure Coravel scheduler for background jobs
+app.Services.UseScheduler(scheduler =>
+{
+    // Run tenant lifecycle job daily at 2 AM
+    scheduler
+        .Schedule<CRS.Jobs.TenantLifecycleJob>()
+        .DailyAtHour(2)
+        .PreventOverlapping(nameof(CRS.Jobs.TenantLifecycleJob));
+});
+
 var provider = app.Services;
 IEventRegistration registration = provider.ConfigureEvents();
 registration.Register<ReserveStudyCreatedEvent>().Subscribe<ReserveStudyCreatedListener>();
@@ -163,6 +173,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
 
     // Register Coravel
     builder.Services.AddMailer(builder.Configuration);
+    builder.Services.AddScheduler(); // Add Coravel scheduler for background jobs
     builder.Services.AddScoped<ReserveStudyCreatedListener>();
     builder.Services.AddScoped<ProposalSentListener>();
     builder.Services.AddScoped<ProposalApprovedListener>();
@@ -170,6 +181,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<FinancialInfoSubmittedListener>();
     builder.Services.AddScoped<ReserveStudyCompletedListener>();
     builder.Services.AddEvents();
+    
+    // Register lifecycle job
+    builder.Services.AddScoped<CRS.Jobs.TenantLifecycleJob>();
 
     // Register controllers for API endpoints (media upload, etc.)
     builder.Services.AddControllers();

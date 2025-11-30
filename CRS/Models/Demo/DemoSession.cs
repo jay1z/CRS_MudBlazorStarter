@@ -41,13 +41,12 @@ namespace CRS.Models.Demo
         /// <summary>
         /// ID of the demo tenant created for this session
         /// </summary>
-        public Guid? DemoTenantId { get; set; }
+        public int? DemoTenantId { get; set; }
         
         /// <summary>
         /// ID of the demo user created for this session
         /// </summary>
-        [StringLength(450)]
-        public string? DemoUserId { get; set; }
+        public Guid? DemoUserId { get; set; }
         
         /// <summary>
         /// Optional email if user provided it

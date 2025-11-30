@@ -6,50 +6,629 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 
-<PageTitle>Start Subscription</PageTitle>
+<PageTitle>Start Your Free Trial - ALX Reserve Cloud</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
-    <MudPaper Class="pa-6">
-        <MudText Typo="Typo.h5" Class="mb-4">Create your company & start subscription</MudText>
-        <EditForm Model="model" OnValidSubmit="HandleValidSubmit">
-            <MudTextField @bind-Value="model.CompanyName" Label="Company name" Required="true" Immediate="true" />
-            <MudTextField @bind-Value="model.Subdomain" Label="Desired subdomain" Required="true" HelperText="Letters, numbers, hyphen (e.g., acme)." Immediate="true" />
-            <MudTextField @bind-Value="model.AdminEmail" Label="Admin email" Required="true" Immediate="true" />
-            <MudSelect T="string" @bind-Value="model.Tier" Label="Plan" Required="true">
-                @foreach (var opt in PlanOptions) {
-                    <MudSelectItem T="string" Value="@opt.Value">@opt.Text</MudSelectItem>
+<!-- Progress Steps Indicator -->
+<div style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); padding: 16px 0;">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center" Spacing="4" Class="flex-wrap">
+            <div class="d-flex align-center gap-2">
+                <div style="width: 32px; height: 32px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #FF8C00;">1</div>
+                <MudText Typo="Typo.body2" Style="color: white; font-weight: 600;">Account Info</MudText>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="color: rgba(255,255,255,0.5);" Size="Size.Small" />
+            <div class="d-flex align-center gap-2" style="opacity: 0.6;">
+                <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">2</div>
+                <MudText Typo="Typo.body2" Style="color: white;">Secure Payment</MudText>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="color: rgba(255,255,255,0.5);" Size="Size.Small" />
+            <div class="d-flex align-center gap-2" style="opacity: 0.6;">
+                <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">3</div>
+                <MudText Typo="Typo.body2" Style="color: white;">Start Using ALX</MudText>
+            </div>
+        </MudStack>
+    </MudContainer>
+</div>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8 mb-16">
+    <MudGrid Spacing="6">
+        <!-- Left Column: Form -->
+        <MudItem xs="12" md="7">
+            <MudPaper Class="pa-8" Elevation="3" Style="border-radius: 20px;">
+                <!-- Header -->
+                <div class="mb-6">
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="margin-bottom: 12px;">
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
+                        14-Day Free Trial
+                    </MudChip>
+                    <MudText Typo="Typo.h4" Class="fw-bold mb-2">
+                        Start Your Free Trial
+                    </MudText>
+                    <MudText Typo="Typo.body1" Style="color: #666;">
+                        No credit card required. Get instant access to all features.
+                    </MudText>
+                </div>
+                
+                <MudDivider Class="my-4" />
+                
+                <EditForm Model="model" OnValidSubmit="HandleValidSubmit">
+                    <MudStack Spacing="4">
+                        <!-- Company Name -->
+                        <div>
+                            <MudTextField @bind-Value="model.CompanyName" 
+                                          Label="Company Name" 
+                                          Variant="Variant.Outlined"
+                                          Required="true" 
+                                          Immediate="true"
+                                          Placeholder="e.g., Miller Reserve Studies"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Business"
+                                          HelperText="The name of your reserve study firm or organization" />
+                        </div>
+                        
+                        <!-- Subdomain -->
+                        <div>
+                            <MudTextField @bind-Value="model.Subdomain" 
+                                          Label="Choose Your Subdomain" 
+                                          Variant="Variant.Outlined"
+                                          Required="true" 
+                                          Immediate="true"
+                                          Placeholder="e.g., miller-reserves"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Link"
+                                          HelperText="@GetSubdomainHelper()"
+                                          OnBlur="ValidateSubdomainAsync"
+                                          Error="@(!string.IsNullOrEmpty(subdomainError))"
+                                          ErrorText="@subdomainError" />
+                            @if (subdomainChecking)
+                            {
+                                <MudText Typo="Typo.caption" Style="color: #666; margin-top: 4px;">
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 16px; height: 16px; vertical-align: middle;" />
+                                    Checking availability...
+                                </MudText>
+                            }
+                            else if (subdomainAvailable == true)
+                            {
+                                <MudText Typo="Typo.caption" Style="color: #28a745; margin-top: 4px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="vertical-align: middle;" />
+                                    @subdomainMessage
+                                </MudText>
+                            }
+                            else if (subdomainAvailable == false && !string.IsNullOrEmpty(subdomainMessage))
+                            {
+                                <MudText Typo="Typo.caption" Style="color: #dc3545; margin-top: 4px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Style="vertical-align: middle;" />
+                                    @subdomainMessage
+                                </MudText>
+                            }
+                        </div>
+                        
+                        <!-- Admin Email -->
+                        <div>
+                            <MudTextField @bind-Value="model.AdminEmail" 
+                                          Label="Your Email Address" 
+                                          Variant="Variant.Outlined"
+                                          Required="true" 
+                                          Immediate="true"
+                                          Placeholder="you@company.com"
+                                          InputType="InputType.Email"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Email"
+                                          HelperText="We'll send your account details to this email"
+                                          OnBlur="ValidateEmailAsync"
+                                          Error="@(!string.IsNullOrEmpty(emailError))"
+                                          ErrorText="@emailError" />
+                            @if (emailChecking)
+                            {
+                                <MudText Typo="Typo.caption" Style="color: #666; margin-top: 4px;">
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Style="width: 16px; height: 16px; vertical-align: middle;" />
+                                    Checking availability...
+                                </MudText>
+                            }
+                            else if (emailAvailable == false && !string.IsNullOrEmpty(emailMessage))
+                            {
+                                <MudText Typo="Typo.caption" Style="color: #dc3545; margin-top: 4px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Style="vertical-align: middle;" />
+                                    @emailMessage
+                                </MudText>
+                            }
+                        </div>
+                        
+                        <!-- Plan Selection -->
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2">Select Your Plan</MudText>
+                            <MudRadioGroup T="string" @bind-Value="model.Tier">
+                                @foreach (var plan in PlanOptions)
+                                {
+                                    <MudPaper Elevation="0" 
+                                              Class="pa-4 mb-3 plan-option" 
+                                              Style="@GetPlanStyle(plan.Value)"
+                                              @onclick="@(() => OnPlanChanged(plan.Value))">
+                                        <MudRadio T="string" Value="@plan.Value" Dense="true">
+                                            <div class="d-flex justify-space-between align-center flex-wrap gap-2">
+                                                <div>
+                                                    <MudText Typo="Typo.body1" Class="fw-bold">@plan.Text</MudText>
+                                                    <MudText Typo="Typo.caption" Style="color: #666;">@GetPlanDescription(plan.Value)</MudText>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <MudText Typo="Typo.h6" Class="fw-bold" Style="color: #FF8C00;">
+                                                        @GetPlanPrice(plan.Value)
+                                                    </MudText>
+                                                    <MudText Typo="Typo.caption" Style="color: #666;">
+                                                        @(model.Interval == "Yearly" ? "billed annually" : "per month")
+                                                    </MudText>
+                                                </div>
+                                            </div>
+                                        </MudRadio>
+                                    </MudPaper>
+                                }
+                            </MudRadioGroup>
+                        </div>
+                        
+                        <!-- Billing Interval Toggle -->
+                        <div class="d-flex justify-center align-center gap-3 pa-4" style="background: #f9f9f9; border-radius: 12px;">
+                            <MudText Typo="Typo.body2" Class="@(model.Interval == "Monthly" ? "fw-bold" : "")" Style="color: #666;">Monthly</MudText>
+                            <MudSwitch @bind-Value="isYearly" Color="Color.Primary" />
+                            <MudText Typo="Typo.body2" Class="@(model.Interval == "Yearly" ? "fw-bold" : "")" Style="color: #666;">
+                                Yearly <MudChip T="string" Size="Size.Small" Color="Color.Success" Style="margin-left: 8px;">Save 20%</MudChip>
+                            </MudText>
+                        </div>
+                        
+                        <!-- Order Summary -->
+                        <MudPaper Elevation="0" Class="pa-4" Style="background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%); border-radius: 12px;">
+                            <MudText Typo="Typo.subtitle2" Class="fw-bold mb-3" Style="color: #6A3D9A;">
+                                <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Small" Class="mr-1" />
+                                Order Summary
+                            </MudText>
+                            
+                            @* DEBUG: Remove this after testing *@
+                            @if (!string.IsNullOrEmpty(model.Tier))
+                            {
+                                <MudText Typo="Typo.caption" Style="color: #999;">Debug: model.Tier = "@model.Tier"</MudText>
+                            }
+                            
+                            <MudStack Spacing="2">
+                                <div class="d-flex justify-space-between">
+                                    <MudText Typo="Typo.body2" Style="color: #666;">Plan:</MudText>
+                                    <MudText Typo="Typo.body2" Class="fw-bold">@GetPlanName(model.Tier)</MudText>
+                                </div>
+                                <div class="d-flex justify-space-between">
+                                    <MudText Typo="Typo.body2" Style="color: #666;">Billing:</MudText>
+                                    <MudText Typo="Typo.body2" Class="fw-bold">@model.Interval</MudText>
+                                </div>
+                                <MudDivider Class="my-2" />
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.body1" Class="fw-bold" Style="color: #FF8C00;">Total:</MudText>
+                                    <MudText Typo="Typo.h6" Class="fw-bold" Style="color: #FF8C00;">@GetPlanPrice(model.Tier)</MudText>
+                                </div>
+                                <MudText Typo="Typo.caption" Style="color: #666;" Align="Align.Center">
+                                    @(model.Interval == "Yearly" ? "billed annually" : "per month")
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+                        
+                        <!-- Submit Button -->
+                        <MudButton Color="Color.Warning" 
+                                   Variant="Variant.Filled" 
+                                   FullWidth="true"
+                                   Size="Size.Large"
+                                   ButtonType="ButtonType.Submit" 
+                                   Disabled="_submitting"
+                                   StartIcon="@(_submitting ? "" : Icons.Material.Filled.Lock)"
+                                   Style="text-transform: none; font-weight: 600; padding: 16px;">
+                            @if (_submitting)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Processing...</span>
+                            }
+                            else
+                            {
+                                <span>Continue to Secure Checkout</span>
+                            }
+                        </MudButton>
+                        
+                        <!-- Trust Signals -->
+                        <div class="d-flex justify-center align-center gap-4 flex-wrap" style="opacity: 0.8;">
+                            <div class="d-flex align-center gap-1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                <MudText Typo="Typo.caption">No credit card</MudText>
+                            </div>
+                            <div class="d-flex align-center gap-1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                <MudText Typo="Typo.caption">14-day trial</MudText>
+                            </div>
+                            <div class="d-flex align-center gap-1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                <MudText Typo="Typo.caption">Cancel anytime</MudText>
+                            </div>
+                        </div>
+                    </MudStack>
+                </EditForm>
+                
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mt-4" Variant="Variant.Outlined">
+                        <MudText Typo="Typo.body2">@_error</MudText>
+                    </MudAlert>
                 }
-            </MudSelect>
-            <MudRadioGroup T="string" @bind-SelectedOption="model.Interval" Class="mt-2">
-                <MudRadio T="string" Option="Monthly">Monthly</MudRadio>
-                <MudRadio T="string" Option="Yearly">Yearly</MudRadio>
-            </MudRadioGroup>
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" Class="mt-4" ButtonType="ButtonType.Submit" Disabled="_submitting">Continue to Secure Checkout</MudButton>
-        </EditForm>
-        @if (!string.IsNullOrEmpty(_error)) {
-            <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
-        }
-        <MudText Typo="Typo.caption" Class="mt-4" Style="color:#666;">After secure payment you will be redirected to a success page where you can finish creating your owner account.</MudText>
-    </MudPaper>
+                
+                <!-- Footer Note -->
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #999; line-height: 1.6;">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Style="vertical-align: middle;" />
+                    Your data is protected with 256-bit encryption. By continuing, you agree to our 
+                    <MudLink Href="/terms" Style="color: #FF8C00;">Terms of Service</MudLink> and 
+                    <MudLink Href="/privacy" Style="color: #FF8C00;">Privacy Policy</MudLink>.
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        
+        <!-- Right Column: Benefits & Trust Signals -->
+        <MudItem xs="12" md="5">
+            <!-- What's Included -->
+            <MudPaper Class="pa-6 mb-4" Elevation="2" Style="border-radius: 16px; background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%);">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Star" Style="color: #FF8C00;" Class="mr-2" />
+                    What's Included in Your Trial
+                </MudText>
+                <MudList T="string" Dense="false">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Full feature access</strong> - Try everything for 14 days</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Automated calculations</strong> - Save 75% of your time</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Professional reports</strong> - Generate PDFs instantly</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Client portals</strong> - Give HOAs 24/7 access</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>Priority support</strong> - Email & chat assistance</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                        <MudText Typo="Typo.body2"><strong>No credit card</strong> - Start risk-free today</MudText>
+                    </MudListItem>
+                </MudList>
+            </MudPaper>
+            
+            <!-- Testimonial -->
+            <MudPaper Class="pa-6 mb-4" Elevation="2" Style="border-radius: 16px;">
+                <MudStack Row="true" AlignItems="AlignItems.Start" Spacing="3">
+                    <MudIcon Icon="@Icons.Material.Filled.FormatQuote" Style="font-size: 40px; color: #FF8C00; opacity: 0.3;" />
+                    <div style="flex: 1;">
+                        <MudText Typo="Typo.body2" Style="font-style: italic; color: #333; line-height: 1.6;" Class="mb-3">
+                            "Setup took literally 5 minutes. We created our first reserve study the same day and cut our report time from 20 hours to 5."
+                        </MudText>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudAvatar Color="Color.Primary" Size="Size.Small">SM</MudAvatar>
+                            <div>
+                                <MudText Typo="Typo.body2" Class="fw-bold">Sarah Miller</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #666;">Miller Reserve Studies, OH</MudText>
+                            </div>
+                        </MudStack>
+                    </div>
+                </MudStack>
+                <MudRating ReadOnly="true" SelectedValue="5" Size="Size.Small" Color="Color.Warning" Class="mt-3" />
+            </MudPaper>
+            
+            <!-- Security & Trust -->
+            <MudPaper Class="pa-6 mb-4" Elevation="2" Style="border-radius: 16px;">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Style="color: #6A3D9A;" Class="mr-2" />
+                    Enterprise Security
+                </MudText>
+                <MudStack Spacing="2">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Size="Size.Small" Style="color: #28a745;" />
+                        <MudText Typo="Typo.body2">SOC 2 Certified & GDPR Compliant</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Cloud" Size="Size.Small" Style="color: #28a745;" />
+                        <MudText Typo="Typo.body2">Hosted on Microsoft Azure</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Backup" Size="Size.Small" Style="color: #28a745;" />
+                        <MudText Typo="Typo.body2">Automated daily backups</MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Style="color: #28a745;" />
+                        <MudText Typo="Typo.body2">256-bit encryption</MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+            
+            <!-- Money-Back Guarantee -->
+            <MudPaper Class="pa-6" Elevation="2" Style="border-radius: 16px; background: #E8F5E9;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Style="font-size: 48px; color: #28a745;" />
+                    <div style="flex: 1;">
+                        <MudText Typo="Typo.h6" Class="fw-bold mb-1">30-Day Money-Back Guarantee</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666; font-size: 14px;">
+                            Not satisfied? Get a full refund within 30 days. No questions asked.
+                        </MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+            
+            <!-- Need Help? -->
+            <div class="mt-4 text-center">
+                <MudText Typo="Typo.body2" Style="color: #666;">
+                    Questions? <MudLink Href="/contact" Style="color: #FF8C00; font-weight: 600;">Chat with our team</MudLink> or 
+                    <MudLink Href="tel:+18005551234" Style="color: #FF8C00; font-weight: 600;">call (800) 555-1234</MudLink>
+                </MudText>
+            </div>
+        </MudItem>
+    </MudGrid>
 </MudContainer>
 
+<!-- FAQ Strip -->
+<div style="background: #f9f9f9; padding: 48px 0;">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudText Typo="Typo.h5" Class="fw-bold mb-6" Align="Align.Center">
+            Frequently Asked Questions
+        </MudText>
+        <MudGrid Spacing="4">
+            <MudItem xs="12" sm="6" md="4">
+                <MudText Typo="Typo.body1" Class="fw-bold mb-2">Do I need a credit card?</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">No! Start your 14-day trial without entering any payment information.</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudText Typo="Typo.body1" Class="fw-bold mb-2">Can I cancel anytime?</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Yes. Cancel during your trial or anytime after with no penalties or fees.</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudText Typo="Typo.body1" Class="fw-bold mb-2">How long does setup take?</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Most users are up and running in under 5 minutes. No IT support required.</MudText>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+</div>
+
 @code {
-    private SignUpModel model = new() { Interval = "Monthly", Tier = "Startup" };
-    private bool _submitting = false;
-    private string? _error;
+[Parameter]
+[SupplyParameterFromQuery(Name = "from")]
+public string? Source { get; set; }
+    
+[Parameter]
+[SupplyParameterFromQuery(Name = "plan")]
+public string? PlanFromQuery { get; set; }
+    
+[Parameter]
+[SupplyParameterFromQuery(Name = "interval")]
+public string? IntervalFromQuery { get; set; }
+    
+private SignUpModel model = new() { Interval = "Monthly", Tier = "Pro" };
+private bool _submitting = false;
+private string? _error;
 
-    private readonly (string Text, string Value)[] PlanOptions = new[] {
-        ("Starter", "Startup"),
-        ("Pro", "Pro"),
-        ("Enterprise", "Enterprise")
+// Subdomain validation state
+private bool? subdomainAvailable = null;
+private bool subdomainChecking = false;
+private string? subdomainError = null;
+private string? subdomainMessage = null;
+
+// Email validation state
+private bool? emailAvailable = null;
+private bool emailChecking = false;
+private string? emailError = null;
+private string? emailMessage = null;
+
+private readonly (string Text, string Value)[] PlanOptions = new[] {
+    ("Starter", "Startup"),
+    ("Professional", "Pro"),
+    ("Enterprise", "Enterprise")
+};
+
+public class SignUpModel {
+    public string CompanyName { get; set; } = string.Empty;
+    public string Subdomain { get; set; } = string.Empty;
+    public string AdminEmail { get; set; } = string.Empty;
+    public string Tier { get; set; } = string.Empty;
+    public string Interval { get; set; } = string.Empty; // Monthly or Yearly
+}
+    
+protected override void OnParametersSet()
+{
+    // Set plan from query parameter if provided, otherwise ensure default is set
+    if (!string.IsNullOrEmpty(PlanFromQuery))
+    {
+        model.Tier = PlanFromQuery;
+    }
+    else if (string.IsNullOrEmpty(model.Tier))
+    {
+        model.Tier = "Pro"; // Ensure default plan is set
+    }
+        
+    // Set interval from query parameter if provided, otherwise ensure default is set
+    if (!string.IsNullOrEmpty(IntervalFromQuery))
+    {
+        model.Interval = IntervalFromQuery;
+    }
+    else if (string.IsNullOrEmpty(model.Interval))
+    {
+        model.Interval = "Monthly"; // Ensure default interval is set
+    }
+        
+    // Auto-select plan based on source
+    if (Source == "demo")
+    {
+        model.Tier = "Pro";
+        Snackbar.Add("Ready to convert your demo to a real account? Fill in your details below.", Severity.Info);
+    }
+}
+    
+    // Yearly toggle property
+    private bool isYearly
+    {
+        get => model.Interval == "Yearly";
+        set 
+        { 
+            model.Interval = value ? "Yearly" : "Monthly";
+            StateHasChanged();
+        }
+    }
+    
+    // Handle plan selection change
+    private void OnPlanChanged(string newPlan)
+    {
+        model.Tier = newPlan;
+        StateHasChanged();
+    }
+    
+    private async Task ValidateSubdomainAsync()
+    {
+        var sub = (model.Subdomain ?? string.Empty).Trim().ToLowerInvariant();
+        subdomainError = null;
+        subdomainMessage = null;
+        
+        if (string.IsNullOrWhiteSpace(sub))
+        {
+            subdomainAvailable = null;
+            return;
+        }
+        
+        // Quick client-side validation first
+        if (!System.Text.RegularExpressions.Regex.IsMatch(sub, "^[a-z0-9-]{3,63}$"))
+        {
+            subdomainAvailable = false;
+            subdomainError = "Subdomain must be 3-63 characters: lowercase letters, numbers, and hyphens only";
+            return;
+        }
+        
+        // Check availability via API
+        subdomainChecking = true;
+        StateHasChanged();
+        
+        try
+        {
+            var client = ClientFactory.CreateClient();
+            var response = await client.GetFromJsonAsync<SubdomainValidationResult>($"{Nav.BaseUri}api/validation/subdomain/{Uri.EscapeDataString(sub)}");
+            
+            if (response != null)
+            {
+                subdomainAvailable = response.IsAvailable;
+                subdomainMessage = response.Message;
+                if (!response.IsAvailable)
+                {
+                    subdomainError = response.Message;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking subdomain: {ex.Message}");
+            subdomainError = "Unable to verify subdomain availability. Please try again.";
+        }
+        finally
+        {
+            subdomainChecking = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task ValidateEmailAsync()
+    {
+        var email = (model.AdminEmail ?? string.Empty).Trim();
+        emailError = null;
+        emailMessage = null;
+        
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            emailAvailable = null;
+            return;
+        }
+        
+        // Quick client-side validation first
+        if (!IsValidEmail(email))
+        {
+            emailAvailable = false;
+            emailError = "Please enter a valid email address";
+            return;
+        }
+        
+        // Check availability via API
+        emailChecking = true;
+        StateHasChanged();
+        
+        try
+        {
+            var client = ClientFactory.CreateClient();
+            var response = await client.GetFromJsonAsync<EmailValidationResult>($"{Nav.BaseUri}api/validation/email?email={Uri.EscapeDataString(email)}");
+            
+            if (response != null)
+            {
+                emailAvailable = response.IsAvailable;
+                emailMessage = response.Message;
+                if (!response.IsAvailable)
+                {
+                    emailError = response.Message;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking email: {ex.Message}");
+            emailError = "Unable to verify email availability. Please try again.";
+        }
+        finally
+        {
+            emailChecking = false;
+            StateHasChanged();
+        }
+    }
+    
+    private string GetSubdomainHelper()
+    {
+        var sub = (model.Subdomain ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(sub))
+        {
+            return "Choose a unique identifier (e.g., miller-reserves)";
+        }
+        return $"Your portal will be: {sub}.alxreservecloud.com";
+    }
+    
+    private string GetPlanStyle(string planValue)
+    {
+        var isSelected = model.Tier == planValue;
+        return isSelected 
+            ? "border: 2px solid #FF8C00; background: #FFF5E6; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;"
+            : "border: 2px solid #e0e0e0; background: white; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;";
+    }
+    
+    private string GetPlanDescription(string planValue) => planValue switch
+    {
+        "Startup" => "Up to 10 properties, 2 team members",
+        "Pro" => "Up to 50 properties, unlimited team members",
+        "Enterprise" => "Unlimited properties, dedicated support",
+        _ => ""
     };
-
-    public class SignUpModel {
-        public string CompanyName { get; set; } = string.Empty;
-        public string Subdomain { get; set; } = string.Empty;
-        public string AdminEmail { get; set; } = string.Empty;
-        public string Tier { get; set; } = string.Empty;
-        public string Interval { get; set; } = string.Empty; // Monthly or Yearly
+    
+    private string GetPlanName(string? planValue)
+    {
+        if (string.IsNullOrWhiteSpace(planValue))
+            return "Professional"; // Default fallback
+            
+        return planValue switch
+        {
+            "Startup" => "Starter",
+            "Pro" => "Professional",
+            "Enterprise" => "Enterprise",
+            _ => "Professional" // Fallback if value doesn't match
+        };
+    }
+    
+    private string GetPlanPrice(string planValue)
+    {
+        var isYearly = model.Interval == "Yearly";
+        return planValue switch
+        {
+            "Startup" => isYearly ? "$159/mo" : "$199/mo",
+            "Pro" => isYearly ? "$399/mo" : "$499/mo",
+            "Enterprise" => "Custom",
+            _ => ""
+        };
     }
 
     private static bool IsValidEmail(string email) =>
@@ -59,17 +638,70 @@
 
     private async Task OnSubmitAsync() {
         _error = null;
-        if (string.IsNullOrWhiteSpace(model.CompanyName)) { _error = "Company name is required."; return; }
+        
+        // Validation
+        if (string.IsNullOrWhiteSpace(model.CompanyName)) 
+        { 
+            _error = "Company name is required."; 
+            return; 
+        }
+        
         var sub = (model.Subdomain ?? string.Empty).Trim().ToLowerInvariant();
-        if (!System.Text.RegularExpressions.Regex.IsMatch(sub, "^[a-z0-9-]{1,63}$")) { _error = "Invalid subdomain."; return; }
-        if (!IsValidEmail(model.AdminEmail)) { _error = "Valid admin email is required."; return; }
-        if (string.IsNullOrWhiteSpace(model.Tier)) { _error = "Plan selection required."; return; }
-        if (string.IsNullOrWhiteSpace(model.Interval)) model.Interval = "Monthly";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(sub, "^[a-z0-9-]{3,63}$")) 
+        { 
+            _error = "Subdomain must be 3-63 characters: letters, numbers, and hyphens only."; 
+            return; 
+        }
+        
+        // Validate subdomain availability if not already checked
+        if (subdomainAvailable != true)
+        {
+            await ValidateSubdomainAsync();
+            if (subdomainAvailable != true)
+            {
+                _error = subdomainError ?? "Please choose an available subdomain.";
+                return;
+            }
+        }
+        
+        // Validate email availability if not already checked
+        if (emailAvailable != true)
+        {
+            await ValidateEmailAsync();
+            if (emailAvailable != true)
+            {
+                _error = emailError ?? "Please use an available email address.";
+                return;
+            }
+        }
+        
+        if (!IsValidEmail(model.AdminEmail)) 
+        { 
+            _error = "Please enter a valid email address."; 
+            return; 
+        }
+        
+        if (string.IsNullOrWhiteSpace(model.Tier)) 
+        { 
+            _error = "Please select a plan."; 
+            return; 
+        }
+        
+        if (string.IsNullOrWhiteSpace(model.Interval)) 
+        {
+            model.Interval = "Monthly";
+        }
 
         _submitting = true;
+        StateHasChanged();
+        
         try {
             var client = ClientFactory.CreateClient();
-            var apiUrl = $"{Nav.BaseUri}api/signup/start"; // ensure absolute URL
+            var apiUrl = $"{Nav.BaseUri}api/signup/start";
+            
+            // Log what we're sending to help debug
+            Console.WriteLine($"[SIGNUP] Submitting: Tier={model.Tier}, Interval={model.Interval}");
+            
             var resp = await client.PostAsJsonAsync(apiUrl, new {
                 companyName = model.CompanyName.Trim(),
                 subdomain = sub,
@@ -77,20 +709,69 @@
                 tier = model.Tier,
                 interval = model.Interval
             });
+            
             if (!resp.IsSuccessStatusCode) {
-                _error = $"Signup failed: {await resp.Content.ReadAsStringAsync()}"; _submitting = false; return;
+                var errorContent = await resp.Content.ReadAsStringAsync();
+                _error = $"Signup failed: {errorContent}";
+                _submitting = false;
+                StateHasChanged();
+                return;
             }
+            
             var payload = await resp.Content.ReadFromJsonAsync<StartResponse>();
-            // payload.SignupToken available if needed for client-side tracking
+            
             if (payload?.CheckoutUrl is string url && !string.IsNullOrWhiteSpace(url)) {
+                // Track conversion
+                Snackbar.Add($"Redirecting to checkout for {model.Tier} ({model.Interval})...", Severity.Success);
                 Nav.NavigateTo(url, forceLoad: true);
             } else {
-                _error = "Unexpected response."; _submitting = false;
+                _error = "Unexpected response from server. Please try again.";
+                _submitting = false;
+                StateHasChanged();
             }
         } catch (Exception ex) {
-            _error = ex.Message; _submitting = false;
+            _error = $"An error occurred: {ex.Message}. Please try again or contact support.";
+            _submitting = false;
+            StateHasChanged();
         }
     }
 
-    private class StartResponse { public string? CheckoutUrl { get; set; } }
+    private class StartResponse 
+    { 
+        public string? CheckoutUrl { get; set; } 
+        public string? SignupToken { get; set; }
+    }
+    
+    private class SubdomainValidationResult
+    {
+        public bool IsAvailable { get; set; }
+        public bool IsValid { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+    
+    private class EmailValidationResult
+    {
+        public bool IsAvailable { get; set; }
+        public bool IsValid { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
 }
+
+<style>
+    .plan-option:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* Smooth animations */
+    .mud-paper {
+        transition: all 0.3s ease;
+    }
+    
+    /* Responsive adjustments */
+    @@media (max-width: 960px) {
+        .mud-container {
+            padding: 16px !important;
+        }
+    }
+</style>

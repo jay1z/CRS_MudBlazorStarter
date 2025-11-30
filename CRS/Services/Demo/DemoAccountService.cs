@@ -5,6 +5,7 @@ using CRS.Data;
 using CRS.Models;
 using CRS.Models.Demo;
 using CRS.Models.Security;
+using TenantModel = CRS.Models.Tenant;
 
 namespace CRS.Services.Demo
 {
@@ -76,10 +77,10 @@ namespace CRS.Services.Demo
                 }
                 
                 // Create demo tenant
-                var demoTenant = new Tenant
+                var demoTenant = new TenantModel
                 {
                     Name = $"Demo Account - {sessionId}",
-                    OwnerId = demoUser.Id,
+                    OwnerId = demoUser.Id.ToString(),
                     IsDemo = true,
                     CreatedAt = DateTime.UtcNow
                 };
@@ -161,7 +162,7 @@ namespace CRS.Services.Demo
                 if (session == null || session.DemoUserId == null)
                     return false;
                 
-                var demoUser = await _userManager.FindByIdAsync(session.DemoUserId);
+                var demoUser = await _userManager.FindByIdAsync(session.DemoUserId.Value.ToString());
                 if (demoUser == null)
                     return false;
                 
@@ -231,7 +232,7 @@ namespace CRS.Services.Demo
                     // Delete demo user
                     if (session.DemoUserId != null)
                     {
-                        var user = await _userManager.FindByIdAsync(session.DemoUserId);
+                        var user = await _userManager.FindByIdAsync(session.DemoUserId.Value.ToString());
                         if (user != null && user.IsDemo)
                         {
                             await _userManager.DeleteAsync(user);

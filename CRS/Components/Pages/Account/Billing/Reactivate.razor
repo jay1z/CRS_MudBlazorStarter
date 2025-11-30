@@ -1,0 +1,295 @@
+﻿@page "/Account/Billing/Reactivate"
+@using CRS.Models
+@using CRS.Data
+@using CRS.Services.Billing
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IBillingService BillingService
+@inject ITenantContext TenantContext
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Reactivate Your Account - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8 mb-16">
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+    else if (_tenant == null)
+    {
+        <MudAlert Severity="Severity.Error">Unable to load account information.</MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-6" Elevation="3">
+            <!-- Status Header -->
+            @if (_tenant.SubscriptionStatus == SubscriptionStatus.Suspended)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mb-4" Variant="Variant.Filled">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.PauseCircle" Class="mr-2" />
+                            Account Suspended
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            Your account was suspended @_daysSuspended days ago due to payment issues.
+                        </MudText>
+                    </MudStack>
+                </MudAlert>
+            }
+            else if (_tenant.IsMarkedForDeletion)
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4" Variant="Variant.Filled">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+                            Scheduled for Deletion
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            Your account is scheduled for permanent deletion on <strong>@_tenant.DeletionScheduledAt?.ToString("MMMM dd, yyyy")</strong>.
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            That's @_daysUntilDeletion days from now.
+                        </MudText>
+                    </MudStack>
+                </MudAlert>
+            }
+
+            <!-- Main Content -->
+            <MudText Typo="Typo.h4" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-2" Style="color: #FF8C00;" />
+                Reactivate Your Account
+            </MudText>
+
+            <!-- Good News Section -->
+            <MudPaper Class="pa-4 mb-4" Elevation="0" Style="background: #E8F5E9; border-radius: 12px;">
+                <MudText Typo="Typo.h6" Class="mb-2" Style="color: #2E7D32;">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #2E7D32;" />
+                    Your Data is Safe!
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: #1B5E20;">
+                    All your communities, reserve studies, contacts, and documents are preserved and waiting for you.
+                </MudText>
+            </MudPaper>
+
+            <!-- Data Summary -->
+            <MudGrid Class="mb-4">
+                <MudItem xs="6">
+                    <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid #e0e0e0;">
+                        <MudText Typo="Typo.caption" Style="color: #666;">Communities</MudText>
+                        <MudText Typo="Typo.h5" Class="fw-bold">@_communityCount</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudPaper Class="pa-3" Elevation="0" Style="border: 1px solid #e0e0e0;">
+                        <MudText Typo="Typo.caption" Style="color: #666;">Reserve Studies</MudText>
+                        <MudText Typo="Typo.h5" Class="fw-bold">@_studyCount</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <!-- What Happens Section -->
+            <MudText Typo="Typo.h6" Class="mb-3">What Happens When You Reactivate?</MudText>
+            <MudList T="string" Dense="false" Class="mb-4">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.FlashOn" IconColor="Color.Success">
+                    <MudText Typo="Typo.body2"><strong>Instant Access</strong> - Full account access restored immediately</MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.DataObject" IconColor="Color.Success">
+                    <MudText Typo="Typo.body2"><strong>All Data Intact</strong> - Everything exactly as you left it</MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.People" IconColor="Color.Success">
+                    <MudText Typo="Typo.body2"><strong>Team Access</strong> - All team members can log in again</MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Support" IconColor="Color.Success">
+                    <MudText Typo="Typo.body2"><strong>Support Available</strong> - We're here if you need help</MudText>
+                </MudListItem>
+            </MudList>
+
+            <MudDivider Class="my-4" />
+
+            <!-- Action Buttons -->
+            @if (!_tenant.IsMarkedForDeletion)
+            {
+                <!-- Regular Reactivation -->
+                <MudButton Color="Color.Primary" 
+                           Variant="Variant.Filled" 
+                           Size="Size.Large"
+                           FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.CreditCard"
+                           OnClick="ReactivateSubscriptionAsync"
+                           Disabled="_processing"
+                           Class="mb-3">
+                    @if (_processing)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Processing...</span>
+                    }
+                    else
+                    {
+                        <span>Update Payment & Reactivate Now</span>
+                    }
+                </MudButton>
+                
+                <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #666;">
+                    You'll be redirected to our secure payment portal to update your payment method.
+                </MudText>
+            }
+            else
+            {
+                <!-- Account Marked for Deletion - Requires Support -->
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    <MudText Typo="Typo.body2" Class="mb-2">
+                        Because your account is scheduled for deletion, reactivation requires manual verification by our support team.
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        This is a security measure to prevent unauthorized access.
+                    </MudText>
+                </MudAlert>
+
+                <MudButton Color="Color.Primary" 
+                           Variant="Variant.Filled" 
+                           Size="Size.Large"
+                           FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.Email"
+                           Href="@GetSupportEmailLink()"
+                           Class="mb-3">
+                    Contact Support to Reactivate
+                </MudButton>
+
+                <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #666;">
+                    <MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" Style="vertical-align: middle;" />
+                    Or call us: <MudLink Href="tel:+18005551234" Style="color: #FF8C00;">(800) 555-1234</MudLink>
+                </MudText>
+            }
+
+            <MudDivider Class="my-4" />
+
+            <!-- FAQ Section -->
+            <MudExpansionPanels>
+                <MudExpansionPanel Text="Will I be charged immediately?" IsInitiallyExpanded="false">
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        Yes, when you reactivate, your subscription will restart and you'll be charged for the current billing period.
+                        Your billing cycle will continue from where it was paused.
+                    </MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="Can I recover my data if it's deleted?" IsInitiallyExpanded="false">
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        Once data is permanently deleted (after @_daysUntilDeletion days), it cannot be recovered.
+                        We recommend reactivating as soon as possible to ensure no data loss.
+                    </MudText>
+                </MudExpansionPanel>
+                <MudExpansionPanel Text="What if I don't want to reactivate?" IsInitiallyExpanded="false">
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        You can export your data before the deletion date by contacting support. After the deletion date,
+                        all data will be permanently removed from our systems.
+                    </MudText>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+
+            <!-- Support Contact -->
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.body2" Align="Align.Center" Style="color: #666;">
+                Need help? Email <MudLink Href="mailto:support@alxreservecloud.com" Style="color: #FF8C00; font-weight: 600;">support@alxreservecloud.com</MudLink>
+            </MudText>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private Tenant? _tenant;
+    private bool _loading = true;
+    private bool _processing = false;
+    private int _communityCount = 0;
+    private int _studyCount = 0;
+    private int _daysSuspended = 0;
+    private int _daysUntilDeletion = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTenantStatusAsync();
+    }
+
+    private async Task LoadTenantStatusAsync()
+    {
+        try
+        {
+            if (!TenantContext.TenantId.HasValue)
+            {
+                Nav.NavigateTo("/");
+                return;
+            }
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
+
+            if (_tenant != null)
+            {
+                // Calculate suspension duration
+                if (_tenant.SuspendedAt.HasValue)
+                {
+                    _daysSuspended = (DateTime.UtcNow - _tenant.SuspendedAt.Value).Days;
+                }
+
+                // Calculate days until deletion
+                if (_tenant.DeletionScheduledAt.HasValue)
+                {
+                    _daysUntilDeletion = Math.Max(0, (_tenant.DeletionScheduledAt.Value - DateTime.UtcNow).Days);
+                }
+
+                // Get data counts to show user what they're recovering
+                _communityCount = await db.Communities.CountAsync(c => c.TenantId == _tenant.Id);
+                _studyCount = await db.ReserveStudies.CountAsync(r => r.TenantId == _tenant.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading account status: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ReactivateSubscriptionAsync()
+    {
+        if (_tenant == null) return;
+
+        _processing = true;
+        StateHasChanged();
+
+        try
+        {
+            // Create Stripe billing portal session for payment update
+            var portalUrl = await BillingService.CreateBillingPortalSessionAsync(_tenant.Id);
+            
+            Snackbar.Add("Redirecting to payment portal...", Severity.Info);
+            
+            // Redirect to Stripe billing portal where user can update payment method
+            // After successful payment, webhook will reactivate the account
+            Nav.NavigateTo(portalUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error accessing payment portal: {ex.Message}", Severity.Error);
+            _processing = false;
+        }
+    }
+    
+    private string GetSupportEmailLink()
+    {
+        if (_tenant == null) return "mailto:support@alxreservecloud.com";
+        var subject = System.Net.WebUtility.UrlEncode($"Reactivate Account - {_tenant.Subdomain}");
+        return $"mailto:support@alxreservecloud.com?subject={subject}";
+    }
+}
+
+<style>
+    .mud-expansion-panel {
+        box-shadow: none !important;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 8px !important;
+    }
+</style>

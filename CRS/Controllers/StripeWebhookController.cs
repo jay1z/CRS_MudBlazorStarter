@@ -10,6 +10,7 @@ using Stripe.Checkout;
 using Coravel.Mailer.Mail.Interfaces; // mailer retained for potential future notifications
 using CRS.Services.Email; // BasicMailable (unused here but kept if needed later)
 using CRS.Services.Provisioning; // owner provisioning service
+using CRS.Models; // for SubscriptionStatus enum
 
 namespace CRS.Controllers {
     [ApiController]
@@ -100,115 +101,82 @@ namespace CRS.Controllers {
 
         private async Task HandleCheckoutSessionCompletedAsync(Event stripeEvent, CancellationToken ct) {
             var session = stripeEvent.Data.Object as Session;
-            if (session == null) return;
-            _logger.LogInformation("Checkout session completed {SessionId} customer {CustomerId}", session.Id, session.CustomerId);
+            if (session == null) {
+                _logger.LogWarning("Checkout session is null for event {EventId}", stripeEvent.Id);
+                return;
+            }
+            _logger.LogInformation("Checkout session completed {SessionId} customer {CustomerId} subscription {SubscriptionId}", 
+                session.Id, session.CustomerId, session.SubscriptionId);
 
             // Prefer session metadata; fallback to subscription metadata if needed
-            IReadOnlyDictionary<string, string> meta = session.Metadata ?? new Dictionary<string, string>();
+            IReadOnlyDictionary<string, string>? meta = session.Metadata;
+            
+            // Log raw metadata state
+            if (meta != null && meta.Count > 0) {
+                _logger.LogInformation("Session metadata found with {Count} keys: {Keys}", 
+                    meta.Count, string.Join(", ", meta.Keys));
+                // Log all metadata values for debugging
+                foreach (var kvp in meta) {
+                    _logger.LogInformation("  Metadata[{Key}] = {Value}", kvp.Key, kvp.Value);
+                }
+            } else {
+                _logger.LogWarning("Session metadata is null or empty for {SessionId}, attempting subscription fallback", session.Id);
+            }
+            
             Subscription? sub = null;
             if ((meta == null || meta.Count == 0) && !string.IsNullOrWhiteSpace(session.SubscriptionId)) {
                 try {
+                    _logger.LogInformation("Fetching subscription {SubId} metadata as fallback", session.SubscriptionId);
                     var client = _stripeClientFactory.CreateClient();
                     var subSvc = new SubscriptionService(client);
                     sub = await subSvc.GetAsync(session.SubscriptionId, options: null, requestOptions: null, cancellationToken: ct);
-                    if (sub?.Metadata != null && sub.Metadata.Count > 0) meta = sub.Metadata;
+                    if (sub?.Metadata != null && sub.Metadata.Count > 0) {
+                        meta = sub.Metadata;
+                        _logger.LogInformation("Using subscription metadata with {Count} keys: {Keys}", 
+                            meta.Count, string.Join(", ", meta.Keys));
+                        foreach (var kvp in meta) {
+                            _logger.LogInformation("  SubMetadata[{Key}] = {Value}", kvp.Key, kvp.Value);
+                        }
+                    } else {
+                        _logger.LogWarning("Subscription {SubId} also has no metadata", session.SubscriptionId);
+                    }
                 } catch (Exception ex) {
-                    _logger.LogWarning(ex, "Unable to fetch subscription {SubId} for metadata fallback", session.SubscriptionId);
+                    _logger.LogError(ex, "Unable to fetch subscription {SubId} for metadata fallback", session.SubscriptionId);
                 }
             }
 
-            if (meta != null && meta.Count > 0) {
-                _logger.LogInformation("Session/subscription metadata keys: {Keys}", string.Join(",", meta.Keys));
-            } else {
-                _logger.LogWarning("No metadata available on session or subscription for {SessionId}", session.Id);
-            }
-
+            // Check if this is a deferred tenant creation (new signup flow)
             var isDeferred = meta != null && meta.TryGetValue("deferred_tenant", out var def) && string.Equals(def, "true", StringComparison.OrdinalIgnoreCase);
+            var deferredValue = meta?.TryGetValue("deferred_tenant", out var dv) == true ? dv : "not found";
+            _logger.LogInformation("Checking deferred flag: meta is null={MetaNull}, has deferred_tenant={HasFlag}, value={Value}, isDeferred={IsDeferred}", 
+                meta == null, meta?.ContainsKey("deferred_tenant") ?? false, deferredValue, isDeferred);
+            
             if (isDeferred) {
-                var companyName = meta.TryGetValue("company_name", out var cn) ? cn : null;
+                var companyName = meta!.TryGetValue("company_name", out var cn) ? cn : null;
                 var subdomain = meta.TryGetValue("subdomain", out var sd) ? sd : null;
                 var adminEmail = meta.TryGetValue("admin_email", out var ae) ? ae : null;
                 var tierStr = meta.TryGetValue("tier", out var tr) ? tr : null;
-                _logger.LogInformation("Deferred flow metadata company={Company} subdomain={Subdomain} admin={Admin} tier={Tier}", companyName, subdomain, adminEmail, tierStr);
+                _logger.LogInformation("Deferred tenant creation: company={Company} subdomain={Subdomain} admin={Admin} tier={Tier}", 
+                    companyName, subdomain, adminEmail, tierStr);
+                
                 if (string.IsNullOrWhiteSpace(companyName) || string.IsNullOrWhiteSpace(subdomain)) {
-                    _logger.LogWarning("Deferred checkout missing required metadata. company={Company} subdomain={Subdomain}", companyName, subdomain);
-                    return;
+                    var error = $"Deferred checkout missing required metadata. company='{companyName}' subdomain='{subdomain}'";
+                    _logger.LogError(error);
+                    throw new InvalidOperationException(error);
                 }
-                var existing = await _db.Tenants.FirstOrDefaultAsync(t => t.Subdomain == subdomain, ct);
-                if (existing == null) {
-                    CRS.Models.SubscriptionTier? tier = null;
-                    if (Enum.TryParse<CRS.Models.SubscriptionTier>(tierStr, true, out var parsedTier)) tier = parsedTier;
-                    var tenant = new CRS.Models.Tenant {
-                        Name = companyName,
-                        Subdomain = subdomain,
-                        IsActive = true,
-                        CreatedAt = DateTime.UtcNow,
-                        ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active,
-                        SubscriptionStatus = CRS.Models.SubscriptionStatus.Incomplete,
-                        PendingOwnerEmail = adminEmail,
-                        StripeCustomerId = session.CustomerId,
-                        LastStripeCheckoutSessionId = session.Id,
-                        Tier = tier
-                    };
-                    _db.Tenants.Add(tenant);
-                    await _db.SaveChangesAsync(ct);
-                    _logger.LogInformation("Deferred tenant created {TenantId} for subdomain {Subdomain}", tenant.Id, subdomain);
-                    await _ownerProvisioning.ProvisionAsync(tenant, adminEmail, ct);
-                } else {
-                    if (string.IsNullOrWhiteSpace(existing.StripeCustomerId) && !string.IsNullOrWhiteSpace(session.CustomerId)) {
-                        existing.StripeCustomerId = session.CustomerId;
-                        await _db.SaveChangesAsync(ct);
-                    }
-                    await _ownerProvisioning.ProvisionAsync(existing, adminEmail, ct);
-                }
-                return;
-            }
-
-            // legacy path
-            var tenantIdMeta = session.Metadata != null && session.Metadata.TryGetValue("tenant_id", out var tid) ? tid : null;
-            var adminEmailMeta = session.Metadata != null && session.Metadata.TryGetValue("admin_email", out var aem) ? aem : null;
-            if (int.TryParse(tenantIdMeta, out var tenantId)) {
-                var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
-                if (tenant != null) {
-                    tenant.StripeCustomerId ??= session.CustomerId;
-                    if (!string.IsNullOrWhiteSpace(adminEmailMeta) && string.IsNullOrWhiteSpace(tenant.PendingOwnerEmail)) tenant.PendingOwnerEmail = adminEmailMeta.Trim();
-                    tenant.ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active;
-                    tenant.SubscriptionStatus = CRS.Models.SubscriptionStatus.Incomplete;
-                    tenant.IsActive = true;
-                    tenant.UpdatedAt = DateTime.UtcNow;
-                    await _db.SaveChangesAsync(ct);
-                    _logger.LogInformation("Activated tenant {TenantId} after checkout session, pending owner {Email}", tenantId, tenant.PendingOwnerEmail);
-                    await _ownerProvisioning.ProvisionAsync(tenant, adminEmailMeta, ct);
-                } else {
-                    _logger.LogWarning("Legacy path: tenant id {TenantId} not found", tenantId);
-                }
-            } else {
-                _logger.LogInformation("Legacy path not taken: no tenant_id metadata on session");
-            }
-        }
-
-        private async Task HandleSubscriptionUpdatedAsync(Event stripeEvent, CancellationToken ct) {
-            var subscription = stripeEvent.Data.Object as Subscription;
-            if (subscription == null) return;
-            var status = MapStatus(subscription.Status);
-            CRS.Models.SubscriptionTier? tier = null;
-            var priceId = subscription.Items.Data.FirstOrDefault()?.Price?.Id;
-            if (priceId != null) {
-                if (priceId == _stripeOptions.StarterMonthlyPriceId || priceId == _stripeOptions.StarterYearlyPriceId || priceId == _stripeOptions.StartupPriceId) tier = CRS.Models.SubscriptionTier.Startup;
-                else if (priceId == _stripeOptions.ProMonthlyPriceId || priceId == _stripeOptions.ProYearlyPriceId || priceId == _stripeOptions.ProPriceId) tier = CRS.Models.SubscriptionTier.Pro;
-                else if (priceId == _stripeOptions.EnterpriseMonthlyPriceId || priceId == _stripeOptions.EnterpriseYearlyPriceId || priceId == _stripeOptions.EnterprisePriceId) tier = CRS.Models.SubscriptionTier.Enterprise;
-            }
-
-            var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.StripeCustomerId == subscription.CustomerId || t.StripeSubscriptionId == subscription.Id, ct);
-            if (tenant == null && subscription.Metadata != null && subscription.Metadata.TryGetValue("deferred_tenant", out var def) && def == "true") {
-                // Subscription event arrived before checkout.session.completed; create tenant now
-                subscription.Metadata.TryGetValue("company_name", out var companyName);
-                subscription.Metadata.TryGetValue("subdomain", out var subdomain);
-                subscription.Metadata.TryGetValue("admin_email", out var adminEmail);
-                if (!string.IsNullOrWhiteSpace(companyName) && !string.IsNullOrWhiteSpace(subdomain)) {
+                
+                try {
                     var existing = await _db.Tenants.FirstOrDefaultAsync(t => t.Subdomain == subdomain, ct);
                     if (existing == null) {
-                        var newTenant = new CRS.Models.Tenant {
+                        _logger.LogInformation("Creating new tenant for subdomain {Subdomain}", subdomain);
+                        CRS.Models.SubscriptionTier? tier = null;
+                        if (!string.IsNullOrWhiteSpace(tierStr) && Enum.TryParse<CRS.Models.SubscriptionTier>(tierStr, true, out var parsedTier)) {
+                            tier = parsedTier;
+                        } else {
+                            _logger.LogWarning("Could not parse tier '{Tier}', defaulting to null", tierStr);
+                        }
+                        
+                        var tenant = new CRS.Models.Tenant {
                             Name = companyName,
                             Subdomain = subdomain,
                             IsActive = true,
@@ -216,39 +184,268 @@ namespace CRS.Controllers {
                             ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active,
                             SubscriptionStatus = CRS.Models.SubscriptionStatus.Incomplete,
                             PendingOwnerEmail = adminEmail,
-                            StripeCustomerId = subscription.CustomerId,
-                            StripeSubscriptionId = subscription.Id,
+                            StripeCustomerId = session.CustomerId,
+                            LastStripeCheckoutSessionId = session.Id,
                             Tier = tier
                         };
-                        _db.Tenants.Add(newTenant);
+                        _db.Tenants.Add(tenant);
                         await _db.SaveChangesAsync(ct);
-                        _logger.LogInformation("Tenant created from subscription.updated {TenantId} for subdomain {Subdomain}", newTenant.Id, subdomain);
-                        await _ownerProvisioning.ProvisionAsync(newTenant, adminEmail, ct);
-                        tenant = newTenant; // continue applying update below
+                        _logger.LogInformation("Successfully created tenant {TenantId} for subdomain {Subdomain}", tenant.Id, subdomain);
+                        
+                        // Provision owner account
+                        _logger.LogInformation("Provisioning owner account for {Email}", adminEmail);
+                        var provisionResult = await _ownerProvisioning.ProvisionAsync(tenant, adminEmail, ct);
+                        _logger.LogInformation("Owner provisioning result: {Result}", provisionResult);
                     } else {
-                        tenant = existing;
-                        await _ownerProvisioning.ProvisionAsync(existing, adminEmail, ct);
+                        _logger.LogInformation("Tenant {TenantId} already exists for subdomain {Subdomain}, updating Stripe customer ID", existing.Id, subdomain);
+                        if (string.IsNullOrWhiteSpace(existing.StripeCustomerId) && !string.IsNullOrWhiteSpace(session.CustomerId)) {
+                            existing.StripeCustomerId = session.CustomerId;
+                            existing.LastStripeCheckoutSessionId = session.Id;
+                            await _db.SaveChangesAsync(ct);
+                            _logger.LogInformation("Updated existing tenant {TenantId} with Stripe customer {CustomerId}", existing.Id, session.CustomerId);
+                        }
+                        var provisionResult = await _ownerProvisioning.ProvisionAsync(existing, adminEmail, ct);
+                        _logger.LogInformation("Owner provisioning result for existing tenant: {Result}", provisionResult);
                     }
+                } catch (Exception ex) {
+                    _logger.LogError(ex, "Failed to create/update tenant for subdomain {Subdomain}", subdomain);
+                    throw; // Re-throw to be caught by outer try-catch
                 }
+                return;
+            } else {
+                _logger.LogInformation("Not a deferred tenant creation, checking legacy path");
+            }
+
+            // legacy path (for existing tenant upgrades/downgrades)
+            var tenantIdMeta = meta != null && meta.TryGetValue("tenant_id", out var tid) ? tid : null;
+            var adminEmailMeta = meta != null && meta.TryGetValue("admin_email", out var aem) ? aem : null;
+            
+            _logger.LogInformation("Checking legacy path: tenantIdMeta={TenantIdMeta}, canParse={CanParse}", 
+                tenantIdMeta, int.TryParse(tenantIdMeta, out _));
+            
+            if (int.TryParse(tenantIdMeta, out var tenantId)) {
+                _logger.LogInformation("Legacy path: activating existing tenant {TenantId}", tenantId);
+                var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+                if (tenant != null) {
+                    tenant.StripeCustomerId ??= session.CustomerId;
+                    tenant.LastStripeCheckoutSessionId = session.Id;
+                    if (!string.IsNullOrWhiteSpace(adminEmailMeta) && string.IsNullOrWhiteSpace(tenant.PendingOwnerEmail)) {
+                        tenant.PendingOwnerEmail = adminEmailMeta.Trim();
+                    }
+                    tenant.ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active;
+                    tenant.SubscriptionStatus = CRS.Models.SubscriptionStatus.Incomplete;
+                    tenant.IsActive = true;
+                    tenant.UpdatedAt = DateTime.UtcNow;
+                    await _db.SaveChangesAsync(ct);
+                    _logger.LogInformation("Activated existing tenant {TenantId}, pending owner {Email}", tenantId, tenant.PendingOwnerEmail);
+                    var provisionResult = await _ownerProvisioning.ProvisionAsync(tenant, adminEmailMeta, ct);
+                    _logger.LogInformation("Legacy path owner provisioning result: {Result}", provisionResult);
+                } else {
+                    var error = $"Legacy path: tenant ID {tenantId} not found in database";
+                    _logger.LogError(error);
+                    throw new InvalidOperationException(error);
+                }
+            } else {
+                var error = $"No valid tenant identifier found in metadata. Session has neither 'deferred_tenant=true' nor 'tenant_id'. Available keys: {(meta != null ? string.Join(", ", meta.Keys) : "none")}";
+                _logger.LogError(error);
+                throw new InvalidOperationException(error);
+            }
+        }
+
+        private async Task HandleSubscriptionUpdatedAsync(Event stripeEvent, CancellationToken ct) {
+            var subscription = stripeEvent.Data.Object as Subscription;
+            if (subscription == null) {
+                _logger.LogWarning("Subscription is null for event {EventId}", stripeEvent.Id);
+                return;
+            }
+            
+            _logger.LogInformation("Subscription event: id={SubId} customer={CustomerId} status={Status}", 
+                subscription.Id, subscription.CustomerId, subscription.Status);
+            
+            var status = MapStatus(subscription.Status);
+            CRS.Models.SubscriptionTier? tier = null;
+            var priceId = subscription.Items.Data.FirstOrDefault()?.Price?.Id;
+            _logger.LogInformation("Subscription price ID: {PriceId}", priceId);
+            
+            if (priceId != null) {
+                if (priceId == _stripeOptions.StarterMonthlyPriceId || priceId == _stripeOptions.StarterYearlyPriceId || priceId == _stripeOptions.StartupPriceId) tier = CRS.Models.SubscriptionTier.Startup;
+                else if (priceId == _stripeOptions.ProMonthlyPriceId || priceId == _stripeOptions.ProYearlyPriceId || priceId == _stripeOptions.ProPriceId) tier = CRS.Models.SubscriptionTier.Pro;
+                else if (priceId == _stripeOptions.EnterpriseMonthlyPriceId || priceId == _stripeOptions.EnterpriseYearlyPriceId || priceId == _stripeOptions.EnterprisePriceId) tier = CRS.Models.SubscriptionTier.Enterprise;
+                _logger.LogInformation("Mapped price to tier: {Tier}", tier);
+            }
+
+            var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.StripeCustomerId == subscription.CustomerId || t.StripeSubscriptionId == subscription.Id, ct);
+            
+            if (tenant == null) {
+                _logger.LogInformation("No existing tenant found for customer {CustomerId} or subscription {SubId}, checking for deferred creation", 
+                    subscription.CustomerId, subscription.Id);
+                
+                // Log subscription metadata
+                if (subscription.Metadata != null && subscription.Metadata.Count > 0) {
+                    _logger.LogInformation("Subscription metadata keys: {Keys}", string.Join(", ", subscription.Metadata.Keys));
+                    foreach (var kvp in subscription.Metadata) {
+                        _logger.LogInformation("  SubMetadata[{Key}] = {Value}", kvp.Key, kvp.Value);
+                    }
+                } else {
+                    _logger.LogWarning("Subscription has no metadata");
+                }
+                
+                if (subscription.Metadata != null && subscription.Metadata.TryGetValue("deferred_tenant", out var def) && def == "true") {
+                    _logger.LogInformation("Deferred tenant flag found in subscription, attempting creation");
+                    // Subscription event arrived before checkout.session.completed; create tenant now
+                    subscription.Metadata.TryGetValue("company_name", out var companyName);
+                    subscription.Metadata.TryGetValue("subdomain", out var subdomain);
+                    subscription.Metadata.TryGetValue("admin_email", out var adminEmail);
+                    
+                    _logger.LogInformation("Subscription deferred metadata: company={Company} subdomain={Subdomain} admin={Admin}", 
+                        companyName, subdomain, adminEmail);
+                    
+                    if (!string.IsNullOrWhiteSpace(companyName) && !string.IsNullOrWhiteSpace(subdomain)) {
+                        var existing = await _db.Tenants.FirstOrDefaultAsync(t => t.Subdomain == subdomain, ct);
+                        if (existing == null) {
+                            _logger.LogInformation("Creating new tenant from subscription event for subdomain {Subdomain}", subdomain);
+                            var newTenant = new CRS.Models.Tenant {
+                                Name = companyName,
+                                Subdomain = subdomain,
+                                IsActive = true,
+                                CreatedAt = DateTime.UtcNow,
+                                ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active,
+                                SubscriptionStatus = CRS.Models.SubscriptionStatus.Incomplete,
+                                PendingOwnerEmail = adminEmail,
+                                StripeCustomerId = subscription.CustomerId,
+                                StripeSubscriptionId = subscription.Id,
+                                Tier = tier
+                            };
+                            _db.Tenants.Add(newTenant);
+                            await _db.SaveChangesAsync(ct);
+                            _logger.LogInformation("Successfully created tenant {TenantId} from subscription for subdomain {Subdomain}", newTenant.Id, subdomain);
+                            var provisionResult = await _ownerProvisioning.ProvisionAsync(newTenant, adminEmail, ct);
+                            _logger.LogInformation("Owner provisioning result from subscription: {Result}", provisionResult);
+                            tenant = newTenant; // continue applying update below
+                        } else {
+                            _logger.LogInformation("Tenant {TenantId} already exists for subdomain {Subdomain}", existing.Id, subdomain);
+                            tenant = existing;
+                            var provisionResult = await _ownerProvisioning.ProvisionAsync(existing, adminEmail, ct);
+                            _logger.LogInformation("Owner provisioning result for existing tenant from subscription: {Result}", provisionResult);
+                        }
+                    } else {
+                        var error = $"Subscription deferred creation missing required metadata: company='{companyName}' subdomain='{subdomain}'";
+                        _logger.LogError(error);
+                        throw new InvalidOperationException(error);
+                    }
+                } else {
+                    _logger.LogWarning("No deferred_tenant flag in subscription metadata, cannot create tenant");
+                }
+            } else {
+                _logger.LogInformation("Found existing tenant {TenantId} for subscription, applying update", tenant.Id);
             }
 
             if (tenant != null) {
+                _logger.LogInformation("Applying subscription update to tenant {TenantId}: status={Status} tier={Tier}", tenant.Id, status, tier);
                 await _billingService.ApplySubscriptionUpdateAsync(subscription.Id, subscription.CustomerId!, tier, status, ct);
+            } else {
+                _logger.LogWarning("Cannot apply subscription update - no tenant found and deferred creation failed");
             }
         }
 
         private async Task HandleSubscriptionDeletedAsync(Event stripeEvent, CancellationToken ct) {
             var subscription = stripeEvent.Data.Object as Subscription;
-            if (subscription == null) return;
-            await _billingService.ApplySubscriptionUpdateAsync(subscription.Id, subscription.CustomerId!, null, CRS.Models.SubscriptionStatus.Canceled, ct);
+            if (subscription == null) {
+                _logger.LogWarning("Subscription is null for event {EventId}", stripeEvent.Id);
+                return;
+            }
+            
+            var tenant = await _db.Tenants.FirstOrDefaultAsync(
+                t => t.StripeSubscriptionId == subscription.Id || t.StripeCustomerId == subscription.CustomerId, ct);
+            
+            if (tenant == null) {
+                _logger.LogWarning("No tenant found for subscription {SubId} or customer {CustomerId}", 
+                    subscription.Id, subscription.CustomerId);
+                return;
+            }
+            
+            // Subscription canceled/deleted - enter suspended state
+            tenant.SubscriptionStatus = SubscriptionStatus.Suspended;
+            tenant.SubscriptionCanceledAt = DateTime.UtcNow;
+            tenant.SuspendedAt = DateTime.UtcNow;
+            tenant.IsActive = false; // No access to application
+            tenant.UpdatedAt = DateTime.UtcNow;
+            
+            // Schedule grace period end (30 days from now for data retention)
+            tenant.GracePeriodEndsAt = DateTime.UtcNow.AddDays(30);
+            
+            _logger.LogInformation("Subscription deleted for tenant {TenantId} - entering Suspended state. Data will be retained until {GracePeriodEnd}", 
+                tenant.Id, tenant.GracePeriodEndsAt);
+            
+            // TODO: Send suspension notification email
+            // await _emailService.SendSuspensionNoticeAsync(tenant);
+            
+            await _db.SaveChangesAsync(ct);
         }
 
         private async Task HandleInvoicePaymentAsync(Event stripeEvent, bool succeeded, CancellationToken ct) {
             var invoice = stripeEvent.Data.Object as Invoice;
-            if (invoice == null) return;
+            if (invoice == null) {
+                _logger.LogWarning("Invoice is null for event {EventId}", stripeEvent.Id);
+                return;
+            }
+            
             var customerId = invoice.CustomerId;
-            if (string.IsNullOrWhiteSpace(customerId)) return;
-            await _billingService.ApplySubscriptionUpdateAsync(string.Empty, customerId!, null, succeeded ? CRS.Models.SubscriptionStatus.Active : CRS.Models.SubscriptionStatus.PastDue, ct);
+            if (string.IsNullOrWhiteSpace(customerId)) {
+                _logger.LogWarning("Invoice has no customer ID for event {EventId}", stripeEvent.Id);
+                return;
+            }
+            
+            var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.StripeCustomerId == customerId, ct);
+            if (tenant == null) {
+                _logger.LogWarning("No tenant found for Stripe customer {CustomerId}", customerId);
+                return;
+            }
+            
+            if (succeeded) {
+                // Payment successful - restore full access
+                var wasInactive = !tenant.IsActive || 
+                    tenant.SubscriptionStatus == SubscriptionStatus.PastDue ||
+                    tenant.SubscriptionStatus == SubscriptionStatus.GracePeriod ||
+                    tenant.SubscriptionStatus == SubscriptionStatus.Suspended;
+                
+                tenant.SubscriptionStatus = SubscriptionStatus.Active;
+                tenant.IsActive = true;
+                tenant.SuspendedAt = null;
+                tenant.GracePeriodEndsAt = null;
+                tenant.LastPaymentFailureAt = null;
+                tenant.UpdatedAt = DateTime.UtcNow;
+                
+                if (wasInactive) {
+                    tenant.ReactivationCount++;
+                    tenant.LastReactivatedAt = DateTime.UtcNow;
+                    _logger.LogInformation("Payment succeeded for tenant {TenantId} - account reactivated (reactivation #{Count})", 
+                        tenant.Id, tenant.ReactivationCount);
+                    
+                    // TODO: Send reactivation success email
+                    // await _emailService.SendReactivationSuccessEmailAsync(tenant);
+                } else {
+                    _logger.LogInformation("Payment succeeded for tenant {TenantId}", tenant.Id);
+                }
+            } else {
+                // Payment failed
+                tenant.LastPaymentFailureAt = DateTime.UtcNow;
+                tenant.UpdatedAt = DateTime.UtcNow;
+                
+                if (tenant.SubscriptionStatus != SubscriptionStatus.PastDue) {
+                    // First payment failure - enter PastDue state
+                    tenant.SubscriptionStatus = SubscriptionStatus.PastDue;
+                    tenant.IsActive = true; // Keep active during Stripe's automatic retry period (7 days)
+                    _logger.LogWarning("Payment failed for tenant {TenantId} - entering PastDue status. Stripe will retry automatically.", tenant.Id);
+                    
+                    // TODO: Send payment failed notification email
+                    // await _emailService.SendPaymentFailedEmailAsync(tenant);
+                } else {
+                    _logger.LogWarning("Payment failed again for tenant {TenantId} (already in PastDue)", tenant.Id);
+                }
+            }
+            
+            await _db.SaveChangesAsync(ct);
         }
 
         private static CRS.Models.SubscriptionStatus MapStatus(string? stripeStatus) => stripeStatus switch {

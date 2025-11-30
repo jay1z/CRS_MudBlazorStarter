@@ -60,6 +60,7 @@ namespace CRS.Migrations
                     Roles = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
                     TenantId = table.Column<int>(type: "int", nullable: false),
+                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -192,6 +193,16 @@ namespace CRS.Migrations
                     AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     TenantId = table.Column<int>(type: "int", nullable: false),
+                    Address1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    City = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    State = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ZipCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NumberOfUnits = table.Column<int>(type: "int", nullable: true),
+                    YearBuilt = table.Column<int>(type: "int", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -544,7 +555,18 @@ namespace CRS.Migrations
                     SubscriptionCanceledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     PendingOwnerEmail = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SignupToken = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    LastStripeCheckoutSessionId = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    LastStripeCheckoutSessionId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SuspendedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    GracePeriodEndsAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletionScheduledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsMarkedForDeletion = table.Column<bool>(type: "bit", nullable: false),
+                    DeletionReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ReactivationCount = table.Column<int>(type: "int", nullable: false),
+                    LastReactivatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastPaymentFailureAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    OwnerId = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -878,6 +900,40 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "DemoSessions",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SessionId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    IpAddress = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    LastActivityAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    DemoTenantId = table.Column<int>(type: "int", nullable: true),
+                    DemoUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    UserAgent = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Referrer = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ConvertedToRealAccount = table.Column<bool>(type: "bit", nullable: false),
+                    ConvertedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DemoSessions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DemoSessions_Tenants_DemoTenantId",
+                        column: x => x.DemoTenantId,
+                        principalSchema: "crs",
+                        principalTable: "Tenants",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserRoleAssignments",
                 schema: "crs",
                 columns: table => new
@@ -964,6 +1020,17 @@ namespace CRS.Migrations
                     LastModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     TenantId = table.Column<int>(type: "int", nullable: false),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
+                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StudyDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FiscalYearEnd = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CurrentReserveFunds = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    MonthlyReserveContribution = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    AnnualInflationRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    AnnualInterestRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    StudyType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PreparedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
@@ -1201,6 +1268,15 @@ namespace CRS.Migrations
                     ElementMeasurementOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ElementRemainingLifeOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ElementUsefulLifeOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ElementName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    Unit = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UsefulLife = table.Column<int>(type: "int", nullable: true),
+                    RemainingLife = table.Column<int>(type: "int", nullable: true),
+                    ReplacementCost = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    Category = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1419,6 +1495,12 @@ namespace CRS.Migrations
                 schema: "crs",
                 table: "CustomerAccounts",
                 column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DemoSessions_DemoTenantId",
+                schema: "crs",
+                table: "DemoSessions",
+                column: "DemoTenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_FinancialInfos_ReserveStudyId",
@@ -1748,6 +1830,10 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "CustomerAccounts",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
+                name: "DemoSessions",
                 schema: "crs");
 
             migrationBuilder.DropTable(

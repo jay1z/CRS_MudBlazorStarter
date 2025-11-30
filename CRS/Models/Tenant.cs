@@ -37,6 +37,18 @@ namespace CRS.Models {
         public Guid SignupToken { get; set; } = Guid.NewGuid(); // used to finalize owner setup securely
         public string? LastStripeCheckoutSessionId { get; set; } // set when created via post-payment flow
         
+        // Subscription lifecycle management
+        public DateTime? SuspendedAt { get; set; } // When account was suspended (no access)
+        public DateTime? GracePeriodEndsAt { get; set; } // When grace period expires (read-only access ends)
+        public DateTime? DeletionScheduledAt { get; set; } // When data will be permanently deleted
+        public bool IsMarkedForDeletion { get; set; } = false; // Soft delete flag
+        public string? DeletionReason { get; set; } // Reason: "payment_failed", "user_requested", etc.
+        
+        // Reactivation tracking
+        public int ReactivationCount { get; set; } = 0; // How many times account was reactivated
+        public DateTime? LastReactivatedAt { get; set; } // Last time subscription was restored
+        public DateTime? LastPaymentFailureAt { get; set; } // Track when payment last failed
+        
         // Demo Mode: Mark demo tenants and track soft delete
         public bool IsDemo { get; set; } = false;
         public DateTime? DateDeleted { get; set; }
@@ -65,10 +77,13 @@ namespace CRS.Models {
         None = 0, // no subscription yet
         Incomplete = 1,
         Active = 2,
-        PastDue = 3,
+        PastDue = 3, // Payment failed, Stripe retrying (Days 0-7)
         Canceled = 4,
         Unpaid = 5,
-        Trialing = 6
+        Trialing = 6,
+        GracePeriod = 7, // Read-only access, data preserved (Days 8-30)
+        Suspended = 8, // No access, data preserved (Days 31-90)
+        MarkedForDeletion = 9 // Soft delete, pending permanent deletion (Days 91-365)
     }
 
     public static class SubscriptionTierDefaults {

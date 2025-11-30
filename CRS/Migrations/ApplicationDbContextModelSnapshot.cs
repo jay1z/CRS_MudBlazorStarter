@@ -46,6 +46,9 @@ namespace CRS.Migrations
                     b.Property<string>("FirstName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsDemo")
+                        .HasColumnType("bit");
+
                     b.Property<string>("LastName")
                         .HasColumnType("nvarchar(max)");
 
@@ -553,8 +556,14 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Address1")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("AnnualMeetingDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("City")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -565,10 +574,25 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsDemo")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("NumberOfUnits")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PhoneNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<byte[]>("RowVersion")
@@ -577,8 +601,17 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<string>("State")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
+
+                    b.Property<int?>("YearBuilt")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ZipCode")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -761,6 +794,77 @@ namespace CRS.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("CustomerAccounts", "crs");
+                });
+
+            modelBuilder.Entity("CRS.Models.Demo.DemoSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ConvertedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("ConvertedToRealAccount")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DemoTenantId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("DemoUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Referrer")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DemoTenantId");
+
+                    b.ToTable("DemoSessions", "crs");
                 });
 
             modelBuilder.Entity("CRS.Models.ElementMeasurementOptions", b =>
@@ -1240,6 +1344,14 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal?>("AnnualInflationRate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("AnnualInterestRate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<Guid?>("ApplicationUserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1248,6 +1360,10 @@ namespace CRS.Migrations
 
                     b.Property<Guid?>("ContactId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("CurrentReserveFunds")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("DateApproved")
                         .HasColumnType("datetime2");
@@ -1261,6 +1377,9 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("FiscalYearEnd")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -1270,11 +1389,27 @@ namespace CRS.Migrations
                     b.Property<bool>("IsComplete")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsDemo")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("LastModified")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal?>("MonthlyReserveContribution")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("PointOfContactType")
                         .HasColumnType("int");
+
+                    b.Property<string>("PreparedBy")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("PropertyManagerId")
                         .HasColumnType("uniqueidentifier");
@@ -1289,6 +1424,12 @@ namespace CRS.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("StudyDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("StudyType")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -1442,6 +1583,9 @@ namespace CRS.Migrations
                     b.Property<Guid>("CommonElementId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Category")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("Count")
                         .HasColumnType("int");
 
@@ -1454,8 +1598,14 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid?>("ElementMeasurementOptionsId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ElementName")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("ElementRemainingLifeOptionsId")
                         .HasColumnType("uniqueidentifier");
@@ -1470,6 +1620,20 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("Quantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("RemainingLife")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("ReplacementCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -1478,6 +1642,12 @@ namespace CRS.Migrations
 
                     b.Property<Guid?>("ServiceContactId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Unit")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("UsefulLife")
+                        .HasColumnType("int");
 
                     b.HasKey("ReserveStudyId", "CommonElementId");
 
@@ -1886,8 +2056,32 @@ namespace CRS.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletionScheduledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("GracePeriodEndsAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsDemo")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsMarkedForDeletion")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastPaymentFailureAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastReactivatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LastStripeCheckoutSessionId")
                         .HasColumnType("nvarchar(max)");
@@ -1900,6 +2094,9 @@ namespace CRS.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OwnerId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PendingOwnerEmail")
@@ -1918,6 +2115,9 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier")
                         .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<int>("ReactivationCount")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("SignupToken")
                         .HasColumnType("uniqueidentifier");
@@ -1940,6 +2140,9 @@ namespace CRS.Migrations
 
                     b.Property<int>("SubscriptionStatus")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("SuspendedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("Tier")
                         .HasColumnType("int");
@@ -2300,6 +2503,15 @@ namespace CRS.Migrations
                     b.Navigation("Contact");
 
                     b.Navigation("ContactGroup");
+                });
+
+            modelBuilder.Entity("CRS.Models.Demo.DemoSession", b =>
+                {
+                    b.HasOne("CRS.Models.Tenant", "DemoTenant")
+                        .WithMany()
+                        .HasForeignKey("DemoTenantId");
+
+                    b.Navigation("DemoTenant");
                 });
 
             modelBuilder.Entity("CRS.Models.FinancialInfo", b =>

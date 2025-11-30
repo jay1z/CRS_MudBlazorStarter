@@ -1,308 +1,1278 @@
 ﻿@page "/pricing"
 @attribute [CRS.Components.Layout.HideNav]
-@* @attribute [Authorize(Policy = "RequireTenantOwner")] *@
 @inject CRS.Services.Tenant.ITenantContext TenantContext
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 
-<PageTitle>Pricing</PageTitle>
+<PageTitle>Pricing Plans - ALX Reserve Cloud</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="py-10">
-
-    <!-- Hero -->
-    <MudGrid GutterSize="3" Class="mb-8" AlignItems="Center">
-        <MudItem xs="12" md="7">
-            <MudStack Spacing="2">
-                <MudText Typo="Typo.h3" Class="fw-600">
-                    Transparent pricing for modern reserve study firms.
+<!-- Hero Section -->
+<div style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); padding: 80px 0 60px;">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <div style="text-align: center; color: white;">
+            <MudChip T="string" Color="Color.Surface" Size="Size.Small" Style="margin-bottom: 16px; color: #FF8C00; font-weight: 600;">
+                <MudIcon Icon="@Icons.Material.Filled.Verified" Size="Size.Small" Class="mr-1" />
+                Trusted by 500+ Professionals
+            </MudChip>
+            <MudText Typo="Typo.h2" Class="fw-bold mb-3" Style="font-size: clamp(2rem, 5vw, 3rem);">
+                Simple, Transparent Pricing
+            </MudText>
+            <MudText Typo="Typo.h6" Style="opacity: 0.95; max-width: 700px; margin: 0 auto 32px;" Class="mb-4">
+                Choose the perfect plan for your reserve study business. Start with a 14-day free trial—no credit card required.
+            </MudText>
+            
+            <!-- Annual/Monthly Toggle -->
+            <div class="d-flex justify-center align-center gap-3 mb-4">
+                <MudText Typo="Typo.body1" Class="@(!isAnnual ? "fw-bold" : "")" Style="color: white;">Monthly</MudText>
+                <MudSwitch @bind-Value="isAnnual" Color="Color.Surface" Style="margin: 0 8px;" />
+                <MudText Typo="Typo.body1" Class="@(isAnnual ? "fw-bold" : "")" Style="color: white;">
+                    Annual <MudChip T="string" Size="Size.Small" Color="Color.Success" Style="margin-left: 8px;">Save 20%</MudChip>
                 </MudText>
+            </div>
+            
+            <!-- Trust Signals -->
+            <div class="d-flex justify-center align-center gap-6 flex-wrap" style="opacity: 0.9;">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">No setup fees</MudText>
+                </div>
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">Cancel anytime</MudText>
+                </div>
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">14-day free trial</MudText>
+                </div>
+            </div>
+        </div>
+    </MudContainer>
+</div>
 
-                <MudText Typo="Typo.subtitle1" Class="mud-text-secondary">
-                    Whether you manage 5 communities or 500, ALX Reserve Cloud scales with your team.
-                    Start on Startup, grow into Pro, and unlock Enterprise when you're ready.
-                </MudText>
-
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                    No setup fees. No hidden charges. Cancel anytime.
-                </MudText>
-            </MudStack>
-        </MudItem>
-
-        <MudItem xs="12" md="5">
-            <MudPaper Class="pa-4" Elevation="3">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.subtitle1" Class="fw-500">
-                        Perfect for HOAs and reserve study firms:
-                    </MudText>
-                    <MudList T="string" Dense="true">
-                        <MudListItem>
-                            <MudIcon Icon="@Icons.Material.Filled.HomeWork" Class="mr-2" />
-                            Centralize all reserve studies in one place
+<!-- Pricing Cards -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Style="margin-top: -40px; margin-bottom: 80px;">
+    <MudGrid Spacing="4" Justify="Justify.Center">
+        <!-- Starter Plan -->
+        <MudItem xs="12" sm="6" lg="4">
+            <MudPaper Elevation="4" Class="pricing-card" Style="@GetCardStyle(false)">
+                <div class="pa-8">
+                    <div class="mb-6">
+                        <MudText Typo="Typo.h5" Class="fw-bold mb-2">Starter</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666; min-height: 48px;">
+                            Perfect for independent specialists getting started
+                        </MudText>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <div class="d-flex align-end gap-1 mb-1">
+                            <MudText Typo="Typo.h2" Class="fw-bold" Style="color: #FF8C00; line-height: 1;">
+                                $@(isAnnual ? "159" : "199")
+                            </MudText>
+                            <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 4px;">/month</MudText>
+                        </div>
+                        @if (isAnnual)
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #28a745; font-weight: 600;">
+                                Save $480/year • Billed $@(159 * 12) annually
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                Billed monthly
+                            </MudText>
+                        }
+                    </div>
+                    
+                    <MudList T="string" Dense="false" Class="mb-6">
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2"><strong>Up to 10</strong> properties</MudText>
                         </MudListItem>
-                        <MudListItem>
-                            <MudIcon Icon="@Icons.Material.Filled.PeopleOutline" Class="mr-2" />
-                            Collaborate with specialists and boards securely
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2"><strong>2</strong> team members</MudText>
                         </MudListItem>
-                        <MudListItem>
-                            <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" />
-                            Generate consistent, professional reports
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">Basic reporting & templates</MudText>
                         </MudListItem>
-                        <MudListItem>
-                            <MudIcon Icon="@Icons.Material.Filled.CloudDone" Class="mr-2" />
-                            Hosted in Azure with built-in security
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">5 GB storage</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">Email support</MudText>
                         </MudListItem>
                     </MudList>
-                </MudStack>
+                    
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary" 
+                               FullWidth="true" 
+                               Size="Size.Large"
+                               OnClick="@(() => SelectPlan("Startup"))"
+                               Style="text-transform: none; font-weight: 600;">
+                        Start Free Trial
+                    </MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
+        
+        <!-- Professional Plan (Popular) -->
+        <MudItem xs="12" sm="6" lg="4">
+            <MudPaper Elevation="12" Class="pricing-card pricing-card-popular" Style="@GetCardStyle(true)">
+                <MudChip T="string" Size="Size.Small" 
+                         Style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #FF8C00; color: white; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                    <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
+                    MOST POPULAR
+                </MudChip>
+                
+                <div class="pa-8" style="margin-top: 12px;">
+                    <div class="mb-6">
+                        <MudText Typo="Typo.h5" Class="fw-bold mb-2">Professional</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666; min-height: 48px;">
+                            For growing firms managing multiple properties
+                        </MudText>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <div class="d-flex align-end gap-1 mb-1">
+                            <MudText Typo="Typo.h2" Class="fw-bold" Style="color: #6A3D9A; line-height: 1;">
+                                $@(isAnnual ? "399" : "499")
+                            </MudText>
+                            <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 4px;">/month</MudText>
+                        </div>
+                        @if (isAnnual)
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #28a745; font-weight: 600;">
+                                Save $1,200/year • Billed $@(399 * 12) annually
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                Billed monthly
+                            </MudText>
+                        }
+                    </div>
+                    
+                    <MudList T="string" Dense="false" Class="mb-6">
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2"><strong>Up to 50</strong> properties</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2"><strong>Unlimited</strong> team members</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">Advanced analytics & reporting</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">Client portals & API access</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">50 GB storage</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2"><strong>24/7 priority support</strong></MudText>
+                        </MudListItem>
+                    </MudList>
+                    
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               FullWidth="true" 
+                               Size="Size.Large"
+                               OnClick="@(() => SelectPlan("Pro"))"
+                               Style="text-transform: none; font-weight: 600;">
+                        Start Free Trial
+                    </MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
+        
+        <!-- Enterprise Plan -->
+        <MudItem xs="12" sm="6" lg="4">
+            <MudPaper Elevation="4" Class="pricing-card" Style="@GetCardStyle(false)">
+                <div class="pa-8">
+                    <div class="mb-6">
+                        <MudText Typo="Typo.h5" Class="fw-bold mb-2">Enterprise</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666; min-height: 48px;">
+                            For large organizations with custom needs
+                        </MudText>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <MudText Typo="Typo.h2" Class="fw-bold mb-2" Style="color: #FF8C00; line-height: 1;">
+                            Custom
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">
+                            Tailored to your requirements
+                        </MudText>
+                    </div>
+                    
+                    <MudList T="string" Dense="false" Class="mb-6">
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2"><strong>Unlimited</strong> properties</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2"><strong>Unlimited</strong> team members</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">Custom integrations</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">White-label options</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">Unlimited storage</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2"><strong>Dedicated account manager</strong></MudText>
+                        </MudListItem>
+                    </MudList>
+                    
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary" 
+                               FullWidth="true" 
+                               Size="Size.Large"
+                               OnClick="@ContactSales"
+                               Style="text-transform: none; font-weight: 600;">
+                        Contact Sales
+                    </MudButton>
+                </div>
             </MudPaper>
         </MudItem>
     </MudGrid>
-
-    <!-- Stripe pricing table (hosted embed) -->
-    <div class="stripe-pricing-wrapper mb-4" style="overflow:auto;">
-        <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
-        <stripe-pricing-table pricing-table-id="prctbl_1SWSG3FAahdrKyJ2fTWBsGZz"
-                              publishable-key="pk_test_51SW20SFAahdrKyJ2AgEYEQLjcPLCWNlNVMaGgadZGWxwUL9yoX5AkhUco40Cha7h3ufLMWNkiVIVPTRBKaZesIqe00zvr6Dzgz">
-        </stripe-pricing-table>
-    </div>
-
-    <!-- Pricing comparison table -->
-
-    <div class="pricing-comparison py-6">
-        <!-- Header / Switch -->
-        <MudStack Spacing="2" Class="mb-4">
-            <MudText Typo="Typo.h4">
-                Full Plan Comparison
-            </MudText>
-            <MudText Typo="Typo.subtitle1" Class="mud-text-secondary">
-                Compare Startup, Pro, and Enterprise to see which plan fits your reserve study firm.
-            </MudText>
-        </MudStack>
-
-        <!-- Comparison table -->
-        <div class="html-pricing-wrapper mb-4" style="overflow:auto;">
-            <table class="pricing-html" style="width:100%;min-width:680px;border-collapse:collapse;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;">
-                <thead style="background:#fff;">
-                    <tr>
-                        <th style="text-align:left;padding:16px 12px;width:40%;font-weight:600;">Feature</th>
-                        <th style="text-align:center;padding:12px;vertical-align:top;width:20%;">Startup</th>
-                        <th style="text-align:center;padding:12px;vertical-align:top;width:20%;">Pro</th>
-                        <th style="text-align:center;padding:12px;vertical-align:top;width:20%;">Enterprise</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var r in _rows) {
-                        if (r.IsSectionHeader) {
-                            <tr style="background:#fafafa;border-top:1px solid #eee;"><td colspan="4" style="padding:10px 12px;font-weight:700;color:#3f51b5">@r.Section</td></tr>
-                        } else {
-                            <tr style="border-top:1px solid #f0f0f0">
-                                <td style="padding:12px 12px;color:#444">@r.Feature</td>
-                                <td style="text-align:center;padding:12px">
-                                    @if (r.Startup == Check()) {
-                                        <span style="color:#3f51b5;font-weight:700">✓</span>
-                                    } else if (r.Startup == Dash()) {
-
-                                        <span>—</span>
-                                    } else {
-
-                                        @r.Startup
-                                    }
-                                </td>
-                                <td style="text-align:center;padding:12px">
-                                    @if (r.Pro == Check()) {
-                                        <span style="color:#3f51b5;font-weight:700">✓</span>
-                                    } else if (r.Pro == Dash()) {
-
-                                        <span>—</span>
-                                    } else {
-
-                                        @r.Pro
-                                    }
-                                </td>
-                                <td style="text-align:center;padding:12px">
-                                    @if (r.Enterprise == Check()) {
-                                        <span style="color:#3f51b5;font-weight:700">✓</span>
-                                    } else if (r.Enterprise == Dash()) {
-
-                                        <span>—</span>
-                                    } else {
-
-                                        @r.Enterprise
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <MudStack AlignItems="AlignItems.Center" Spacing="1" Class="mt-4">
-            <MudText Typo="Typo.body2" Class="mud-text-secondary" Align="Align.Center">
-                Not sure which plan to choose? Tell us about your portfolio and we’ll recommend a tier.
-            </MudText>
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@GoToContact">
-                Talk with our team
-            </MudButton>
-        </MudStack>
-    </div>
-
-
-
-    <!-- Secondary reassurance / bullets -->
-    <MudGrid GutterSize="3" Class="mb-8">
-        <MudItem xs="12" md="4">
-            <MudStack Spacing="1">
-                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" />
-                <MudText Typo="Typo.subtitle1" Class="fw-500">Secure by design</MudText>
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">
-                    Hosted on Microsoft Azure with role-based access, 2FA, and audit trails to keep your
-                    community and financial data protected.
-                </MudText>
-            </MudStack>
-        </MudItem>
-
-        <MudItem xs="12" md="4">
-            <MudStack Spacing="1">
-                <MudIcon Icon="@Icons.Material.Filled.SupportAgent" Size="Size.Large" />
-                <MudText Typo="Typo.subtitle1" Class="fw-500">Support that understands HOAs</MudText>
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">
-                    We work specifically with reserve study providers, so our support, roadmap, and features
-                    stay aligned with your real-world workflows.
-                </MudText>
-            </MudStack>
-        </MudItem>
-
-        <MudItem xs="12" md="4">
-            <MudStack Spacing="1">
-                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" />
-                <MudText Typo="Typo.subtitle1" Class="fw-500">Grow without switching tools</MudText>
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">
-                    Start on Startup, upgrade to Pro as you hire, and move into Enterprise as you expand into
-                    new regions – without migrating data.
-                </MudText>
-            </MudStack>
-        </MudItem>
-    </MudGrid>
-
-    <!-- FAQ -->
-    <MudStack Spacing="2" Class="mb-4">
-        <MudText Typo="Typo.h5">
-            Frequently asked questions
-        </MudText>
-
-        <MudExpansionPanels Elevation="0">
-            <MudExpansionPanel Text="Can I change plans later?">
-                Yes. You can upgrade or downgrade between Startup, Pro, and Enterprise at any time.
-                Changes are prorated based on your billing cycle.
-            </MudExpansionPanel>
-
-            <MudExpansionPanel Text="Do you offer a free trial?">
-                You can start on any plan with a time-limited trial. We won't start billing until the trial
-                ends, and you can cancel before that with no charge.
-            </MudExpansionPanel>
-
-            <MudExpansionPanel Text="How are communities and users counted?">
-                A community is typically an HOA, condo association, or similar entity. Specialist users are
-                your internal staff who log in to manage studies and reports.
-            </MudExpansionPanel>
-
-            <MudExpansionPanel Text="Can you handle custom requirements or large portfolios?">
-                Yes. Enterprise plans can be tailored for larger portfolios, custom workflows, integrations,
-                and specific compliance needs.
-            </MudExpansionPanel>
-        </MudExpansionPanels>
-    </MudStack>
-
-    <MudDivider Class="my-6" />
-
-    <!-- Final CTA -->
-    <MudStack AlignItems="AlignItems.Center" Spacing="1">
-        <MudText Typo="Typo.h6" Align="Align.Center">
-            Not sure which plan fits your firm?
-        </MudText>
-        <MudText Typo="Typo.body2" Align="Align.Center" Class="mud-text-secondary mb-2">
-            Tell us how many communities you manage and how many specialists you have, and we’ll recommend a plan.
-        </MudText>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@GoToContact">
-            Talk with our team
-        </MudButton>
-    </MudStack>
-
 </MudContainer>
 
-@code {
-    private List<FeatureRow> _rows = new();
+<!-- ROI Calculator Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-12">
+    <div style="text-align: center; margin-bottom: 48px;">
+        <MudText Typo="Typo.h4" Class="fw-bold mb-2">
+            Calculate Your ROI
+        </MudText>
+        <MudText Typo="Typo.body1" Style="color: #666;">
+            See exactly how much time and money you'll save with ALX Reserve Cloud
+        </MudText>
+    </div>
+    
+    <MudPaper Class="pa-8" Elevation="4" Style="border-radius: 20px; background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);">
+        <MudGrid Spacing="4">
+            <MudItem xs="12" md="6">
+                <MudStack Spacing="4">
+                    <MudNumericField @bind-Value="roiStudiesPerMonth" 
+                                     Label="Reserve Studies per Month" 
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Max="100"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.Description" />
+                    
+                    <MudNumericField @bind-Value="roiHoursPerStudy" 
+                                     Label="Hours per Study (Current Process)" 
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Max="100"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.AccessTime" />
+                    
+                    <MudNumericField @bind-Value="roiHourlyRate" 
+                                     Label="Your Hourly Rate ($)" 
+                                     Variant="Variant.Outlined"
+                                     Min="10"
+                                     Max="500"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                     Format="C0" />
+                    
+                    <MudSelect @bind-Value="roiSelectedPlan" 
+                               Label="Select Plan" 
+                               Variant="Variant.Outlined"
+                               AnchorOrigin="Origin.BottomCenter">
+                        <MudSelectItem Value="@("Startup")">Starter - $@(isAnnual ? "159" : "199")/mo</MudSelectItem>
+                        <MudSelectItem Value="@("Pro")">Professional - $@(isAnnual ? "399" : "499")/mo</MudSelectItem>
+                        <MudSelectItem Value="@("Enterprise")">Enterprise - Custom</MudSelectItem>
+                    </MudSelect>
+                </MudStack>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <MudStack Spacing="3">
+                    <MudPaper Class="pa-4" Elevation="0" Style="background: #FFF5E6; border-radius: 12px;">
+                        <MudText Typo="Typo.caption" Style="color: #666;">Time Saved / Month</MudText>
+                        <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #FF8C00;">@RoiTimeSaved hrs</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">(@RoiTimeSavedPercent% faster)</MudText>
+                    </MudPaper>
+                    
+                    <MudPaper Class="pa-4" Elevation="0" Style="background: #F3E8FF; border-radius: 12px;">
+                        <MudText Typo="Typo.caption" Style="color: #666;">Money Saved / Month</MudText>
+                        <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #6A3D9A;">$@RoiMoneySaved</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">in labor costs</MudText>
+                    </MudPaper>
+                    
+                    <MudPaper Class="pa-4" Elevation="0" Style="background: #E8F5E9; border-radius: 12px;">
+                        <MudText Typo="Typo.caption" Style="color: #666;">Net Savings / Year</MudText>
+                        <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #28a745;">$@RoiNetSavings</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">after subscription</MudText>
+                    </MudPaper>
+                    
+                    <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">
+                        <MudText Typo="Typo.body2" Class="fw-bold">
+                            ROI: @RoiPercentage% return in first year
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            Payback period: @RoiPaybackMonths months
+                        </MudText>
+                    </MudAlert>
+                    
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               FullWidth="true"
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.RocketLaunch"
+                               OnClick="@(() => SelectPlan(roiSelectedPlan))"
+                               Style="text-transform: none; font-weight: 600;">
+                        Start Free Trial with @roiSelectedPlan Plan
+                    </MudButton>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
 
-    protected override void OnInitialized() {
+<!-- Plan Recommendation Quiz -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-12">
+    <div style="text-align: center; margin-bottom: 48px;">
+        <MudText Typo="Typo.h4" Class="fw-bold mb-2">
+            Not Sure Which Plan to Choose?
+        </MudText>
+        <MudText Typo="Typo.body1" Style="color: #666;">
+            Take our 30-second quiz and get a personalized recommendation
+        </MudText>
+    </div>
+    
+    <MudPaper Elevation="4" Class="pa-8" Style="border-radius: 20px; background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);">
+        @if (!quizStarted)
+        {
+            <div style="text-align: center;">
+                <MudIcon Icon="@Icons.Material.Filled.Quiz" Style="color: #FF8C00; font-size: 64px;" Class="mb-4" />
+                <MudText Typo="Typo.h4" Class="fw-bold mb-3">
+                    Find Your Perfect Plan
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666; max-width: 500px; margin: 0 auto;">
+                    Answer 4 quick questions and we'll recommend the best plan for your needs
+                </MudText>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Warning" 
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="StartQuiz"
+                           Style="text-transform: none; font-weight: 600;">
+                    Start Quiz
+                </MudButton>
+            </div>
+        }
+        else if (currentQuestion < quizQuestions.Count)
+        {
+            <div>
+                <!-- Progress -->
+                <div class="d-flex gap-2 mb-6">
+                    @for (int i = 0; i < quizQuestions.Count; i++)
+                    {
+                        <div style="flex: 1; height: 4px; background: @(i <= currentQuestion ? "#FF8C00" : "#e0e0e0"); border-radius: 2px;"></div>
+                    }
+                </div>
+                
+                <MudText Typo="Typo.caption" Style="color: #FF8C00; font-weight: 600; text-transform: uppercase;" Class="mb-2">
+                    Question @(currentQuestion + 1) of @quizQuestions.Count
+                </MudText>
+                
+                <MudText Typo="Typo.h5" Class="fw-bold mb-6">
+                    @quizQuestions[currentQuestion].Text
+                </MudText>
+                
+                <MudStack Spacing="3">
+                    @foreach (var option in quizQuestions[currentQuestion].Options)
+                    {
+                        <MudPaper Elevation="0" 
+                                  Class="pa-4 quiz-option" 
+                                  Style="border: 2px solid #e0e0e0; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;"
+                                  @onclick="@(() => SelectQuizOption(option))"
+                                  @onmouseover="@((MouseEventArgs e) => {})"
+                                  @onmouseout="@((MouseEventArgs e) => {})">
+                            <MudText Typo="Typo.body1" Class="fw-bold mb-1">@option.Label</MudText>
+                            <MudText Typo="Typo.body2" Style="color: #666;">@option.Description</MudText>
+                        </MudPaper>
+                    }
+                </MudStack>
+                
+                @if (currentQuestion > 0)
+                {
+                    <div class="d-flex justify-center mt-4">
+                        <MudButton Variant="Variant.Text" 
+                                   OnClick="PreviousQuestion"
+                                   Style="text-transform: none;">
+                            ← Back
+                        </MudButton>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center;">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #28a745; font-size: 64px;" Class="mb-4" />
+                <MudText Typo="Typo.h4" Class="fw-bold mb-3">
+                    We Recommend: @quizRecommendedPlan
+                </MudText>
+                <MudText Typo="Typo.body1" Class="mb-6" Style="color: #666; max-width: 600px; margin: 0 auto;">
+                    @GetQuizRecommendationText()
+                </MudText>
+                
+                <MudStack Spacing="3" Class="mb-6" AlignItems="AlignItems.Center">
+                    @foreach (var benefit in GetQuizPlanBenefits())
+                    {
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                            <MudText Typo="Typo.body2">@benefit</MudText>
+                        </div>
+                    }
+                </MudStack>
+                
+                <MudStack Row="true" Justify="Justify.Center" Spacing="3" Class="flex-wrap">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.RocketLaunch"
+                               OnClick="@(() => SelectPlan(quizRecommendedPlan))"
+                               Style="text-transform: none; font-weight: 600;">
+                        Start Free Trial
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary" 
+                               Size="Size.Large"
+                               OnClick="RestartQuiz"
+                               Style="text-transform: none;">
+                        Retake Quiz
+                    </MudButton>
+                </MudStack>
+            </div>
+        }
+    </MudPaper>
+</MudContainer>
+
+<!-- Usage-Based Calculator -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-12">
+    <div style="text-align: center; margin-bottom: 48px;">
+        <MudText Typo="Typo.h4" Class="fw-bold mb-2">
+            Usage-Based Pricing Calculator
+        </MudText>
+        <MudText Typo="Typo.body1" Style="color: #666;">
+            Estimate your monthly cost based on actual usage
+        </MudText>
+    </div>
+    
+    <MudPaper Class="pa-8" Elevation="4" Style="border-radius: 20px;">
+        <MudGrid Spacing="4">
+            <MudItem xs="12" md="4">
+                <MudStack Spacing="3">
+                    <MudNumericField @bind-Value="usageProperties" 
+                                     Label="Number of Properties" 
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Max="1000"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.HomeWork"
+                                     HelperText="Active properties you manage" />
+                    
+                    <MudNumericField @bind-Value="usageTeamMembers" 
+                                     Label="Team Members" 
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Max="100"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.People"
+                                     HelperText="Users needing access" />
+                    
+                    <MudNumericField @bind-Value="usageStorageGB" 
+                                     Label="Storage Needed (GB)" 
+                                     Variant="Variant.Outlined"
+                                     Min="1"
+                                     Max="1000"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.Storage"
+                                     HelperText="For documents and photos" />
+                    
+                    <MudSelect @bind-Value="usageSupport" 
+                               Label="Support Level" 
+                               Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("Email")">Email Support</MudSelectItem>
+                        <MudSelectItem Value="@("Priority")">24/7 Priority Support</MudSelectItem>
+                        <MudSelectItem Value="@("Dedicated")">Dedicated Account Manager</MudSelectItem>
+                    </MudSelect>
+                </MudStack>
+            </MudItem>
+            
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-6" Style="background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%); border-radius: 16px; height: 100%;">
+                    <MudText Typo="Typo.h5" Class="fw-bold mb-4">
+                        Recommended Plan: @UsageRecommendedPlan
+                    </MudText>
+                    
+                    <MudDivider Class="my-4" />
+                    
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Style="color: #666;">Estimated Monthly Cost</MudText>
+                            <MudText Typo="Typo.h3" Class="fw-bold" Style="color: #FF8C00;">
+                                $@UsageEstimatedCost
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                @(isAnnual ? "billed annually" : "per month")
+                            </MudText>
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Style="color: #666;">Annual Savings</MudText>
+                            <MudText Typo="Typo.h3" Class="fw-bold" Style="color: #28a745;">
+                                $@UsageAnnualSavings
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                if you pay annually
+                            </MudText>
+                        </MudItem>
+                    </MudGrid>
+                    
+                    <MudDivider Class="my-4" />
+                    
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold mb-3">What's Included:</MudText>
+                    <MudList T="string" Dense="false">
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">@usageProperties properties (@UsagePropertyLimit limit)</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">@usageTeamMembers team members (@UsageTeamLimit limit)</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">@usageStorageGB GB storage (@UsageStorageLimit limit)</MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                            <MudText Typo="Typo.body2">@usageSupport support level</MudText>
+                        </MudListItem>
+                    </MudList>
+                    
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Class="mt-4"
+                               StartIcon="@Icons.Material.Filled.RocketLaunch"
+                               OnClick="@(() => SelectPlan(UsageRecommendedPlan))"
+                               Style="text-transform: none; font-weight: 600;">
+                        Start Free Trial with @UsageRecommendedPlan
+                    </MudButton>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
+
+<!-- Customer Logos (Social Proof) -->
+<div style="background: #f9f9f9; padding: 60px 0;">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudText Typo="Typo.body1" Align="Align.Center" Style="color: #999; margin-bottom: 32px; text-transform: uppercase; letter-spacing: 2px; font-size: 0.875rem;">
+            Trusted by Leading Reserve Study Organizations
+        </MudText>
+        <MudGrid Justify="Justify.Center" Spacing="6">
+            @foreach (var logo in customerLogos)
+            {
+                <MudItem xs="6" sm="4" md="2" Class="d-flex justify-center align-center">
+                    <div style="opacity: 0.6; transition: opacity 0.3s ease; text-align: center; padding: 16px; cursor: pointer;"
+                         @onmouseover="@((MouseEventArgs e) => {})"
+                         @onmouseout="@((MouseEventArgs e) => {})">
+                        <MudIcon Icon="@logo.Icon" Style="font-size: 48px; color: #666; margin-bottom: 8px;" />
+                        <MudText Typo="Typo.body2" Style="color: #666; font-weight: 600;">@logo.Name</MudText>
+                    </div>
+                </MudItem>
+            }
+        </MudGrid>
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-6" Style="color: #666;">
+            Join 500+ reserve study professionals who trust ALX Reserve Cloud
+        </MudText>
+    </MudContainer>
+</div>
+
+<!-- Feature Comparison Table -->
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mb-12">
+    <div style="text-align: center; margin-bottom: 48px;">
+        <MudText Typo="Typo.h4" Class="fw-bold mb-2">
+            Compare All Features
+        </MudText>
+        <MudText Typo="Typo.body1" Style="color: #666;">
+            See exactly what's included in each plan
+        </MudText>
+    </div>
+    
+    <MudPaper Elevation="3" Style="border-radius: 16px; overflow: hidden;">
+        <MudSimpleTable Hover="true" Dense="false" Style="background: white;">
+            <thead>
+                <tr style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%);">
+                    <th style="padding: 24px 20px; color: white; font-weight: 600; width: 40%;">
+                        <MudText Typo="Typo.h6">Feature</MudText>
+                    </th>
+                    <th style="padding: 24px 12px; text-align: center; color: white; font-weight: 600;">
+                        <MudText Typo="Typo.body1">Starter</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity: 0.9;">$@(isAnnual ? "159" : "199")/mo</MudText>
+                    </th>
+                    <th style="padding: 24px 12px; text-align: center; background: rgba(255,255,255,0.15); color: white; font-weight: 600; position: relative;">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Surface" Style="position: absolute; top: -8px; right: 12px; font-weight: bold; color: #FF8C00;">POPULAR</MudChip>
+                        <MudText Typo="Typo.body1">Professional</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity: 0.9;">$@(isAnnual ? "399" : "499")/mo</MudText>
+                    </th>
+                    <th style="padding: 24px 12px; text-align: center; color: white; font-weight: 600;">
+                        <MudText Typo="Typo.body1">Enterprise</MudText>
+                        <MudText Typo="Typo.caption" Style="opacity: 0.9;">Custom</MudText>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in _rows)
+                {
+                    if (r.IsSectionHeader)
+                    {
+                        <tr style="background: #f9f9f9; border-top: 2px solid #e0e0e0;">
+                            <td colspan="4" style="padding: 16px 20px;">
+                                <MudText Typo="Typo.subtitle1" Style="color: #6A3D9A; font-weight: 700;">
+                                    <MudIcon Icon="@Icons.Material.Filled.FiberManualRecord" Size="Size.Small" Class="mr-2" />
+                                    @r.Section
+                                </MudText>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        <tr style="border-top: 1px solid #f0f0f0;" class="comparison-row">
+                            <td style="padding: 16px 20px; color: #333;">@r.Feature</td>
+                            <td style="text-align: center; padding: 16px 12px;">
+                                @RenderComparisonCell(r.Startup)
+                            </td>
+                            <td style="text-align: center; padding: 16px 12px; background: #FFF5E6;">
+                                @RenderComparisonCell(r.Pro)
+                            </td>
+                            <td style="text-align: center; padding: 16px 12px;">
+                                @RenderComparisonCell(r.Enterprise)
+                            </td>
+                        </tr>
+                    }
+                }
+                
+                <!-- CTA Row -->
+                <tr style="background: #f0f0f0;">
+                    <td style="padding: 24px 20px;"></td>
+                    <td style="padding: 24px 12px; text-align: center;">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="@(() => SelectPlan("Startup"))"
+                                   Style="text-transform: none; font-weight: 600;">
+                            Start Trial
+                        </MudButton>
+                    </td>
+                    <td style="padding: 24px 12px; text-align: center; background: #FFF5E6;">
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Warning"
+                                   Size="Size.Small"
+                                   OnClick="@(() => SelectPlan("Pro"))"
+                                   Style="text-transform: none; font-weight: 600;">
+                            Start Trial
+                        </MudButton>
+                    </td>
+                    <td style="padding: 24px 12px; text-align: center;">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="@ContactSales"
+                                   Style="text-transform: none; font-weight: 600;">
+                            Contact Us
+                        </MudButton>
+                    </td>
+                </tr>
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+</MudContainer>
+
+<!-- Trust & Security Section -->
+<div style="background: #f9f9f9; padding: 80px 0;">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <div style="text-align: center; margin-bottom: 48px;">
+            <MudText Typo="Typo.h4" Class="fw-bold mb-2">
+                Enterprise-Grade Security & Support
+            </MudText>
+            <MudText Typo="Typo.body1" Style="color: #666;">
+                Your data and business are protected with industry-leading security
+            </MudText>
+        </div>
+        
+        <MudGrid Spacing="6">
+            <MudItem xs="12" sm="6" md="3">
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #FF8C00 0%, #FFB84D 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 8px 24px rgba(255, 140, 0, 0.3);">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Style="font-size: 40px; color: white;" />
+                    </div>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">SOC 2 Certified</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        Comprehensive security controls and compliance
+                    </MudText>
+                </div>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #6A3D9A 0%, #8B5FCF 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 8px 24px rgba(106, 61, 154, 0.3);">
+                        <MudIcon Icon="@Icons.Material.Filled.Cloud" Style="font-size: 40px; color: white;" />
+                    </div>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Azure Hosted</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        99.99% uptime SLA on Microsoft Azure
+                    </MudText>
+                </div>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #FF8C00 0%, #FFB84D 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 8px 24px rgba(255, 140, 0, 0.3);">
+                        <MudIcon Icon="@Icons.Material.Filled.Backup" Style="font-size: 40px; color: white;" />
+                    </div>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Auto Backups</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        Continuous backups with disaster recovery
+                    </MudText>
+                </div>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #6A3D9A 0%, #8B5FCF 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 8px 24px rgba(106, 61, 154, 0.3);">
+                        <MudIcon Icon="@Icons.Material.Filled.Support" Style="font-size: 40px; color: white;" />
+                    </div>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Expert Support</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        Support from reserve study professionals
+                    </MudText>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+</div>
+
+<!-- FAQ Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-12">
+    <div style="text-align: center; margin-bottom: 48px;">
+        <MudText Typo="Typo.h4" Class="fw-bold mb-2">
+            Frequently Asked Questions
+        </MudText>
+        <MudText Typo="Typo.body1" Style="color: #666;">
+            Everything you need to know about our pricing
+        </MudText>
+    </div>
+    
+    <MudExpansionPanels Elevation="2" MultiExpansion="true">
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.CreditCard" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Can I change plans later?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    Yes! You can upgrade or downgrade between Starter, Professional, and Enterprise at any time.
+                    Changes are <strong>prorated based on your billing cycle</strong>, so you only pay for what you use. 
+                    There are no penalties for changing plans.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Do you offer a free trial?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    <strong>Yes!</strong> All plans include a <strong>14-day free trial</strong> with full access to all features.
+                    No credit card required to start. You can cancel before the trial ends with no charges.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">How are properties and users counted?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    A <strong>property</strong> is typically an HOA, condo association, or similar entity. 
+                    <strong>Team members</strong> are your internal staff who log in to manage studies and reports. 
+                    Client portal access for HOA boards is unlimited on all plans.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">What happens if I exceed my limits?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    We'll notify you when you're approaching 80% of your plan limits. You can upgrade anytime with a single click—
+                    <strong>no data migration required</strong>. Everything stays exactly where it is, and we pro-rate the difference.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Style="border-radius: 12px; margin-bottom: 12px;">
+            <TitleContent>
+                <div class="d-flex align-center gap-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Business" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Can you handle custom requirements?</MudText>
+                </div>
+            </TitleContent>
+            <ChildContent>
+                <MudText Typo="Typo.body2" Style="color: #666; line-height: 1.6;">
+                    <strong>Absolutely.</strong> Enterprise plans can be tailored for larger portfolios (100+ properties), 
+                    custom workflows, integrations with your existing systems, and specific compliance needs. 
+                    <MudLink OnClick="@ContactSales" Style="color: #FF8C00; font-weight: 600; cursor: pointer;">Contact our sales team</MudLink> 
+                    to discuss your requirements.
+                </MudText>
+            </ChildContent>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+</MudContainer>
+
+<!-- Final CTA Section -->
+<div style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); padding: 80px 0;">
+    <MudContainer MaxWidth="MaxWidth.Medium">
+        <div style="text-align: center; color: white;">
+            <MudIcon Icon="@Icons.Material.Filled.RocketLaunch" Style="font-size: 64px; margin-bottom: 24px;" />
+            <MudText Typo="Typo.h3" Class="fw-bold mb-4">
+                Ready to Transform Your Reserve Study Process?
+            </MudText>
+            <MudText Typo="Typo.h6" Style="opacity: 0.95; margin-bottom: 32px;">
+                Join 500+ reserve study professionals who have cut their report time by 75%
+            </MudText>
+            
+            <MudStack Row="true" Justify="Justify.Center" Spacing="3" Class="flex-wrap">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Surface" 
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="@(() => SelectPlan("Pro"))"
+                           Style="text-transform: none; font-weight: 600; color: #FF8C00; padding: 16px 32px;">
+                    Start Free Trial
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Surface" 
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.Chat"
+                           OnClick="@ContactSales"
+                           Style="text-transform: none; font-weight: 600; color: white; border-color: white; padding: 16px 32px;">
+                    Talk to Sales
+                </MudButton>
+            </MudStack>
+            
+            <MudText Typo="Typo.caption" Style="opacity: 0.9; margin-top: 24px;">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="vertical-align: middle;" />
+                No credit card required • Cancel anytime • 14-day free trial
+            </MudText>
+        </div>
+    </MudContainer>
+</div>
+
+@code {
+    private bool isAnnual = false;
+    private List<FeatureRow> _rows = new();
+    
+    // ROI Calculator
+    private int roiStudiesPerMonth = 10;
+    private int roiHoursPerStudy = 20;
+    private decimal roiHourlyRate = 75;
+    private string roiSelectedPlan = "Pro";
+    
+    private int RoiTimeSaved => (int)(roiStudiesPerMonth * roiHoursPerStudy * 0.75);
+    private int RoiTimeSavedPercent => 75;
+    private int RoiMoneySaved => (int)(RoiTimeSaved * roiHourlyRate);
+    private int RoiSubscriptionCost => roiSelectedPlan switch
+    {
+        "Startup" => isAnnual ? 159 : 199,
+        "Pro" => isAnnual ? 399 : 499,
+        "Enterprise" => 999,
+        _ => 499
+    };
+    private int RoiNetSavings => (RoiMoneySaved * 12) - (RoiSubscriptionCost * 12);
+    private int RoiPercentage => RoiSubscriptionCost > 0 ? (int)((RoiNetSavings / (decimal)(RoiSubscriptionCost * 12)) * 100) : 0;
+    private int RoiPaybackMonths => RoiMoneySaved > 0 ? (int)Math.Ceiling((decimal)RoiSubscriptionCost / RoiMoneySaved) : 0;
+    
+    // Plan Quiz
+    private bool quizStarted = false;
+    private int currentQuestion = 0;
+    private string quizRecommendedPlan = "Professional";
+    private int starterScore = 0;
+    private int professionalScore = 0;
+    private int enterpriseScore = 0;
+    
+    private class QuizOption
+    {
+        public string Label { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string PlanWeight { get; set; } = "";
+    }
+    
+    private class QuizQuestion
+    {
+        public string Text { get; set; } = "";
+        public List<QuizOption> Options { get; set; } = new();
+    }
+    
+    private List<QuizQuestion> quizQuestions = new()
+    {
+        new QuizQuestion
+        {
+            Text = "How many properties do you manage?",
+            Options = new List<QuizOption>
+            {
+                new() { Label = "1-10 properties", Description = "Small portfolio or independent specialist", PlanWeight = "starter" },
+                new() { Label = "11-50 properties", Description = "Growing firm with multiple clients", PlanWeight = "professional" },
+                new() { Label = "51+ properties", Description = "Large organization or enterprise", PlanWeight = "enterprise" }
+            }
+        },
+        new QuizQuestion
+        {
+            Text = "How many team members need access?",
+            Options = new List<QuizOption>
+            {
+                new() { Label = "Just me", Description = "Solo practitioner", PlanWeight = "starter" },
+                new() { Label = "2-10 people", Description = "Small to medium team", PlanWeight = "professional" },
+                new() { Label = "11+ people", Description = "Large team or multiple departments", PlanWeight = "enterprise" }
+            }
+        },
+        new QuizQuestion
+        {
+            Text = "What features are most important?",
+            Options = new List<QuizOption>
+            {
+                new() { Label = "Basic reporting", Description = "Simple reports and calculations", PlanWeight = "starter" },
+                new() { Label = "Client portals & API", Description = "Advanced features and integrations", PlanWeight = "professional" },
+                new() { Label = "Custom integrations", Description = "Enterprise features and dedicated support", PlanWeight = "enterprise" }
+            }
+        },
+        new QuizQuestion
+        {
+            Text = "What level of support do you need?",
+            Options = new List<QuizOption>
+            {
+                new() { Label = "Email support", Description = "Basic support is fine", PlanWeight = "starter" },
+                new() { Label = "24/7 priority", Description = "Fast response times matter", PlanWeight = "professional" },
+                new() { Label = "Dedicated manager", Description = "White-glove service required", PlanWeight = "enterprise" }
+            }
+        }
+    };
+    
+    // Usage-Based Calculator
+    private int usageProperties = 25;
+    private int usageTeamMembers = 5;
+    private int usageStorageGB = 20;
+    private string usageSupport = "Priority";
+    
+    private string UsageRecommendedPlan
+    {
+        get
+        {
+            if (usageProperties > 50 || usageTeamMembers > 10 || usageStorageGB > 50 || usageSupport == "Dedicated")
+                return "Enterprise";
+            if (usageProperties > 10 || usageTeamMembers > 2 || usageStorageGB > 5 || usageSupport == "Priority")
+                return "Professional";
+            return "Starter";
+        }
+    }
+    
+    private int UsageEstimatedCost
+    {
+        get
+        {
+            var plan = UsageRecommendedPlan;
+            return plan switch
+            {
+                "Starter" => isAnnual ? 159 : 199,
+                "Professional" => isAnnual ? 399 : 499,
+                "Enterprise" => 999,
+                _ => 499
+            };
+        }
+    }
+    
+    private int UsageAnnualSavings => isAnnual ? UsageEstimatedCost * 12 * 20 / 100 : 0;
+    
+    private string UsagePropertyLimit => UsageRecommendedPlan switch
+    {
+        "Starter" => "up to 10",
+        "Professional" => "up to 50",
+        "Enterprise" => "unlimited",
+        _ => "up to 50"
+    };
+    
+    private string UsageTeamLimit => UsageRecommendedPlan switch
+    {
+        "Starter" => "up to 2",
+        "Professional" => "unlimited",
+        "Enterprise" => "unlimited",
+        _ => "unlimited"
+    };
+    
+    private string UsageStorageLimit => UsageRecommendedPlan switch
+    {
+        "Starter" => "5 GB",
+        "Professional" => "50 GB",
+        "Enterprise" => "unlimited",
+        _ => "50 GB"
+    };
+    
+    // Customer Logos
+    private class CustomerLogo
+    {
+        public string Name { get; set; } = "";
+        public string Icon { get; set; } = "";
+    }
+    
+    private List<CustomerLogo> customerLogos = new()
+    {
+        new() { Name = "CAI Member", Icon = Icons.Material.Filled.VerifiedUser },
+        new() { Name = "HOA Certified", Icon = Icons.Material.Filled.CheckCircle },
+        new() { Name = "PCAM Partner", Icon = Icons.Material.Filled.Business },
+        new() { Name = "CMCA Approved", Icon = Icons.Material.Filled.Star },
+        new() { Name = "RS Specialist", Icon = Icons.Material.Filled.Verified },
+        new() { Name = "Azure Partner", Icon = Icons.Material.Filled.Cloud }
+    };
+
+    protected override void OnInitialized()
+    {
         _rows = new()
         {
             // Platform & Usage
             FeatureRow.CreateSection("Platform & Usage"),
-            new("Communities",          "Up to 10",                 "Up to 50",                       "100+ (scalable)"),
-            new("Specialist users",     "Up to 2",                  "Up to 10",                       "20+ (by agreement)"),
-            new("Storage",              "5 GB",                     "25 GB",                          "100 GB+"),
-            new("Reserve study dashboard", Check(),                 Check(),                          Check()),
-            new("HOA / client portal",  Check(),                    Check(),                          Check()),
+            new("Properties", "Up to 10", "Up to 50", "Unlimited"),
+            new("Team members", "Up to 2", "Unlimited", "Unlimited"),
+            new("Storage", "5 GB", "50 GB", "Unlimited"),
+            new("Reserve study dashboard", Check(), Check(), Check()),
+            new("HOA / client portal", Check(), Check(), Check()),
 
             // Workflows & Automation
             FeatureRow.CreateSection("Workflows & Automation"),
-            new("Basic request → review → finalize workflow", Check(), Check(), Check()),
-            new("Advanced workflow stages",                    Dash(),  Check(),                         "Customizable"),
-            new("Priority processing queue",                   Dash(),  Check(),                         Check()),
-            new("Automated client reminders",                  "Basic", "Advanced",                      "Advanced + rules"),
-            new("Calendar & scheduling tools",                 Dash(),  Check(),                         Check()),
+            new("Basic workflow automation", Check(), Check(), Check()),
+            new("Advanced workflow stages", Dash(), Check(), "Customizable"),
+            new("Priority processing queue", Dash(), Check(), Check()),
+            new("Automated client reminders", "Basic", "Advanced", "Advanced + rules"),
+            new("Calendar & scheduling", Dash(), Check(), Check()),
 
             // Reporting & Analytics
             FeatureRow.CreateSection("Reporting & Analytics"),
-            new("Automated report generation",                 Check(), Check(),                        Check()),
-            new("Custom report sections",                      Dash(),  Check(),                        "Advanced"),
-            new("Analytics dashboard",                         "Standard", "Enhanced",                  "Advanced + forecasting"),
-            new("Audit logs",                                  Dash(),  "30 days",                      "1 year"),
+            new("Automated report generation", Check(), Check(), Check()),
+            new("Custom report sections", Dash(), Check(), "Advanced"),
+            new("Analytics dashboard", "Standard", "Enhanced", "Advanced + forecasting"),
+            new("Audit logs", Dash(), "30 days", "1 year"),
 
             // Branding & Integrations
             FeatureRow.CreateSection("Branding & Integrations"),
-            new("Custom branding (logo on reports & portal)",  Dash(),  Check(),                        "White-label"),
-            new("Email integration (custom domain)",           Dash(),  Check(),                        Check()),
-            new("API access",                                  Dash(),  "Limited (read)",               "Full (read/write)"),
-            new("SSO (Azure AD / Google)",                     Dash(),  Dash(),                         Check()),
-            new("CRM / ERP integrations",                      Dash(),  Dash(),                         "Available on request"),
+            new("Custom branding", Dash(), Check(), "White-label"),
+            new("API access", Dash(), "Limited (read)", "Full (read/write)"),
+            new("SSO (Azure AD / Google)", Dash(), Dash(), Check()),
+            new("Custom integrations", Dash(), Dash(), Check()),
 
             // Security & Support
             FeatureRow.CreateSection("Security & Support"),
-            new("Hosted on Microsoft Azure",                   Check(), Check(),                        Check()),
-            new("Two-factor authentication",                   Check(), Check(),                        Check()),
-            new("Permission controls",                         "Standard roles", "Enhanced permissions","Granular matrix"),
-            new("Email support",                               "48-hour response", "24-hour response",  "Same-day response"),
-            new("Dedicated account manager",                   Dash(),  Dash(),                         Check())
+            new("Microsoft Azure hosting", Check(), Check(), Check()),
+            new("Two-factor authentication", Check(), Check(), Check()),
+            new("Permission controls", "Standard roles", "Enhanced", "Granular"),
+            new("Email support", "48-hour response", "24-hour response", "Same-day response"),
+            new("Dedicated account manager", Dash(), Dash(), Check())
+        };
+    }
+    
+    // Quiz Methods
+    private void StartQuiz()
+    {
+        quizStarted = true;
+        currentQuestion = 0;
+        starterScore = 0;
+        professionalScore = 0;
+        enterpriseScore = 0;
+    }
+    
+    private void SelectQuizOption(QuizOption option)
+    {
+        switch (option.PlanWeight.ToLower())
+        {
+            case "starter":
+                starterScore += 3;
+                professionalScore += 1;
+                break;
+            case "professional":
+                professionalScore += 3;
+                starterScore += 1;
+                enterpriseScore += 1;
+                break;
+            case "enterprise":
+                enterpriseScore += 3;
+                professionalScore += 1;
+                break;
+        }
+        
+        if (currentQuestion < quizQuestions.Count - 1)
+        {
+            currentQuestion++;
+        }
+        else
+        {
+            CalculateQuizRecommendation();
+            currentQuestion++;
+        }
+    }
+    
+    private void PreviousQuestion()
+    {
+        if (currentQuestion > 0)
+        {
+            currentQuestion--;
+        }
+    }
+    
+    private void RestartQuiz()
+    {
+        quizStarted = false;
+        currentQuestion = 0;
+        starterScore = 0;
+        professionalScore = 0;
+        enterpriseScore = 0;
+    }
+    
+    private void CalculateQuizRecommendation()
+    {
+        if (enterpriseScore >= professionalScore && enterpriseScore >= starterScore)
+        {
+            quizRecommendedPlan = "Enterprise";
+        }
+        else if (professionalScore >= starterScore)
+        {
+            quizRecommendedPlan = "Professional";
+        }
+        else
+        {
+            quizRecommendedPlan = "Starter";
+        }
+    }
+    
+    private string GetQuizRecommendationText()
+    {
+        return quizRecommendedPlan switch
+        {
+            "Starter" => "Based on your answers, our Starter plan is perfect for you. It's ideal for independent specialists managing up to 10 properties with essential features.",
+            "Professional" => "Based on your answers, our Professional plan is the best fit. It includes unlimited team members, advanced analytics, client portals, and 24/7 priority support—perfect for growing firms.",
+            "Enterprise" => "Based on your answers, our Enterprise plan is designed for your needs. With unlimited properties, custom integrations, dedicated support, and white-label options, it's perfect for large organizations.",
+            _ => ""
+        };
+    }
+    
+    private List<string> GetQuizPlanBenefits()
+    {
+        return quizRecommendedPlan switch
+        {
+            "Starter" => new List<string>
+            {
+                "Up to 10 properties",
+                "2 team members",
+                "Basic reporting & templates",
+                "5 GB storage",
+                "Email support"
+            },
+            "Professional" => new List<string>
+            {
+                "Up to 50 properties",
+                "Unlimited team members",
+                "Advanced analytics & reporting",
+                "Client portals & API access",
+                "24/7 priority support",
+                "50 GB storage"
+            },
+            "Enterprise" => new List<string>
+            {
+                "Unlimited properties & users",
+                "Custom integrations",
+                "Dedicated account manager",
+                "Unlimited storage",
+                "White-label options",
+                "Custom SLA"
+            },
+            _ => new List<string>()
         };
     }
 
-    private void GoToContact() => Nav.NavigateTo("/contact");
+    private void SelectPlan(string planTier)
+    {
+        var interval = isAnnual ? "Yearly" : "Monthly";
+        Nav.NavigateTo($"/tenant/signup?plan={planTier}&interval={interval}");
+    }
 
-    // Helpers to render cells with checkmarks vs text
-    private RenderFragment RenderCell(string value) => builder => {
-        if (value == Check()) {
-            builder.OpenComponent<MudIcon>(0);
-            builder.AddAttribute(1, "Color", Color.Primary);
-            builder.AddAttribute(2, "Icon", Icons.Material.Filled.CheckCircle);
-            builder.CloseComponent();
-        } else if (value == Dash()) {
-            builder.OpenComponent<MudText>(3);
-            builder.AddAttribute(4, "Typo", Typo.body2);
-            builder.AddContent(5, "—");
-            builder.CloseComponent();
-        } else {
-            builder.OpenComponent<MudText>(6);
-            builder.AddAttribute(7, "Typo", Typo.body2);
-            builder.AddContent(8, value);
-            builder.CloseComponent();
-        }
-    };
+    private void ContactSales()
+    {
+        Nav.NavigateTo("/contact?reason=Enterprise");
+    }
+
+    private string GetCardStyle(bool isPopular)
+    {
+        return isPopular 
+            ? "border-radius: 20px; position: relative; cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease; transform: scale(1.05);" 
+            : "border-radius: 20px; position: relative; cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease;";
+    }
+
+    private RenderFragment RenderComparisonCell(string value)
+    {
+        return builder =>
+        {
+            if (value == Check())
+            {
+                builder.OpenComponent<MudIcon>(0);
+                builder.AddAttribute(1, "Icon", Icons.Material.Filled.CheckCircle);
+                builder.AddAttribute(2, "Color", Color.Success);
+                builder.AddAttribute(3, "Size", Size.Small);
+                builder.CloseComponent();
+            }
+            else if (value == Dash())
+            {
+                builder.OpenElement(4, "span");
+                builder.AddAttribute(5, "style", "color: #ccc;");
+                builder.AddContent(6, "—");
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.OpenComponent<MudText>(7);
+                builder.AddAttribute(8, "Typo", Typo.body2);
+                builder.AddAttribute(9, "Style", "font-weight: 500;");
+                builder.AddAttribute(10, "ChildContent", (RenderFragment)(b => b.AddContent(11, value)));
+                builder.CloseComponent();
+            }
+        };
+    }
 
     private static string Check() => "CHECK";
     private static string Dash() => "DASH";
 
-    private class FeatureRow {
+    private class FeatureRow
+    {
         public bool IsSectionHeader { get; set; }
         public string Section { get; set; } = string.Empty;
         public string Feature { get; set; } = string.Empty;
@@ -312,7 +1282,8 @@
 
         public FeatureRow() { }
 
-        public FeatureRow(string feature, string startup, string pro, string enterprise) {
+        public FeatureRow(string feature, string startup, string pro, string enterprise)
+        {
             Feature = feature;
             Startup = startup;
             Pro = pro;
@@ -322,6 +1293,40 @@
         public static FeatureRow CreateSection(string name) =>
             new() { IsSectionHeader = true, Section = name };
     }
-
-    [Parameter] public EventCallback<string> OnSelectPlan { get; set; }
 }
+
+<style>
+    .pricing-card {
+        transition: all 0.3s ease;
+    }
+    
+    .pricing-card:hover {
+        transform: translateY(-8px) !important;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.15) !important;
+    }
+    
+    .pricing-card-popular {
+        border: 3px solid #FF8C00;
+    }
+    
+    .comparison-row {
+        transition: background-color 0.2s ease;
+    }
+    
+    .comparison-row:hover {
+        background-color: #f5f5f5 !important;
+    }
+    
+    .quiz-option:hover {
+        border-color: #FF8C00 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 140, 0, 0.2) !important;
+    }
+    
+    /* Responsive */
+    @@media (max-width: 960px) {
+        .pricing-card-popular {
+            transform: scale(1) !important;
+        }
+    }
+</style>

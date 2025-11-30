@@ -1,0 +1,185 @@
+﻿@page "/Account/Billing/GracePeriod"
+@using CRS.Models
+@using CRS.Data
+@using CRS.Services.Billing
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IBillingService BillingService
+@inject ITenantContext TenantContext
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Read-Only Mode - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8 mb-16">
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+    else if (_tenant == null)
+    {
+        <MudAlert Severity="Severity.Error">Unable to load account information.</MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-6" Elevation="3">
+            <!-- Alert Header -->
+            <MudAlert Severity="Severity.Warning" Class="mb-4" Variant="Variant.Filled">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" />
+                        Read-Only Mode Active
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        Your account is in read-only mode. You can view all your data, but cannot make changes.
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+
+            <!-- Countdown -->
+            @if (_tenant.GracePeriodEndsAt.HasValue)
+            {
+                <MudPaper Class="pa-4 mb-4" Elevation="0" Style="background: #FFF3E0; border-left: 4px solid #FF8C00;">
+                    <MudText Typo="Typo.h6" Class="mb-2" Style="color: #E65100;">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Style="color: #E65100;" />
+                        @_daysRemaining days until suspension
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color: #E65100;">
+                        Update payment by <strong>@_tenant.GracePeriodEndsAt.Value.ToString("MMMM dd, yyyy")</strong> to restore full access.
+                        After this date, you'll lose all access until payment is restored.
+                    </MudText>
+                </MudPaper>
+            }
+
+            <!-- Why This Happened -->
+            <MudText Typo="Typo.h6" Class="mb-3">Why is my account in read-only mode?</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4" Style="color: #666;">
+                Your last payment attempt failed. We've tried multiple times to process your payment, but were unsuccessful.
+                Your account has been placed in read-only mode to give you time to update your payment method without losing access to your data.
+            </MudText>
+
+            <!-- What You Can Do -->
+            <MudText Typo="Typo.h6" Class="mb-3">What you can do now:</MudText>
+            <MudList T="string" Dense="false" Class="mb-4">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Visibility" IconColor="Color.Info">
+                    <MudText Typo="Typo.body2"><strong>View</strong> all communities, studies, and reports</MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Download" IconColor="Color.Info">
+                    <MudText Typo="Typo.body2"><strong>Export</strong> your data and documents</MudText>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Block" IconColor="Color.Error">
+                    <MudText Typo="Typo.body2"><strong>Cannot</strong> create, edit, or delete anything</MudText>
+                </MudListItem>
+            </MudList>
+
+            <!-- Restore Access Button -->
+            <MudButton Color="Color.Warning" 
+                       Variant="Variant.Filled" 
+                       Size="Size.Large"
+                       FullWidth="true"
+                       StartIcon="@Icons.Material.Filled.CreditCard"
+                       OnClick="UpdatePaymentAsync"
+                       Disabled="_processing"
+                       Class="mb-3">
+                @if (_processing)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Processing...</span>
+                }
+                else
+                {
+                    <span>Update Payment Method & Restore Full Access</span>
+                }
+            </MudButton>
+
+            <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #666;" Class="mb-4">
+                You'll be redirected to our secure payment portal.
+            </MudText>
+
+            <!-- What Happens Next -->
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.h6" Class="mb-3">What happens after I update payment?</MudText>
+            <MudTimeline TimelineAlign="TimelineAlign.Start" TimelinePosition="TimelinePosition.Start">
+                <MudTimelineItem Color="Color.Success" Elevation="0">
+                    <MudText Typo="Typo.body2" Class="fw-bold">Immediate</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">Payment processed successfully</MudText>
+                </MudTimelineItem>
+                <MudTimelineItem Color="Color.Success" Elevation="0">
+                    <MudText Typo="Typo.body2" Class="fw-bold">Within seconds</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">Full access automatically restored</MudText>
+                </MudTimelineItem>
+                <MudTimelineItem Color="Color.Success" Elevation="0">
+                    <MudText Typo="Typo.body2" Class="fw-bold">Right away</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">Create, edit, and manage everything as before</MudText>
+                </MudTimelineItem>
+            </MudTimeline>
+
+            <!-- Support -->
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.body2" Align="Align.Center" Style="color: #666;">
+                Having trouble? Email <MudLink Href="mailto:support@alxreservecloud.com" Style="color: #FF8C00; font-weight: 600;">support@alxreservecloud.com</MudLink>
+            </MudText>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private Tenant? _tenant;
+    private bool _loading = true;
+    private bool _processing = false;
+    private int _daysRemaining = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTenantStatusAsync();
+    }
+
+    private async Task LoadTenantStatusAsync()
+    {
+        try
+        {
+            if (!TenantContext.TenantId.HasValue)
+            {
+                Nav.NavigateTo("/");
+                return;
+            }
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
+
+            if (_tenant != null && _tenant.GracePeriodEndsAt.HasValue)
+            {
+                _daysRemaining = Math.Max(0, (_tenant.GracePeriodEndsAt.Value - DateTime.UtcNow).Days);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading account status: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task UpdatePaymentAsync()
+    {
+        if (_tenant == null) return;
+
+        _processing = true;
+        StateHasChanged();
+
+        try
+        {
+            var portalUrl = await BillingService.CreateBillingPortalSessionAsync(_tenant.Id);
+            Snackbar.Add("Redirecting to payment portal...", Severity.Info);
+            Nav.NavigateTo(portalUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error accessing payment portal: {ex.Message}", Severity.Error);
+            _processing = false;
+        }
+    }
+}

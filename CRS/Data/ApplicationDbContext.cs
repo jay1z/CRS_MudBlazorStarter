@@ -190,6 +190,20 @@ namespace CRS.Data {
                 .WithMany(ce => ce.ReserveStudyCommonElements)
                 .HasForeignKey(rsbe => rsbe.CommonElementId);
 
+            // Configure decimal precision for ReserveStudy
+            builder.Entity<ReserveStudy>(entity => {
+                entity.Property(rs => rs.CurrentReserveFunds).HasPrecision(18, 2);
+                entity.Property(rs => rs.MonthlyReserveContribution).HasPrecision(18, 2);
+                entity.Property(rs => rs.AnnualInflationRate).HasPrecision(18, 2);
+                entity.Property(rs => rs.AnnualInterestRate).HasPrecision(18, 2);
+            });
+
+            // Configure decimal precision for ReserveStudyCommonElement
+            builder.Entity<ReserveStudyCommonElement>(entity => {
+                entity.Property(rsce => rsce.Quantity).HasPrecision(18, 2);
+                entity.Property(rsce => rsce.ReplacementCost).HasPrecision(18, 2);
+            });
+
             // TenantHomepage entity configuration
             builder.Entity<TenantHomepage>(entity => {
                 entity.ToTable("TenantHomepages");

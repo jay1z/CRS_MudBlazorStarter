@@ -6,7 +6,7 @@ namespace CRS.Services.Demo
 {
     public interface IDemoDataSeedService
     {
-        Task SeedDemoDataAsync(Guid tenantId);
+        Task SeedDemoDataAsync(int tenantId);
     }
     
     public class DemoDataSeedService : IDemoDataSeedService
@@ -22,7 +22,7 @@ namespace CRS.Services.Demo
             _logger = logger;
         }
         
-        public async Task SeedDemoDataAsync(Guid tenantId)
+        public async Task SeedDemoDataAsync(int tenantId)
         {
             try
             {
@@ -61,7 +61,7 @@ namespace CRS.Services.Demo
             }
         }
         
-        private Community CreateSampleProperty(Guid tenantId, string name, int units, string size)
+        private Community CreateSampleProperty(int tenantId, string name, int units, string size)
         {
             return new Community
             {
@@ -115,7 +115,7 @@ namespace CRS.Services.Demo
                 AnnualInterestRate = 2.0m,
                 StudyType = "Full Update",
                 PreparedBy = "Demo Account",
-                Status = "Draft",
+                Status = ReserveStudy.WorkflowStatus.RequestCreated,
                 Notes = "This is a sample reserve study created for demonstration purposes. All data is fictional.",
                 DateCreated = DateTime.UtcNow,
                 IsDemo = true
@@ -130,6 +130,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Asphalt Shingle Roofing",
                 Description = "Replace asphalt shingle roofing on all residential buildings",
                 Quantity = 15000m,
@@ -146,6 +147,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Exterior Building Painting",
                 Description = "Repaint all exterior building surfaces including trim",
                 Quantity = 12000m,
@@ -162,6 +164,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Asphalt Paving Resurface",
                 Description = "Mill and overlay asphalt paving in parking lots and driveways",
                 Quantity = 8500m,
@@ -178,6 +181,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Common Area HVAC Systems",
                 Description = "Replace HVAC units serving clubhouse and common areas",
                 Quantity = 3m,
@@ -194,6 +198,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Perimeter Fencing",
                 Description = "Replace wood privacy fencing around property perimeter",
                 Quantity = 850m,
@@ -210,6 +215,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Swimming Pool Resurface",
                 Description = "Resurface community swimming pool including tile and coping",
                 Quantity = 1m,
@@ -226,6 +232,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Pool Deck Resurfacing",
                 Description = "Replace concrete pool deck with stamped concrete",
                 Quantity = 2400m,
@@ -242,6 +249,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Playground Equipment",
                 Description = "Replace playground equipment including safety surfacing",
                 Quantity = 1m,
@@ -258,6 +266,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Irrigation System Replacement",
                 Description = "Replace underground irrigation system including controller",
                 Quantity = 1m,
@@ -274,6 +283,7 @@ namespace CRS.Services.Demo
             elements.Add(new ReserveStudyCommonElement
             {
                 ReserveStudyId = studyId,
+                CommonElementId = Guid.Empty,
                 ElementName = "Exterior Site Lighting",
                 Description = "Replace decorative site lighting fixtures throughout community",
                 Quantity = 45m,
