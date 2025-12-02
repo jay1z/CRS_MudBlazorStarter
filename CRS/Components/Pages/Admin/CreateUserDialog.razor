@@ -1,0 +1,209 @@
+﻿@using CRS.Data
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Identity
+@using FluentValidation
+@inject ITenantUserService TenantUserService
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-width: 600px; padding: 0;">
+            <MudText Typo="Typo.h6" Class="mb-4">Add New Team Member</MudText>
+            <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-6">
+                Create a new specialist or viewer account. They'll receive an email with setup instructions.
+            </MudText>
+
+            <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+                <FluentValidationValidator />
+                <MudStack Spacing="3">
+                    <!-- Role Selection (First for context) -->
+                    <MudSelect @bind-Value="model.Role" 
+                               Label="Role *" 
+                               Variant="Variant.Outlined"
+                               For="@(() => model.Role)"
+                               HelperText="Choose the appropriate access level">
+                        <MudSelectItem Value="@("TenantSpecialist")">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Engineering" Size="Size.Small" />
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500;">Specialist</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #999;">Can create and manage studies</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudSelectItem>
+                        <MudSelectItem Value="@("TenantViewer")">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500;">Viewer</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #999;">Read-only access to studies</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudSelectItem>
+                    </MudSelect>
+
+                    <MudDivider />
+
+                    <!-- Name Fields -->
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="model.FirstName" 
+                                          Label="First Name *" 
+                                          Variant="Variant.Outlined"
+                                          For="@(() => model.FirstName)" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="model.LastName" 
+                                          Label="Last Name *" 
+                                          Variant="Variant.Outlined"
+                                          For="@(() => model.LastName)" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Email -->
+                    <MudTextField @bind-Value="model.Email" 
+                                  Label="Email Address *" 
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Email"
+                                  For="@(() => model.Email)"
+                                  HelperText="They'll use this to sign in" />
+
+                    <!-- Title (Optional) -->
+                    <MudTextField @bind-Value="model.Title" 
+                                  Label="Job Title (Optional)" 
+                                  Variant="Variant.Outlined"
+                                  Placeholder="e.g., Senior Reserve Specialist"
+                                  For="@(() => model.Title)" />
+
+                    <!-- Info Alert -->
+                    <MudAlert Severity="MudBlazor.Severity.Info" Dense="true" Class="mt-2">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                                <MudIcon Icon="@Icons.Material.Filled.Mail" Size="Size.Small" Class="mr-1" />
+                                Email Invitation
+                            </MudText>
+                            <MudText Typo="Typo.caption">
+                                An invitation will be sent with instructions to confirm their email and set a password.
+                            </MudText>
+                        </MudStack>
+                    </MudAlert>
+
+                    <ValidationSummary />
+                </MudStack>
+            </EditForm>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="HandleSubmit"
+                   Disabled="isSubmitting">
+            @if (isSubmitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Creating...</span>
+            }
+            else
+            {
+                <span>Create & Send Invitation</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private CreateUserModel model = new();
+    private bool isSubmitting;
+
+    private async Task HandleSubmit()
+    {
+        if (isSubmitting) return;
+
+        if (TenantContext.TenantId == null)
+        {
+            Snackbar.Add("No tenant context available", MudBlazor.Severity.Error);
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var created = await TenantUserService.CreateTenantUserAsync(
+                model.Email!,
+                "Letmeinnow1_", // Temporary password
+                model.FirstName!,
+                model.LastName!,
+                TenantContext.TenantId.Value,
+                model.Role!
+            );
+
+            if (created != null)
+            {
+                // Update title if provided
+                if (!string.IsNullOrWhiteSpace(model.Title))
+                {
+                    created.Title = model.Title;
+                    await TenantUserService.UpdateUserAsync(created);
+                }
+
+                Snackbar.Add($"Successfully created {created.FullName}. Invitation email sent to {created.Email}.", MudBlazor.Severity.Success);
+                MudDialog.Close(DialogResult.Ok(created));
+            }
+            else
+            {
+                Snackbar.Add($"Failed to create user. The email may already be in use.", MudBlazor.Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating user: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class CreateUserModel
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Email { get; set; }
+        public string? Title { get; set; }
+        public string Role { get; set; } = "TenantSpecialist";
+    }
+
+    public class CreateUserModelValidator : AbstractValidator<CreateUserModel>
+    {
+        public CreateUserModelValidator()
+        {
+            RuleFor(x => x.FirstName)
+                .NotEmpty().WithMessage("First name is required")
+                .MaximumLength(50).WithMessage("First name must be 50 characters or less");
+
+            RuleFor(x => x.LastName)
+                .NotEmpty().WithMessage("Last name is required")
+                .MaximumLength(50).WithMessage("Last name must be 50 characters or less");
+
+            RuleFor(x => x.Email)
+                .NotEmpty().WithMessage("Email is required")
+                .EmailAddress().WithMessage("Please enter a valid email address")
+                .MaximumLength(256).WithMessage("Email must be 256 characters or less");
+
+            RuleFor(x => x.Role)
+                .NotEmpty().WithMessage("Please select a role")
+                .Must(r => r == "TenantSpecialist" || r == "TenantViewer")
+                .WithMessage("Invalid role selected");
+
+            RuleFor(x => x.Title)
+                .MaximumLength(100).WithMessage("Title must be 100 characters or less");
+        }
+    }
+}

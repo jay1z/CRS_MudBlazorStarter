@@ -214,6 +214,12 @@ else {
 
  isSubmitting = true;
  try {
+ // IMPORTANT: Save new community first if needed
+ if (step1 != null && !await step1.SaveNewCommunityIfNeededAsync()) {
+ Snackbar.Add("Failed to save community. Please try again.", Severity.Error);
+ return;
+ }
+
  PrepareModelForSubmission();
 
  // Use workflow service so the StudyRequest is created and state machine is initialized
@@ -235,18 +241,18 @@ else {
  }
 
  private void PrepareModelForSubmission() {
- if (isExistingCommunity && Model?.Community?.Id != null) {
+ if (isExistingCommunity && Model?.Community?.Id != null && Model.Community.Id != Guid.Empty) {
  // For existing community, just set the reference without trying to attach
  Model.CommunityId = Model.Community.Id;
  // Detach the Community from the Model to prevent tracking conflicts
  Model.Community = null;
  }
  else if (Model?.Community != null) {
- // For new community, ensure it's tracked as a new entity
- Model.Community.Id = Guid.CreateVersion7(); // Ensure new ID is generated
- foreach (var address in Model.Community.Addresses ?? Enumerable.Empty<Address>()) {
- // Generate new IDs for addresses explicitly to avoid duplicate key issues
- address.Id = Guid.CreateVersion7();
+ // For new community that was just saved, set the CommunityId reference
+ if (Model.Community.Id != Guid.Empty) {
+ Model.CommunityId = Model.Community.Id;
+ // Detach the Community to prevent duplicate tracking
+ Model.Community = null;
  }
  }
  }

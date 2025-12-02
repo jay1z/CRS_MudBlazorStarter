@@ -184,6 +184,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     
     // Register lifecycle job
     builder.Services.AddScoped<CRS.Jobs.TenantLifecycleJob>();
+    
+    // Phase 1: Register audit log archiving background service
+    builder.Services.AddHostedService<AuditLogArchiveService>();
 
     // Register controllers for API endpoints (media upload, etc.)
     builder.Services.AddControllers();
@@ -262,12 +265,21 @@ void ConfigureDatabases(WebApplicationBuilder builder) {
         throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
     // Register scoped DbContext for consumers like Identity stores, RoleManager/UserManager, and seeding logic
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+    builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
+    {
+        options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure());
+    });
 
-    builder.Services.AddDbContextFactory<ApplicationDbContext>(
-        options => options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()),
-        ServiceLifetime.Scoped);
+    // Register the factory as singleton - it will resolve scoped dependencies per-call
+    builder.Services.AddSingleton<IDbContextFactory<ApplicationDbContext>>(sp =>
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure())
+            .Options;
+        
+        // Use IServiceScopeFactory to create scopes for resolving scoped dependencies
+        return new ScopedDbContextFactory(options, sp.GetRequiredService<IServiceScopeFactory>());
+    });
 }
 
 void ConfigureIdentity(WebApplicationBuilder builder) {
@@ -396,20 +408,101 @@ async Task ConfigurePipeline(WebApplication app) {
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // Dev helper: promote a user to Admin quickly
+    // Dev helper endpoints
     if (app.Environment.IsDevelopment()) {
         app.MapGet("/dev/make-admin", async (string email, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole<Guid>> roleManager) => {
+                if (string.IsNullOrWhiteSpace(email)) return Results.BadRequest("email is required");
+                if (!await roleManager.RoleExistsAsync("Admin")) await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
+                var user = await userManager.FindByEmailAsync(email);
+                if (user == null) return Results.NotFound($"User '{email}' not found.");
+                var inRole = await userManager.IsInRoleAsync(user, "Admin");
+                if (!inRole) {
+                    var r = await userManager.AddToRoleAsync(user, "Admin");
+                    if (!r.Succeeded) return Results.BadRequest(string.Join(", ", r.Errors.Select(e => e.Description)));
+                }
+                return Results.Text($"'{email}' is now in Admin role.");
+            }).WithDisplayName("Dev: Promote user to Admin");
+            
+            // Dev helper: assign scoped role (tenant or platform)
+            app.MapGet("/dev/assign-role", async (
+                string email,
+                string roleName,
+                int? tenantId,
+                UserManager<ApplicationUser> userManager,
+                IDbContextFactory<ApplicationDbContext> dbFactory) => {
+                
+                if (string.IsNullOrWhiteSpace(email)) return Results.BadRequest("email is required");
+                if (string.IsNullOrWhiteSpace(roleName)) return Results.BadRequest("roleName is required");
+                
+                var user = await userManager.FindByEmailAsync(email);
+                if (user == null) return Results.NotFound($"User '{email}' not found.");
+                
+                await using var db = await dbFactory.CreateDbContextAsync();
+                
+                // Get or create the role
+                var role = await db.Roles2.FirstOrDefaultAsync(r => r.Name == roleName);
+                if (role == null) {
+                    role = new CRS.Models.Security.Role {
+                        Name = roleName,
+                        Scope = tenantId.HasValue ? CRS.Models.Security.RoleScope.Tenant : CRS.Models.Security.RoleScope.Platform
+                    };
+                    db.Roles2.Add(role);
+                    await db.SaveChangesAsync();
+                }
+                
+                // Check if assignment already exists
+                var exists = await db.UserRoleAssignments.AnyAsync(a =>
+                    a.UserId == user.Id &&
+                    a.RoleId == role.Id &&
+                    a.TenantId == tenantId);
+                
+                if (exists) {
+                    return Results.Ok(new { message = $"User '{email}' already has role '{roleName}' for tenant {tenantId?.ToString() ?? "platform"}" });
+                }
+                
+                // Create assignment
+                db.UserRoleAssignments.Add(new CRS.Models.Security.UserRoleAssignment {
+                    UserId = user.Id,
+                    RoleId = role.Id,
+                    TenantId = tenantId
+                });
+                await db.SaveChangesAsync();
+                
+                return Results.Ok(new {
+                    message = $"Assigned role '{roleName}' to user '{email}' for tenant {tenantId?.ToString() ?? "platform"}",
+                    userId = user.Id,
+                    roleId = role.Id,
+                    tenantId = tenantId
+                });
+            }).WithDisplayName("Dev: Assign scoped role to user");
+            
+            // Dev helper: fix users with null passwords by generating temporary password
+            app.MapGet("/dev/fix-null-password", async (string email, UserManager<ApplicationUser> userManager, ApplicationDbContext db) => {
             if (string.IsNullOrWhiteSpace(email)) return Results.BadRequest("email is required");
-            if (!await roleManager.RoleExistsAsync("Admin")) await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
             var user = await userManager.FindByEmailAsync(email);
             if (user == null) return Results.NotFound($"User '{email}' not found.");
-            var inRole = await userManager.IsInRoleAsync(user, "Admin");
-            if (!inRole) {
-                var r = await userManager.AddToRoleAsync(user, "Admin");
-                if (!r.Succeeded) return Results.BadRequest(string.Join(", ", r.Errors.Select(e => e.Description)));
+            
+            // Check if user has a password
+            var hasPassword = await userManager.HasPasswordAsync(user);
+            if (hasPassword) {
+                return Results.Ok(new { message = $"User '{email}' already has a password. No action needed." });
             }
-            return Results.Text($"'{email}' is now in Admin role.");
-        }).WithDisplayName("Dev: Promote user to Admin");
+            
+            // Use fixed password for testing in Development
+            var tempPassword = "Letmeinnow1_";
+            
+            // Add password to user
+            var result = await userManager.AddPasswordAsync(user, tempPassword);
+            if (!result.Succeeded) {
+                return Results.BadRequest(new { error = "Failed to add password", errors = result.Errors.Select(e => e.Description) });
+            }
+            
+            return Results.Ok(new { 
+                message = $"Password added for user '{email}'",
+                temporaryPassword = tempPassword,
+                warning = "Please share this password securely with the user and ask them to change it immediately."
+            });
+        }).WithDisplayName("Dev: Fix user with null password");
 
         // Example workflow transition + notification trigger
         app.MapGet("/dev/workflow/example", async (IStudyWorkflowService engine) => {
@@ -479,3 +572,27 @@ async Task SeedDatabase(WebApplication app) {
 // DTOs
 public record SaveRequest(string Name, string Html, string? ComponentsJson);
 public record TenantFindRequest(string Email);
+
+// Custom factory that creates DbContext with scoped dependencies
+class ScopedDbContextFactory : IDbContextFactory<ApplicationDbContext>
+{
+    private readonly DbContextOptions<ApplicationDbContext> _options;
+    private readonly IServiceScopeFactory _scopeFactory;
+    
+    public ScopedDbContextFactory(DbContextOptions<ApplicationDbContext> options, IServiceScopeFactory scopeFactory)
+    {
+        _options = options;
+        _scopeFactory = scopeFactory;
+    }
+    
+    public ApplicationDbContext CreateDbContext()
+    {
+        // Create a scope to properly resolve scoped services
+        // This ensures ITenantContext and IHttpContextAccessor are resolved from the correct scope
+        var scope = _scopeFactory.CreateScope();
+        var httpContextAccessor = scope.ServiceProvider.GetService<IHttpContextAccessor>();
+        var tenantContext = scope.ServiceProvider.GetService<ITenantContext>();
+        
+        return new ApplicationDbContext(_options, httpContextAccessor, tenantContext);
+    }
+}

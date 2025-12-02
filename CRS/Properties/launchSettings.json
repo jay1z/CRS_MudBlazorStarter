@@ -16,7 +16,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:7056;http://localhost:5063"
+      "applicationUrl": "https://acme3.localhost:7056;http://localhost:5063"
     }
   },
   "$schema": "https://json.schemastore.org/launchsettings.json"

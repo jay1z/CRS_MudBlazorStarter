@@ -15,11 +15,10 @@
         // SaaS Refactor: Tenant scope
         public int TenantId { get; set; }
         
-        // Additional property details for demo data
-        public string? Address1 { get; set; }
-        public string? City { get; set; }
-        public string? State { get; set; }
-        public string? ZipCode { get; set; }
+        // Phase 1: Removed duplicate address fields (Address1, City, State, ZipCode)
+        // Use Addresses collection instead for normalized data
+        
+        // Additional community details
         public string? PhoneNumber { get; set; }
         public string? Email { get; set; }
         public int? NumberOfUnits { get; set; }
@@ -30,3 +29,4 @@
         public bool IsDemo { get; set; } = false;
     }
 }
+

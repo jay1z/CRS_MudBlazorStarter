@@ -1,6 +1,8 @@
 ﻿@attribute [AllowAnonymous]
+@layout EmptyLayout
 @page "/Account/Login"
 @page "/login"
+@implements IDisposable
 
 @using System.ComponentModel.DataAnnotations
 @using System.ComponentModel
@@ -21,107 +23,142 @@
 @inject CRS.Services.MultiTenancy.TenantService TenantService
 @inject IConfiguration Config
 @inject CRS.Services.Storage.ILogoStorageService LogoStorage
+@inject CRS.Services.Layout.ILayoutService LayoutService
 
 <PageTitle>Log in</PageTitle>
 
+@if (TenantContext.IsPlatformHost && string.IsNullOrWhiteSpace(TenantContext.Subdomain)) {
+    <!-- Platform host without subdomain - show message -->
+    <div Class="d-flex flex-column justify-center align-center pa-6" Style="height: 100vh; width: 100vw;">
+        <MudPaper Class="pa-8" Elevation="4" Style="max-width: 600px; text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Primary" Style="font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h4" Class="fw-bold mb-4">Welcome to ALX Reserve Cloud</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                To log in, please visit your organization's dedicated login page at:
+            </MudText>
+            <MudPaper Class="pa-3 mb-4" Elevation="0" Style="background: #f5f5f5; border-radius: 8px;">
+                <MudText Typo="Typo.body2" Style="font-family: monospace; color: #FF8C00;">
+                    <strong>yourcompany</strong>.alxreservecloud.com
+                </MudText>
+            </MudPaper>
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.body2" Class="mb-4" Style="color: #666;">
+                Don't have an account yet?
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Large" Href="/tenant/signup" StartIcon="@Icons.Material.Filled.RocketLaunch">
+                Start Free Trial
+            </MudButton>
+            <MudText Typo="Typo.caption" Class="mt-4" Style="color: #999;">
+                <MudLink Href="/" Style="color: #FF8C00;">← Back to home</MudLink>
+            </MudText>
+        </MudPaper>
+    </div>
+} else {
+    <!-- Tenant-specific login form -->
+    @* <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="d-flex justify-center align-center" Style="min-height:100vh;">
+        <MudPaper Class="w-100 pa-6 d-flex flex-column flex-md-row rounded-lg" Elevation="3"> *@
 
-@* <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="d-flex justify-center align-center" Style="min-height:100vh;">
-    <MudPaper Class="w-100 pa-6 d-flex flex-column flex-md-row rounded-lg" Elevation="3">
- *@        
-@* Left: Login form *@
-<div Class="d-flex flex-column flex-md-row" Style="height: 100vh; width: 100vw;">
-    <div Class="d-flex flex-column justify-center align-center pa-6" Style="width: 100%; max-width: 600px;">
-        <MudGrid>
-            <MudItem md="12">
-                @if (!string.IsNullOrWhiteSpace(tenantLogoUrl)) {
-                    <MudImage Src="@tenantLogoUrl" Alt="@logoAltText" Class="mx-auto mb-4" Style="object-fit: contain;" />
-                } else {
-                    <MudImage Src="images/logo.png" Alt="Logo" Width="240" Height="240" Class="mx-auto mb-4" />
-                }
-            </MudItem>
-            <MudItem md="12">
-                <StatusMessage Message="@errorMessage" />
-                <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
-                    <DataAnnotationsValidator />
-                    <MudText GutterBottom="true" Typo="Typo.body1">Use a local account to log in.</MudText>
-                    <MudGrid>
-                        <MudItem md="12">
-                            <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email" Label="Email" Placeholder="name@example.com" UserAttributes="@(new() { { "autocomplete", "username" }, { "aria-required", "true" } })" />
-                        </MudItem>
-                        <MudItem md="12">
-                            <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" Label="Password" InputType="InputType.Password" Placeholder="password" UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } })" />
-                        </MudItem>
-                        @if (!IsTenantFixed) {
+    @* Left: Login form *@
+    <div Class="d-flex flex-column flex-md-row" Style="height: 80vh; width: 100vw;">
+        <div Class="d-flex flex-column justify-center align-center pa-6" Style="width: 100%; max-width: 600px;">
+            <MudGrid>
+                <MudItem md="12">
+                    @if (!string.IsNullOrWhiteSpace(tenantLogoUrl)) {
+                        <MudImage Src="@tenantLogoUrl" Alt="@logoAltText" Class="mx-auto mb-4" Style="object-fit: contain;" />
+                    } else {
+                        <MudImage Src="images/logo.png" Alt="Logo" Width="240" Height="240" Class="mx-auto mb-4" />
+                    }
+                </MudItem>
+                <MudItem md="12">
+                    <StatusMessage Message="@errorMessage" />
+                    <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                        <DataAnnotationsValidator />
+                        <MudText GutterBottom="true" Typo="Typo.body1">Use a local account to log in.</MudText>
+                        <MudGrid>
                             <MudItem md="12">
-                                <MudStaticTextField For="@(() => Input.TenantSlug)" @bind-Value="Input.TenantSlug" Label="Tenant" Placeholder="tenant subdomain (e.g. hoa1)" UserAttributes="@(new() { { "aria-required", "true" } })" />
+                                <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email" Label="Email" Placeholder="name@example.com" UserAttributes="@(new() { { "autocomplete", "username" }, { "aria-required", "true" } })" />
                             </MudItem>
-                        } else {
-                            <MudItem md="12"><MudText Typo="Typo.body2">Tenant: <strong>@FixedTenantSlug</strong></MudText></MudItem>
-                        }
+                            <MudItem md="12">
+                                <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" Label="Password" InputType="InputType.Password" Placeholder="password" UserAttributes="@(new() { { "autocomplete", "current-password" }, { "aria-required", "true" } })" />
+                            </MudItem>
+                            @* 
+                                @if (!IsTenantFixed) {
+                                    <MudItem md="12">
+                                        <MudStaticTextField For="@(() => Input.TenantSlug)" @bind-Value="Input.TenantSlug" Label="Tenant" Placeholder="tenant subdomain (e.g. hoa1)" UserAttributes="@(new() { { "aria-required", "true" } })" />
+                                    </MudItem>
+                                } else {
+                                    <MudItem md="12"><MudText Typo="Typo.body2">Tenant: <strong>@FixedTenantSlug</strong></MudText></MudItem>
+                                }
+                            *@
+                            <MudItem md="12">
+                                <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Remember me</MudStaticCheckBox>
+                            </MudItem>
+                            <MudItem md="12">
+                                <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Log in</MudStaticButton>
+                            </MudItem>
+                        </MudGrid>
+                    </EditForm>
+                    <MudGrid Class="mt-4">
                         <MudItem md="12">
-                            <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Remember me</MudStaticCheckBox>
-                        </MudItem>
-                        <MudItem md="12">
-                            <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Log in</MudStaticButton>
+                            <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink><br />
+                            <MudLink Href="Account/ResendEmailConfirmation">Resend email confirmation</MudLink>
                         </MudItem>
                     </MudGrid>
-                </EditForm>
-                <MudGrid Class="mt-4">
-                    <MudItem md="12">
-                        <MudLink Href="Account/ForgotPassword">Forgot your password?</MudLink><br />
-                        <MudLink Href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</MudLink><br />
-                        <MudLink Href="Account/ResendEmailConfirmation">Resend email confirmation</MudLink>
-                    </MudItem>
-                </MudGrid>
-            </MudItem>
-            @* <MudItem md="6">
-                    <MudText GutterBottom="true" Typo="Typo.body1">Use another service to log in.</MudText>
-                    <ExternalLoginPicker />
-                </MudItem> *@
-        </MudGrid>
+                </MudItem>
+                @* <MudItem md="6">
+                        <MudText GutterBottom="true" Typo="Typo.body1">Use another service to log in.</MudText>
+                        <ExternalLoginPicker />
+                    </MudItem> *@
+            </MudGrid>
+        </div>
+
+        @* Right: Image - fills full height *@
+        <div Class="d-none d-md-flex flex-grow-1" Style="overflow: hidden; padding: 0; margin: 0;">
+            <MudImage Src="images/login_2.png" ObjectFit="ObjectFit.Cover" Alt="Login" Style="width: 100%; height: 100%; display: block;" />
+        </div>
     </div>
 
-    @* Right: Image *@
-    <div Class="d-none d-md-flex flex-grow-1 justify-center align-center" Style="overflow: hidden;">
-        <MudImage Src="images/login_2.png" ObjectFit="ObjectFit.Cover" Alt="Login" Style="width: 100%; height: 100%;" />
-    </div>
-</div>
-@*     
-    </MudPaper>
-</MudContainer>
- *@
-@code {
-private string? errorMessage;
-private string? tenantLogoUrl;
-private string logoAltText = "Logo";
+    @* </MudPaper>
+    </MudContainer> *@
 
-[CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
-[SupplyParameterFromForm] private InputModel Input { get; set; } = new();
-[SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
-
-private bool IsTenantFixed => !string.IsNullOrWhiteSpace(TenantContext.Subdomain);
-private string? FixedTenantSlug => TenantContext.Subdomain;
-
-protected override async Task OnInitializedAsync() {
-    if (HttpMethods.IsGet(HttpContext.Request.Method)) {
-        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-    }
-    if (IsTenantFixed) {
-        Input.TenantSlug = FixedTenantSlug;
-        await LoadTenantLogoAsync();
-    }
 }
+@code {
+    private string? errorMessage;
+    private string? tenantLogoUrl;
+    private string logoAltText = "Logo";
 
-private async Task LoadTenantLogoAsync() {
-    if (TenantContext.TenantId.HasValue) {
-        try {
-            tenantLogoUrl = await LogoStorage.GetLogoUrlAsync(TenantContext.TenantId.Value);
-            logoAltText = $"{TenantContext.TenantName ?? "Company"} Logo";
-        } catch (Exception ex) {
-            Logger.LogWarning(ex, "Error loading tenant logo for tenant {TenantId}", TenantContext.TenantId);
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    private bool IsTenantFixed => !string.IsNullOrWhiteSpace(TenantContext.Subdomain);
+    private string? FixedTenantSlug => TenantContext.Subdomain;
+
+    protected override async Task OnInitializedAsync() {
+        // Hide app bar if on subdomain (tenant-specific login)
+        if (!string.IsNullOrWhiteSpace(TenantContext.Subdomain)) {
+            LayoutService.SetHideNav(true);
+        }
+
+        if (HttpMethods.IsGet(HttpContext.Request.Method)) {
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+        if (IsTenantFixed) {
+            Input.TenantSlug = FixedTenantSlug;
+            await LoadTenantLogoAsync();
         }
     }
-}
+
+    private async Task LoadTenantLogoAsync() {
+        if (TenantContext.TenantId.HasValue) {
+            try {
+                tenantLogoUrl = await LogoStorage.GetLogoUrlAsync(TenantContext.TenantId.Value);
+                logoAltText = $"{TenantContext.TenantName ?? "Company"} Logo";
+            } catch (Exception ex) {
+                Logger.LogWarning(ex, "Error loading tenant logo for tenant {TenantId}", TenantContext.TenantId);
+            }
+        }
+    }
 
     public async Task LoginUser() {
         errorMessage = null;
@@ -140,11 +177,41 @@ private async Task LoadTenantLogoAsync() {
             errorMessage = "Error: Invalid login attempt."; return;
         }
 
+        // Check if user exists and get their tenant
+        var user = await UserManager.FindByEmailAsync(Input.Email);
+        if (user == null) {
+            await SignInManager.SignOutAsync();
+            errorMessage = "Error: Invalid login attempt.";
+            return;
+        }
+
+        // TENANT MISMATCH WARNING: Check if user is trying to log in to wrong tenant
+        if (tenant != null && user.TenantId != tenant.Id) {
+            await SignInManager.SignOutAsync();
+
+            // Get the user's correct tenant information
+            try {
+                var userTenant = await TenantService.FindByIdAsync(user.TenantId);
+                if (userTenant != null) {
+                    errorMessage = $"Wrong tenant! This account belongs to '{userTenant.Name}'. Please visit: {userTenant.Subdomain}.{Config["App:RootDomain"] ?? DeriveRootDomain()}";
+                } else {
+                    errorMessage = "Error: This account belongs to a different tenant.";
+                }
+            } catch {
+                errorMessage = "Error: This account belongs to a different tenant.";
+            }
+            StateHasChanged();
+            return;
+        }
+
+        // Check tenant is active
         if (tenant != null) {
-            var user = await UserManager.FindByEmailAsync(Input.Email);
-            if (user is null || user.TenantId != tenant.Id) { await SignInManager.SignOutAsync(); errorMessage = "Error: Invalid login attempt."; return; }
             var active = await LicenseValidator.IsTenantActiveAsync(tenant.Id);
-            if (!active) { await SignInManager.SignOutAsync(); errorMessage = "Error: This tenant is inactive."; return; }
+            if (!active) {
+                await SignInManager.SignOutAsync();
+                errorMessage = "Error: This tenant is inactive.";
+                return;
+            }
         }
 
         // Tenant-aware redirect logic simplified: always land on Dashboard for tenant sites
@@ -191,5 +258,10 @@ private async Task LoadTenantLogoAsync() {
         [Required, DataType(DataType.Password)] public string Password { get; set; } = "";
         public bool RememberMe { get; set; }
         public string? TenantSlug { get; set; }
+    }
+
+    public void Dispose() {
+        // Restore nav when leaving login page
+        LayoutService.SetHideNav(false);
     }
 }

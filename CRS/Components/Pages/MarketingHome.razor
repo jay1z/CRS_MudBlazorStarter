@@ -1,10 +1,21 @@
-﻿@page "/marketing"
+﻿@layout EmptyLayout
 @using CRS.Components.Shared
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
 
-<PageTitle>ALX Reserve Cloud - Cut Report Time by 75%</PageTitle>
+<PageTitle>ALX Reserve Cloud - SaaS</PageTitle>
+
+<!-- Loading Overlay -->
+@if (!pageLoaded)
+{
+    <div id="loadingOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: white; z-index: 9999; display: flex; align-items: center; justify-content: center; transition: opacity 0.3s ease;">
+        <div style="text-align: center;">
+            <MudProgressCircular Color="Color.Warning" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.body1" Class="mt-4" Style="color: #666;">Loading...</MudText>
+        </div>
+    </div>
+}
 
 <!-- Phase 4 Components -->
 <ProductTour @ref="productTour" OnTourComplete="OnTourComplete" />
@@ -20,35 +31,6 @@
             Style="position: fixed; bottom: 90px; right: 20px; z-index: 1000;"
             Title="Take a Product Tour" />
 }
-
-<!-- Sticky Navigation Bar (appears after scroll) -->
-<div id="stickyNav" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; transition: all 0.3s ease;">
-    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-3">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudImage Src="images/logo.png" Alt="ALX Reserve Cloud" Width="40" Height="40" />
-                <MudText Typo="Typo.h6" Style="color: #FF8C00; font-weight: 600;">ALX Reserve Cloud</MudText>
-            </MudStack>
-            
-            <MudStack Row="true" Spacing="3" Class="d-none d-md-flex">
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#features" Style="text-transform: none;">Features</MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#pricing" Style="text-transform: none;">Pricing</MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/customers/miller-reserve-studies" Style="text-transform: none;">Case Studies</MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#faq" Style="text-transform: none;">FAQ</MudButton>
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Warning" 
-                           Size="Size.Small" 
-                           OnClick="@(() => Nav.NavigateTo("/tenant/signup"))"
-                           Style="text-transform: none; font-weight: 600;">
-                    Start Free Trial
-                </MudButton>
-            </MudStack>
-            
-            <!-- Mobile menu button -->
-            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Primary" Class="d-flex d-md-none" />
-        </MudStack>
-    </MudContainer>
-</div>
 
 <!-- Hero Section -->
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-12 mb-16">
@@ -1565,17 +1547,29 @@
 </MudContainer>
 
 @code {
-    private string[] labelsData = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
-    private double[][] chartData = new[] { new double[] { 30, 35, 32, 50, 62, 68 } };
-    private bool isAnnual = false;
-    private string emailCapture = "";
-    private bool subscribeLoading = false;
-    private ProductTour? productTour;
-    private bool tourCompleted = false;
+private string[] labelsData = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
+private double[][] chartData = new[] { new double[] { 30, 35, 32, 50, 62, 68 } };
+private bool isAnnual = false;
+private string emailCapture = "";
+private bool subscribeLoading = false;
+private ProductTour? productTour;
+private bool tourCompleted = false;
+private bool pageLoaded = false;
 
-    protected override async Task OnInitializedAsync() {
-        await base.OnInitializedAsync();
+protected override async Task OnInitializedAsync() {
+    await base.OnInitializedAsync();
+}
+    
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender)
+    {
+        // Small delay to ensure CSS/images are loaded
+        await Task.Delay(100);
+        pageLoaded = true;
+        StateHasChanged();
     }
+}
     
     private void OnTourComplete()
     {
@@ -1674,32 +1668,24 @@
 </style>
 
 <script>
-    // Sticky navigation
-    window.addEventListener('scroll', () => {
-        const nav = document.getElementById('stickyNav');
-        if (nav) {
-            if (window.scrollY > 100) {
-                nav.style.display = 'block';
-            } else {
-                nav.style.display = 'none';
-            }
-        }
-    });
-    
+(function() {
     // Exit intent detection
-    let exitIntentTriggered = false;
+    if (!window.exitIntentTriggered) {
+        window.exitIntentTriggered = false;
+    }
+    
     window.setupExitIntent = (dotNetHelper) => {
         document.addEventListener('mouseleave', (e) => {
-            if (e.clientY < 10 && !exitIntentTriggered) {
-                exitIntentTriggered = true;
+            if (e.clientY < 10 && !window.exitIntentTriggered) {
+                window.exitIntentTriggered = true;
                 dotNetHelper.invokeMethodAsync('Show');
             }
         });
         
         // Also trigger on tab switch intent (not leaving but switching)
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden' && !exitIntentTriggered) {
-                exitIntentTriggered = true;
+            if (document.visibilityState === 'hidden' && !window.exitIntentTriggered) {
+                window.exitIntentTriggered = true;
                 dotNetHelper.invokeMethodAsync('Show');
             }
         });
@@ -1757,4 +1743,5 @@
             }
         });
     });
+})();
 </script>

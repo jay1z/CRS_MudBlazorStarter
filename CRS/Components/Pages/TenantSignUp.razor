@@ -137,13 +137,12 @@
                         <!-- Plan Selection -->
                         <div>
                             <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2">Select Your Plan</MudText>
-                            <MudRadioGroup T="string" @bind-Value="model.Tier">
+                            <MudRadioGroup T="string" Value="@model.Tier" ValueChanged="@OnPlanChanged">
                                 @foreach (var plan in PlanOptions)
                                 {
                                     <MudPaper Elevation="0" 
                                               Class="pa-4 mb-3 plan-option" 
-                                              Style="@GetPlanStyle(plan.Value)"
-                                              @onclick="@(() => OnPlanChanged(plan.Value))">
+                                              Style="@GetPlanStyle(plan.Value)">
                                         <MudRadio T="string" Value="@plan.Value" Dense="true">
                                             <div class="d-flex justify-space-between align-center flex-wrap gap-2">
                                                 <div>
@@ -473,8 +472,12 @@ protected override void OnParametersSet()
     // Handle plan selection change
     private void OnPlanChanged(string newPlan)
     {
-        model.Tier = newPlan;
-        StateHasChanged();
+        if (!string.IsNullOrWhiteSpace(newPlan))
+        {
+            model.Tier = newPlan;
+            Console.WriteLine($"[SIGNUP] Plan changed to: {newPlan}");
+            StateHasChanged();
+        }
     }
     
     private async Task ValidateSubdomainAsync()
@@ -486,6 +489,7 @@ protected override void OnParametersSet()
         if (string.IsNullOrWhiteSpace(sub))
         {
             subdomainAvailable = null;
+            StateHasChanged();
             return;
         }
         
@@ -494,6 +498,7 @@ protected override void OnParametersSet()
         {
             subdomainAvailable = false;
             subdomainError = "Subdomain must be 3-63 characters: lowercase letters, numbers, and hyphens only";
+            StateHasChanged();
             return;
         }
         
@@ -514,12 +519,14 @@ protected override void OnParametersSet()
                 {
                     subdomainError = response.Message;
                 }
+                Console.WriteLine($"[VALIDATION] Subdomain '{sub}' - Available: {response.IsAvailable}, Message: {response.Message}");
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error checking subdomain: {ex.Message}");
             subdomainError = "Unable to verify subdomain availability. Please try again.";
+            subdomainAvailable = null;
         }
         finally
         {
@@ -537,6 +544,7 @@ protected override void OnParametersSet()
         if (string.IsNullOrWhiteSpace(email))
         {
             emailAvailable = null;
+            StateHasChanged();
             return;
         }
         
@@ -545,6 +553,7 @@ protected override void OnParametersSet()
         {
             emailAvailable = false;
             emailError = "Please enter a valid email address";
+            StateHasChanged();
             return;
         }
         
@@ -565,12 +574,14 @@ protected override void OnParametersSet()
                 {
                     emailError = response.Message;
                 }
+                Console.WriteLine($"[VALIDATION] Email '{email}' - Available: {response.IsAvailable}, Message: {response.Message}");
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error checking email: {ex.Message}");
             emailError = "Unable to verify email availability. Please try again.";
+            emailAvailable = null;
         }
         finally
         {

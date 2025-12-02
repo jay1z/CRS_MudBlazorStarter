@@ -1,0 +1,71 @@
+﻿@inherits LayoutComponentBase
+@using CRS.Themes
+@inject ThemeService ThemeService
+@inject NavigationManager Nav
+
+<!-- MudBlazor providers -->
+<MudThemeProvider Theme="@ThemeService.CurrentTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<!-- App Bar for marketing pages -->
+<MudLayout>
+    @if (IsMarketingPage) {
+        <!-- Full Marketing Nav Bar -->
+        <MudAppBar Elevation="25" Style="background-color: white; color: #333;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" style="cursor: pointer;" @onclick="@(() => Nav.NavigateTo("/"))">
+                <MudImage Src="images/icon.png" Alt="ALX Reserve Cloud" Width="40" Height="40" />
+                <MudText Typo="Typo.h3" Color="Color.Primary">ALX Reserve Cloud</MudText>
+            </MudStack>
+
+            <MudSpacer />
+
+            <MudStack Row="true" Spacing="3" Class="d-none d-md-flex">
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#features" Style="text-transform: none;">Features</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#pricing" Style="text-transform: none;">Pricing</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/customers/miller-reserve-studies" Style="text-transform: none;">Case Studies</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#faq" Style="text-transform: none;">FAQ</MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Warning"
+                           Size="Size.Small"
+                           OnClick="@(() => Nav.NavigateTo("/tenant/signup"))"
+                           Style="text-transform: none; font-weight: 600;">
+                    Start Free Trial
+                </MudButton>
+            </MudStack>
+
+            <!-- Mobile menu button -->
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Primary" Class="d-flex d-md-none" />
+        </MudAppBar>
+    }
+
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool IsMarketingPage {
+        get {
+            var uri = Nav.Uri;
+            var path = Nav.ToBaseRelativePath(uri);
+
+            // Marketing pages: home, marketing, customer pages
+            return string.IsNullOrEmpty(path) ||
+                   path == "/" ||
+                   path.Equals("marketing", StringComparison.OrdinalIgnoreCase) ||
+                   path.StartsWith("customers/", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    protected override void OnInitialized() {
+        ThemeService.OnThemeChanged += StateHasChanged;
+        ThemeService.SetTheme(new Default().Theme!);
+        Nav.LocationChanged += (s, e) => StateHasChanged();
+    }
+
+    public void Dispose() {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+    }
+}

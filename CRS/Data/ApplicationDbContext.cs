@@ -15,12 +15,12 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 namespace CRS.Data {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid> {
         private const string DefaultSchema = "crs";
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IHttpContextAccessor? _httpContextAccessor;
         // SaaS Refactor: Inject tenant context
-        private readonly ITenantContext _tenantContext;
+        private readonly ITenantContext? _tenantContext;
         private readonly string? _explicitConnection; // multi-tenant override
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor, ITenantContext tenantContext, string? explicitConnection = null)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor? httpContextAccessor = null, ITenantContext? tenantContext = null, string? explicitConnection = null)
             : base(options) {
             _httpContextAccessor = httpContextAccessor;
             _tenantContext = tenantContext;
@@ -49,31 +49,86 @@ namespace CRS.Data {
 
             ConfigureEntities(builder);
 
-            // Indexes to improve tenant queries
+            // Phase 1: Performance Indexes - Single column indexes for tenant queries
             builder.Entity<Community>().HasIndex(e => e.TenantId);
             builder.Entity<Contact>().HasIndex(e => e.TenantId);
             builder.Entity<PropertyManager>().HasIndex(e => e.TenantId);
             builder.Entity<ReserveStudy>().HasIndex(e => e.TenantId);
             builder.Entity<FinancialInfo>().HasIndex(e => e.TenantId);
             builder.Entity<Proposal>().HasIndex(e => e.TenantId);
-            builder.Entity<StudyRequest>().HasIndex(e => e.TenantId); // add
-            builder.Entity<StudyRequest>().HasIndex(e => new { e.TenantId, e.CurrentStatus }); // add
-            builder.Entity<StudyStatusHistory>().HasIndex(e => e.TenantId); // add
-            builder.Entity<StudyStatusHistory>().HasIndex(e => new { e.TenantId, e.RequestId, e.ChangedAt }); // add
-            builder.Entity<StudyStatusHistory>().HasIndex(e => new { e.TenantId, e.ToStatus, e.ChangedAt }); // add
-
-            // Ensure an index on AspNetUsers.TenantId for tenant-scoped user lookups
+            builder.Entity<StudyRequest>().HasIndex(e => e.TenantId);
+            builder.Entity<StudyRequest>().HasIndex(e => new { e.TenantId, e.CurrentStatus });
+            builder.Entity<StudyStatusHistory>().HasIndex(e => e.TenantId);
+            builder.Entity<StudyStatusHistory>().HasIndex(e => new { e.TenantId, e.RequestId, e.ChangedAt });
+            builder.Entity<StudyStatusHistory>().HasIndex(e => new { e.TenantId, e.ToStatus, e.ChangedAt });
             builder.Entity<ApplicationUser>().HasIndex(u => u.TenantId);
+
+            // Phase 1: Composite Indexes for Common Query Patterns
+            // ReserveStudy composite indexes for frequently used queries
+            builder.Entity<ReserveStudy>()
+                .HasIndex(rs => new { rs.TenantId, rs.ApplicationUserId, rs.CommunityId })
+                .HasDatabaseName("IX_ReserveStudy_Tenant_User_Community");
+            
+            builder.Entity<ReserveStudy>()
+                .HasIndex(rs => new { rs.TenantId, rs.SpecialistUserId, rs.IsActive })
+                .HasDatabaseName("IX_ReserveStudy_Tenant_Specialist_Active");
+            
+            builder.Entity<ReserveStudy>()
+                .HasIndex(rs => new { rs.TenantId, rs.Status, rs.IsActive })
+                .HasDatabaseName("IX_ReserveStudy_Tenant_Status_Active");
+            
+            builder.Entity<ReserveStudy>()
+                .HasIndex(rs => new { rs.TenantId, rs.IsActive, rs.DateCreated })
+                .IncludeProperties(rs => new { rs.CommunityId, rs.ApplicationUserId, rs.SpecialistUserId, rs.Status })
+                .HasDatabaseName("IX_ReserveStudy_Tenant_Active_Created_Covering");
+
+            // Community composite indexes
+            builder.Entity<Community>()
+                .HasIndex(c => new { c.TenantId, c.IsActive })
+                .HasDatabaseName("IX_Community_Tenant_Active");
+
+            // Contact filtered index for soft deletes
+            builder.Entity<Contact>()
+                .HasIndex(c => new { c.TenantId, c.ApplicationUserId })
+                .HasFilter("[DateDeleted] IS NULL")
+                .HasDatabaseName("IX_Contact_Tenant_User_NotDeleted");
+
+            // FinancialInfo composite index
+            builder.Entity<FinancialInfo>()
+                .HasIndex(f => new { f.TenantId, f.ReserveStudyId })
+                .HasFilter("[DateDeleted] IS NULL")
+                .HasDatabaseName("IX_FinancialInfo_Tenant_Study_NotDeleted");
+
+            // Proposal composite index
+            builder.Entity<Proposal>()
+                .HasIndex(p => new { p.TenantId, p.ReserveStudyId, p.IsApproved })
+                .HasFilter("[DateDeleted] IS NULL")
+                .HasDatabaseName("IX_Proposal_Tenant_Study_Approved_NotDeleted");
+
+            // Element indexes for service contact queries
+            builder.Entity<ReserveStudyBuildingElement>()
+                .HasIndex(e => new { e.ReserveStudyId, e.BuildingElementId })
+                .HasDatabaseName("IX_RSBuildingElement_Study_Element");
+            
+            builder.Entity<ReserveStudyCommonElement>()
+                .HasIndex(e => new { e.ReserveStudyId, e.CommonElementId })
+                .HasDatabaseName("IX_RSCommonElement_Study_Element");
+
+            // AuditLog performance index
+            builder.Entity<AuditLog>()
+                .HasIndex(a => new { a.TableName, a.CreatedAt })
+                .IncludeProperties(a => new { a.RecordId, a.ColumnName, a.Action })
+                .HasDatabaseName("IX_AuditLog_Table_Created_Covering");
 
             // SaaS Refactor: Tenant-aware query filters on principals
             // Apply a global tenant query filter to all entities implementing ITenantScoped
             ApplyTenantQueryFilters(builder);
 
             // Matching filters on dependents to avoid EF warnings with required relationships
-            builder.Entity<ReserveStudyBuildingElement>().HasQueryFilter(e => _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
-            builder.Entity<ReserveStudyCommonElement>().HasQueryFilter(e => _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
-            builder.Entity<ReserveStudyAdditionalElement>().HasQueryFilter(e => _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
-            builder.Entity<ContactXContactGroup>().HasQueryFilter(e => _tenantContext.TenantId == null || (e.Contact != null && e.Contact.TenantId == _tenantContext.TenantId));
+            builder.Entity<ReserveStudyBuildingElement>().HasQueryFilter(e => _tenantContext == null || _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
+            builder.Entity<ReserveStudyCommonElement>().HasQueryFilter(e => _tenantContext == null || _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
+            builder.Entity<ReserveStudyAdditionalElement>().HasQueryFilter(e => _tenantContext == null || _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
+            builder.Entity<ContactXContactGroup>().HasQueryFilter(e => _tenantContext == null || _tenantContext.TenantId == null || (e.Contact != null && e.Contact.TenantId == _tenantContext.TenantId));
 
             // Fix1: Configure1:1 relationships using dependent FKs
             builder.Entity<ReserveStudy>()
@@ -140,7 +195,8 @@ namespace CRS.Data {
         }
 
         private void ApplyTenantFilterGeneric<TEntity>(ModelBuilder builder) where TEntity : class, ITenantScoped {
-            builder.Entity<TEntity>().HasQueryFilter(e => _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
+            // When _tenantContext is null (e.g., during startup), no tenant filter is applied
+            builder.Entity<TEntity>().HasQueryFilter(e => _tenantContext == null || _tenantContext.TenantId == null || e.TenantId == _tenantContext.TenantId);
         }
 
         private void ConfigureEntities(ModelBuilder builder) {
@@ -231,6 +287,15 @@ namespace CRS.Data {
                 entity.Property(e => e.Title).HasMaxLength(256);
                 entity.Property(e => e.Status).HasMaxLength(64);
             });
+
+            // Phase 2: ElementOption consolidated configuration
+            builder.Entity<ElementOption>(entity => {
+                entity.ToTable("ElementOptions");
+                entity.HasIndex(e => new { e.OptionType, e.IsActive, e.ZOrder })
+                    .HasDatabaseName("IX_ElementOption_Type_Active_Order");
+                entity.Property(e => e.DisplayText).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Unit).IsRequired().HasMaxLength(50);
+            });
         }
 
         // Apply owned type configurations
@@ -272,7 +337,7 @@ namespace CRS.Data {
         }
 
         private Guid? GetCurrentUserId() {
-            var userIdString = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userIdString = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
             return userIdString != null && Guid.TryParse(userIdString, out Guid userId) ? userId : null;
         }
 
@@ -305,7 +370,7 @@ namespace CRS.Data {
 
         // SaaS Refactor: Ensure TenantId is set on inserted entities
         private void AddTenantIds() {
-            var tenantId = _tenantContext.TenantId; // no default, new site may have no tenant context
+            var tenantId = _tenantContext?.TenantId; // no default, new site may have no tenant context
             foreach (var entry in ChangeTracker.Entries().Where(e => e.State == EntityState.Added)) {
                 if (entry.Entity is ITenantScoped scoped) {
                     if (scoped.TenantId == 0 && tenantId.HasValue) scoped.TenantId = tenantId.Value;
@@ -320,6 +385,7 @@ namespace CRS.Data {
         public DbSet<AccessToken> AccessTokens { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<AuditLogArchive> AuditLogArchives { get; set; } // Phase 1: Archive table
         public DbSet<BuildingElement> BuildingElements { get; set; }
         public DbSet<CalendarEvent> CalendarEvents { get; set; }
         public DbSet<CommonElement> CommonElements { get; set; }
@@ -327,9 +393,10 @@ namespace CRS.Data {
         public DbSet<Contact> Contacts { get; set; }
         public DbSet<ContactGroup> ContactGroups { get; set; }
         public DbSet<ContactXContactGroup> ContactXContactGroups { get; set; }
-        public DbSet<ElementMeasurementOptions> ElementMeasurementOptions { get; set; }
-        public DbSet<ElementRemainingLifeOptions> ElementRemainingLifeOptions { get; set; }
-        public DbSet<ElementUsefulLifeOptions> ElementUsefulLifeOptions { get; set; }
+        
+        // Phase 2: Consolidated element options (replaces 3 separate tables)
+        public DbSet<ElementOption> ElementOptions { get; set; }
+        
         public DbSet<FinancialInfo> FinancialInfos { get; set; }
         public DbSet<KanbanTask> KanbanTasks { get; set; }
         public DbSet<Notification> Notifications { get; set; }
@@ -370,11 +437,9 @@ namespace CRS.Data {
             context.SaveChanges();
             GenerateCommonElements(context);
             context.SaveChanges();
-            GenerateElementMeasurementOptions(context);
-            context.SaveChanges();
-            GenerateElementRemainingLifeOptions(context);
-            context.SaveChanges();
-            GenerateElementUsefulLifeOptions(context);
+            
+            // Phase 2: Use consolidated ElementOptions instead of separate tables
+            GenerateElementOptions(context);
             context.SaveChanges();
 
             // Removed default tenant seeding for new multi-tenant site; tenants are created via signup
@@ -453,72 +518,68 @@ namespace CRS.Data {
             }
         }
 
-        private static void GenerateElementMeasurementOptions(DbContext context) {
-            IEnumerable<ElementMeasurementOptions> elementMeasurementOptions =
-            [
-                new ElementMeasurementOptions {  DisplayText = "Square Feet", Unit = "sq. ft.", ZOrder = 0 },
-                new ElementMeasurementOptions {  DisplayText = "Linear Feet", Unit = "LF.", ZOrder = 1 },
-                new ElementMeasurementOptions {  DisplayText = "Each", Unit = "ea.", ZOrder = 2 }
-            ];
-            foreach (ElementMeasurementOptions elementMeasurementOption in elementMeasurementOptions) {
-                ElementMeasurementOptions option = context.Set<ElementMeasurementOptions>().FirstOrDefault(e => e.DisplayText == elementMeasurementOption.DisplayText)!;
-                if (option is null) {
-                    context.Set<ElementMeasurementOptions>().Add(elementMeasurementOption);
-                }
-            }
-        }
+        private static void GenerateElementOptions(DbContext context) {
+            // Phase 2: Consolidated element options seeding
+            List<ElementOption> options = new();
 
-        private static void GenerateElementRemainingLifeOptions(DbContext context) {
-            IEnumerable<ElementRemainingLifeOptions> elementRemainingLifeOptions =
-            [
-                new ElementRemainingLifeOptions {  DisplayText = "1-5 Years", Unit = "1-5", ZOrder = 0 },
-                new ElementRemainingLifeOptions {  DisplayText = "6-10 Years", Unit = "6-10", ZOrder = 1 },
-                new ElementRemainingLifeOptions {  DisplayText = "11-15 Years", Unit = "11-15", ZOrder = 2 },
-                new ElementRemainingLifeOptions {  DisplayText = "16-20 Years", Unit = "16-20", ZOrder = 3 },
-                new ElementRemainingLifeOptions {  DisplayText = "21-25 Years", Unit = "21-25", ZOrder = 4 },
-                new ElementRemainingLifeOptions {  DisplayText = "26-30 Years", Unit = "26-30", ZOrder = 5 },
-                new ElementRemainingLifeOptions {  DisplayText = "31-35 Years", Unit = "31-35", ZOrder = 6 },
-                new ElementRemainingLifeOptions {  DisplayText = "36-40 Years", Unit = "36-40", ZOrder = 7 },
-                new ElementRemainingLifeOptions {  DisplayText = "41-45 Years", Unit = "41-45", ZOrder = 8 },
-                new ElementRemainingLifeOptions {  DisplayText = "46-50 Years", Unit = "46-50", ZOrder = 9 },
-                new ElementRemainingLifeOptions {  DisplayText = "51-55 Years", Unit = "51-55", ZOrder = 10 },
-                new ElementRemainingLifeOptions {  DisplayText = "61-65 Years", Unit = "61-65", ZOrder = 12 },
-                new ElementRemainingLifeOptions {  DisplayText = "66-70 Years", Unit = "66-70", ZOrder = 13 },
-                new ElementRemainingLifeOptions {  DisplayText = "71-75 Years", Unit = "71-75", ZOrder = 14 },
-                new ElementRemainingLifeOptions {  DisplayText = "76-80 Years", Unit = "76-80", ZOrder = 15 }
-            ];
-            foreach (ElementRemainingLifeOptions elementRemainingLifeOption in elementRemainingLifeOptions) {
-                ElementRemainingLifeOptions option = context.Set<ElementRemainingLifeOptions>().FirstOrDefault(e => e.DisplayText == elementRemainingLifeOption.DisplayText)!;
-                if (option is null) {
-                    context.Set<ElementRemainingLifeOptions>().Add(elementRemainingLifeOption);
-                }
-            }
-        }
+            // Measurement options
+            options.Add(new ElementOption { OptionType = ElementOptionType.Measurement, DisplayText = "Square Feet", Unit = "sq. ft.", ZOrder = 0, IsActive = true });
+            options.Add(new ElementOption { OptionType = ElementOptionType.Measurement, DisplayText = "Linear Feet", Unit = "LF.", ZOrder = 1, IsActive = true });
+            options.Add(new ElementOption { OptionType = ElementOptionType.Measurement, DisplayText = "Each", Unit = "ea.", ZOrder = 2, IsActive = true });
 
-        private static void GenerateElementUsefulLifeOptions(DbContext context) {
-            IEnumerable<ElementUsefulLifeOptions> elementUsefulLifeOptions =
-            [
-                new ElementUsefulLifeOptions {  DisplayText = "1-5 Years", Unit = "1-5", ZOrder = 0 },
-                new ElementUsefulLifeOptions {  DisplayText = "6-10 Years", Unit = "6-10", ZOrder = 1 },
-                new ElementUsefulLifeOptions {  DisplayText = "11-15 Years", Unit = "11-15", ZOrder = 2 },
-                new ElementUsefulLifeOptions {  DisplayText = "16-20 Years", Unit = "16-20", ZOrder = 3 },
-                new ElementUsefulLifeOptions {  DisplayText = "21-25 Years", Unit = "21-25", ZOrder = 4 },
-                new ElementUsefulLifeOptions {  DisplayText = "26-30 Years", Unit = "26-30", ZOrder = 5 },
-                new ElementUsefulLifeOptions {  DisplayText = "31-35 Years", Unit = "31-35", ZOrder = 6 },
-                new ElementUsefulLifeOptions {  DisplayText = "36-40 Years", Unit = "36-40", ZOrder = 7 },
-                new ElementUsefulLifeOptions {  DisplayText = "41-45 Years", Unit = "41-45", ZOrder = 8 },
-                new ElementUsefulLifeOptions {  DisplayText = "46-50 Years", Unit = "46-50", ZOrder = 9 },
-                new ElementUsefulLifeOptions {  DisplayText = "51-55 Years", Unit = "51-55", ZOrder = 10 },
-                new ElementUsefulLifeOptions {  DisplayText = "56-60 Years", Unit = "56-60", ZOrder = 11 },
-                new ElementUsefulLifeOptions {  DisplayText = "61-65 Years", Unit = "61-65", ZOrder = 12 },
-                new ElementUsefulLifeOptions {  DisplayText = "66-70 Years", Unit = "66-70", ZOrder = 13 },
-                new ElementUsefulLifeOptions {  DisplayText = "71-75 Years", Unit = "71-75", ZOrder = 14 },
-                new ElementUsefulLifeOptions {  DisplayText = "76-80 Years", Unit = "76-80", ZOrder = 15 }
-            ];
-            foreach (ElementUsefulLifeOptions elementUsefulLifeOption in elementUsefulLifeOptions) {
-                ElementUsefulLifeOptions option = context.Set<ElementUsefulLifeOptions>().FirstOrDefault(e => e.DisplayText == elementUsefulLifeOption.DisplayText)!;
-                if (option is null) {
-                    context.Set<ElementUsefulLifeOptions>().Add(elementUsefulLifeOption);
+            // Remaining Life options
+            var remainingLifeRanges = new[] {
+                ("1-5 Years", "1-5", 0, 1, 5),
+                ("6-10 Years", "6-10", 1, 6, 10),
+                ("11-15 Years", "11-15", 2, 11, 15),
+                ("16-20 Years", "16-20", 3, 16, 20),
+                ("21-25 Years", "21-25", 4, 21, 25),
+                ("26-30 Years", "26-30", 5, 26, 30),
+                ("31-35 Years", "31-35", 6, 31, 35),
+                ("36-40 Years", "36-40", 7, 36, 40),
+                ("41-45 Years", "41-45", 8, 41, 45),
+                ("46-50 Years", "46-50", 9, 46, 50),
+                ("51-55 Years", "51-55", 10, 51, 55),
+                ("56-60 Years", "56-60", 11, 56, 60),
+                ("61-65 Years", "61-65", 12, 61, 65),
+                ("66-70 Years", "66-70", 13, 66, 70),
+                ("71-75 Years", "71-75", 14, 71, 75),
+                ("76-80 Years", "76-80", 15, 76, 80)
+            };
+
+            foreach (var (display, unit, order, min, max) in remainingLifeRanges) {
+                options.Add(new ElementOption {
+                    OptionType = ElementOptionType.RemainingLife,
+                    DisplayText = display,
+                    Unit = unit,
+                    MinValue = min,
+                    MaxValue = max,
+                    ZOrder = order,
+                    IsActive = true
+                });
+            }
+
+            // Useful Life options (same ranges as remaining life)
+            foreach (var (display, unit, order, min, max) in remainingLifeRanges) {
+                options.Add(new ElementOption {
+                    OptionType = ElementOptionType.UsefulLife,
+                    DisplayText = display,
+                    Unit = unit,
+                    MinValue = min,
+                    MaxValue = max,
+                    ZOrder = order,
+                    IsActive = true
+                });
+            }
+
+            // Only add options that don't already exist
+            foreach (var option in options) {
+                var exists = context.Set<ElementOption>().Any(e =>
+                    e.OptionType == option.OptionType &&
+                    e.DisplayText == option.DisplayText);
+
+                if (!exists) {
+                    context.Set<ElementOption>().Add(option);
                 }
             }
         }

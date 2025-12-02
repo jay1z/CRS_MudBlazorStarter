@@ -13,7 +13,7 @@
         <!-- View Online Button -->
         <div style="text-align: center; margin-bottom: 20px;">
             <p style="margin-top: 15px; text-align: center;">
-                <a href="@(string.IsNullOrEmpty(Model.BaseUrl) ? "/" : Model.BaseUrl)/ReserveStudies/Details/@(Model.ReserveStudy?.Id)" style="display: inline-block; padding: 8px 15px; background-color: #f8f9fa; color: #3498db; text-decoration: none; border: 1px solid #3498db; border-radius: 4px; font-weight: bold;">Access your Reserve Study online</a>
+                <a href="@(string.IsNullOrEmpty(Model.BaseUrl) ? "/" : Model.BaseUrl)/ReserveStudies/@(Model.ReserveStudy?.Id)/Details" style="display: inline-block; padding: 8px 15px; background-color: #f8f9fa; color: #3498db; text-decoration: none; border: 1px solid #3498db; border-radius: 4px; font-weight: bold;">Access your Reserve Study online</a>
             </p>
         </div>
 
@@ -94,7 +94,7 @@
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
             <p style="color: #555;">Please contact us if you have any questions or need further information.</p>
             <p style="margin-top: 15px; text-align: center;">
-                <a href="@(string.IsNullOrEmpty(Model.BaseUrl) ? "/" : Model.BaseUrl)/ReserveStudies/Details/@(Model.ReserveStudy?.Id)" style="display: inline-block; padding: 8px 15px; background-color: #f8f9fa; color: #3498db; text-decoration: none; border: 1px solid #3498db; border-radius: 4px; font-weight: bold;">Access your Reserve Study online</a>
+                <a href="@(string.IsNullOrEmpty(Model.BaseUrl) ? "/" : Model.BaseUrl)/ReserveStudies/@(Model.ReserveStudy?.Id)/Details" style="display: inline-block; padding: 8px 15px; background-color: #f8f9fa; color: #3498db; text-decoration: none; border: 1px solid #3498db; border-radius: 4px; font-weight: bold;">Access your Reserve Study online</a>
             </p>
             <p style="color: #777; font-size: 12px; margin-top: 15px; text-align: center;">This email was generated on @DateTime.Now.ToString("MMMM d, yyyy") at @DateTime.Now.ToString("h:mm tt")</p>
         </div>

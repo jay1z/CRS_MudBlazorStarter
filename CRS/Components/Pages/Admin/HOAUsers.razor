@@ -1,18 +1,17 @@
-﻿@page "/Admin/Users"
-@attribute [Authorize(Policy = "RequireTenantOwner")]
+﻿@page "/Admin/HOAUsers"
+@attribute [Authorize(Policy = "RequireTenantStaff")]
+
 @using CRS.Data
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject UserManager<ApplicationUser> UserManager
-@inject RoleManager<IdentityRole<Guid>> RoleManager
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
-@using CRS.Services.Tenant
-@inject ITenantUserService TenantUserService
-@inject ITenantContext TenantContext
+@inject CRS.Services.Tenant.ITenantUserService TenantUserService
+@inject CRS.Services.Tenant.ITenantContext TenantContext
 
-<PageTitle>Team Management</PageTitle>
+<PageTitle>HOA User Management</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
     <!-- Header Section -->
@@ -20,20 +19,20 @@
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
             <MudStack Spacing="1">
                 <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
-                    <MudIcon Icon="@Icons.Material.Filled.Groups" Class="mr-2" Style="vertical-align: middle;" />
-                    Team Management
+                    <MudIcon Icon="@Icons.Material.Filled.Business" Class="mr-2" Style="vertical-align: middle;" />
+                    HOA User Management
                 </MudText>
                 <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
-                    Manage specialists, viewers, and team member access
+                    Manage HOA board members and customer access
                 </MudText>
             </MudStack>
             <MudButton Variant="Variant.Filled" 
                        Color="Color.Surface" 
                        Size="Size.Large"
                        StartIcon="@Icons.Material.Filled.PersonAdd"
-                       OnClick="OpenCreateUserDialog"
+                       OnClick="OpenInviteDialog"
                        Style="color: #FF8C00; font-weight: 600;">
-                Add Team Member
+                Invite HOA User
             </MudButton>
         </MudStack>
     </MudPaper>
@@ -48,38 +47,8 @@
                             <MudIcon Icon="@Icons.Material.Filled.People" Style="color: #FF8C00; font-size: 28px;" />
                         </div>
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@users.Count</MudText>
-                            <MudText Typo="Typo.body2" Style="color: #666;">Total Users</MudText>
-                        </MudStack>
-                    </MudStack>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Style="border-radius: 12px;">
-                <MudCardContent>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                        <div style="width: 48px; height: 48px; background: #F3E8FF; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                            <MudIcon Icon="@Icons.Material.Filled.Engineering" Style="color: #6A3D9A; font-size: 28px;" />
-                        </div>
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetRoleCount("TenantSpecialist")</MudText>
-                            <MudText Typo="Typo.body2" Style="color: #666;">Specialists</MudText>
-                        </MudStack>
-                    </MudStack>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Style="border-radius: 12px;">
-                <MudCardContent>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                        <div style="width: 48px; height: 48px; background: #FFF5E6; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="color: #FF8C00; font-size: 28px;" />
-                        </div>
-                        <MudStack Spacing="0">
-                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetRoleCount("TenantViewer")</MudText>
-                            <MudText Typo="Typo.body2" Style="color: #666;">Viewers</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@hoaUsers.Count</MudText>
+                            <MudText Typo="Typo.body2" Style="color: #666;">Total HOA Users</MudText>
                         </MudStack>
                     </MudStack>
                 </MudCardContent>
@@ -93,8 +62,38 @@
                             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #28a745; font-size: 28px;" />
                         </div>
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@users.Count(u => u.Status == StatusEnum.Active)</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@hoaUsers.Count(u => u.Status == StatusEnum.Active)</MudText>
                             <MudText Typo="Typo.body2" Style="color: #666;">Active</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2" Style="border-radius: 12px;">
+                <MudCardContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                        <div style="width: 48px; height: 48px; background: #F3E8FF; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Home" Style="color: #6A3D9A; font-size: 28px;" />
+                        </div>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetRoleCount("HOAUser")</MudText>
+                            <MudText Typo="Typo.body2" Style="color: #666;">Board Members</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2" Style="border-radius: 12px;">
+                <MudCardContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                        <div style="width: 48px; height: 48px; background: #FFF5E6; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Gavel" Style="color: #FF8C00; font-size: 28px;" />
+                        </div>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetRoleCount("HOAAuditor")</MudText>
+                            <MudText Typo="Typo.body2" Style="color: #666;">Auditors</MudText>
                         </MudStack>
                     </MudStack>
                 </MudCardContent>
@@ -102,57 +101,47 @@
         </MudItem>
     </MudGrid>
 
-    <!-- Search and Filter Section -->
+    <!-- Search Section -->
     <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius: 12px;">
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
             <MudTextField @bind-Value="searchValue" 
-                          Placeholder="Search by name or email..." 
+                          Placeholder="Search by name, email, or organization..." 
                           Adornment="Adornment.Start" 
                           AdornmentIcon="@Icons.Material.Filled.Search" 
                           Immediate="true"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Style="flex: 1; max-width: 400px;" />
-            <MudSelect @bind-Value="roleFilter" 
-                       Label="Filter by Role" 
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense"
-                       Style="min-width: 200px;">
-                <MudSelectItem Value="@((string?)null)">All Roles</MudSelectItem>
-                <MudSelectItem Value="@("TenantSpecialist")">Specialists</MudSelectItem>
-                <MudSelectItem Value="@("TenantViewer")">Viewers</MudSelectItem>
-                <MudSelectItem Value="@("TenantOwner")">Owners</MudSelectItem>
-            </MudSelect>
-            @if (!string.IsNullOrEmpty(searchValue) || roleFilter != null)
+            @if (!string.IsNullOrEmpty(searchValue))
             {
                 <MudButton Variant="Variant.Text" 
                            Color="Color.Secondary" 
                            StartIcon="@Icons.Material.Filled.Clear"
-                           OnClick="ClearFilters">
+                           OnClick="@(() => searchValue = null)">
                     Clear
                 </MudButton>
             }
         </MudStack>
     </MudPaper>
 
-    <!-- Users Table -->
+    <!-- HOA Users Table -->
     <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
         @if (isLoading)
         {
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
             <div class="pa-8 text-center">
-                <MudText Typo="Typo.h6" Style="color: #666;">Loading team members...</MudText>
+                <MudText Typo="Typo.h6" Style="color: #666;">Loading HOA users...</MudText>
             </div>
         }
         else if (!filteredUsers.Any())
         {
             <div class="pa-8 text-center">
-                <MudIcon Icon="@Icons.Material.Filled.PersonOff" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
-                <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No team members found</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.Business" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+                <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No HOA users found</MudText>
                 <MudText Typo="Typo.body2" Style="color: #999;">
-                    @(string.IsNullOrEmpty(searchValue) && roleFilter == null 
-                        ? "Click 'Add Team Member' to get started" 
-                        : "Try adjusting your filters")
+                    @(string.IsNullOrEmpty(searchValue) 
+                        ? "Click 'Invite HOA User' to add board members" 
+                        : "Try adjusting your search")
                 </MudText>
             </div>
         }
@@ -166,6 +155,7 @@
                 <HeaderContent>
                     <MudTh Style="font-weight: 600;">User</MudTh>
                     <MudTh Style="font-weight: 600;">Email</MudTh>
+                    <MudTh Style="font-weight: 600;">Organization</MudTh>
                     <MudTh Style="font-weight: 600;">Role</MudTh>
                     <MudTh Style="font-weight: 600;">Status</MudTh>
                     <MudTh Style="font-weight: 600; text-align: right;">Actions</MudTh>
@@ -184,6 +174,9 @@
                     </MudTd>
                     <MudTd DataLabel="Email">
                         <MudText Typo="Typo.body2">@context.Email</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Organization">
+                        <MudText Typo="Typo.body2">@(context.CompanyName ?? "N/A")</MudText>
                     </MudTd>
                     <MudTd DataLabel="Role">
                         @foreach (var role in (context.Roles ?? Array.Empty<string>()))
@@ -211,30 +204,23 @@
                                  Dense="true"
                                  AnchorOrigin="Origin.BottomRight"
                                  TransformOrigin="Origin.TopRight">
-                            <MudMenuItem Icon="@Icons.Material.Filled.Edit" 
-                                         OnClick="@(() => OpenEditUserDialog(context))">
-                                Edit User
-                            </MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.GroupAdd" 
-                                         OnClick="@(() => OpenAddRoleToUserDialog(context))">
-                                Manage Roles
-                            </MudMenuItem>
-                            <MudDivider />
                             <MudMenuItem Icon="@Icons.Material.Filled.Email" 
                                          OnClick="@(() => ResendInviteAsync(context))">
-                                Resend Invite
+                                Resend Invitation
                             </MudMenuItem>
-                            @if (context.Roles?.Any() == true)
-                            {
-                                <MudMenuItem Icon="@Icons.Material.Filled.GroupRemove" 
-                                             OnClick="@(() => RemovePrimaryRoleAsync(context))"
-                                             IconColor="Color.Warning">
-                                    Remove Role
-                                </MudMenuItem>
-                            }
+                            <MudMenuItem Icon="@Icons.Material.Filled.VpnKey" 
+                                         OnClick="@(() => SendPasswordResetAsync(context))">
+                                Send Password Reset
+                            </MudMenuItem>
                             <MudDivider />
-                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" 
-                                         OnClick="@(() => ConfirmDeleteUser(context))"
+                            <MudMenuItem Icon="@Icons.Material.Filled.SwapHoriz" 
+                                         OnClick="@(() => ChangeRoleAsync(context))"
+                                         IconColor="Color.Info">
+                                Change Role
+                            </MudMenuItem>
+                            <MudDivider />
+                            <MudMenuItem Icon="@Icons.Material.Filled.Block" 
+                                         OnClick="@(() => DeactivateUserAsync(context))"
                                          IconColor="Color.Error">
                                 Deactivate User
                             </MudMenuItem>
@@ -247,63 +233,67 @@
 </MudContainer>
 
 @code {
-    private List<ApplicationUser> users = new();
+    private List<ApplicationUser> hoaUsers = new();
     private string? searchValue;
-    private string? roleFilter;
     private bool isLoading = true;
 
     private IEnumerable<ApplicationUser> filteredUsers
     {
         get
         {
-            var filtered = users.AsEnumerable();
+            if (string.IsNullOrWhiteSpace(searchValue))
+                return hoaUsers;
 
-            // Apply search filter
-            if (!string.IsNullOrWhiteSpace(searchValue))
-            {
-                filtered = filtered.Where(u =>
-                    (u.UserName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (u.Email?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (u.FirstName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (u.LastName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false));
-            }
-
-            // Apply role filter
-            if (!string.IsNullOrWhiteSpace(roleFilter))
-            {
-                filtered = filtered.Where(u => u.Roles?.Contains(roleFilter) ?? false);
-            }
-
-            return filtered;
+            return hoaUsers.Where(u =>
+                (u.UserName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.Email?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.FirstName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.LastName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.CompanyName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false));
         }
     }
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadUsers();
+        await LoadHOAUsers();
     }
 
-    private async Task LoadUsers()
+    private async Task LoadHOAUsers()
     {
         isLoading = true;
         try
         {
             var tenantId = TenantContext.TenantId;
-            await using var db = await DbFactory.CreateDbContextAsync();
-            var query = UserManager.Users.AsQueryable();
-            if (tenantId.HasValue)
+            if (!tenantId.HasValue)
             {
-                query = query.Where(u => u.TenantId == tenantId.Value);
+                Snackbar.Add("Tenant context not available", Severity.Error);
+                return;
             }
-            users = await query.OrderBy(u => u.LastName).ThenBy(u => u.FirstName).ToListAsync();
-            foreach (var user in users)
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+            
+            // Get all users with HOA roles in this tenant
+            var usersInRoles = await UserManager.GetUsersInRoleAsync("HOAUser");
+            var auditorsInRoles = await UserManager.GetUsersInRoleAsync("HOAAuditor");
+            
+            var allHOAUsers = usersInRoles.Concat(auditorsInRoles)
+                .Where(u => u.TenantId == tenantId.Value)
+                .DistinctBy(u => u.Id)
+                .OrderBy(u => u.LastName)
+                .ThenBy(u => u.FirstName)
+                .ToList();
+
+            hoaUsers = allHOAUsers;
+
+            // Load roles for each user
+            foreach (var user in hoaUsers)
             {
                 user.Roles = await UserManager.GetRolesAsync(user);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading HOA users: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -311,24 +301,17 @@
         }
     }
 
-    private void ClearFilters()
-    {
-        searchValue = null;
-        roleFilter = null;
-    }
-
     private int GetRoleCount(string roleName)
     {
-        return users.Count(u => u.Roles?.Contains(roleName) ?? false);
+        return hoaUsers.Count(u => u.Roles?.Contains(roleName) ?? false);
     }
 
     private Color GetRoleColor(string role)
     {
         return role switch
         {
-            "TenantOwner" => Color.Error,
-            "TenantSpecialist" => Color.Primary,
-            "TenantViewer" => Color.Info,
+            "HOAUser" => Color.Primary,
+            "HOAAuditor" => Color.Secondary,
             _ => Color.Default
         };
     }
@@ -337,9 +320,8 @@
     {
         return role switch
         {
-            "TenantOwner" => "Owner",
-            "TenantSpecialist" => "Specialist",
-            "TenantViewer" => "Viewer",
+            "HOAUser" => "Board Member",
+            "HOAAuditor" => "Auditor",
             _ => role
         };
     }
@@ -355,7 +337,7 @@
         };
     }
 
-    private async Task OpenCreateUserDialog()
+    private async Task OpenInviteDialog()
     {
         var options = new DialogOptions 
         { 
@@ -364,31 +346,12 @@
             FullWidth = true
         };
         
-        var dialog = await DialogService.ShowAsync<CreateUserDialog>("Add Team Member", options);
+        var dialog = await DialogService.ShowAsync<InviteHOAUserDialog>("Invite HOA User", options);
         var result = await dialog.Result;
 
         if (!result.Canceled)
         {
-            await LoadUsers();
-        }
-    }
-
-    private async Task OpenEditUserDialog(ApplicationUser user)
-    {
-        var parameters = new DialogParameters<EditUserDialog> { { x => x.User, user } };
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true, 
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true
-        };
-        
-        var dialog = await DialogService.ShowAsync<EditUserDialog>("Edit User", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-        {
-            await LoadUsers();
+            await LoadHOAUsers();
         }
     }
 
@@ -396,11 +359,10 @@
     {
         try
         {
-            // Generate new confirmation and reset tokens
             var confirmationToken = await UserManager.GenerateEmailConfirmationTokenAsync(user);
             var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
             
-            Snackbar.Add($"Invitation email sent to {user.Email}", Severity.Success);
+            Snackbar.Add($"Invitation emails sent to {user.Email}", Severity.Success);
         }
         catch (Exception ex)
         {
@@ -408,84 +370,78 @@
         }
     }
 
-    private async Task RemovePrimaryRoleAsync(ApplicationUser user)
+    private async Task SendPasswordResetAsync(ApplicationUser user)
     {
-        if (user.Roles == null || user.Roles.Count == 0)
+        try
         {
-            Snackbar.Add("User has no roles.", Severity.Info);
-            return;
+            var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
+            Snackbar.Add($"Password reset email sent to {user.Email}", Severity.Success);
         }
-
-        var role = user.Roles.First();
-        
-        bool? confirm = await DialogService.ShowMessageBox(
-            "Confirm Role Removal",
-            $"Are you sure you want to remove the '{role}' role from {user.FullName}?",
-            yesText: "Remove", cancelText: "Cancel");
-
-        if (confirm == true)
+        catch (Exception ex)
         {
-            var result = await UserManager.RemoveFromRoleAsync(user, role);
-            if (result.Succeeded)
-            {
-                Snackbar.Add($"Removed role {role} from {user.Email}", Severity.Success);
-                await LoadUsers();
-            }
-            else
-            {
-                Snackbar.Add($"Failed removing role: {string.Join(',', result.Errors.Select(e => e.Description))}", Severity.Error);
-            }
+            Snackbar.Add($"Error sending password reset: {ex.Message}", Severity.Error);
         }
     }
 
-    private async Task ConfirmDeleteUser(ApplicationUser user)
+    private async Task ChangeRoleAsync(ApplicationUser user)
     {
+        var currentRole = user.Roles?.FirstOrDefault();
+        var newRole = currentRole == "HOAUser" ? "HOAAuditor" : "HOAUser";
+
         bool? confirm = await DialogService.ShowMessageBox(
-            "Confirm Deactivation",
-            $"Are you sure you want to deactivate {user.FullName}? They will no longer be able to access the system.",
-            yesText: "Deactivate", cancelText: "Cancel",
-            options: new DialogOptions { MaxWidth = MaxWidth.Small });
+            "Confirm Role Change",
+            $"Change {user.FullName}'s role from {GetRoleDisplayName(currentRole ?? "")} to {GetRoleDisplayName(newRole)}?",
+            yesText: "Change", cancelText: "Cancel");
 
         if (confirm == true)
         {
-            await DeactivateUserAsync(user);
+            try
+            {
+                if (!string.IsNullOrEmpty(currentRole))
+                {
+                    await UserManager.RemoveFromRoleAsync(user, currentRole);
+                }
+                await UserManager.AddToRoleAsync(user, newRole);
+                
+                Snackbar.Add($"Role changed to {GetRoleDisplayName(newRole)}", Severity.Success);
+                await LoadHOAUsers();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error changing role: {ex.Message}", Severity.Error);
+            }
         }
     }
 
     private async Task DeactivateUserAsync(ApplicationUser user)
     {
-        try
-        {
-            user.Status = StatusEnum.Inactive;
-            var result = await UserManager.UpdateAsync(user);
-            
-            if (result.Succeeded)
-            {
-                Snackbar.Add($"User {user.Email} has been deactivated", Severity.Success);
-                await LoadUsers();
-            }
-            else
-            {
-                Snackbar.Add($"Failed to deactivate user: {string.Join(',', result.Errors.Select(e => e.Description))}", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error deactivating user: {ex.Message}", Severity.Error);
-        }
-    }
+        bool? confirm = await DialogService.ShowMessageBox(
+            "Confirm Deactivation",
+            $"Deactivate {user.FullName}? They will no longer be able to access reserve studies and reports.",
+            yesText: "Deactivate", cancelText: "Cancel",
+            options: new DialogOptions { MaxWidth = MaxWidth.Small });
 
-    private async Task OpenAddRoleToUserDialog(ApplicationUser user)
-    {
-        var parameters = new DialogParameters<CRS.Components.Pages.Users.AddUserToRoleDialog> { { x => x.User, user } };
-        var options = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true, MaxWidth = MaxWidth.Medium };
-        var dialog = await DialogService.ShowAsync<CRS.Components.Pages.Users.AddUserToRoleDialog>("Manage Roles", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
+        if (confirm == true)
         {
-            await LoadUsers();
+            try
+            {
+                user.Status = StatusEnum.Inactive;
+                var result = await UserManager.UpdateAsync(user);
+                
+                if (result.Succeeded)
+                {
+                    Snackbar.Add($"User {user.Email} has been deactivated", Severity.Success);
+                    await LoadHOAUsers();
+                }
+                else
+                {
+                    Snackbar.Add($"Failed: {string.Join(',', result.Errors.Select(e => e.Description))}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
         }
     }
 }
-

@@ -63,14 +63,22 @@ namespace CRS.Services.Demo
         
         private Community CreateSampleProperty(int tenantId, string name, int units, string size)
         {
+            // Phase 1: Updated to use Addresses collection instead of duplicate fields
             return new Community
             {
                 TenantId = tenantId,
                 Name = name,
-                Address1 = GetSampleAddress(size),
-                City = GetSampleCity(size),
-                State = GetSampleState(size),
-                ZipCode = GetSampleZip(size),
+                Addresses = new List<Address>
+                {
+                    new Address
+                    {
+                        Street = GetSampleAddress(size),
+                        City = GetSampleCity(size),
+                        State = GetSampleState(size),
+                        Zip = GetSampleZip(size),
+                        IsMailingAddress = true
+                    }
+                },
                 PhoneNumber = "(555) 123-4567",
                 Email = $"info@{name.ToLower().Replace(" ", "")}.com",
                 NumberOfUnits = units,

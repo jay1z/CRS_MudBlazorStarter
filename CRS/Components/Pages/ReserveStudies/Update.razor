@@ -211,9 +211,9 @@
                                         <ChildRowContent Context="childContext">
                                             @if (childContext.ShowDetails) {
                                                 <MudTd colspan="4">
-                                                    <MudGrid>
+                                                <MudGrid>
                                                         <MudItem xs="3">
-                                                            <MudSelect @bind-Value="childContext.ElementMeasurementOptions" Label="Measurement Options">
+                                                            <MudSelect @bind-Value="childContext.MeasurementOption" Label="Measurement Options">
                                                                 @foreach (var option in measurementOptions) {
                                                                 <MudSelectItem Value="option">@option.DisplayText</MudSelectItem>
                                                             }
@@ -224,14 +224,14 @@
                                                         <MudText Typo="Typo.body1">@childContext.LastServiced?.ToString("MM/dd/yyyy")</MudText>
                                                     </MudItem>
                                                     <MudItem xs="3">
-                                                        <MudSelect @bind-Value="childContext.ElementUsefulLifeOptions" Label="Useful Life">
+                                                        <MudSelect @bind-Value="childContext.UsefulLifeOption" Label="Useful Life">
                                                             @foreach (var option in usefulLifeOptions) {
                                                                 <MudSelectItem Value="option">@option.DisplayText</MudSelectItem>
                                                             }
                                                         </MudSelect>
                                                     </MudItem>
                                                     <MudItem xs="3">
-                                                        <MudSelect @bind-Value="childContext.ElementRemainingLifeOptions" Label="Remaining Life">
+                                                        <MudSelect @bind-Value="childContext.RemainingLifeOption" Label="Remaining Life">
                                                             @foreach (var option in remainingLifeOptions) {
                                                                 <MudSelectItem Value="option">@option.DisplayText</MudSelectItem>
                                                             }
@@ -312,9 +312,10 @@
     private List<IReserveStudyElement> elementsWithServiceContact = new();
 
     private ReserveStudy reserveStudy;
-    private List<ElementMeasurementOptions> measurementOptions;
-    private List<ElementUsefulLifeOptions> usefulLifeOptions;
-    private List<ElementRemainingLifeOptions> remainingLifeOptions;
+    // Phase 2: Use consolidated ElementOption lists filtered by type
+    private List<ElementOption> measurementOptions;
+    private List<ElementOption> usefulLifeOptions;
+    private List<ElementOption> remainingLifeOptions;
     private List<BuildingElement> availableBuildingElements = new();
     private List<CommonElement> availableCommonElements = new();
 
@@ -335,20 +336,20 @@
                 .Include(rs => rs.Specialist)
 
                 .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.BuildingElement)
-                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.ElementMeasurementOptions)
-                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.ElementUsefulLifeOptions)
-                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.ElementRemainingLifeOptions)
+                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.MeasurementOption)
+                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.UsefulLifeOption)
+                .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.RemainingLifeOption)
                 .Include(rs => rs.ReserveStudyBuildingElements).ThenInclude(be => be.ServiceContact)
 
                 .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.CommonElement)
-                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.ElementMeasurementOptions)
-                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.ElementUsefulLifeOptions)
-                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.ElementRemainingLifeOptions)
+                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.MeasurementOption)
+                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.UsefulLifeOption)
+                .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.RemainingLifeOption)
                 .Include(rs => rs.ReserveStudyCommonElements).ThenInclude(be => be.ServiceContact)
 
-                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.ElementMeasurementOptions)
-                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.ElementUsefulLifeOptions)
-                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.ElementRemainingLifeOptions)
+                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.MeasurementOption)
+                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.UsefulLifeOption)
+                .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.RemainingLifeOption)
                 .Include(rs => rs.ReserveStudyAdditionalElements).ThenInclude(be => be.ServiceContact)
 
                 .FirstOrDefault(rs => rs.Id == Id);
@@ -359,9 +360,22 @@
             messageStore = new(editContext);
             applicationUsers = await context.Users.ToListAsync();
 
-            measurementOptions = await context.ElementMeasurementOptions.ToListAsync();
-            usefulLifeOptions = await context.ElementUsefulLifeOptions.ToListAsync();
-            remainingLifeOptions = await context.ElementRemainingLifeOptions.ToListAsync();
+            // Phase 2: Load consolidated ElementOptions filtered by type
+            measurementOptions = await context.ElementOptions
+                .Where(e => e.OptionType == ElementOptionType.Measurement && e.IsActive)
+                .OrderBy(e => e.ZOrder)
+                .ToListAsync();
+            
+            usefulLifeOptions = await context.ElementOptions
+                .Where(e => e.OptionType == ElementOptionType.UsefulLife && e.IsActive)
+                .OrderBy(e => e.ZOrder)
+                .ToListAsync();
+            
+            remainingLifeOptions = await context.ElementOptions
+                .Where(e => e.OptionType == ElementOptionType.RemainingLife && e.IsActive)
+                .OrderBy(e => e.ZOrder)
+                .ToListAsync();
+            
             availableBuildingElements = await context.BuildingElements.ToListAsync();
             availableCommonElements = await context.CommonElements.ToListAsync();
         }

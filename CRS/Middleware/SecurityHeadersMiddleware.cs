@@ -42,12 +42,12 @@ public class SecurityHeadersMiddleware
             "img-src 'self' data: https:",
             // Allow styles from self, inline styles (for MudBlazor) and https hosts (CDNs)
             "style-src 'self' 'unsafe-inline' https:",
-            // Allow scripts from self, inline (required by some libs), and Stripe's script domain
-            "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+            // Allow scripts from self, inline (required by some libs), Stripe, and Clarity
+            "script-src 'self' 'unsafe-inline' https://js.stripe.com https://www.clarity.ms https://scripts.clarity.ms",
             // Allow framing content from Stripe for pricing table / checkout widgets
             "frame-src 'self' https://js.stripe.com https://checkout.stripe.com",
-            // allow secure websockets and https by default; connect-src can include Stripe API if needed
-            "connect-src 'self' https: wss:",
+            // allow secure websockets and https by default; connect-src includes Stripe API and Clarity
+            "connect-src 'self' https: wss: https://www.clarity.ms",
             // Fonts from self, data URIs, and https hosts
             "font-src 'self' data: https:"
         };

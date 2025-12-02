@@ -110,6 +110,17 @@ namespace CRS.Services.Tenant {
             return user;
         }
 
+        public async Task<IdentityResult> UpdateUserAsync(ApplicationUser user) {
+            if (user == null) throw new ArgumentNullException(nameof(user));
+            
+            try {
+                return await _userManager.UpdateAsync(user);
+            } catch (Exception ex) {
+                _logger.LogError(ex, "Error updating user {UserId}", user.Id);
+                throw;
+            }
+        }
+
         // Random password generator retained for future use
         private static string GenerateRandomPassword() {
             const string lowers = "abcdefghijkmnopqrstuvwxyz";

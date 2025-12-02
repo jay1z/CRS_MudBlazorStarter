@@ -1,0 +1,390 @@
+﻿@page "/ReserveStudies/Request"
+@attribute [Authorize]
+
+@using System.Security.Claims
+@using CRS.Components.Layout
+@using CRS.Components.Pages.ReserveStudyPages.Steps
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@implements IAsyncDisposable
+@inject ILogger<CreatePublic> Logger
+@inject UserStateService UserState
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IReserveStudyService ReserveStudyService
+@inject IReserveStudyWorkflowService WorkflowService
+@inject ITenantContext TenantContext
+
+<PageTitle>Request Reserve Study - @(TenantContext.TenantName ?? "ALX Reserve Cloud")</PageTitle>
+
+@if (isLoading) {
+    <MudPaper Elevation="0" Class="pa-8">
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        <MudText Typo="Typo.h5" Class="mt-4">Loading...</MudText>
+    </MudPaper>
+}
+else if (!TenantContext.TenantId.HasValue) {
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+        <MudAlert Severity="Severity.Error">
+            <MudText Typo="Typo.h6" Class="mb-2">Access Denied</MudText>
+            <MudText Typo="Typo.body2">
+                This page is only accessible from your organization's subdomain. 
+                Please contact your reserve study provider for the correct link.
+            </MudText>
+        </MudAlert>
+    </MudContainer>
+}
+else {
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+        <!-- Tenant Branding Header -->
+        <MudPaper Class="pa-6 mb-4" Elevation="2" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 12px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                @if (!string.IsNullOrEmpty(TenantContext.BrandingJson)) {
+                    <!-- TODO: Parse branding JSON and display logo -->
+                    <MudIcon Icon="@Icons.Material.Filled.Business" Style="color: white; font-size: 48px;" />
+                }
+                else {
+                    <MudIcon Icon="@Icons.Material.Filled.Business" Style="color: white; font-size: 48px;" />
+                }
+                <div>
+                    <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                        @TenantContext.TenantName
+                    </MudText>
+                    <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.9);">
+                        Reserve Study Request Form
+                    </MudText>
+                </div>
+            </MudStack>
+        </MudPaper>
+
+        <MudCard Elevation="4">
+            <MudCardContent>
+                <MudStepper @bind-ActiveStep="activeStep" Linear="true" CenterLabels="true"
+                            CompletedStepColor="Color.Success" CurrentStepColor="Color.Primary"
+                            Class="mb-4" @ref="stepper">
+                    <ChildContent>
+                        @foreach (var step in steps) {
+                            <MudStep Title="@step.Title"
+                                     Icon="@(stepValidationState.GetValueOrDefault(step.Index) ? Icons.Material.Filled.CheckCircle : null)"
+                                     IconColor="@(stepValidationState.GetValueOrDefault(step.Index) ? Color.Success : Color.Default)">
+                                @step.Content
+                            </MudStep>
+                        }
+                    </ChildContent>
+                    <CompletedContent>
+                        <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-6">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="font-size: 80px; color: #28a745;" />
+                            <MudText Typo="Typo.h4" Class="fw-bold">Request Submitted!</MudText>
+                            <MudText Typo="Typo.body1" Align="Align.Center" Style="max-width: 500px;">
+                                Thank you for submitting your reserve study request. We've sent a confirmation email 
+                                with a tracking link to <strong>@Model?.Contact?.Email</strong>.
+                            </MudText>
+                            <MudText Typo="Typo.body2" Style="color: #666;" Align="Align.Center">
+                                A specialist from @TenantContext.TenantName will contact you within 1-2 business days.
+                            </MudText>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary"
+                                       Size="Size.Large"
+                                       StartIcon="@Icons.Material.Filled.Dashboard"
+                                       Href="/dashboard">
+                                Go to Dashboard
+                            </MudButton>
+                        </MudStack>
+                    </CompletedContent>
+                    <ActionContent>
+                        @if (!_completed) {
+                            <MudGrid Justify="Justify.SpaceBetween" Class="mt-4">
+                                <MudItem>
+                                    <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                                               Disabled="activeStep <= 0 || isSubmitting" OnClick="PreviousStep">
+                                        <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-2" />
+                                        Back
+                                    </MudButton>
+                                </MudItem>
+                                <MudItem>
+                                    @if (activeStep < steps.Count - 1) {
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="isSubmitting" OnClick="NextStep">
+                                            Continue
+                                            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="ml-2" />
+                                        </MudButton>
+                                    }
+                                    else if (AcceptTerms) {
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                                   OnClick="SubmitForm" Disabled="isSubmitting || !IsFormValid()">
+                                            @if (isSubmitting) {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                                <span>Submitting...</span>
+                                            }
+                                            else {
+                                                <span>Submit Request</span>
+                                            }
+                                        </MudButton>
+                                    }
+                                    else {
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="true">
+                                            <MudTooltip Text="You must accept the terms to proceed">
+                                                Submit Request
+                                            </MudTooltip>
+                                        </MudButton>
+                                    }
+                                </MudItem>
+                            </MudGrid>
+                        }
+                    </ActionContent>
+                </MudStepper>
+            </MudCardContent>
+        </MudCard>
+        
+        <!-- Help Section -->
+        <MudPaper Class="pa-4 mt-4" Elevation="1" Style="background: #f9f9f9; border-radius: 8px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Help" Color="Color.Primary" />
+                <div>
+                    <MudText Typo="Typo.body2">
+                        <strong>Need assistance?</strong> Contact @TenantContext.TenantName support.
+                    </MudText>
+                </div>
+            </MudStack>
+        </MudPaper>
+    </MudContainer>
+}
+
+@code {
+    private record StepDefinition(int Index, string Title, RenderFragment Content);
+
+    [CascadingParameter] public Routes? Routes { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private ReserveStudy? Model { get; set; }
+    private readonly Dictionary<int, bool> stepValidationState = new();
+
+    private MudStepper? stepper;
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private bool AcceptTerms;
+    private bool _completed;
+    private bool isExistingCommunity;
+    private int activeStep;
+
+    private Step1? step1;
+    private Step2? step2;
+    private Step3? step3;
+    private Step4? step4;
+
+    private List<StepDefinition> steps = new();
+
+    protected override async Task OnInitializedAsync() {
+        try {
+            await UserState.InitializeAsync();
+            
+            // Allow authenticated users (not just tenant staff)
+            if (!UserState.ClaimsPrincipal.Identity?.IsAuthenticated ?? true) {
+                NavigationManager.NavigateTo("/Account/Login?returnUrl=" + Uri.EscapeDataString("/ReserveStudies/Request"), true);
+                return;
+            }
+
+            // Verify tenant context is available
+            if (!TenantContext.TenantId.HasValue) {
+                Logger.LogWarning("CreatePublic: No tenant context available for user {UserId}", GetCurrentUserId(UserState.ClaimsPrincipal));
+                isLoading = false;
+                return;
+            }
+
+            InitializeModel();
+            InitializeSteps();
+        }
+        catch (Exception ex) {
+            LogAndDisplayError("Error initializing", ex);
+        }
+        finally {
+            isLoading = false;
+        }
+    }
+
+    private void InitializeSteps() {
+        steps = new List<StepDefinition> {
+            new(0, "Community Information", @<Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated" OnExistingCommunityChanged="@((bool isExisting) => isExistingCommunity = isExisting)" />),
+            new(1, "Property Manager", @<Step2 @ref="step2" Model="Model" StepValidated="OnStepValidated" />),
+            new(2, "Property Elements", @<Step3 @ref="step3" Model="Model" StepValidated="OnStepValidated" />),
+            new(3, "Acknowledgement", @<Step4 @ref="step4" Model="Model" StepValidated="OnStepValidated" AcceptTerms="@AcceptTerms" AcceptTermsChanged="@OnAcceptTermsChanged" />)
+        };
+    }
+
+    private void InitializeModel() {
+        // SECURITY: Use current tenant's context
+        var tenantId = TenantContext.TenantId!.Value;
+        
+        Model = new ReserveStudy {
+            ApplicationUserId = GetCurrentUserId(UserState.ClaimsPrincipal),
+            TenantId = tenantId, // SECURITY: Force tenant ID
+            Community = new Community {
+                Name = string.Empty,
+                TenantId = tenantId, // SECURITY: Force tenant ID on community
+                Addresses = new List<Address> {
+                    new Address { Street = string.Empty, City = string.Empty, State = string.Empty, Zip = string.Empty }
+                }
+            },
+            Contact = new Contact { 
+                FirstName = string.Empty, 
+                LastName = string.Empty, 
+                Email = string.Empty, 
+                Phone = string.Empty,
+                TenantId = tenantId // SECURITY: Force tenant ID
+            },
+            PropertyManager = new PropertyManager { 
+                FirstName = string.Empty, 
+                LastName = string.Empty, 
+                CompanyName = string.Empty, 
+                Email = string.Empty, 
+                Phone = string.Empty,
+                TenantId = tenantId // SECURITY: Force tenant ID
+            },
+            ReserveStudyAdditionalElements = new List<ReserveStudyAdditionalElement>(),
+            IsActive = true
+        };
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    private async Task NextStep() {
+        try {
+            bool isValid = await ValidateCurrentStep();
+            if (isValid) {
+                activeStep++;
+                await stepper!.NextStepAsync();
+            }
+        }
+        catch (Exception ex) {
+            LogAndDisplayError("Error validating step", ex);
+        }
+    }
+
+    private async Task<bool> ValidateCurrentStep() {
+        bool isValid = activeStep switch {
+            0 => step1 != null && await step1.ValidateAsync(),
+            1 => step2 != null && await step2.ValidateAsync(),
+            2 => step3 != null && await step3.ValidateAsync(),
+            3 => step4 != null && await step4.ValidateAsync(),
+            _ => false
+        };
+
+        if (!isValid) {
+            Snackbar.Add(activeStep == 3
+                ? "You must accept the terms to proceed."
+                : "Please correct the errors before proceeding.",
+                Severity.Warning);
+        }
+
+        return isValid;
+    }
+
+    private async Task PreviousStep() {
+        if (activeStep > 0) {
+            activeStep--;
+            await stepper!.PreviousStepAsync();
+        }
+    }
+
+    private bool IsFormValid() =>
+        steps.All(step => stepValidationState.GetValueOrDefault(step.Index)) && AcceptTerms;
+
+    private async Task SubmitForm() {
+        if (isSubmitting) return; // guard double submit
+        
+        // SECURITY: Final tenant validation check
+        if (!TenantContext.TenantId.HasValue) {
+            Snackbar.Add("Unable to determine your organization. Please refresh and try again.", Severity.Error);
+            return;
+        }
+        
+        if (!IsFormValid()) {
+            Snackbar.Add("Please complete all required fields.", Severity.Warning);
+            return;
+        }
+
+        isSubmitting = true;
+        try {
+            PrepareModelForSubmission();
+
+            // Use workflow service so the StudyRequest is created and state machine is initialized
+            var created = await WorkflowService.CreateReserveStudyRequestAsync(Model!);
+
+            Snackbar.Add("Reserve Study request submitted successfully!", Severity.Success);
+            _completed = true;
+            await stepper!.NextStepAsync();
+        }
+        catch (UnauthorizedAccessException ex) {
+            Logger.LogError(ex, "Unauthorized attempt to create reserve study for tenant {TenantId}", TenantContext.TenantId);
+            Snackbar.Add("You do not have permission to create a reserve study for this organization.", Severity.Error);
+        }
+        catch (Exception ex) {
+            LogAndDisplayError("Error submitting form", ex);
+        }
+        finally {
+            isSubmitting = false;
+        }
+    }
+
+    private void PrepareModelForSubmission() {
+        // SECURITY: Force tenant ID on all entities one final time
+        var tenantId = TenantContext.TenantId!.Value;
+        Model!.TenantId = tenantId;
+        
+        if (isExistingCommunity && Model?.Community?.Id != null) {
+            // For existing community, just set the reference
+            Model.CommunityId = Model.Community.Id;
+            Model.Community = null;
+        }
+        else if (Model?.Community != null) {
+            // For new community, ensure it's tracked as a new entity
+            Model.Community.Id = Guid.CreateVersion7();
+            Model.Community.TenantId = tenantId; // SECURITY: Force tenant ID
+            
+            foreach (var address in Model.Community.Addresses ?? Enumerable.Empty<Address>()) {
+                address.Id = Guid.CreateVersion7();
+            }
+        }
+        
+        // SECURITY: Ensure all related entities have correct tenant ID
+        if (Model?.Contact != null) {
+            Model.Contact.TenantId = tenantId;
+        }
+        
+        if (Model?.PropertyManager != null) {
+            Model.PropertyManager.TenantId = tenantId;
+        }
+    }
+
+    private void LogAndDisplayError(string message, Exception ex) {
+        Logger.LogError($"{message}: {ex}");
+        Snackbar.Add($"{message}: {ex.Message}", Severity.Error);
+
+        if (ex.InnerException != null) {
+            Snackbar.Add($"Additional details: {ex.InnerException.Message}", Severity.Error);
+        }
+    }
+
+    private Task OnAcceptTermsChanged(bool value) {
+        AcceptTerms = value;
+        stepValidationState[3] = value;
+        return Task.CompletedTask;
+    }
+
+    private void OnStepValidated(bool isValid) {
+        stepValidationState[activeStep] = isValid;
+        StateHasChanged();
+    }
+
+    private Guid? GetCurrentUserId(ClaimsPrincipal user) {
+        var userIdString = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId)) {
+            throw new InvalidOperationException("User ID not found or invalid");
+        }
+        return userId;
+    }
+}

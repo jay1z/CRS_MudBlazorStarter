@@ -32,7 +32,16 @@ namespace CRS.Middleware
                 path.StartsWith("/api/stripe", StringComparison.OrdinalIgnoreCase) || // Stripe webhooks
                 path.StartsWith("/tenant", StringComparison.OrdinalIgnoreCase) || // Tenant signup/not-found
                 path == "/" || 
-                path.StartsWith("/health", StringComparison.OrdinalIgnoreCase))
+                path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/dev", StringComparison.OrdinalIgnoreCase)) // Dev endpoints
+            {
+                await _next(context);
+                return;
+            }
+            
+            // IMPORTANT: Exempt platform tenant from license checks
+            // Platform admins should always have access
+            if (tenantContext.TenantId.HasValue && tenantContext.Subdomain?.Equals("platform", StringComparison.OrdinalIgnoreCase) == true)
             {
                 await _next(context);
                 return;

@@ -57,6 +57,7 @@ namespace CRS.Migrations
                     FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CompanyName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Roles = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
                     TenantId = table.Column<int>(type: "int", nullable: false),
@@ -193,10 +194,6 @@ namespace CRS.Migrations
                     AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     TenantId = table.Column<int>(type: "int", nullable: false),
-                    Address1 = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    City = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    State = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ZipCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     NumberOfUnits = table.Column<int>(type: "int", nullable: true),
@@ -236,14 +233,18 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ElementMeasurementOptions",
+                name: "ElementOptions",
                 schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Unit = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DisplayText = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    OptionType = table.Column<int>(type: "int", nullable: false),
+                    DisplayText = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Unit = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    MinValue = table.Column<int>(type: "int", nullable: true),
+                    MaxValue = table.Column<int>(type: "int", nullable: true),
                     ZOrder = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -251,45 +252,7 @@ namespace CRS.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ElementMeasurementOptions", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ElementRemainingLifeOptions",
-                schema: "crs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Unit = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DisplayText = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ZOrder = table.Column<int>(type: "int", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ElementRemainingLifeOptions", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ElementUsefulLifeOptions",
-                schema: "crs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Unit = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DisplayText = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ZOrder = table.Column<int>(type: "int", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ElementUsefulLifeOptions", x => x.Id);
+                    table.PrimaryKey("PK_ElementOptions", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -691,7 +654,7 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "AuditLogs",
+                name: "AuditLogArchives",
                 schema: "crs",
                 columns: table => new
                 {
@@ -699,6 +662,45 @@ namespace CRS.Migrations
                     ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Action = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TableName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RecordId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ColumnName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    OldValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NewValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ActorId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ActorName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CorrelationId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Method = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Path = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RemoteIp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Payload = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ArchivedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ArchiveReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AuditLogArchives", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AuditLogArchives_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalSchema: "crs",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AuditLogs",
+                schema: "crs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Action = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TableName = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     RecordId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ColumnName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     OldValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -1150,9 +1152,9 @@ namespace CRS.Migrations
                     NeedsService = table.Column<bool>(type: "bit", nullable: false),
                     ServiceContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     LastServiced = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ElementMeasurementOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ElementRemainingLifeOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ElementUsefulLifeOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MeasurementOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RemainingLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    UsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1162,22 +1164,22 @@ namespace CRS.Migrations
                 {
                     table.PrimaryKey("PK_ReserveStudyAdditionalElements", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ReserveStudyAdditionalElements_ElementMeasurementOptions_ElementMeasurementOptionsId",
-                        column: x => x.ElementMeasurementOptionsId,
+                        name: "FK_ReserveStudyAdditionalElements_ElementOptions_MeasurementOptionId",
+                        column: x => x.MeasurementOptionId,
                         principalSchema: "crs",
-                        principalTable: "ElementMeasurementOptions",
+                        principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ReserveStudyAdditionalElements_ElementRemainingLifeOptions_ElementRemainingLifeOptionsId",
-                        column: x => x.ElementRemainingLifeOptionsId,
+                        name: "FK_ReserveStudyAdditionalElements_ElementOptions_RemainingLifeOptionId",
+                        column: x => x.RemainingLifeOptionId,
                         principalSchema: "crs",
-                        principalTable: "ElementRemainingLifeOptions",
+                        principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ReserveStudyAdditionalElements_ElementUsefulLifeOptions_ElementUsefulLifeOptionsId",
-                        column: x => x.ElementUsefulLifeOptionsId,
+                        name: "FK_ReserveStudyAdditionalElements_ElementOptions_UsefulLifeOptionId",
+                        column: x => x.UsefulLifeOptionId,
                         principalSchema: "crs",
-                        principalTable: "ElementUsefulLifeOptions",
+                        principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyAdditionalElements_ReserveStudies_ReserveStudyId",
@@ -1203,9 +1205,9 @@ namespace CRS.Migrations
                     Count = table.Column<int>(type: "int", nullable: false),
                     ServiceContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     LastServiced = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ElementMeasurementOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ElementRemainingLifeOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ElementUsefulLifeOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MeasurementOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RemainingLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    UsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1223,22 +1225,22 @@ namespace CRS.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ReserveStudyBuildingElements_ElementMeasurementOptions_ElementMeasurementOptionsId",
-                        column: x => x.ElementMeasurementOptionsId,
+                        name: "FK_ReserveStudyBuildingElements_ElementOptions_MeasurementOptionId",
+                        column: x => x.MeasurementOptionId,
                         principalSchema: "crs",
-                        principalTable: "ElementMeasurementOptions",
+                        principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ReserveStudyBuildingElements_ElementRemainingLifeOptions_ElementRemainingLifeOptionsId",
-                        column: x => x.ElementRemainingLifeOptionsId,
+                        name: "FK_ReserveStudyBuildingElements_ElementOptions_RemainingLifeOptionId",
+                        column: x => x.RemainingLifeOptionId,
                         principalSchema: "crs",
-                        principalTable: "ElementRemainingLifeOptions",
+                        principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ReserveStudyBuildingElements_ElementUsefulLifeOptions_ElementUsefulLifeOptionsId",
-                        column: x => x.ElementUsefulLifeOptionsId,
+                        name: "FK_ReserveStudyBuildingElements_ElementOptions_UsefulLifeOptionId",
+                        column: x => x.UsefulLifeOptionId,
                         principalSchema: "crs",
-                        principalTable: "ElementUsefulLifeOptions",
+                        principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyBuildingElements_ReserveStudies_ReserveStudyId",
@@ -1265,9 +1267,9 @@ namespace CRS.Migrations
                     Count = table.Column<int>(type: "int", nullable: false),
                     ServiceContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     LastServiced = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ElementMeasurementOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ElementRemainingLifeOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    ElementUsefulLifeOptionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MeasurementOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RemainingLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    UsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ElementName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Quantity = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
@@ -1294,22 +1296,22 @@ namespace CRS.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ReserveStudyCommonElements_ElementMeasurementOptions_ElementMeasurementOptionsId",
-                        column: x => x.ElementMeasurementOptionsId,
+                        name: "FK_ReserveStudyCommonElements_ElementOptions_MeasurementOptionId",
+                        column: x => x.MeasurementOptionId,
                         principalSchema: "crs",
-                        principalTable: "ElementMeasurementOptions",
+                        principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ReserveStudyCommonElements_ElementRemainingLifeOptions_ElementRemainingLifeOptionsId",
-                        column: x => x.ElementRemainingLifeOptionsId,
+                        name: "FK_ReserveStudyCommonElements_ElementOptions_RemainingLifeOptionId",
+                        column: x => x.RemainingLifeOptionId,
                         principalSchema: "crs",
-                        principalTable: "ElementRemainingLifeOptions",
+                        principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ReserveStudyCommonElements_ElementUsefulLifeOptions_ElementUsefulLifeOptionsId",
-                        column: x => x.ElementUsefulLifeOptionsId,
+                        name: "FK_ReserveStudyCommonElements_ElementOptions_UsefulLifeOptionId",
+                        column: x => x.UsefulLifeOptionId,
                         principalSchema: "crs",
-                        principalTable: "ElementUsefulLifeOptions",
+                        principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyCommonElements_ReserveStudies_ReserveStudyId",
@@ -1449,6 +1451,19 @@ namespace CRS.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AuditLogArchives_ApplicationUserId",
+                schema: "crs",
+                table: "AuditLogArchives",
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditLog_Table_Created_Covering",
+                schema: "crs",
+                table: "AuditLogs",
+                columns: new[] { "TableName", "CreatedAt" })
+                .Annotation("SqlServer:Include", new[] { "RecordId", "ColumnName", "Action" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_ApplicationUserId",
                 schema: "crs",
                 table: "AuditLogs",
@@ -1461,10 +1476,23 @@ namespace CRS.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Community_Tenant_Active",
+                schema: "crs",
+                table: "Communities",
+                columns: new[] { "TenantId", "IsActive" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ContactGroups_ApplicationUserId",
                 schema: "crs",
                 table: "ContactGroups",
                 column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Contact_Tenant_User_NotDeleted",
+                schema: "crs",
+                table: "Contacts",
+                columns: new[] { "TenantId", "ApplicationUserId" },
+                filter: "[DateDeleted] IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Contacts_ApplicationUserId",
@@ -1503,6 +1531,19 @@ namespace CRS.Migrations
                 column: "DemoTenantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ElementOption_Type_Active_Order",
+                schema: "crs",
+                table: "ElementOptions",
+                columns: new[] { "OptionType", "IsActive", "ZOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FinancialInfo_Tenant_Study_NotDeleted",
+                schema: "crs",
+                table: "FinancialInfos",
+                columns: new[] { "TenantId", "ReserveStudyId" },
+                filter: "[DateDeleted] IS NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_FinancialInfos_ReserveStudyId",
                 schema: "crs",
                 table: "FinancialInfos",
@@ -1532,6 +1573,13 @@ namespace CRS.Migrations
                 schema: "crs",
                 table: "PropertyManagers",
                 column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Proposal_Tenant_Study_Approved_NotDeleted",
+                schema: "crs",
+                table: "Proposals",
+                columns: new[] { "TenantId", "ReserveStudyId", "IsApproved" },
+                filter: "[DateDeleted] IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Proposals_ReserveStudyId",
@@ -1583,22 +1631,41 @@ namespace CRS.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudyAdditionalElements_ElementMeasurementOptionsId",
+                name: "IX_ReserveStudy_Tenant_Active_Created_Covering",
                 schema: "crs",
-                table: "ReserveStudyAdditionalElements",
-                column: "ElementMeasurementOptionsId");
+                table: "ReserveStudies",
+                columns: new[] { "TenantId", "IsActive", "DateCreated" })
+                .Annotation("SqlServer:Include", new[] { "CommunityId", "ApplicationUserId", "SpecialistUserId", "Status" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudyAdditionalElements_ElementRemainingLifeOptionsId",
+                name: "IX_ReserveStudy_Tenant_Specialist_Active",
                 schema: "crs",
-                table: "ReserveStudyAdditionalElements",
-                column: "ElementRemainingLifeOptionsId");
+                table: "ReserveStudies",
+                columns: new[] { "TenantId", "SpecialistUserId", "IsActive" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudyAdditionalElements_ElementUsefulLifeOptionsId",
+                name: "IX_ReserveStudy_Tenant_Status_Active",
+                schema: "crs",
+                table: "ReserveStudies",
+                columns: new[] { "TenantId", "Status", "IsActive" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudy_Tenant_User_Community",
+                schema: "crs",
+                table: "ReserveStudies",
+                columns: new[] { "TenantId", "ApplicationUserId", "CommunityId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyAdditionalElements_MeasurementOptionId",
                 schema: "crs",
                 table: "ReserveStudyAdditionalElements",
-                column: "ElementUsefulLifeOptionsId");
+                column: "MeasurementOptionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyAdditionalElements_RemainingLifeOptionId",
+                schema: "crs",
+                table: "ReserveStudyAdditionalElements",
+                column: "RemainingLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyAdditionalElements_ReserveStudyId",
@@ -1613,28 +1680,28 @@ namespace CRS.Migrations
                 column: "ServiceContactId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyAdditionalElements_UsefulLifeOptionId",
+                schema: "crs",
+                table: "ReserveStudyAdditionalElements",
+                column: "UsefulLifeOptionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyBuildingElements_BuildingElementId",
                 schema: "crs",
                 table: "ReserveStudyBuildingElements",
                 column: "BuildingElementId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudyBuildingElements_ElementMeasurementOptionsId",
+                name: "IX_ReserveStudyBuildingElements_MeasurementOptionId",
                 schema: "crs",
                 table: "ReserveStudyBuildingElements",
-                column: "ElementMeasurementOptionsId");
+                column: "MeasurementOptionId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudyBuildingElements_ElementRemainingLifeOptionsId",
+                name: "IX_ReserveStudyBuildingElements_RemainingLifeOptionId",
                 schema: "crs",
                 table: "ReserveStudyBuildingElements",
-                column: "ElementRemainingLifeOptionsId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudyBuildingElements_ElementUsefulLifeOptionsId",
-                schema: "crs",
-                table: "ReserveStudyBuildingElements",
-                column: "ElementUsefulLifeOptionsId");
+                column: "RemainingLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyBuildingElements_ServiceContactId",
@@ -1643,34 +1710,52 @@ namespace CRS.Migrations
                 column: "ServiceContactId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyBuildingElements_UsefulLifeOptionId",
+                schema: "crs",
+                table: "ReserveStudyBuildingElements",
+                column: "UsefulLifeOptionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RSBuildingElement_Study_Element",
+                schema: "crs",
+                table: "ReserveStudyBuildingElements",
+                columns: new[] { "ReserveStudyId", "BuildingElementId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyCommonElements_CommonElementId",
                 schema: "crs",
                 table: "ReserveStudyCommonElements",
                 column: "CommonElementId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudyCommonElements_ElementMeasurementOptionsId",
+                name: "IX_ReserveStudyCommonElements_MeasurementOptionId",
                 schema: "crs",
                 table: "ReserveStudyCommonElements",
-                column: "ElementMeasurementOptionsId");
+                column: "MeasurementOptionId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudyCommonElements_ElementRemainingLifeOptionsId",
+                name: "IX_ReserveStudyCommonElements_RemainingLifeOptionId",
                 schema: "crs",
                 table: "ReserveStudyCommonElements",
-                column: "ElementRemainingLifeOptionsId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ReserveStudyCommonElements_ElementUsefulLifeOptionsId",
-                schema: "crs",
-                table: "ReserveStudyCommonElements",
-                column: "ElementUsefulLifeOptionsId");
+                column: "RemainingLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyCommonElements_ServiceContactId",
                 schema: "crs",
                 table: "ReserveStudyCommonElements",
                 column: "ServiceContactId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyCommonElements_UsefulLifeOptionId",
+                schema: "crs",
+                table: "ReserveStudyCommonElements",
+                column: "UsefulLifeOptionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RSCommonElement_Study_Element",
+                schema: "crs",
+                table: "ReserveStudyCommonElements",
+                columns: new[] { "ReserveStudyId", "CommonElementId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Roles_Name",
@@ -1817,6 +1902,10 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
+                name: "AuditLogArchives",
+                schema: "crs");
+
+            migrationBuilder.DropTable(
                 name: "AuditLogs",
                 schema: "crs");
 
@@ -1917,15 +2006,7 @@ namespace CRS.Migrations
                 schema: "crs");
 
             migrationBuilder.DropTable(
-                name: "ElementMeasurementOptions",
-                schema: "crs");
-
-            migrationBuilder.DropTable(
-                name: "ElementRemainingLifeOptions",
-                schema: "crs");
-
-            migrationBuilder.DropTable(
-                name: "ElementUsefulLifeOptions",
+                name: "ElementOptions",
                 schema: "crs");
 
             migrationBuilder.DropTable(

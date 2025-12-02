@@ -2,11 +2,14 @@
 
 @using CRS.Data
 @using CRS.Services
+@using CRS.Services.Tenant
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
 @inherits OwningComponentBase
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserStateService UserState
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
 
 <MudForm Model="Model" @ref="form">
     <MudGrid>
@@ -202,12 +205,42 @@
     }
 
     private async Task LoadUserCommunities() {
+        // SECURITY: Only load communities from the current tenant
+        if (!TenantContext.TenantId.HasValue) {
+            Snackbar.Add("Unable to determine tenant context. Please ensure you're accessing from the correct subdomain.", Severity.Error);
+            return;
+        }
+
+        // Check if user is authenticated
+        if (UserState.CurrentUser == null) {
+            // For HOA users or users without existing reserve studies, show empty list
+            existingCommunities = new List<Community>();
+            return;
+        }
+
         using var context = await DbFactory.CreateDbContextAsync();
-        existingCommunities = await context.Communities
-            .Include(c => c.Addresses) // Include addresses
+        var currentTenantId = TenantContext.TenantId.Value;
+        var currentUserId = UserState.CurrentUser.Id;
+        
+        // Phase 1: Optimized query - First get community IDs, then fetch full data
+        // This avoids expensive subqueries in the WHERE clause
+        var userStudyCommunityIds = await context.ReserveStudies
             .AsNoTracking()
-            .Where(c => context.ReserveStudies
-                .Any(rs => rs.Community.Id == c.Id && rs.ApplicationUserId == UserState.CurrentUser.Id))
+            .Where(rs => rs.TenantId == currentTenantId && rs.ApplicationUserId == currentUserId)
+            .Select(rs => rs.CommunityId)
+            .Distinct()
+            .ToListAsync();
+
+        if (!userStudyCommunityIds.Any()) {
+            existingCommunities = new List<Community>();
+            return;
+        }
+
+        existingCommunities = await context.Communities
+            .Include(c => c.Addresses)
+            .AsNoTracking()
+            .Where(c => userStudyCommunityIds.Contains(c.Id))
+            .OrderBy(c => c.Name)
             .ToListAsync();
     }
 
@@ -216,6 +249,12 @@
         if (Model.Community.Addresses == null || !Model.Community.Addresses.Any()) {
             Model.Community.Addresses = new List<Address> { new Address() };
         }
+        
+        // SECURITY: Set tenant ID on new communities
+        if (TenantContext.TenantId.HasValue && Model.Community.TenantId == 0) {
+            Model.Community.TenantId = TenantContext.TenantId.Value;
+        }
+        
         await base.OnParametersSetAsync();
     }
 
@@ -224,6 +263,12 @@
         if (!useExisting) {
             selectedCommunity = null;
             Model.Community = new Community { };
+            
+            // SECURITY: Set tenant ID on new community
+            if (TenantContext.TenantId.HasValue) {
+                Model.Community.TenantId = TenantContext.TenantId.Value;
+            }
+            
             // Reset mailing address options
             usePhysicalAsMailingAddress = true;
             mailingAddress = new Address { IsMailingAddress = true };
@@ -269,7 +314,19 @@
         return useExistingCommunity;
     }
 
+    public bool IsNewCommunity() {
+        // Community is new if it doesn't have a database ID yet
+        return !useExistingCommunity && Model.Community.Id == Guid.Empty;
+    }
+
     public async Task<bool> ValidateAsync() {
+        // SECURITY: Validate tenant context exists
+        if (!TenantContext.TenantId.HasValue) {
+            Snackbar.Add("Unable to determine tenant context. Please refresh and try again.", Severity.Error);
+            await StepValidated.InvokeAsync(false);
+            return false;
+        }
+        
         await form.Validate();
         bool valid = form.IsValid;
 
@@ -280,8 +337,57 @@
                 Model.Community.Addresses.Add(mailingAddress);
             }
         }
+        
+        // SECURITY: Final check - ensure community has correct tenant ID
+        if (Model.Community.TenantId != TenantContext.TenantId.Value) {
+            Model.Community.TenantId = TenantContext.TenantId.Value;
+        }
 
         await StepValidated.InvokeAsync(valid);
         return valid;
+    }
+
+    /// <summary>
+    /// Saves a new community to the database and updates the Model with the saved community ID.
+    /// This should be called by the parent form before submitting the reserve study.
+    /// </summary>
+    public async Task<bool> SaveNewCommunityIfNeededAsync() {
+        // Only save if this is a new community (not existing)
+        if (!IsNewCommunity()) {
+            return true; // Already has a valid ID or is an existing community
+        }
+
+        try {
+            using var context = await DbFactory.CreateDbContextAsync();
+            
+            // Set tenant ID one more time to be safe
+            if (TenantContext.TenantId.HasValue) {
+                Model.Community.TenantId = TenantContext.TenantId.Value;
+            }
+
+            // Ensure the community has a valid GUID (not default)
+            if (Model.Community.Id == Guid.Empty) {
+                Model.Community.Id = Guid.CreateVersion7();
+            }
+
+            // Ensure all addresses have valid IDs
+            foreach (var address in Model.Community.Addresses ?? Enumerable.Empty<Address>()) {
+                if (address.Id == Guid.Empty) {
+                    address.Id = Guid.CreateVersion7();
+                }
+            }
+
+            // Add the community to the database
+            context.Communities.Add(Model.Community);
+            await context.SaveChangesAsync();
+
+            // Model.Community now has the database-generated ID
+            Snackbar.Add($"Community '{Model.Community.Name}' created successfully.", Severity.Success);
+            return true;
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error saving community: {ex.Message}", Severity.Error);
+            return false;
+        }
     }
 }

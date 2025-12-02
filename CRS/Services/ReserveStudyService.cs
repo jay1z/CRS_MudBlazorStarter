@@ -30,12 +30,39 @@ namespace CRS.Services {
         public async Task<ReserveStudy> CreateReserveStudyAsync(ReserveStudy reserveStudy) {
             await using var context = await _dbFactory.CreateDbContextAsync();
 
-            var tenantId = _tenantContext.TenantId ?? 1;
-            if (reserveStudy.TenantId == 0) reserveStudy.TenantId = tenantId;
+            // SECURITY: Require tenant context
+            if (!_tenantContext.TenantId.HasValue) {
+                throw new InvalidOperationException("Tenant context is required to create a reserve study.");
+            }
 
-            // Guard: if creating a new community, enforce limits
+            var tenantId = _tenantContext.TenantId.Value;
+            
+            // SECURITY: Force tenant ID assignment - never trust client input
+            reserveStudy.TenantId = tenantId;
+
+            // SECURITY: Validate existing community belongs to current tenant
+            if (reserveStudy.CommunityId != Guid.Empty) {
+                var existingCommunity = await context.Communities
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == reserveStudy.CommunityId);
+                    
+                if (existingCommunity == null) {
+                    throw new InvalidOperationException("The specified community does not exist.");
+                }
+                
+                if (existingCommunity.TenantId != tenantId) {
+                    throw new UnauthorizedAccessException("You cannot create a reserve study for a community that belongs to a different organization.");
+                }
+            }
+
+            // Guard: if creating a new community, enforce limits and validate tenant ID
             var creatingNewCommunity = reserveStudy.CommunityId == Guid.Empty && reserveStudy.Community != null && reserveStudy.Community.Id == Guid.Empty;
             if (creatingNewCommunity) {
+                // SECURITY: Force tenant ID on new community
+                if (reserveStudy.Community.TenantId != tenantId) {
+                    reserveStudy.Community.TenantId = tenantId;
+                }
+                
                 var canAdd = await _featureGuard.CanAddCommunityAsync(tenantId);
                 if (!canAdd) throw new InvalidOperationException("Community limit reached or subscription inactive. Upgrade required.");
             }

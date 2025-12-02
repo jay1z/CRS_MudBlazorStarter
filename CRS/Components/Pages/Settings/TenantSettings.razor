@@ -11,136 +11,576 @@
 @inject ITenantContext TenantContext
 @inject ThemeService ThemeService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject IWebHostEnvironment Env
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 @inject CRS.Services.Storage.ILogoStorageService LogoStorage
 
-<PageTitle>Tenant Settings</PageTitle>
+<PageTitle>Organization Settings</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h5" Class="mb-4">Tenant Settings</MudText>
-        
-        @if (tenant == null) {
-            <MudAlert Severity="Severity.Warning">No tenant context available.</MudAlert>
-        } else {
-            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
-                <MudTabPanel Text="General" Icon="@Icons.Material.Filled.Info">
-                    <MudGrid>
-                        <MudItem xs="12" md="6">
-                            <MudTextField @bind-Value="tenant.Name" Label="Tenant Name" Variant="Variant.Outlined" />
-                        </MudItem>
-                        <MudItem xs="12" md="6">
-                            <MudTextField Value="@tenant.Subdomain" Label="Subdomain" Variant="Variant.Outlined" ReadOnly="true" HelperText="Contact support to change subdomain" />
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudSwitch T="bool" @bind-Checked="tenant.IsActive" Color="Color.Primary" Label="Active" />
-                        </MudItem>
-                    </MudGrid>
-                </MudTabPanel>
-
-                <MudTabPanel Text="Branding & Theme" Icon="@Icons.Material.Filled.Palette">
-                    <MudGrid>
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.h6" Class="mb-2">Theme Preset</MudText>
-                            <MudSelect T="string" @bind-Value="selectedPreset" Label="Choose Preset" Variant="Variant.Outlined" Dense="true" Class="mb-4">
-                                <MudSelectItem Value='@("")'>Custom</MudSelectItem>
-                                @foreach (var name in presetNames) {
-                                    <MudSelectItem Value="@name">@name</MudSelectItem>
-                                }
-                            </MudSelect>
-                            @if (!string.IsNullOrWhiteSpace(selectedPreset)) {
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ApplyPreset" Class="mb-4">Apply Preset</MudButton>
-                            }
-                        </MudItem>
-
-                        <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.subtitle1" Class="mb-2">Light Theme Colors</MudText>
-                            <MudColorPicker @bind-Text="branding.Primary" Label="Primary" Class="mb-2" />
-                            <MudColorPicker @bind-Text="branding.Secondary" Label="Secondary" Class="mb-2" />
-                            <MudColorPicker @bind-Text="branding.Background" Label="Background" Class="mb-2" />
-                            <MudColorPicker @bind-Text="branding.AppbarBackground" Label="Appbar Background" />
-                        </MudItem>
-
-                        <MudItem xs="12" md="6">
-                            <MudText Typo="Typo.subtitle1" Class="mb-2">Dark Theme Colors</MudText>
-                            <MudColorPicker @bind-Text="branding.DarkPrimary" Label="Dark Primary" Class="mb-2" />
-                            <MudColorPicker @bind-Text="branding.DarkSecondary" Label="Dark Secondary" Class="mb-2" />
-                        </MudItem>
-
-                        <MudItem xs="12">
-                            <MudSwitch T="bool" @bind-Checked="useDarkMode" Color="Color.Primary" Label="Use Dark Mode by Default" />
-                        </MudItem>
-
-                        <MudItem xs="12">
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="PreviewTheme" Class="mr-2">Preview Theme</MudButton>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetTheme">Reset to Default</MudButton>
-                        </MudItem>
-                    </MudGrid>
-                </MudTabPanel>
-
-                <MudTabPanel Text="Logo" Icon="@Icons.Material.Filled.Image">
-                    <MudGrid>
-                        <MudItem xs="12">
-                            @if (!string.IsNullOrWhiteSpace(logoUrl)) {
-                                <MudPaper Class="pa-4 mb-4" Elevation="2">
-                                    <MudText Typo="Typo.subtitle1" Class="mb-2">Current Logo</MudText>
-                                    <MudImage Src="@logoUrl" Alt="Tenant Logo" Width="200" Class="mb-2" />
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="RemoveLogo" StartIcon="@Icons.Material.Filled.Delete">Remove Logo</MudButton>
-                                </MudPaper>
-                            } else {
-                                <MudAlert Severity="Severity.Info" Class="mb-4">No logo uploaded yet.</MudAlert>
-                            }
-                        </MudItem>
-
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.subtitle1" Class="mb-2">Upload New Logo</MudText>
-                            <InputFile OnChange="HandleLogoUpload" accept="image/png,image/jpeg,image/svg+xml,image/webp" class="form-control mb-2" />
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Recommended: 400×400px, PNG/SVG, under 500KB (max 2MB)
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Info">
-                                Images over 400px will be automatically resized and optimized
-                            </MudText>
-                        </MudItem>
-                    </MudGrid>
-                </MudTabPanel>
-
-                <MudTabPanel Text="Advanced" Icon="@Icons.Material.Filled.Code">
-                    <MudGrid>
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.subtitle1" Class="mb-2">Custom Branding JSON</MudText>
-                            <MudTextField @bind-Value="tenant.BrandingJson" Lines="8" Label="Branding JSON" Variant="Variant.Outlined" HelperText="Advanced: Edit JSON directly" />
-                            @if (!string.IsNullOrWhiteSpace(jsonError)) {
-                                <MudAlert Severity="Severity.Error" Class="mt-2">@jsonError</MudAlert>
-                            }
-                        </MudItem>
-                    </MudGrid>
-                </MudTabPanel>
-            </MudTabs>
-
-            <MudDivider Class="my-4" />
-            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveSettings" Disabled="@(!string.IsNullOrWhiteSpace(jsonError))">Save Settings</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="LoadTenant">Cancel</MudButton>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <!-- Header Section -->
+    <MudPaper Elevation="0" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 12px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" Style="vertical-align: middle;" />
+                    Organization Settings
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    Configure your organization's branding, theme, and preferences
+                </MudText>
             </MudStack>
-        }
+            @if (hasUnsavedChanges)
+            {
+                <MudChip T="string" Color="Color.Warning" Style="background: white; color: #FF8C00;">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-1" />
+                    Unsaved Changes
+                </MudChip>
+            }
+        </MudStack>
     </MudPaper>
+
+    @if (tenant == null)
+    {
+        <MudPaper Class="pa-8" Elevation="2" Style="border-radius: 12px;">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Style="font-size: 64px; color: #FFA726;" />
+                <MudText Typo="Typo.h6">No tenant context available</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Please ensure you're logged in with a valid tenant account.</MudText>
+            </MudStack>
+        </MudPaper>
+    }
+    else
+    {
+        <MudGrid Spacing="4">
+            <!-- Left Navigation Panel -->
+            <MudItem xs="12" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; position: sticky; top: 100px;">
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold mb-3" Style="color: #666; text-transform: uppercase; letter-spacing: 1px;">
+                        Settings
+                    </MudText>
+                    <MudNavMenu>
+                        <MudNavLink Icon="@Icons.Material.Filled.Info" 
+                                    IconColor="@(activeTab == 0 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 0 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 0)">
+                            General
+                        </MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.Palette" 
+                                    IconColor="@(activeTab == 1 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 1 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 1)">
+                            Branding & Theme
+                        </MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.Image" 
+                                    IconColor="@(activeTab == 2 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 2 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 2)">
+                            Logo
+                        </MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.Code" 
+                                    IconColor="@(activeTab == 3 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 3 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 3)">
+                            Advanced
+                        </MudNavLink>
+                    </MudNavMenu>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Right Content Panel -->
+            <MudItem xs="12" md="9">
+                <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px; min-height: 600px;">
+                    @if (activeTab == 0)
+                    {
+                        <!-- General Settings -->
+                        <MudStack Spacing="4">
+                            <div>
+                                <MudText Typo="Typo.h5" Class="fw-bold mb-2">General Information</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                    Basic information about your organization
+                                </MudText>
+                            </div>
+
+                            <MudDivider />
+
+                            <MudGrid Spacing="3">
+                                <MudItem xs="12">
+                                    <MudPaper Elevation="0" Class="pa-4" Style="background: #F9F9F9; border-radius: 8px;">
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                            <MudIcon Icon="@Icons.Material.Filled.Business" Style="color: #FF8C00; font-size: 40px;" />
+                                            <MudStack Spacing="0" Style="flex: 1;">
+                                                <MudText Typo="Typo.body2" Style="color: #666;">Organization Name</MudText>
+                                                <MudText Typo="Typo.h6" Class="fw-bold">@tenant.Name</MudText>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12" md="6">
+                                    <MudTextField @bind-Value="tenant.Name" 
+                                                  Label="Organization Name" 
+                                                  Variant="Variant.Outlined"
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.Business"
+                                                  HelperText="This name appears in emails and reports"
+                                                  OnBlur="MarkAsChanged" />
+                                </MudItem>
+
+                                <MudItem xs="12" md="6">
+                                    <MudTextField Value="@tenant.Subdomain" 
+                                                  Label="Subdomain" 
+                                                  Variant="Variant.Outlined"
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.Link"
+                                                  ReadOnly="true" 
+                                                  HelperText="Contact support to change your subdomain" />
+                                </MudItem>
+
+                                <MudItem xs="12">
+                                    <MudPaper Elevation="0" Class="pa-4" Style="border: 2px solid #e0e0e0; border-radius: 8px;">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.body1" Class="fw-bold">Organization Status</MudText>
+                                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                                    @(tenant.IsActive ? "Your organization is currently active and accessible" : "Your organization is currently inactive")
+                                                </MudText>
+                                            </MudStack>
+                                            <MudSwitch T="bool" @bind-Checked="tenant.IsActive" 
+                                                       Color="@(tenant.IsActive ? Color.Success : Color.Default)"
+                                                       OnChange="MarkAsChanged" />
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12">
+                                    <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">
+                                        <MudText Typo="Typo.body2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                                            <strong>Subdomain:</strong> Your organization's URL is <strong>@(tenant.Subdomain).alxreservecloud.com</strong>
+                                        </MudText>
+                                    </MudAlert>
+                                </MudItem>
+                            </MudGrid>
+                        </MudStack>
+                    }
+                    else if (activeTab == 1)
+                    {
+                        <!-- Branding & Theme -->
+                        <MudStack Spacing="4">
+                            <div>
+                                <MudText Typo="Typo.h5" Class="fw-bold mb-2">Branding & Theme</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                    Customize your organization's colors and appearance
+                                </MudText>
+                            </div>
+
+                            <MudDivider />
+
+                            <!-- Theme Preset Selection -->
+                            <MudPaper Elevation="0" Class="pa-4" Style="background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%); border-radius: 12px;">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                    <MudIcon Icon="@Icons.Material.Filled.ColorLens" Style="color: #6A3D9A; font-size: 40px;" />
+                                    <MudStack Style="flex: 1;">
+                                        <MudText Typo="Typo.h6" Class="fw-bold">Quick Start: Choose a Preset</MudText>
+                                        <MudText Typo="Typo.body2" Style="color: #666;">
+                                            Select a pre-configured theme or customize your own
+                                        </MudText>
+                                    </MudStack>
+                                </MudStack>
+                                <MudSelect T="string" 
+                                           @bind-Value="selectedPreset" 
+                                           Label="Theme Preset" 
+                                           Variant="Variant.Outlined"
+                                           Margin="Margin.Dense"
+                                           Class="mt-4">
+                                    <MudSelectItem Value='@("")'>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Small" />
+                                            <span>Custom Theme</span>
+                                        </MudStack>
+                                    </MudSelectItem>
+                                    @foreach (var name in presetNames)
+                                    {
+                                        <MudSelectItem Value="@name">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                <MudIcon Icon="@Icons.Material.Filled.Palette" Size="Size.Small" />
+                                                <span>@name</span>
+                                            </MudStack>
+                                        </MudSelectItem>
+                                    }
+                                </MudSelect>
+                                @if (!string.IsNullOrWhiteSpace(selectedPreset))
+                                {
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="Color.Primary" 
+                                               OnClick="ApplyPreset" 
+                                               FullWidth="true"
+                                               Class="mt-3"
+                                               StartIcon="@Icons.Material.Filled.Check">
+                                        Apply @selectedPreset Preset
+                                    </MudButton>
+                                }
+                            </MudPaper>
+
+                            <!-- Color Customization -->
+                            <MudGrid Spacing="3">
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.h6" Class="fw-bold mb-3">
+                                        <MudIcon Icon="@Icons.Material.Filled.WbSunny" Size="Size.Small" Class="mr-2" />
+                                        Light Theme Colors
+                                    </MudText>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="border: 2px solid #e0e0e0; border-radius: 8px;">
+                                        <MudText Typo="Typo.caption" Style="color: #666;" Class="mb-2">Primary Color</MudText>
+                                        <MudColorPicker @bind-Text="branding.Primary" 
+                                                        Style="width: 100%;"
+                                                        ColorPickerView="ColorPickerView.Spectrum"
+                                                        DisableAlpha="true"
+                                                        OnChange="MarkAsChanged" />
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="border: 2px solid #e0e0e0; border-radius: 8px;">
+                                        <MudText Typo="Typo.caption" Style="color: #666;" Class="mb-2">Secondary Color</MudText>
+                                        <MudColorPicker @bind-Text="branding.Secondary" 
+                                                        Style="width: 100%;"
+                                                        ColorPickerView="ColorPickerView.Spectrum"
+                                                        DisableAlpha="true"
+                                                        OnChange="MarkAsChanged" />
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="border: 2px solid #e0e0e0; border-radius: 8px;">
+                                        <MudText Typo="Typo.caption" Style="color: #666;" Class="mb-2">AppBar Background</MudText>
+                                        <MudColorPicker @bind-Text="branding.AppbarBackground" 
+                                                        Style="width: 100%;"
+                                                        ColorPickerView="ColorPickerView.Spectrum"
+                                                        DisableAlpha="true"
+                                                        OnChange="MarkAsChanged" />
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="3">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="border: 2px solid #e0e0e0; border-radius: 8px;">
+                                        <MudText Typo="Typo.caption" Style="color: #666;" Class="mb-2">Background</MudText>
+                                        <MudColorPicker @bind-Text="branding.Background" 
+                                                        Style="width: 100%;"
+                                                        ColorPickerView="ColorPickerView.Spectrum"
+                                                        DisableAlpha="true"
+                                                        OnChange="MarkAsChanged" />
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12">
+                                    <MudDivider Class="my-2" />
+                                    <MudText Typo="Typo.h6" Class="fw-bold mb-3">
+                                        <MudIcon Icon="@Icons.Material.Filled.DarkMode" Size="Size.Small" Class="mr-2" />
+                                        Dark Theme Colors
+                                    </MudText>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="border: 2px solid #e0e0e0; border-radius: 8px; background: #2C2C2C;">
+                                        <MudText Typo="Typo.caption" Style="color: #CCC;" Class="mb-2">Dark Primary</MudText>
+                                        <MudColorPicker @bind-Text="branding.DarkPrimary" 
+                                                        Style="width: 100%;"
+                                                        ColorPickerView="ColorPickerView.Spectrum"
+                                                        DisableAlpha="true"
+                                                        OnChange="MarkAsChanged" />
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6">
+                                    <MudPaper Elevation="0" Class="pa-3" Style="border: 2px solid #e0e0e0; border-radius: 8px; background: #2C2C2C;">
+                                        <MudText Typo="Typo.caption" Style="color: #CCC;" Class="mb-2">Dark Secondary</MudText>
+                                        <MudColorPicker @bind-Text="branding.DarkSecondary" 
+                                                        Style="width: 100%;"
+                                                        ColorPickerView="ColorPickerView.Spectrum"
+                                                        DisableAlpha="true"
+                                                        OnChange="MarkAsChanged" />
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12">
+                                    <MudPaper Elevation="0" Class="pa-4" Style="border: 2px solid #e0e0e0; border-radius: 8px;">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.body1" Class="fw-bold">Default Theme Mode</MudText>
+                                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                                    Choose which theme mode to use by default
+                                                </MudText>
+                                            </MudStack>
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                <MudIcon Icon="@Icons.Material.Filled.WbSunny" Size="Size.Small" Style="@(useDarkMode ? "color: #999;" : "color: #FFA726;")" />
+                                                <MudSwitch T="bool" @bind-Checked="useDarkMode" 
+                                                           Color="Color.Primary"
+                                                           OnChange="MarkAsChanged" />
+                                                <MudIcon Icon="@Icons.Material.Filled.DarkMode" Size="Size.Small" Style="@(useDarkMode ? "color: #6A3D9A;" : "color: #999;")" />
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                            </MudGrid>
+
+                            <!-- Theme Actions -->
+                            <MudStack Row="true" Spacing="2" Class="mt-4">
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary" 
+                                           OnClick="PreviewTheme"
+                                           StartIcon="@Icons.Material.Filled.Preview">
+                                    Preview Theme
+                                </MudButton>
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Secondary" 
+                                           OnClick="ResetTheme"
+                                           StartIcon="@Icons.Material.Filled.RestartAlt">
+                                    Reset to Default
+                                </MudButton>
+                            </MudStack>
+
+                            <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                                    Changes are previewed immediately. Click <strong>Save Settings</strong> at the bottom to persist your changes.
+                                </MudText>
+                            </MudAlert>
+                        </MudStack>
+                    }
+                    else if (activeTab == 2)
+                    {
+                        <!-- Logo Settings -->
+                        <MudStack Spacing="4">
+                            <div>
+                                <MudText Typo="Typo.h5" Class="fw-bold mb-2">Organization Logo</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                    Upload your organization's logo to personalize your portal
+                                </MudText>
+                            </div>
+
+                            <MudDivider />
+
+                            @if (!string.IsNullOrWhiteSpace(logoUrl))
+                            {
+                                <!-- Current Logo -->
+                                <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #e0e0e0; border-radius: 12px; text-align: center;">
+                                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                                        <MudText Typo="Typo.h6" Class="fw-bold">Current Logo</MudText>
+                                        <div style="max-width: 300px; padding: 24px; background: #f9f9f9; border-radius: 8px;">
+                                            <MudImage Src="@logoUrl" Alt="Organization Logo" Style="max-width: 100%; height: auto;" />
+                                        </div>
+                                        <MudButton Variant="Variant.Outlined" 
+                                                   Color="Color.Error" 
+                                                   OnClick="ConfirmRemoveLogo" 
+                                                   StartIcon="@Icons.Material.Filled.Delete">
+                                            Remove Logo
+                                        </MudButton>
+                                    </MudStack>
+                                </MudPaper>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" Style="font-size: 48px; color: #666;" />
+                                        <MudText Typo="Typo.body1" Class="fw-bold">No logo uploaded yet</MudText>
+                                        <MudText Typo="Typo.body2" Style="color: #666;">
+                                            Upload your organization's logo to personalize your portal
+                                        </MudText>
+                                    </MudStack>
+                                </MudAlert>
+                            }
+
+                            <!-- Upload Section -->
+                            <MudPaper Elevation="0" Class="pa-6" Style="border: 2px dashed #6A3D9A; border-radius: 12px; background: #F3E8FF;">
+                                <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                                    <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="color: #6A3D9A; font-size: 56px;" />
+                                    <MudText Typo="Typo.h6" Class="fw-bold">Upload New Logo</MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;" Align="Align.Center">
+                                        Choose a file to upload. For best results, use a square image (400×400px minimum).
+                                    </MudText>
+                                    
+                                    <InputFile @ref="fileInput"
+                                               OnChange="HandleLogoUpload" 
+                                               accept="image/png,image/jpeg,image/svg+xml,image/webp" 
+                                               style="display: none;" />
+                                    
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="Color.Primary" 
+                                               OnClick="TriggerFileInput"
+                                               StartIcon="@Icons.Material.Filled.UploadFile">
+                                        Choose File
+                                    </MudButton>
+
+                                    <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                                        <MudText Typo="Typo.caption" Style="color: #666;">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                            Accepted formats: PNG, JPG, SVG, WebP
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Style="color: #666;">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                            Recommended size: 400×400px (square)
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Style="color: #666;">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                            Maximum file size: 2MB
+                                        </MudText>
+                                    </MudStack>
+                                </MudStack>
+                            </MudPaper>
+
+                            <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.AutoFixHigh" Size="Size.Small" Class="mr-1" />
+                                    Images larger than 400px will be automatically resized and optimized for web use.
+                                </MudText>
+                            </MudAlert>
+                        </MudStack>
+                    }
+                    else if (activeTab == 3)
+                    {
+                        <!-- Advanced Settings -->
+                        <MudStack Spacing="4">
+                            <div>
+                                <MudText Typo="Typo.h5" Class="fw-bold mb-2">Advanced Settings</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                    Edit branding configuration directly as JSON
+                                </MudText>
+                            </div>
+
+                            <MudDivider />
+
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                                <MudStack Spacing="2">
+                                    <MudText Typo="Typo.body1" Class="fw-bold">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />
+                                        Caution: Advanced Users Only
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        Editing the JSON directly can break your theme if not formatted correctly. 
+                                        We recommend using the visual theme editor above unless you're familiar with JSON syntax.
+                                    </MudText>
+                                </MudStack>
+                            </MudAlert>
+
+                            <MudTextField @bind-Value="tenant.BrandingJson" 
+                                          Lines="12" 
+                                          Label="Branding JSON Configuration" 
+                                          Variant="Variant.Outlined"
+                                          HelperText="Edit the raw JSON branding configuration"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Code"
+                                          OnBlur="MarkAsChanged" />
+
+                            @if (!string.IsNullOrWhiteSpace(jsonError))
+                            {
+                                <MudAlert Severity="Severity.Error" Variant="Variant.Filled">
+                                    <MudStack Spacing="1">
+                                        <MudText Typo="Typo.body1" Class="fw-bold">JSON Validation Error</MudText>
+                                        <MudText Typo="Typo.body2">@jsonError</MudText>
+                                    </MudStack>
+                                </MudAlert>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Success" Dense="true" Variant="Variant.Outlined">
+                                    <MudText Typo="Typo.body2">
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                        JSON is valid and ready to save
+                                    </MudText>
+                                </MudAlert>
+                            }
+
+                            <MudPaper Elevation="0" Class="pa-4" Style="background: #F9F9F9; border-radius: 8px; font-family: monospace;">
+                                <MudText Typo="Typo.caption" Style="color: #666;" Class="mb-2">Example JSON Structure:</MudText>
+                                <code style="font-size: 12px; color: #333; display: block; white-space: pre-wrap;">
+{
+  "Primary": "#6A3D9A",
+  "Secondary": "#FF8C00",
+  "AppbarBackground": "#FFFFFF",
+  "Background": "#F5F5F5",
+  "DarkPrimary": "#8B5FCF",
+  "DarkSecondary": "#FFB84D",
+  "UseDarkMode": false,
+  "Preset": null
+}
+                                </code>
+                            </MudPaper>
+                        </MudStack>
+                    }
+                </MudPaper>
+
+                <!-- Action Buttons - Fixed at bottom -->
+                <MudPaper Elevation="3" Class="pa-4 mt-4" Style="border-radius: 12px; position: sticky; bottom: 20px; background: white; z-index: 100;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            @if (hasUnsavedChanges)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Style="color: #FFA726;" />
+                                <MudText Typo="Typo.body2" Style="color: #666;">You have unsaved changes</MudText>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #28a745;" />
+                                <MudText Typo="Typo.body2" Style="color: #666;">All changes saved</MudText>
+                            }
+                        </MudStack>
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Secondary" 
+                                       OnClick="CancelChanges"
+                                       StartIcon="@Icons.Material.Filled.Close">
+                                Cancel
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       OnClick="SaveSettings" 
+                                       Disabled="@(!string.IsNullOrWhiteSpace(jsonError) || isSaving)"
+                                       StartIcon="@(isSaving ? "" : Icons.Material.Filled.Save)">
+                                @if (isSaving)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                    <span>Saving...</span>
+                                }
+                                else
+                                {
+                                    <span>Save Settings</span>
+                                }
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
 </MudContainer>
 
 @code {
-    private Tenant? tenant;
-    private BrandingModel branding = new();
-    private bool useDarkMode;
-    private string? selectedPreset;
-    private IReadOnlyList<string> presetNames = Array.Empty<string>();
-    private string? logoUrl;
-    private string? jsonError;
+private Tenant? tenant;
+private Tenant? originalTenant; // For change tracking
+private BrandingModel branding = new();
+private bool useDarkMode;
+private string? selectedPreset;
+private IReadOnlyList<string> presetNames = Array.Empty<string>();
+private string? logoUrl;
+private string? jsonError;
+private bool hasUnsavedChanges = false;
+private bool isSaving = false;
+private int activeTab = 0;
 
-    protected override async Task OnInitializedAsync() {
-        presetNames = ThemeService.GetPresetNames();
-        await LoadTenant();
-    }
+// Reference to the InputFile element
+private InputFile? fileInput;
+
+protected override async Task OnInitializedAsync() {
+    presetNames = ThemeService.GetPresetNames();
+    await LoadTenant();
+}
 
     private async Task LoadTenant() {
         if (!TenantContext.TenantId.HasValue) return;
@@ -150,12 +590,29 @@
             tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
             
             if (tenant != null) {
+                // Create a deep copy for change tracking
+                originalTenant = new Tenant
+                {
+                    Id = tenant.Id,
+                    Name = tenant.Name,
+                    Subdomain = tenant.Subdomain,
+                    IsActive = tenant.IsActive,
+                    BrandingJson = tenant.BrandingJson
+                };
+                
                 ParseBranding();
                 await LoadLogoUrl();
+                hasUnsavedChanges = false;
             }
         } catch (Exception ex) {
-            Snackbar.Add($"Error loading tenant: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading tenant: {ex.Message}", MudBlazor.Severity.Error);
         }
+    }
+
+    private void MarkAsChanged()
+    {
+        hasUnsavedChanges = true;
+        StateHasChanged();
     }
 
     private void ParseBranding() {
@@ -197,14 +654,15 @@
         branding.DarkSecondary = preset.PaletteDark?.Secondary?.ToString();
         
         SerializeBranding();
-        Snackbar.Add($"Applied preset: {selectedPreset}", Severity.Success);
+        MarkAsChanged();
+        Snackbar.Add($"Applied preset: {selectedPreset}", MudBlazor.Severity.Success);
     }
 
     private void PreviewTheme() {
         SerializeBranding();
         TenantContext.BrandingJson = tenant?.BrandingJson;
         ThemeService.ApplyTenantBrandingIfAvailable();
-        Snackbar.Add("Theme preview applied. Save to persist changes.", Severity.Info);
+        Snackbar.Add("Theme preview applied. Save to persist changes.", MudBlazor.Severity.Info);
     }
 
     private void ResetTheme() {
@@ -214,7 +672,8 @@
         if (tenant != null) tenant.BrandingJson = null;
         TenantContext.BrandingJson = null;
         ThemeService.SetTheme(new MudBlazor.MudTheme());
-        Snackbar.Add("Theme reset to default", Severity.Info);
+        MarkAsChanged();
+        Snackbar.Add("Theme reset to default", MudBlazor.Severity.Info);
     }
 
     private void SerializeBranding() {
@@ -252,15 +711,16 @@
         SerializeBranding();
         
         if (!string.IsNullOrWhiteSpace(jsonError)) {
-            Snackbar.Add("Cannot save: Invalid branding JSON", Severity.Error);
+            Snackbar.Add("Cannot save: Invalid branding JSON", MudBlazor.Severity.Error);
             return;
         }
 
+        isSaving = true;
         try {
             await using var db = await DbFactory.CreateDbContextAsync();
             var existing = await db.Tenants.FirstOrDefaultAsync(t => t.Id == tenant.Id);
             if (existing == null) {
-                Snackbar.Add("Tenant not found", Severity.Error);
+                Snackbar.Add("Tenant not found", MudBlazor.Severity.Error);
                 return;
             }
 
@@ -277,9 +737,55 @@
             TenantContext.IsActive = existing.IsActive;
             ThemeService.ApplyTenantBrandingIfAvailable();
             
-            Snackbar.Add("Settings saved successfully!", Severity.Success);
+            // Update original for change tracking
+            originalTenant = new Tenant
+            {
+                Id = tenant.Id,
+                Name = tenant.Name,
+                Subdomain = tenant.Subdomain,
+                IsActive = tenant.IsActive,
+                BrandingJson = tenant.BrandingJson
+            };
+            
+            hasUnsavedChanges = false;
+            Snackbar.Add("Settings saved successfully!", MudBlazor.Severity.Success);
         } catch (Exception ex) {
-            Snackbar.Add($"Error saving: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error saving: {ex.Message}", MudBlazor.Severity.Error);
+        } finally {
+            isSaving = false;
+        }
+    }
+
+    private async Task CancelChanges()
+    {
+        if (!hasUnsavedChanges)
+        {
+            Nav.NavigateTo("/Dashboard");
+            return;
+        }
+
+        bool? confirm = await DialogService.ShowMessageBox(
+            "Discard Changes?",
+            "You have unsaved changes. Are you sure you want to discard them?",
+            yesText: "Discard", cancelText: "Keep Editing");
+
+        if (confirm == true)
+        {
+            await LoadTenant(); // Reload original values
+            Nav.NavigateTo("/Dashboard");
+        }
+    }
+
+    private async Task ConfirmRemoveLogo()
+    {
+        bool? confirm = await DialogService.ShowMessageBox(
+            "Remove Logo?",
+            "Are you sure you want to remove your organization's logo?",
+            yesText: "Remove", cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            await RemoveLogo();
         }
     }
 
@@ -288,7 +794,16 @@
         try {
             logoUrl = await LogoStorage.GetLogoUrlAsync(TenantContext.TenantId.Value);
         } catch (Exception ex) {
-            Snackbar.Add($"Error loading logo: {ex.Message}", Severity.Warning);
+            Snackbar.Add($"Error loading logo: {ex.Message}", MudBlazor.Severity.Warning);
+        }
+    }
+
+    private async Task TriggerFileInput()
+    {
+        if (fileInput?.Element != null)
+        {
+            // Use a simple JavaScript interop to click the element
+            await JS.InvokeVoidAsync("clickElement", fileInput.Element);
         }
     }
 
@@ -300,20 +815,20 @@
         // Validate
         var (valid, error) = await LogoStorage.ValidateLogoAsync(file);
         if (!valid) {
-            Snackbar.Add(error, Severity.Warning);
+            Snackbar.Add(error, MudBlazor.Severity.Warning);
             return;
         }
 
         // Warn if large
         if (file.Size > CRS.Services.Storage.LogoUploadConfig.OptimalSizeBytes) {
-            Snackbar.Add($"Large file ({file.Size / 1024}KB). Optimizing...", Severity.Info);
+            Snackbar.Add($"Large file ({file.Size / 1024}KB). Optimizing...", MudBlazor.Severity.Info);
         }
 
         try {
             logoUrl = await LogoStorage.UploadLogoAsync(TenantContext.TenantId.Value, file);
-            Snackbar.Add("Logo uploaded successfully!", Severity.Success);
+            Snackbar.Add("Logo uploaded successfully!", MudBlazor.Severity.Success);
         } catch (Exception ex) {
-            Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Upload failed: {ex.Message}", MudBlazor.Severity.Error);
         }
     }
 
@@ -324,12 +839,12 @@
             var deleted = await LogoStorage.DeleteLogoAsync(TenantContext.TenantId.Value);
             if (deleted) {
                 logoUrl = null;
-                Snackbar.Add("Logo removed", Severity.Info);
+                Snackbar.Add("Logo removed successfully", MudBlazor.Severity.Info);
             } else {
-                Snackbar.Add("Logo not found", Severity.Warning);
+                Snackbar.Add("Logo not found", MudBlazor.Severity.Warning);
             }
         } catch (Exception ex) {
-            Snackbar.Add($"Error removing logo: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error removing logo: {ex.Message}", MudBlazor.Severity.Error);
         }
     }
 

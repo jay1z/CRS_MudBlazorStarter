@@ -27,7 +27,8 @@
     <AuthorizeView Policy="RequireTenantOwner">
         <Authorized>
             <MudNavGroup Title="Tenant Admin" Expanded="true">
-                <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Manage Users</MudNavLink>
+                <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Team Members</MudNavLink>
+                <MudNavLink Href="/Admin/HOAUsers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business">HOA Users</MudNavLink>
                 <MudNavLink Href="/Admin/Settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">Tenant Settings</MudNavLink>
                 <MudNavLink Href="/Reports/Publish" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Publish">Publish Reports</MudNavLink>
                 <MudNavLink Href="/account/billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing</MudNavLink>
@@ -40,6 +41,7 @@
         <Authorized>
             <MudNavGroup Title="Specialist Tools" Expanded="false">
                 <MudNavLink Href="/ReserveStudies/Specialist" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AssignmentTurnedIn">My Work</MudNavLink>
+                <MudNavLink Href="/Admin/HOAUsers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonAdd">Manage HOA Users</MudNavLink>
                 <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth">Calendar</MudNavLink>
                 <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts">Contacts</MudNavLink>
             </MudNavGroup>
@@ -62,6 +64,7 @@
     <AuthorizeView Policy="RequireHOAUser">
         <Authorized>
             <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="/ReserveStudies/Request" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.RequestQuote">Request Reserve Study</MudNavLink>
             <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Download Final Report</MudNavLink>
             <MudNavLink Href="/Support" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
         </Authorized>

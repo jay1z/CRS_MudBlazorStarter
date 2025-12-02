@@ -16,6 +16,13 @@ namespace CRS.Services.MultiTenancy {
             .FirstOrDefaultAsync(t => t.Subdomain == subdomain, ct);
         }
 
+        public async Task<CRS.Models.Tenant?> FindByIdAsync(int tenantId, CancellationToken ct = default) {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+            return await db.Set<CRS.Models.Tenant>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+        }
+
         public async Task<CRS.Models.Tenant> CreateTenantAsync(string name, string subdomain, CancellationToken ct = default) {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("name required");
             if (string.IsNullOrWhiteSpace(subdomain)) throw new ArgumentException("subdomain required");

@@ -13,9 +13,31 @@
 <MudPopoverProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="25">
-        <MudText Typo="Typo.h5" Class="ml-3">ALX Reserve Cloud</MudText>
+    <MudAppBar Elevation="25" Style="background-color: white; color: #333;">
+        <!-- Logo + Site Name -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" style="cursor: pointer;" @onclick="@(() => NavigationManager.NavigateTo("/"))">
+            <MudImage Src="images/icon.png" Alt="ALX Reserve Cloud" Width="40" Height="40" />
+            <MudText Typo="Typo.h3" Color="Color.Primary">ALX Reserve Cloud</MudText>
+        </MudStack>
+
         <MudSpacer />
+
+        <!-- Marketing Nav Links -->
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#features">Features</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#pricing">Pricing</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/customers/miller-reserve-studies">Case Studies</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="#faq">FAQ</MudButton>
+
+        <!-- Start Free Trial Button -->
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Warning"
+                   Size="Size.Small"
+                   OnClick="@(() => NavigationManager.NavigateTo("/tenant/signup"))"
+                   Style="text-transform: none; font-weight: 600; margin-left: 16px;">
+            Start Free Trial
+        </MudButton>
+
+        <!-- User Menu (if authenticated) -->
         <AuthorizeView Context="auth">
             <Authorized>
                 <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
@@ -25,10 +47,10 @@
                     <MudMenuItem Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Account/Manage"))">Profile</MudMenuItem>
                 </MudMenu>
             </Authorized>
-            <NotAuthorized>
-                @* Intentionally left blank: login must happen from tenant-specific pages only *@
-            </NotAuthorized>
         </AuthorizeView>
+
+        <!-- Mobile menu button -->
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Primary" Class="d-flex d-md-none" />
     </MudAppBar>
 
     <MudMainContent Class="pt-16 px-4">

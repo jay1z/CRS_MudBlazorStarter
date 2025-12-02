@@ -2,277 +2,699 @@
 @attribute [Authorize]
 @using MudBlazor
 @using CRS.Services.Interfaces
+@using CRS.Services.Tenant
 @using CRS.Models
 @inject ISystemSettingsService SystemSettingsService
+@inject ITenantUserRoleService RoleService
+@inject ITenantContext TenantContext
 
-<PageTitle>@TenantName</PageTitle>
+<PageTitle>Dashboard - @TenantName</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-20">
-<MudCard Elevation="4" Class="pa-4">
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 mb-8">
+    
+    @* Role-based welcome banner *@
+    @if (RoleService.IsHOAUser || RoleService.IsHOAAuditor)
+    {
+        <!-- HOA User View - Simplified -->
+        <MudPaper Elevation="0" Class="pa-6 mb-6" Style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 16px;">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    Welcome to Your Portal 👋
+                </MudText>
+                <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.95);">
+                    View your reserve studies, reports, and documents
+                </MudText>
+            </MudStack>
+        </MudPaper>
+    }
+    else
+    {
+        <!-- Staff/Admin View - Full featured -->
+        <MudPaper Elevation="0" Class="pa-6 mb-6" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 16px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                        Welcome back, @GetUserGreeting()! 👋
+                    </MudText>
+                    <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.95);">
+                        @GetRoleDescription()
+                    </MudText>
+                </MudStack>
+                @if (!RoleService.IsTenantViewer)
+                {
+                    <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Surface" 
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   Style="color: #FF8C00; font-weight: 600;">
+                            New Property
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Surface" 
+                                   StartIcon="@Icons.Material.Filled.Upload"
+                                   Style="color: white; border-color: white;">
+                            Import Data
+                        </MudButton>
+                    </MudStack>
+                }
+            </MudStack>
+        </MudPaper>
+    }
 
     <!-- GLOBAL NOTIFICATIONS BANNER -->
-    @if (globalBanner != null)
+    @if (globalBanner != null && !bannerDismissed)
     {
-        <MudAlert Severity="@GetMudSeverity(globalBanner.Severity)" Variant="Variant.Filled" Elevation="1" Dense="false" Class="mb-4" CloseIcon="@Icons.Material.Filled.Close" CloseIconClicked="@(() => HideBanner())">
-            @globalBanner.Message
-            @if (globalBanner.EndDate.HasValue)
-            {
-                <br />
-                <small>This notice will be active until @globalBanner.EndDate.Value.ToLocalTime().ToString("g")</small>
-            }
+        <MudAlert Severity="@GetMudSeverity(globalBanner.Severity)" 
+                  Variant="Variant.Filled" 
+                  Elevation="3" 
+                  Dense="false" 
+                  Class="mb-6" 
+                  Style="border-radius: 12px;"
+                  CloseIcon="@Icons.Material.Filled.Close" 
+                  CloseIconClicked="@(() => HideBanner())">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.body1" Style="font-weight: 600;">@globalBanner.Message</MudText>
+                @if (globalBanner.EndDate.HasValue)
+                {
+                    <MudText Typo="Typo.caption">
+                        Active until @globalBanner.EndDate.Value.ToLocalTime().ToString("g")
+                    </MudText>
+                }
+            </MudStack>
         </MudAlert>
     }
 
-        <!-- KPI CARDS -->
-        <MudGrid Class="mb-4" GutterSize="3">
-            <MudItem xs="12" sm="6" md="3">
-                <MudPaper Class="pa-3 d-flex flex-column" Elevation="1">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                        <MudText Typo="Typo.subtitle2">Properties</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.HomeWork" />
+    @* Conditional rendering based on role *@
+    @if (RoleService.IsHOAUser || RoleService.IsHOAAuditor)
+    {
+        @* HOA User Dashboard - Simplified view *@
+        <MudGrid Spacing="4" Class="mb-6">
+            <!-- My Studies -->
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                    <MudStack Spacing="3">
+                        <div class="d-flex justify-space-between align-center">
+                            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Assessment" Style="font-size: 32px;" />
+                            </div>
+                        </div>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiActiveStudies</MudText>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">My Reserve Studies</MudText>
+                        </MudStack>
                     </MudStack>
-                    <MudText Typo="Typo.h4" Class="mt-2">@KpiProperties</MudText>
                 </MudPaper>
             </MudItem>
 
-            <MudItem xs="12" sm="6" md="3">
-                <MudPaper Class="pa-3 d-flex flex-column" Elevation="1">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                        <MudText Typo="Typo.subtitle2">Active Studies</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.Assessment" />
+            <!-- Available Reports -->
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                    <MudStack Spacing="3">
+                        <div class="d-flex justify-space-between align-center">
+                            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Description" Style="font-size: 32px;" />
+                            </div>
+                        </div>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiReports</MudText>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">Available Reports</MudText>
+                        </MudStack>
                     </MudStack>
-                    <MudText Typo="Typo.h4" Class="mt-2">@KpiActiveStudies</MudText>
-                </MudPaper>
-            </MudItem>
-
-            <MudItem xs="12" sm="6" md="3">
-                <MudPaper Class="pa-3 d-flex flex-column" Elevation="1">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                        <MudText Typo="Typo.subtitle2">Reports</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.Description" />
-                    </MudStack>
-                    <MudText Typo="Typo.h4" Class="mt-2">@KpiReports</MudText>
-                </MudPaper>
-            </MudItem>
-
-            <MudItem xs="12" sm="6" md="3">
-                <MudPaper Class="pa-3 d-flex flex-column" Elevation="1">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                        <MudText Typo="Typo.subtitle2">Customer Accounts</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.People" />
-                    </MudStack>
-                    <MudText Typo="Typo.h4" Class="mt-2">@KpiCustomerAccounts</MudText>
                 </MudPaper>
             </MudItem>
         </MudGrid>
 
-        <!-- PIPELINE BOARD + PROPERTIES / CUSTOMERS / LINKS -->
-        <MudGrid Class="mb-4" GutterSize="3">
-            <!-- PIPELINE BOARD -->
-            <MudItem xs="12" md="8">
-                <MudPaper Class="pa-4" Elevation="1">
-                    <MudText Typo="Typo.h6" Class="mb-3">Pipeline</MudText>
-
-                    <MudGrid GutterSize="2">
-                        <MudItem xs="12" sm="4">
-                            <MudPaper Class="pa-3" Elevation="0">
-                                <MudText Typo="Typo.subtitle2">Screening</MudText>
-                                <MudText Typo="Typo.h5" Class="mt-1">@PipelineScreening</MudText>
-                            </MudPaper>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudPaper Class="pa-3" Elevation="0">
-                                <MudText Typo="Typo.subtitle2">Enrollment</MudText>
-                                <MudText Typo="Typo.h5" Class="mt-1">@PipelineEnrollment</MudText>
-                            </MudPaper>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudPaper Class="pa-3" Elevation="0">
-                                <MudText Typo="Typo.subtitle2">Complete</MudText>
-                                <MudText Typo="Typo.h5" Class="mt-1">@PipelineComplete</MudText>
-                            </MudPaper>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
-            </MudItem>
-
-            <!-- CUSTOMER ACCOUNTS + HELPFUL LINKS -->
-            <MudItem xs="12" md="4">
-                <MudStack Spacing="3">
-                    <MudPaper Class="pa-4" Elevation="1">
-                        <MudText Typo="Typo.h6">Customer Accounts</MudText>
-                        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
-                            You do not have any customer accounts yet.
+        <!-- HOA: My Studies & Documents -->
+        <MudGrid Spacing="4">
+            <MudItem xs="12" lg="8">
+                <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
+                    <MudStack Spacing="1" Class="mb-4">
+                        <MudText Typo="Typo.h5" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" Style="vertical-align: middle;" />
+                            My Reserve Studies
                         </MudText>
-                    </MudPaper>
-
-                    <MudPaper Class="pa-4" Elevation="1">
-                        <MudText Typo="Typo.h6">Helpful Links</MudText>
-                        <MudList T="string" Dense="true" Class="mt-2">
-                            <MudListItem Href="https://alxreservecloud.com/docs" Target="_blank">
-                                Onboarding guide
-                            </MudListItem>
-                            <MudListItem Href="https://alxreservecloud.com/help/faq" Target="_blank">
-                                Frequently asked questions
-                            </MudListItem>
-                            <MudListItem Href="https://alxreservecloud.com/support" Target="_blank">
-                                Contact support
-                            </MudListItem>
-                            <MudListItem Href="https://alxreservecloud.com/status" Target="_blank">
-                                System status
-                            </MudListItem>
-                        </MudList>
-                    </MudPaper>
-                </MudStack>
-            </MudItem>
-        </MudGrid>
-
-        <!-- PROPERTIES TABLE + ACTIVITY + SUPPORT TICKETS -->
-        <MudGrid GutterSize="3">
-            <!-- PROPERTIES TABLE -->
-            <MudItem xs="12" md="7">
-                <MudPaper Class="pa-4" Elevation="1">
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
-                        <MudText Typo="Typo.h6">Properties</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">
+                            Access your community's reserve study reports and documents
+                        </MudText>
                     </MudStack>
-
-                    @if (!Properties.Any()) {
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">
-                            You have not added any properties yet.
-                        </MudText>
-                    } else {
-                        <MudTable Dense="true" Hover="true" Items="Properties">
-                            <HeaderContent>
-                                <MudTh>Name</MudTh>
-                                <MudTh>Location</MudTh>
-                                <MudTh>Status</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="Name">@context.Name</MudTd>
-                                <MudTd DataLabel="Location">@context.Location</MudTd>
-                                <MudTd DataLabel="Status">@context.Status</MudTd>
-                            </RowTemplate>
-                        </MudTable>
-                    }
-                </MudPaper>
-            </MudItem>
-
-            <!-- ACTIVITY + SUPPORT TICKETS -->
-            <MudItem xs="12" md="5">
-                <MudStack Spacing="3">
-                    <MudPaper Class="pa-4" Elevation="1">
-                        <MudText Typo="Typo.h6">Activity</MudText>
-
-                        @if (!Activity.Any()) {
-                            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
-                                No activity yet. As you create properties, studies, and reports, they will appear here.
+                    
+                    <MudPaper Elevation="0" Class="pa-8" Style="border: 2px dashed #e0e0e0; border-radius: 12px; text-align: center; background: #fafafa;">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 64px; color: #ccc;" />
+                            <MudText Typo="Typo.h6" Style="font-weight: 600;">No studies available yet</MudText>
+                            <MudText Typo="Typo.body2" Style="color: #666;">
+                                Your reserve studies will appear here once they're published
                             </MudText>
-                        } else {
-                            <MudList T="string" Dense="true" Class="mt-2">
-                                @foreach (var item in Activity) {
-                                    <MudListItem>
-                                        <MudText Typo="Typo.body2">@item.Description</MudText>
-                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                            @item.Timestamp.ToString("g")
-                                        </MudText>
-                                    </MudListItem>
-                                }
-                            </MudList>
-                        }
+                        </MudStack>
                     </MudPaper>
+                </MudPaper>
+            </MudItem>
 
-                    <MudPaper Class="pa-4" Elevation="1">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                            <MudText Typo="Typo.h6">Support Tickets</MudText>
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Primary"
-                                       Size="Size.Small"
-                                       StartIcon="@Icons.Material.Filled.Add">
-                                New ticket
+            <MudItem xs="12" lg="4">
+                <MudStack Spacing="4">
+                    <!-- Quick Links -->
+                    <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
+                        <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Link" Style="color: #6A3D9A;" Class="mr-2" />
+                            Quick Links
+                        </MudText>
+                        <MudStack Spacing="2">
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary" 
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Download"
+                                       Style="text-transform: none; justify-content: flex-start; padding: 12px;">
+                                Download Latest Report
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary" 
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.QuestionAnswer"
+                                       Style="text-transform: none; justify-content: flex-start; padding: 12px;">
+                                Ask a Question
                             </MudButton>
                         </MudStack>
+                    </MudPaper>
 
-                        @if (!Tickets.Any()) {
-                            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
-                                You do not have any open support tickets.
-                            </MudText>
-                        } else {
-                            <MudList T="string" Dense="true" Class="mt-2">
-                                @foreach (var ticket in Tickets) {
-                                    <MudListItem>
-                                        <MudStack>
-                                            <MudText Typo="Typo.body2">
-                                                #@ticket.Number - @ticket.Subject
-                                            </MudText>
-                                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                                @ticket.Status • @ticket.Created.ToString("g")
-                                            </MudText>
-                                        </MudStack>
-                                    </MudListItem>
-                                }
-                            </MudList>
-                        }
+                    <!-- Support -->
+                    <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
+                        <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Help" Style="color: #FF8C00;" Class="mr-2" />
+                            Need Help?
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3" Style="color: #666;">
+                            Have questions about your reserve study? We're here to help!
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Email">
+                            Contact Support
+                        </MudButton>
                     </MudPaper>
                 </MudStack>
             </MudItem>
         </MudGrid>
-    </MudCard>
+    }
+    else
+    {
+        @* Staff/Admin/Specialist Dashboard - Full view *@
+    <MudGrid Class="mb-6" Spacing="4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; transition: transform 0.3s ease, box-shadow 0.3s ease;">
+                <MudStack Spacing="3">
+                    <div class="d-flex justify-space-between align-center">
+                        <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.HomeWork" Style="font-size: 32px;" />
+                        </div>
+                        <MudChip T="string" Size="Size.Small" Style="background: rgba(255,255,255,0.2); color: white;">+0%</MudChip>
+                    </div>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiProperties</MudText>
+                        <MudText Typo="Typo.body2" Style="opacity: 0.9;">Total Properties</MudText>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; transition: transform 0.3s ease, box-shadow 0.3s ease;">
+                <MudStack Spacing="3">
+                    <div class="d-flex justify-space-between align-center">
+                        <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Assessment" Style="font-size: 32px;" />
+                        </div>
+                        <MudChip T="string" Size="Size.Small" Style="background: rgba(255,255,255,0.2); color: white;">+0%</MudChip>
+                    </div>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiActiveStudies</MudText>
+                        <MudText Typo="Typo.body2" Style="opacity: 0.9;">Active Studies</MudText>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; transition: transform 0.3s ease, box-shadow 0.3s ease;">
+                <MudStack Spacing="3">
+                    <div class="d-flex justify-space-between align-center">
+                        <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Description" Style="font-size: 32px;" />
+                        </div>
+                        <MudChip T="string" Size="Size.Small" Style="background: rgba(255,255,255,0.2); color: white;">+0%</MudChip>
+                    </div>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiReports</MudText>
+                        <MudText Typo="Typo.body2" Style="opacity: 0.9;">Reports Generated</MudText>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; transition: transform 0.3s ease, box-shadow 0.3s ease;">
+                <MudStack Spacing="3">
+                    <div class="d-flex justify-space-between align-center">
+                        <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.People" Style="font-size: 32px;" />
+                        </div>
+                        <MudChip T="string" Size="Size.Small" Style="background: rgba(255,255,255,0.2); color: white;">+0%</MudChip>
+                    </div>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiCustomerAccounts</MudText>
+                        <MudText Typo="Typo.body2" Style="opacity: 0.9;">Customer Accounts</MudText>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- PIPELINE & QUICK ACTIONS -->
+    <MudGrid Class="mb-6" Spacing="4">
+        <!-- PIPELINE BOARD - Enhanced -->
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px; height: 100%;">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h5" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" Style="vertical-align: middle;" />
+                            Study Pipeline
+                        </MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">
+                            Track your reserve studies from screening to completion
+                        </MudText>
+                    </MudStack>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               Style="text-transform: none;">
+                        View All
+                    </MudButton>
+                </MudStack>
+
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="4">
+                        <MudPaper Class="pa-5" Elevation="0" Style="border: 2px solid #e0e0e0; border-radius: 12px; background: linear-gradient(135deg, #FFF5E6 0%, #FFFFFF 100%); transition: all 0.3s ease;">
+                            <MudStack Spacing="2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Style="color: #FF8C00; font-size: 32px;" />
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Style="font-weight: 600;">In Progress</MudChip>
+                                </div>
+                                <MudText Typo="Typo.subtitle2" Style="color: #666;">Screening</MudText>
+                                <MudText Typo="Typo.h3" Style="font-weight: 700; color: #FF8C00;">@PipelineScreening</MudText>
+                                <MudProgressLinear Color="Color.Warning" Value="45" Size="Size.Small" Class="mt-2" Style="border-radius: 4px;" />
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudPaper Class="pa-5" Elevation="0" Style="border: 2px solid #e0e0e0; border-radius: 12px; background: linear-gradient(135deg, #F3E8FF 0%, #FFFFFF 100%); transition: all 0.3s ease;">
+                            <MudStack Spacing="2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Assignment" Style="color: #6A3D9A; font-size: 32px;" />
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Style="font-weight: 600;">Active</MudChip>
+                                </div>
+                                <MudText Typo="Typo.subtitle2" Style="color: #666;">Enrollment</MudText>
+                                <MudText Typo="Typo.h3" Style="font-weight: 700; color: #6A3D9A;">@PipelineEnrollment</MudText>
+                                <MudProgressLinear Color="Color.Primary" Value="65" Size="Size.Small" Class="mt-2" Style="border-radius: 4px;" />
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudPaper Class="pa-5" Elevation="0" Style="border: 2px solid #e0e0e0; border-radius: 12px; background: linear-gradient(135deg, #E8F5E9 0%, #FFFFFF 100%); transition: all 0.3s ease;">
+                            <MudStack Spacing="2">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #28a745; font-size: 32px;" />
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Style="font-weight: 600;">Done</MudChip>
+                                </div>
+                                <MudText Typo="Typo.subtitle2" Style="color: #666;">Complete</MudText>
+                                <MudText Typo="Typo.h3" Style="font-weight: 700; color: #28a745;">@PipelineComplete</MudText>
+                                <MudProgressLinear Color="Color.Success" Value="100" Size="Size.Small" Class="mt-2" Style="border-radius: 4px;" />
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+
+        <!-- QUICK ACTIONS & LINKS -->
+        <MudItem xs="12" md="4">
+            <MudStack Spacing="4" Style="height: 100%;">
+                <!-- Quick Actions -->
+                <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
+                    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                        <MudIcon Icon="@Icons.Material.Filled.Bolt" Style="color: #FF8C00; vertical-align: middle;" Class="mr-2" />
+                        Quick Actions
+                    </MudText>
+                    <MudStack Spacing="2">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   Style="text-transform: none; justify-content: flex-start; padding: 12px;">
+                            Create New Study
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Upload"
+                                   Style="text-transform: none; justify-content: flex-start; padding: 12px;">
+                            Upload Documents
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                                   Style="text-transform: none; justify-content: flex-start; padding: 12px;">
+                            Generate Report
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+
+                <!-- Helpful Links -->
+                <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px; flex: 1;">
+                    <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight: 600;">
+                        <MudIcon Icon="@Icons.Material.Filled.Help" Style="color: #6A3D9A; vertical-align: middle;" Class="mr-2" />
+                        Resources
+                    </MudText>
+                    <MudList T="string" Dense="true">
+                        <MudListItem Icon="@Icons.Material.Filled.MenuBook" IconColor="Color.Primary" Href="https://alxreservecloud.com/docs" Target="_blank">
+                            <MudText Typo="Typo.body2">Getting Started Guide</MudText>
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.VideoLibrary" IconColor="Color.Primary" Href="https://alxreservecloud.com/tutorials" Target="_blank">
+                            <MudText Typo="Typo.body2">Video Tutorials</MudText>
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.QuestionAnswer" IconColor="Color.Primary" Href="https://alxreservecloud.com/help/faq" Target="_blank">
+                            <MudText Typo="Typo.body2">FAQs</MudText>
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.Support" IconColor="Color.Primary" Href="https://alxreservecloud.com/support" Target="_blank">
+                            <MudText Typo="Typo.body2">Contact Support</MudText>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+
+    <!-- PROPERTIES & ACTIVITY -->
+    <MudGrid Spacing="4">
+        <!-- PROPERTIES TABLE - Enhanced -->
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h5" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Business" Class="mr-2" Style="vertical-align: middle;" />
+                            Recent Properties
+                        </MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">
+                            Your latest property additions
+                        </MudText>
+                    </MudStack>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               Style="text-transform: none;">
+                        Add Property
+                    </MudButton>
+                </MudStack>
+
+                @if (!Properties.Any())
+                {
+                    <MudPaper Elevation="0" Class="pa-8" Style="border: 2px dashed #e0e0e0; border-radius: 12px; text-align: center; background: #fafafa;">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.HomeWork" Style="font-size: 40px; color: #6A3D9A;" />
+                            </div>
+                            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.h6" Style="font-weight: 600;">No properties yet</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                    Get started by adding your first property
+                                </MudText>
+                            </MudStack>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       Style="text-transform: none;">
+                                Add Your First Property
+                            </MudButton>
+                        </MudStack>
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudTable Dense="true" 
+                              Hover="true" 
+                              Items="Properties"
+                              Elevation="0"
+                              Style="border-radius: 8px;">
+                        <HeaderContent>
+                            <MudTh Style="font-weight: 600;">Name</MudTh>
+                            <MudTh Style="font-weight: 600;">Location</MudTh>
+                            <MudTh Style="font-weight: 600;">Status</MudTh>
+                            <MudTh Style="font-weight: 600;"></MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Name">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudAvatar Color="Color.Primary" Size="Size.Small">
+                                        @context.Name.Substring(0, 1)
+                                    </MudAvatar>
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Name</MudText>
+                                </MudStack>
+                            </MudTd>
+                            <MudTd DataLabel="Location">
+                                <MudText Typo="Typo.body2" Style="color: #666;">@context.Location</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Status">
+                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                                    @context.Status
+                                </MudChip>
+                            </MudTd>
+                            <MudTd>
+                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <!-- ACTIVITY & SUPPORT -->
+        <MudItem xs="12" lg="5">
+            <MudStack Spacing="4">
+                <!-- Activity Feed -->
+                <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
+                    <MudStack Spacing="1" Class="mb-4">
+                        <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Notifications" Style="color: #FF8C00; vertical-align: middle;" Class="mr-2" />
+                            Recent Activity
+                        </MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">
+                            Latest updates and changes
+                        </MudText>
+                    </MudStack>
+
+                    @if (!Activity.Any())
+                    {
+                        <MudPaper Elevation="0" Class="pa-6" Style="border: 2px dashed #e0e0e0; border-radius: 12px; text-align: center; background: #fafafa;">
+                            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Timeline" Style="font-size: 40px; color: #ccc;" />
+                                <MudText Typo="Typo.body2" Style="color: #999;">
+                                    No activity yet
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="color: #999;">
+                                    Activity will appear here as you work
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+                    }
+                    else
+                    {
+                        <MudTimeline TimelineOrientation="TimelineOrientation.Vertical" TimelinePosition="TimelinePosition.Start">
+                            @foreach (var item in Activity)
+                            {
+                                <MudTimelineItem Color="Color.Primary" Size="Size.Small">
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@item.Description</MudText>
+                                        <MudText Typo="Typo.caption" Style="color: #999;">
+                                            @item.Timestamp.ToString("g")
+                                        </MudText>
+                                    </MudStack>
+                                </MudTimelineItem>
+                            }
+                        </MudTimeline>
+                    }
+                </MudPaper>
+
+                <!-- Support Tickets -->
+                <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                                <MudIcon Icon="@Icons.Material.Filled.SupportAgent" Style="color: #6A3D9A; vertical-align: middle;" Class="mr-2" />
+                                Support
+                            </MudText>
+                        </MudStack>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   Style="text-transform: none;">
+                            New Ticket
+                        </MudButton>
+                    </MudStack>
+
+                    @if (!Tickets.Any())
+                    {
+                        <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Dense="true">
+                            <MudText Typo="Typo.body2">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="vertical-align: middle;" Class="mr-1" />
+                                No open support tickets
+                            </MudText>
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudList T="string" Dense="true">
+                            @foreach (var ticket in Tickets)
+                            {
+                                <MudListItem>
+                                    <MudStack Spacing="1">
+                                        <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                                            #@ticket.Number - @ticket.Subject
+                                        </MudText>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@ticket.Status</MudChip>
+                                            <MudText Typo="Typo.caption" Style="color: #999;">
+                                                @ticket.Created.ToString("g")
+                                            </MudText>
+                                        </MudStack>
+                                    </MudStack>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                </MudPaper>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+    }
 </MudContainer>
 
+<style>
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.15) !important;
+        cursor: pointer;
+    }
+</style>
+
 @code {
-private string TenantName => "Sample HOA Management Co.";
-private GlobalBannerInfo? globalBanner;
-private bool bannerDismissed = false;
+    private string TenantName => TenantContext.TenantName ?? "ALX Reserve Cloud";
+    private GlobalBannerInfo? globalBanner;
+    private bool bannerDismissed = false;
 
-private int KpiProperties => 0;
-private int KpiActiveStudies => 0;
-private int KpiReports => 0;
-private int KpiCustomerAccounts => 0;
+    // KPI Metrics
+    private int KpiProperties => Properties.Count;
+    private int KpiActiveStudies => PipelineScreening + PipelineEnrollment;
+    private int KpiReports => 0;
+    private int KpiCustomerAccounts => 0;
 
-private int PipelineScreening => 0;
-private int PipelineEnrollment => 0;
-private int PipelineComplete => 0;
+    // Pipeline metrics
+    private int PipelineScreening => 0;
+    private int PipelineEnrollment => 0;
+    private int PipelineComplete => 0;
 
-private List<PropertyRow> Properties { get; set; } = new();
+    private List<PropertyRow> Properties { get; set; } = new();
+    private List<ActivityItem> Activity { get; set; } = new();
+    private List<TicketItem> Tickets { get; set; } = new();
 
-private List<ActivityItem> Activity { get; set; } = new();
-private List<TicketItem> Tickets { get; set; } = new();
-
-protected override async Task OnInitializedAsync()
-{
-    // Load global banner from system settings
-    globalBanner = await SystemSettingsService.GetGlobalBannerInfoAsync();
-}
-
-private Severity GetMudSeverity(BannerSeverity severity)
-{
-    return severity switch
+    protected override async Task OnInitializedAsync()
     {
-        BannerSeverity.Success => Severity.Success,
-        BannerSeverity.Warning => Severity.Warning,
-        BannerSeverity.Error => Severity.Error,
-        _ => Severity.Info
-    };
-}
+        // Initialize role service
+        await RoleService.InitializeAsync();
+        
+        // Load global banner from system settings
+        globalBanner = await SystemSettingsService.GetGlobalBannerInfoAsync();
+        
+        // TODO: Load real data from services based on role
+        // if (RoleService.IsHOAUser || RoleService.IsHOAAuditor) {
+        //     LoadHOAStudiesAsync();
+        // } else {
+        //     LoadPropertiesAsync();
+        //     LoadActivityAsync();
+        //     LoadTicketsAsync();
+        // }
+    }
 
-private void HideBanner()
-{
-    globalBanner = null;
-    bannerDismissed = true;
-}
+    private string GetUserGreeting()
+    {
+        if (RoleService.IsPlatformAdmin) return "Platform Admin";
+        if (RoleService.IsTenantOwner) return "Owner";
+        if (RoleService.IsTenantSpecialist) return "Specialist";
+        if (RoleService.IsTenantViewer) return "Viewer";
+        return "User";
+    }
 
-public class PropertyRow {
+    private string GetRoleDescription()
+    {
+        if (RoleService.IsPlatformAdmin) 
+            return "Manage all tenants and system settings";
+        if (RoleService.IsTenantOwner) 
+            return "Here's your organization's performance overview";
+        if (RoleService.IsTenantSpecialist) 
+            return "Here's what's happening with your reserve studies today";
+        if (RoleService.IsTenantViewer) 
+            return "View your organization's reports and analytics";
+        return "Welcome to your dashboard";
+    }
+
+    private Severity GetMudSeverity(BannerSeverity severity)
+    {
+        return severity switch
+        {
+            BannerSeverity.Success => Severity.Success,
+            BannerSeverity.Warning => Severity.Warning,
+            BannerSeverity.Error => Severity.Error,
+            _ => Severity.Info
+        };
+    }
+
+    private Color GetStatusColor(string status)
+    {
+        return status.ToLower() switch
+        {
+            "active" => Color.Success,
+            "pending" => Color.Warning,
+            "inactive" => Color.Default,
+            "complete" => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private void HideBanner()
+    {
+        globalBanner = null;
+        bannerDismissed = true;
+    }
+
+    public class PropertyRow
+    {
         public string Name { get; set; } = default!;
         public string Location { get; set; } = default!;
         public string Status { get; set; } = default!;
     }
 
-    public class ActivityItem {
+    public class ActivityItem
+    {
         public string Description { get; set; } = default!;
         public DateTime Timestamp { get; set; }
     }
 
-    public class TicketItem {
+    public class TicketItem
+    {
         public string Number { get; set; } = default!;
         public string Subject { get; set; } = default!;
         public string Status { get; set; } = default!;

@@ -12,107 +12,120 @@
 <PageTitle>My Assigned Reserve Studies</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large">
- <MudStack Spacing="2" Class="mb-4">
- <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
- <MudText Typo="Typo.h4">Assigned Requests</MudText>
- <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">@items.Count.ToString()</MudChip>
- </MudStack>
- <MudTextField @bind-Value="search" Placeholder="Search community, contact, address..." Immediate="true" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
- </MudStack>
+<!-- Quick Actions Section -->
+<MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius: 12px;">
+<MudStack Row="true" Spacing="2" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+<MudText Typo="Typo.h6" Style="font-weight: 500;">
+<MudIcon Icon="@Icons.Material.Filled.Bolt" Class="mr-2" Style="vertical-align: middle;" />
+Quick Actions
+</MudText>
+<MudStack Row="true" Spacing="2">
+<MudButton Variant="Variant.Filled" 
+Color="Color.Primary"
+StartIcon="@Icons.Material.Filled.PersonAdd"
+Href="/Admin/HOAUsers"
+Size="Size.Small">
+Invite HOA User
+</MudButton>
+<MudButton Variant="Variant.Outlined" 
+Color="Color.Secondary"
+StartIcon="@Icons.Material.Filled.Groups"
+Href="/Admin/HOAUsers"
+Size="Size.Small">
+Manage HOA Users
+</MudButton>
+</MudStack>
+</MudStack>
+</MudPaper>
 
- @if (isLoading)
- {
- <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
- }
- else if (items.Count ==0)
- {
- <MudAlert Severity="Severity.Info">No assigned requests.</MudAlert>
- }
- else
- {
- <MudPaper>
- <MudTable Items="@filtered" Hover="true" Dense="true" Bordered="false" Breakpoint="Breakpoint.Sm">
- <HeaderContent>
- <MudTh>Community</MudTh>
- <MudTh>Contact</MudTh>
- <MudTh>Status</MudTh>
- <MudTh>Created</MudTh>
- <MudTh align="right"></MudTh>
- </HeaderContent>
- <RowTemplate>
- <MudTd>@context.Community?.Name</MudTd>
- <MudTd>@context.Contact?.FullName</MudTd>
- <MudTd>
- <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Outlined" Size="Size.Small">@FormatStatus(context.Status)</MudChip>
- </MudTd>
- <MudTd>@context.DateCreated?.ToLocalTime().ToString("g")</MudTd>
- <MudTd align="right">
- <MudButton Color="Color.Primary" Variant="Variant.Text" Size="Size.Small" OnClick="@(()=>NavigateToDetails(context.Id))">Open</MudButton>
- </MudTd>
- </RowTemplate>
- </MudTable>
- </MudPaper>
- }
+<MudStack Spacing="2" Class="mb-4">
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+<MudText Typo="Typo.h4">Assigned Requests</MudText>
+<MudChip T="string" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">@items.Count.ToString()</MudChip>
+</MudStack>
+<MudTextField @bind-Value="search" Placeholder="Search community, contact, address..." Immediate="true" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+</MudStack>
+
+    @if (isLoading) {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    } else if (items.Count == 0) {
+        <MudAlert Severity="Severity.Info">No assigned requests.</MudAlert>
+    } else {
+        <MudPaper>
+            <MudTable Items="@filtered" Hover="true" Dense="true" Bordered="false" Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Community</MudTh>
+                    <MudTh>Contact</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Created</MudTh>
+                    <MudTh align="right"></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Community?.Name</MudTd>
+                    <MudTd>@context.Contact?.FullName</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Outlined" Size="Size.Small">@FormatStatus(context.Status)</MudChip>
+                    </MudTd>
+                    <MudTd>@context.DateCreated?.ToLocalTime().ToString("g")</MudTd>
+                    <MudTd align="right">
+                        <MudButton Color="Color.Primary" Variant="Variant.Text" Size="Size.Small" OnClick="@(() => NavigateToDetails(context.Id))">Open</MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
 </MudContainer>
 
 @code {
- private bool isLoading = true;
- private string? search;
- private List<ReserveStudy> items = new();
+    private bool isLoading = true;
+    private string? search;
+    private List<ReserveStudy> items = new();
 
- private IEnumerable<ReserveStudy> filtered => string.IsNullOrWhiteSpace(search)
- ? items
- : items.Where(i =>
- (i.Community?.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
- || (i.Contact?.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
- || (i.PropertyManager?.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
- || (FormatStatus(i.Status).Contains(search, StringComparison.OrdinalIgnoreCase))
- || (i.Community?.Addresses?.Any(a =>
- (a.Street?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
- || (a.City?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
- || (a.State?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
- || (a.Zip?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)) ?? false)
- );
+    private IEnumerable<ReserveStudy> filtered => string.IsNullOrWhiteSpace(search)
+    ? items
+    : items.Where(i =>
+    (i.Community?.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (i.Contact?.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (i.PropertyManager?.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (FormatStatus(i.Status).Contains(search, StringComparison.OrdinalIgnoreCase))
+    || (i.Community?.Addresses?.Any(a =>
+    (a.Street?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (a.City?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (a.State?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (a.Zip?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)) ?? false)
+    );
 
- protected override async Task OnInitializedAsync()
- {
- try
- {
- await UserState.InitializeAsync();
- var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
- items = await ReserveStudyService.GetAssignedReserveStudiesAsync(userId);
- }
- catch (Exception ex)
- {
- Snackbar.Add($"Error loading assigned studies: {ex.Message}", Severity.Error);
- }
- finally
- {
- isLoading = false;
- }
- }
+    protected override async Task OnInitializedAsync() {
+        try {
+            await UserState.InitializeAsync();
+            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+            items = await ReserveStudyService.GetAssignedReserveStudiesAsync(userId);
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading assigned studies: {ex.Message}", Severity.Error);
+        } finally {
+            isLoading = false;
+        }
+    }
 
- private void NavigateToDetails(Guid id) => NavigationManager.NavigateTo($"/ReserveStudies/{id}/Details");
+    private void NavigateToDetails(Guid id) => NavigationManager.NavigateTo($"/ReserveStudies/{id}/Details");
 
- private static string FormatStatus(ReserveStudy.WorkflowStatus status)
- {
- var name = Enum.GetName(typeof(ReserveStudy.WorkflowStatus), status) ?? status.ToString();
- var withSpaces = System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z])([A-Z])", " $1");
- withSpaces = System.Text.RegularExpressions.Regex.Replace(withSpaces, "([A-Za-z])(\\d)", "$1 $2");
- return withSpaces.Trim();
- }
+    private static string FormatStatus(ReserveStudy.WorkflowStatus status) {
+        var name = Enum.GetName(typeof(ReserveStudy.WorkflowStatus), status) ?? status.ToString();
+        var withSpaces = System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z])([A-Z])", " $1");
+        withSpaces = System.Text.RegularExpressions.Regex.Replace(withSpaces, "([A-Za-z])(\\d)", "$1 $2");
+        return withSpaces.Trim();
+    }
 
- private static Color GetStatusColor(ReserveStudy.WorkflowStatus status) => status switch
- {
- ReserveStudy.WorkflowStatus.RequestCancelled => Color.Error,
- ReserveStudy.WorkflowStatus.RequestArchived => Color.Default,
- ReserveStudy.WorkflowStatus.RequestCompleted => Color.Success,
- ReserveStudy.WorkflowStatus.FinancialInfoRequested => Color.Warning,
- ReserveStudy.WorkflowStatus.FinancialInfoSubmitted => Color.Info,
- ReserveStudy.WorkflowStatus.FinancialInfoReviewed => Color.Info,
- ReserveStudy.WorkflowStatus.ProposalApproved => Color.Success,
- ReserveStudy.WorkflowStatus.ProposalCreated => Color.Primary,
- ReserveStudy.WorkflowStatus.ProposalSent => Color.Primary,
- _ => Color.Secondary
- };
+    private static Color GetStatusColor(ReserveStudy.WorkflowStatus status) => status switch {
+        ReserveStudy.WorkflowStatus.RequestCancelled => Color.Error,
+        ReserveStudy.WorkflowStatus.RequestArchived => Color.Default,
+        ReserveStudy.WorkflowStatus.RequestCompleted => Color.Success,
+        ReserveStudy.WorkflowStatus.FinancialInfoRequested => Color.Warning,
+        ReserveStudy.WorkflowStatus.FinancialInfoSubmitted => Color.Info,
+        ReserveStudy.WorkflowStatus.FinancialInfoReviewed => Color.Info,
+        ReserveStudy.WorkflowStatus.ProposalApproved => Color.Success,
+        ReserveStudy.WorkflowStatus.ProposalCreated => Color.Primary,
+        ReserveStudy.WorkflowStatus.ProposalSent => Color.Primary,
+        _ => Color.Secondary
+    };
 }

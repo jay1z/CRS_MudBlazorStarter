@@ -95,10 +95,22 @@ namespace CRS.Data {
                     bool changed = false;
                     if (string.IsNullOrWhiteSpace(existing.Name)) { existing.Name = name; changed = true; }
                     if (existing.IsActive != isActive) { existing.IsActive = isActive; changed = true; }
+                    // Ensure platform tenant has Active subscription status
+                    if (subdomain == "platform" && existing.SubscriptionStatus != SubscriptionStatus.Active) {
+                        existing.SubscriptionStatus = SubscriptionStatus.Active;
+                        changed = true;
+                    }
                     if (changed) await db.SaveChangesAsync();
                     return existing;
                 }
-                var t = new Tenant { Name = name, Subdomain = subdomain, IsActive = isActive, CreatedAt = DateTime.UtcNow };
+                var t = new Tenant { 
+                    Name = name, 
+                    Subdomain = subdomain, 
+                    IsActive = isActive, 
+                    CreatedAt = DateTime.UtcNow,
+                    // Platform tenant should always be Active
+                    SubscriptionStatus = subdomain == "platform" ? SubscriptionStatus.Active : SubscriptionStatus.None
+                };
                 db.Add(t);
                 await db.SaveChangesAsync();
                 return t;

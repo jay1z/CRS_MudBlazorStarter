@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251130040414_InitialCreate")]
+    [Migration("20251202132236_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -34,6 +34,9 @@ namespace CRS.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
+
+                    b.Property<string>("CompanyName")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -263,13 +266,97 @@ namespace CRS.Migrations
                         .HasColumnType("rowversion");
 
                     b.Property<string>("TableName")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("TableName", "CreatedAt")
+                        .HasDatabaseName("IX_AuditLog_Table_Created_Covering");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TableName", "CreatedAt"), new[] { "RecordId", "ColumnName", "Action" });
+
+                    b.ToTable("AuditLogs", "crs");
+                });
+
+            modelBuilder.Entity("CRS.Models.AuditLogArchive", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ActorId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ActorName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ApplicationUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ArchiveReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ArchivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ColumnName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CorrelationId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Method")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Path")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RecordId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RemoteIp")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("TableName")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("AuditLogs", "crs");
+                    b.ToTable("AuditLogArchives", "crs");
                 });
 
             modelBuilder.Entity("CRS.Models.Billing.StripeEventLog", b =>
@@ -559,14 +646,8 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Address1")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime?>("AnnualMeetingDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("City")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -604,21 +685,18 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<string>("State")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
 
                     b.Property<int?>("YearBuilt")
                         .HasColumnType("int");
 
-                    b.Property<string>("ZipCode")
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "IsActive")
+                        .HasDatabaseName("IX_Community_Tenant_Active");
 
                     b.ToTable("Communities", "crs");
                 });
@@ -673,6 +751,10 @@ namespace CRS.Migrations
                     b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "ApplicationUserId")
+                        .HasDatabaseName("IX_Contact_Tenant_User_NotDeleted")
+                        .HasFilter("[DateDeleted] IS NULL");
 
                     b.ToTable("Contacts", "crs");
                 });
@@ -870,7 +952,7 @@ namespace CRS.Migrations
                     b.ToTable("DemoSessions", "crs");
                 });
 
-            modelBuilder.Entity("CRS.Models.ElementMeasurementOptions", b =>
+            modelBuilder.Entity("CRS.Models.ElementOption", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -887,7 +969,20 @@ namespace CRS.Migrations
 
                     b.Property<string>("DisplayText")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("MaxValue")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MinValue")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OptionType")
+                        .HasColumnType("int");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -897,88 +992,18 @@ namespace CRS.Migrations
 
                     b.Property<string>("Unit")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("ZOrder")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.ToTable("ElementMeasurementOptions", "crs");
-                });
+                    b.HasIndex("OptionType", "IsActive", "ZOrder")
+                        .HasDatabaseName("IX_ElementOption_Type_Active_Order");
 
-            modelBuilder.Entity("CRS.Models.ElementRemainingLifeOptions", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateDeleted")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DisplayText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ZOrder")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ElementRemainingLifeOptions", "crs");
-                });
-
-            modelBuilder.Entity("CRS.Models.ElementUsefulLifeOptions", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("DateCreated")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateDeleted")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DateModified")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DisplayText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ZOrder")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ElementUsefulLifeOptions", "crs");
+                    b.ToTable("ElementOptions", "crs");
                 });
 
             modelBuilder.Entity("CRS.Models.FinancialInfo", b =>
@@ -1047,6 +1072,10 @@ namespace CRS.Migrations
                         .IsUnique();
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "ReserveStudyId")
+                        .HasDatabaseName("IX_FinancialInfo_Tenant_Study_NotDeleted")
+                        .HasFilter("[DateDeleted] IS NULL");
 
                     b.ToTable("FinancialInfos", "crs");
                 });
@@ -1338,6 +1367,10 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("TenantId", "ReserveStudyId", "IsApproved")
+                        .HasDatabaseName("IX_Proposal_Tenant_Study_Approved_NotDeleted")
+                        .HasFilter("[DateDeleted] IS NULL");
+
                     b.ToTable("Proposals", "crs");
                 });
 
@@ -1451,6 +1484,20 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("TenantId", "ApplicationUserId", "CommunityId")
+                        .HasDatabaseName("IX_ReserveStudy_Tenant_User_Community");
+
+                    b.HasIndex("TenantId", "IsActive", "DateCreated")
+                        .HasDatabaseName("IX_ReserveStudy_Tenant_Active_Created_Covering");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "IsActive", "DateCreated"), new[] { "CommunityId", "ApplicationUserId", "SpecialistUserId", "Status" });
+
+                    b.HasIndex("TenantId", "SpecialistUserId", "IsActive")
+                        .HasDatabaseName("IX_ReserveStudy_Tenant_Specialist_Active");
+
+                    b.HasIndex("TenantId", "Status", "IsActive")
+                        .HasDatabaseName("IX_ReserveStudy_Tenant_Status_Active");
+
                     b.ToTable("ReserveStudies", "crs");
                 });
 
@@ -1472,17 +1519,11 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("ElementMeasurementOptionsId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("ElementRemainingLifeOptionsId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("ElementUsefulLifeOptionsId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("MeasurementOptionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1490,6 +1531,9 @@ namespace CRS.Migrations
 
                     b.Property<bool>("NeedsService")
                         .HasColumnType("bit");
+
+                    b.Property<Guid?>("RemainingLifeOptionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("ReserveStudyId")
                         .HasColumnType("uniqueidentifier");
@@ -1503,17 +1547,20 @@ namespace CRS.Migrations
                     b.Property<Guid?>("ServiceContactId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("UsefulLifeOptionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ElementMeasurementOptionsId");
+                    b.HasIndex("MeasurementOptionId");
 
-                    b.HasIndex("ElementRemainingLifeOptionsId");
-
-                    b.HasIndex("ElementUsefulLifeOptionsId");
+                    b.HasIndex("RemainingLifeOptionId");
 
                     b.HasIndex("ReserveStudyId");
 
                     b.HasIndex("ServiceContactId");
+
+                    b.HasIndex("UsefulLifeOptionId");
 
                     b.ToTable("ReserveStudyAdditionalElements", "crs");
                 });
@@ -1538,21 +1585,18 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("ElementMeasurementOptionsId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("ElementRemainingLifeOptionsId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("ElementUsefulLifeOptionsId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("MeasurementOptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("RemainingLifeOptionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -1563,17 +1607,23 @@ namespace CRS.Migrations
                     b.Property<Guid?>("ServiceContactId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("UsefulLifeOptionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("ReserveStudyId", "BuildingElementId");
 
                     b.HasIndex("BuildingElementId");
 
-                    b.HasIndex("ElementMeasurementOptionsId");
+                    b.HasIndex("MeasurementOptionId");
 
-                    b.HasIndex("ElementRemainingLifeOptionsId");
-
-                    b.HasIndex("ElementUsefulLifeOptionsId");
+                    b.HasIndex("RemainingLifeOptionId");
 
                     b.HasIndex("ServiceContactId");
+
+                    b.HasIndex("UsefulLifeOptionId");
+
+                    b.HasIndex("ReserveStudyId", "BuildingElementId")
+                        .HasDatabaseName("IX_RSBuildingElement_Study_Element");
 
                     b.ToTable("ReserveStudyBuildingElements", "crs");
                 });
@@ -1604,17 +1654,8 @@ namespace CRS.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("ElementMeasurementOptionsId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("ElementName")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("ElementRemainingLifeOptionsId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("ElementUsefulLifeOptionsId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1622,6 +1663,9 @@ namespace CRS.Migrations
 
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("MeasurementOptionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
@@ -1632,6 +1676,9 @@ namespace CRS.Migrations
 
                     b.Property<int?>("RemainingLife")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("RemainingLifeOptionId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("ReplacementCost")
                         .HasPrecision(18, 2)
@@ -1652,17 +1699,23 @@ namespace CRS.Migrations
                     b.Property<int?>("UsefulLife")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("UsefulLifeOptionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("ReserveStudyId", "CommonElementId");
 
                     b.HasIndex("CommonElementId");
 
-                    b.HasIndex("ElementMeasurementOptionsId");
+                    b.HasIndex("MeasurementOptionId");
 
-                    b.HasIndex("ElementRemainingLifeOptionsId");
-
-                    b.HasIndex("ElementUsefulLifeOptionsId");
+                    b.HasIndex("RemainingLifeOptionId");
 
                     b.HasIndex("ServiceContactId");
+
+                    b.HasIndex("UsefulLifeOptionId");
+
+                    b.HasIndex("ReserveStudyId", "CommonElementId")
+                        .HasDatabaseName("IX_RSCommonElement_Study_Element");
 
                     b.ToTable("ReserveStudyCommonElements", "crs");
                 });
@@ -2469,6 +2522,15 @@ namespace CRS.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CRS.Models.AuditLogArchive", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("ApplicationUserId");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CRS.Models.Contact", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", "User")
@@ -2594,17 +2656,13 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ReserveStudyAdditionalElement", b =>
                 {
-                    b.HasOne("CRS.Models.ElementMeasurementOptions", "ElementMeasurementOptions")
+                    b.HasOne("CRS.Models.ElementOption", "MeasurementOption")
                         .WithMany()
-                        .HasForeignKey("ElementMeasurementOptionsId");
+                        .HasForeignKey("MeasurementOptionId");
 
-                    b.HasOne("CRS.Models.ElementRemainingLifeOptions", "ElementRemainingLifeOptions")
+                    b.HasOne("CRS.Models.ElementOption", "RemainingLifeOption")
                         .WithMany()
-                        .HasForeignKey("ElementRemainingLifeOptionsId");
-
-                    b.HasOne("CRS.Models.ElementUsefulLifeOptions", "ElementUsefulLifeOptions")
-                        .WithMany()
-                        .HasForeignKey("ElementUsefulLifeOptionsId");
+                        .HasForeignKey("RemainingLifeOptionId");
 
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
                         .WithMany("ReserveStudyAdditionalElements")
@@ -2614,15 +2672,19 @@ namespace CRS.Migrations
                         .WithMany()
                         .HasForeignKey("ServiceContactId");
 
-                    b.Navigation("ElementMeasurementOptions");
+                    b.HasOne("CRS.Models.ElementOption", "UsefulLifeOption")
+                        .WithMany()
+                        .HasForeignKey("UsefulLifeOptionId");
 
-                    b.Navigation("ElementRemainingLifeOptions");
+                    b.Navigation("MeasurementOption");
 
-                    b.Navigation("ElementUsefulLifeOptions");
+                    b.Navigation("RemainingLifeOption");
 
                     b.Navigation("ReserveStudy");
 
                     b.Navigation("ServiceContact");
+
+                    b.Navigation("UsefulLifeOption");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudyBuildingElement", b =>
@@ -2633,17 +2695,13 @@ namespace CRS.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CRS.Models.ElementMeasurementOptions", "ElementMeasurementOptions")
+                    b.HasOne("CRS.Models.ElementOption", "MeasurementOption")
                         .WithMany()
-                        .HasForeignKey("ElementMeasurementOptionsId");
+                        .HasForeignKey("MeasurementOptionId");
 
-                    b.HasOne("CRS.Models.ElementRemainingLifeOptions", "ElementRemainingLifeOptions")
+                    b.HasOne("CRS.Models.ElementOption", "RemainingLifeOption")
                         .WithMany()
-                        .HasForeignKey("ElementRemainingLifeOptionsId");
-
-                    b.HasOne("CRS.Models.ElementUsefulLifeOptions", "ElementUsefulLifeOptions")
-                        .WithMany()
-                        .HasForeignKey("ElementUsefulLifeOptionsId");
+                        .HasForeignKey("RemainingLifeOptionId");
 
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
                         .WithMany("ReserveStudyBuildingElements")
@@ -2655,17 +2713,21 @@ namespace CRS.Migrations
                         .WithMany()
                         .HasForeignKey("ServiceContactId");
 
+                    b.HasOne("CRS.Models.ElementOption", "UsefulLifeOption")
+                        .WithMany()
+                        .HasForeignKey("UsefulLifeOptionId");
+
                     b.Navigation("BuildingElement");
 
-                    b.Navigation("ElementMeasurementOptions");
+                    b.Navigation("MeasurementOption");
 
-                    b.Navigation("ElementRemainingLifeOptions");
-
-                    b.Navigation("ElementUsefulLifeOptions");
+                    b.Navigation("RemainingLifeOption");
 
                     b.Navigation("ReserveStudy");
 
                     b.Navigation("ServiceContact");
+
+                    b.Navigation("UsefulLifeOption");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudyCommonElement", b =>
@@ -2676,17 +2738,13 @@ namespace CRS.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CRS.Models.ElementMeasurementOptions", "ElementMeasurementOptions")
+                    b.HasOne("CRS.Models.ElementOption", "MeasurementOption")
                         .WithMany()
-                        .HasForeignKey("ElementMeasurementOptionsId");
+                        .HasForeignKey("MeasurementOptionId");
 
-                    b.HasOne("CRS.Models.ElementRemainingLifeOptions", "ElementRemainingLifeOptions")
+                    b.HasOne("CRS.Models.ElementOption", "RemainingLifeOption")
                         .WithMany()
-                        .HasForeignKey("ElementRemainingLifeOptionsId");
-
-                    b.HasOne("CRS.Models.ElementUsefulLifeOptions", "ElementUsefulLifeOptions")
-                        .WithMany()
-                        .HasForeignKey("ElementUsefulLifeOptionsId");
+                        .HasForeignKey("RemainingLifeOptionId");
 
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
                         .WithMany("ReserveStudyCommonElements")
@@ -2698,17 +2756,21 @@ namespace CRS.Migrations
                         .WithMany()
                         .HasForeignKey("ServiceContactId");
 
+                    b.HasOne("CRS.Models.ElementOption", "UsefulLifeOption")
+                        .WithMany()
+                        .HasForeignKey("UsefulLifeOptionId");
+
                     b.Navigation("CommonElement");
 
-                    b.Navigation("ElementMeasurementOptions");
+                    b.Navigation("MeasurementOption");
 
-                    b.Navigation("ElementRemainingLifeOptions");
-
-                    b.Navigation("ElementUsefulLifeOptions");
+                    b.Navigation("RemainingLifeOption");
 
                     b.Navigation("ReserveStudy");
 
                     b.Navigation("ServiceContact");
+
+                    b.Navigation("UsefulLifeOption");
                 });
 
             modelBuilder.Entity("CRS.Models.Security.UserRoleAssignment", b =>

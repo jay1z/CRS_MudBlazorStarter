@@ -1,0 +1,155 @@
+﻿@using CRS.Data
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Identity
+@using MudBlazor
+@inject ITenantUserService TenantUserService
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" Model="model">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.body1" Style="color: #666;">
+                    Invite an HOA board member or auditor to access reserve studies and reports.
+                </MudText>
+
+                <MudTextField @bind-Value="model.Email"
+                              Label="Email Address"
+                              Required="true"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Email" />
+
+                <MudGrid>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="model.FirstName"
+                                      Label="First Name"
+                                      Required="true"
+                                      Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="model.LastName"
+                                      Label="Last Name"
+                                      Required="true"
+                                      Variant="Variant.Outlined" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudTextField @bind-Value="model.CompanyName"
+                              Label="HOA / Organization Name"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Business" />
+
+                <MudTextField @bind-Value="model.Title"
+                              Label="Title / Position"
+                              Placeholder="e.g., Board President, Treasurer, etc."
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Badge" />
+
+                <MudSelect @bind-Value="model.Role"
+                           Label="Role"
+                           Variant="Variant.Outlined"
+                           Required="true"
+                           Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.AccountCircle">
+                    <MudSelectItem Value="@("HOAUser")">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Board Member</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">Can view studies and reports, submit requests</MudText>
+                        </div>
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("HOAAuditor")">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Auditor</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">Read-only access for compliance review</MudText>
+                        </div>
+                    </MudSelectItem>
+                </MudSelect>
+
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+                    <MudText Typo="Typo.body2">
+                        The user will receive an email with instructions to set their password and access the platform.
+                    </MudText>
+                </MudAlert>
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Secondary">Cancel</MudButton>
+        <MudButton OnClick="Submit" 
+                   Color="Color.Primary" 
+                   Variant="Variant.Filled"
+                   Disabled="isSubmitting"
+                   StartIcon="@Icons.Material.Filled.Send">
+            @(isSubmitting ? "Sending Invitation..." : "Send Invitation")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+[CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    private MudForm? form;
+    private InviteModel model = new();
+    private bool isSubmitting;
+
+    private class InviteModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string? CompanyName { get; set; }
+        public string? Title { get; set; }
+        public string Role { get; set; } = "HOAUser";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (form == null || !TenantContext.TenantId.HasValue)
+            return;
+
+        await form.Validate();
+        if (!form.IsValid)
+            return;
+
+        isSubmitting = true;
+        try
+        {
+            var user = await TenantUserService.CreateTenantUserAsync(
+                model.Email.Trim(),
+                "Letmeinnow1_", // Temporary password (user will reset)
+                model.FirstName.Trim(),
+                model.LastName.Trim(),
+                TenantContext.TenantId.Value,
+                model.Role);
+
+            if (user != null)
+            {
+                // Update additional fields
+                user.CompanyName = model.CompanyName?.Trim();
+                user.Title = model.Title?.Trim();
+                await TenantUserService.UpdateUserAsync(user);
+
+                Snackbar.Add($"Invitation sent to {model.Email}", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Failed to create user. Email may already be registered.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

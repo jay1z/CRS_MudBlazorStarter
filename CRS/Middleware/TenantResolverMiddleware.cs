@@ -52,11 +52,28 @@ namespace CRS.Middleware {
                         }
                     }
 
+                    // SECURITY: Only enforce tenant isolation in production
+                    // In development, allow platform admins to access any tenant via subdomain
+                    var allowCrossTenantAccess = context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment();
+                    var isPlatformAdmin = context.User.IsInRole("PlatformAdmin");
+                    
                     if (tenantFromHost != null && claimTenantId != 0 && claimTenantId != tenantFromHost.Id) {
-                        _logger.LogWarning("TenantResolver: Authenticated user tenant mismatch. ClaimTenantId={ClaimTenantId} HostTenantId={HostTenantId}. Signing out.", claimTenantId, tenantFromHost.Id);
-                        await signInManager.SignOutAsync();
-                        context.Response.Redirect("/Account/Login");
-                        return;
+                        // Allow platform admins to access any tenant in development
+                        if (allowCrossTenantAccess && isPlatformAdmin) {
+                            _logger.LogInformation("TenantResolver: Platform admin accessing different tenant. ClaimTenantId={ClaimTenantId} HostTenantId={HostTenantId}. Allowing access.", claimTenantId, tenantFromHost.Id);
+                            // Override tenant context to match the host
+                            tenantContext.TenantId = tenantFromHost.Id;
+                            tenantContext.TenantName = tenantFromHost.Name;
+                            tenantContext.Subdomain = tenantFromHost.Subdomain;
+                            tenantContext.IsActive = tenantFromHost.IsActive;
+                            tenantContext.BrandingJson = tenantFromHost.BrandingJson;
+                            tenantContext.IsResolvedByLogin = false;
+                        } else {
+                            _logger.LogWarning("TenantResolver: Authenticated user tenant mismatch. ClaimTenantId={ClaimTenantId} HostTenantId={HostTenantId}. Signing out.", claimTenantId, tenantFromHost.Id);
+                            await signInManager.SignOutAsync();
+                            context.Response.Redirect("/Account/Login");
+                            return;
+                        }
                     }
 
                     if (claimTenantId != 0) {

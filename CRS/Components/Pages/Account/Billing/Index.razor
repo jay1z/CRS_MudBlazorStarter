@@ -1,0 +1,813 @@
+﻿@page "/Account/Billing"
+@page "/Billing"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using CRS.Models
+@using CRS.Data
+@using CRS.Services.Billing
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@using Stripe
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IBillingService BillingService
+@inject ITenantContext TenantContext
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IStripeClientFactory StripeClientFactory
+
+<PageTitle>Billing & Subscription - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6 mb-16">
+    @if (_loading)
+    {
+        <MudPaper Class="pa-8" Elevation="2" Style="border-radius: 12px;">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.body1">Loading billing information...</MudText>
+            </MudStack>
+        </MudPaper>
+    }
+    else if (_tenant == null)
+    {
+        <MudPaper Class="pa-8" Elevation="2" Style="border-radius: 12px;">
+            <MudAlert Severity="Severity.Error">
+                <MudText Typo="Typo.body1">Unable to load billing information. Please contact support.</MudText>
+            </MudAlert>
+        </MudPaper>
+    }
+    else
+    {
+        <!-- Header -->
+        <MudPaper Elevation="0" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 12px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                        <MudIcon Icon="@Icons.Material.Filled.CreditCard" Class="mr-2" Style="vertical-align: middle;" />
+                        Billing & Subscription
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                        Manage your subscription, payment methods, and invoices
+                    </MudText>
+                </MudStack>
+                @if (_billingStatus?.Status == "trialing")
+                {
+                    <MudChip T="string" Color="Color.Warning" Style="background: white; color: #FF8C00;">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-1" />
+                        Trial Active
+                    </MudChip>
+                }
+                else if (_billingStatus?.Status == "active")
+                {
+                    <MudChip T="string" Color="Color.Success" Style="background: white; color: #28a745;">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                        Active
+                    </MudChip>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Warning Banners -->
+        @if (_tenant.SubscriptionStatus == SubscriptionStatus.PastDue)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="mb-4">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+                        Payment Failed - Action Required
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        Your last payment attempt failed. Please update your payment method to avoid service interruption.
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Surface" 
+                               StartIcon="@Icons.Material.Filled.CreditCard"
+                               OnClick="OpenBillingPortalAsync">
+                        Update Payment Method
+                    </MudButton>
+                </MudStack>
+            </MudAlert>
+        }
+        else if (_tenant.SubscriptionStatus == SubscriptionStatus.GracePeriod && _tenant.GracePeriodEndsAt.HasValue)
+        {
+            var daysRemaining = Math.Max(0, (_tenant.GracePeriodEndsAt.Value - DateTime.UtcNow).Days);
+            <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mb-4">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.Error" Class="mr-2" />
+                        Grace Period - @daysRemaining Days Remaining
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        Your account is in read-only mode. Update payment by <strong>@_tenant.GracePeriodEndsAt.Value.ToString("MMMM dd, yyyy")</strong> to restore full access.
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Surface" 
+                               StartIcon="@Icons.Material.Filled.CreditCard"
+                               Href="/Account/Billing/GracePeriod">
+                        View Details & Update Payment
+                    </MudButton>
+                </MudStack>
+            </MudAlert>
+        }
+
+        <MudGrid Spacing="4">
+            <!-- Left Column: Navigation -->
+            <MudItem xs="12" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; position: sticky; top: 100px;">
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold mb-3" Style="color: #666; text-transform: uppercase; letter-spacing: 1px;">
+                        Billing
+                    </MudText>
+                    <MudNavMenu>
+                        <MudNavLink Icon="@Icons.Material.Filled.Dashboard" 
+                                    IconColor="@(activeTab == 0 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 0 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 0)">
+                            Overview
+                        </MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.TrendingUp" 
+                                    IconColor="@(activeTab == 1 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 1 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 1)">
+                            Usage & Limits
+                        </MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.Receipt" 
+                                    IconColor="@(activeTab == 2 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 2 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 2)">
+                            Invoices
+                        </MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.CreditCard" 
+                                    IconColor="@(activeTab == 3 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 3 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 3)">
+                            Payment Method
+                        </MudNavLink>
+                    </MudNavMenu>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Right Column: Content -->
+            <MudItem xs="12" md="9">
+                @if (activeTab == 0)
+                {
+                    <!-- Overview Tab -->
+                    <MudStack Spacing="4">
+                        <!-- Current Plan Card -->
+                        <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start" Class="mb-4">
+                                <div>
+                                    <MudText Typo="Typo.h5" Class="fw-bold mb-2">Current Plan</MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        Manage your subscription and billing cycle
+                                    </MudText>
+                                </div>
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Upgrade"
+                                           Href="/Pricing">
+                                    Compare Plans
+                                </MudButton>
+                            </MudStack>
+
+                            <MudGrid Spacing="3">
+                                <MudItem xs="12" md="6">
+                                    <MudPaper Elevation="0" Class="pa-4" Style="background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%); border-radius: 12px;">
+                                        <MudStack Spacing="2">
+                                            <MudText Typo="Typo.caption" Style="color: #666;">Plan Tier</MudText>
+                                            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #6A3D9A;">
+                                                @GetPlanName(_tenant.Tier)
+                                            </MudText>
+                                            <MudText Typo="Typo.body2" Style="color: #666;">
+                                                @GetPlanPrice(_tenant.Tier, _billingStatus?.Interval) @GetBillingCycle(_billingStatus?.Interval)
+                                            </MudText>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12" md="6">
+                                    <MudPaper Elevation="0" Class="pa-4" Style="background: #F9F9F9; border-radius: 12px;">
+                                        <MudStack Spacing="2">
+                                            <MudText Typo="Typo.caption" Style="color: #666;">Status</MudText>
+                                            <MudChip T="string" 
+                                                     Color="@GetStatusColor(_billingStatus?.Status ?? "unknown")" 
+                                                     Size="Size.Large"
+                                                     Style="width: fit-content;">
+                                                @GetStatusText(_billingStatus?.Status ?? "unknown")
+                                            </MudChip>
+                                            @if (_tenant.SubscriptionActivatedAt.HasValue)
+                                            {
+                                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                                    Member since @_tenant.SubscriptionActivatedAt.Value.ToString("MMMM yyyy")
+                                                </MudText>
+                                            }
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+
+                                @if (_tenant.SubscriptionActivatedAt.HasValue)
+                                {
+                                    <MudItem xs="12">
+                                        <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">
+                                            <MudText Typo="Typo.body2">
+                                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
+                                                Member since <strong>@_tenant.SubscriptionActivatedAt.Value.ToString("MMMM yyyy")</strong>
+                                            </MudText>
+                                        </MudAlert>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+
+                            <MudDivider Class="my-4" />
+
+                            <MudStack Row="true" Spacing="2" Justify="Justify.Center">
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Settings"
+                                           OnClick="OpenBillingPortalAsync"
+                                           Disabled="_processing">
+                                    @if (_processing)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>Loading...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Manage Subscription</span>
+                                    }
+                                </MudButton>
+                                @if (_billingStatus?.Interval == "month")
+                                {
+                                    <MudButton Variant="Variant.Outlined" 
+                                               Color="Color.Success"
+                                               StartIcon="@Icons.Material.Filled.Savings"
+                                               OnClick="OpenBillingPortalAsync">
+                                        Switch to Annual (Save 20%)
+                                    </MudButton>
+                                }
+                            </MudStack>
+                        </MudPaper>
+
+                        <!-- Quick Actions -->
+                        <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+                            <MudText Typo="Typo.h6" Class="fw-bold mb-4">Quick Actions</MudText>
+                            <MudGrid Spacing="3">
+                                <MudItem xs="12" sm="6" md="4">
+                                    <MudPaper Elevation="0" 
+                                              Class="pa-4 quick-action-card" 
+                                              Style="border: 2px solid #e0e0e0; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;"
+                                              @onclick="@(() => activeTab = 2)">
+                                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Receipt" Style="color: #6A3D9A; font-size: 40px;" />
+                                            <MudText Typo="Typo.body1" Class="fw-bold">View Invoices</MudText>
+                                            <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #666;">
+                                                Download receipts
+                                            </MudText>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="4">
+                                    <MudPaper Elevation="0" 
+                                              Class="pa-4 quick-action-card" 
+                                              Style="border: 2px solid #e0e0e0; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;"
+                                              @onclick="OpenBillingPortalAsync">
+                                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@Icons.Material.Filled.CreditCard" Style="color: #FF8C00; font-size: 40px;" />
+                                            <MudText Typo="Typo.body1" Class="fw-bold">Update Payment</MudText>
+                                            <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #666;">
+                                                Change card details
+                                            </MudText>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+
+                                <MudItem xs="12" sm="6" md="4">
+                                    <MudPaper Elevation="0" 
+                                              Class="pa-4 quick-action-card" 
+                                              Style="border: 2px solid #e0e0e0; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;"
+                                              @onclick="@(() => Nav.NavigateTo("/Pricing"))">
+                                        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Upgrade" Style="color: #6A3D9A; font-size: 40px;" />
+                                            <MudText Typo="Typo.body1" Class="fw-bold">Upgrade Plan</MudText>
+                                            <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #666;">
+                                                Get more features
+                                            </MudText>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudItem>
+                            </MudGrid>
+                        </MudPaper>
+                    </MudStack>
+                }
+                else if (activeTab == 1)
+                {
+                    <!-- Usage & Limits Tab -->
+                    <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+                        <MudText Typo="Typo.h5" Class="fw-bold mb-2">Usage & Limits</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-4">
+                            Monitor your usage against your plan limits
+                        </MudText>
+
+                        <MudStack Spacing="4">
+                            <!-- Properties -->
+                            <div>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-2">
+                                    <MudText Typo="Typo.body1" Class="fw-bold">
+                                        <MudIcon Icon="@Icons.Material.Filled.HomeWork" Size="Size.Small" Class="mr-1" />
+                                        Properties
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        @_billingStatus?.CommunitiesUsed / @_billingStatus?.MaxCommunities
+                                    </MudText>
+                                </MudStack>
+                                <MudProgressLinear Value="@GetUsagePercentage(_billingStatus?.CommunitiesUsed ?? 0, _billingStatus?.MaxCommunities ?? 1)" 
+                                                   Color="@GetUsageColor(_billingStatus?.CommunitiesUsed ?? 0, _billingStatus?.MaxCommunities ?? 1)"
+                                                   Size="Size.Medium" />
+                                @if (IsNearLimit(_billingStatus?.CommunitiesUsed ?? 0, _billingStatus?.MaxCommunities ?? 1))
+                                {
+                                    <MudText Typo="Typo.caption" Style="color: #FF8C00;" Class="mt-1">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" />
+                                        Approaching limit. Consider upgrading.
+                                    </MudText>
+                                }
+                            </div>
+
+                            <!-- Team Members -->
+                            <div>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-2">
+                                    <MudText Typo="Typo.body1" Class="fw-bold">
+                                        <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Class="mr-1" />
+                                        Team Members
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        @_billingStatus?.SpecialistsUsed / @(_billingStatus?.MaxSpecialists == 999999 ? "∞" : _billingStatus?.MaxSpecialists.ToString())
+                                    </MudText>
+                                </MudStack>
+                                @if (_billingStatus?.MaxSpecialists == 999999)
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="width: fit-content;">
+                                        Unlimited
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudProgressLinear Value="@GetUsagePercentage(_billingStatus?.SpecialistsUsed ?? 0, _billingStatus?.MaxSpecialists ?? 1)" 
+                                                       Color="@GetUsageColor(_billingStatus?.SpecialistsUsed ?? 0, _billingStatus?.MaxSpecialists ?? 1)"
+                                                       Size="Size.Medium" />
+                                }
+                            </div>
+
+                            <!-- Storage (placeholder - implement if tracking storage) -->
+                            <div>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-2">
+                                    <MudText Typo="Typo.body1" Class="fw-bold">
+                                        <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Class="mr-1" />
+                                        Storage
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        Available with your plan
+                                    </MudText>
+                                </MudStack>
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small" Style="width: fit-content;">
+                                    Contact support for details
+                                </MudChip>
+                            </div>
+                        </MudStack>
+
+                        <MudDivider Class="my-4" />
+
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                            <MudText Typo="Typo.body2">
+                                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                                Need more capacity? <MudLink Href="/Pricing" Style="color: #FF8C00; font-weight: 600;">Upgrade your plan</MudLink>
+                            </MudText>
+                        </MudAlert>
+                    </MudPaper>
+                }
+                else if (activeTab == 2)
+                {
+                    <!-- Invoices Tab -->
+                    <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+                        <MudText Typo="Typo.h5" Class="fw-bold mb-2">Billing History</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-4">
+                            View and download your invoices
+                        </MudText>
+
+                        @if (_loadingInvoices)
+                        {
+                            <MudProgressLinear Indeterminate="true" />
+                        }
+                        else if (_invoices == null || !_invoices.Any())
+                        {
+                            <MudAlert Severity="Severity.Info">
+                                <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Style="font-size: 48px; color: #666;" />
+                                    <MudText Typo="Typo.body1" Class="fw-bold">No invoices yet</MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        Invoices will appear here after your first billing cycle
+                                    </MudText>
+                                </MudStack>
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudTable Items="@_invoices" Elevation="0" Dense="true" Hover="true">
+                                <HeaderContent>
+                                    <MudTh>Date</MudTh>
+                                    <MudTh>Amount</MudTh>
+                                    <MudTh>Status</MudTh>
+                                    <MudTh Style="text-align: right;">Actions</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="Date">
+                                        <MudText Typo="Typo.body2">@context.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                                    </MudTd>
+                                    <MudTd DataLabel="Amount">
+                                        <MudText Typo="Typo.body2" Class="fw-bold">
+                                            @FormatCurrency(context.AmountCents, context.Currency)
+                                        </MudText>
+                                    </MudTd>
+                                    <MudTd DataLabel="Status">
+                                        <MudChip T="string" 
+                                                 Color="@GetInvoiceStatusColor(context.Status)" 
+                                                 Size="Size.Small">
+                                            @context.Status.ToUpper()
+                                        </MudChip>
+                                    </MudTd>
+                                    <MudTd DataLabel="Actions" Style="text-align: right;">
+                                        @if (!string.IsNullOrEmpty(context.HostedInvoiceUrl))
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.Download" 
+                                                           Color="Color.Primary" 
+                                                           Size="Size.Small"
+                                                           Href="@context.HostedInvoiceUrl" 
+                                                           Target="_blank"
+                                                           Title="Download PDF" />
+                                        }
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        }
+                    </MudPaper>
+                }
+                else if (activeTab == 3)
+                {
+                    <!-- Payment Method Tab -->
+                    <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+                        <MudText Typo="Typo.h5" Class="fw-bold mb-2">Payment Method</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-4">
+                            Manage your payment information securely through Stripe
+                        </MudText>
+
+                        <MudPaper Elevation="0" Class="pa-6" Style="border: 2px solid #e0e0e0; border-radius: 12px; background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%);">
+                            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                                <MudIcon Icon="@Icons.Material.Filled.Security" Style="color: #6A3D9A; font-size: 56px;" />
+                                <MudText Typo="Typo.h6" Class="fw-bold">Secure Payment Portal</MudText>
+                                <MudText Typo="Typo.body2" Align="Align.Center" Style="color: #666; max-width: 400px;">
+                                    Your payment information is securely stored by Stripe, our PCI-compliant payment processor.
+                                    We never store your credit card details.
+                                </MudText>
+
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary"
+                                           Size="Size.Large"
+                                           StartIcon="@Icons.Material.Filled.CreditCard"
+                                           OnClick="OpenBillingPortalAsync"
+                                           Disabled="_processing">
+                                    @if (_processing)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>Loading...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Manage Payment Method</span>
+                                    }
+                                </MudButton>
+
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4" Class="mt-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Style="color: #666;" />
+                                    <MudText Typo="Typo.caption" Style="color: #666;">256-bit SSL encryption</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #666;">•</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #666;">PCI DSS compliant</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudPaper>
+
+                        <MudDivider Class="my-4" />
+
+                        <MudText Typo="Typo.h6" Class="fw-bold mb-3">What you can do:</MudText>
+                        <MudList T="string" Dense="false">
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.CreditCard" IconColor="Color.Primary">
+                                <MudText Typo="Typo.body2">Add or update credit/debit cards</MudText>
+                            </MudListItem>
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">
+                                <MudText Typo="Typo.body2">Set a default payment method</MudText>
+                            </MudListItem>
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.Receipt" IconColor="Color.Primary">
+                                <MudText Typo="Typo.body2">Update billing address</MudText>
+                            </MudListItem>
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.History" IconColor="Color.Primary">
+                                <MudText Typo="Typo.body2">View payment history</MudText>
+                            </MudListItem>
+                        </MudList>
+                    </MudPaper>
+                }
+            </MudItem>
+        </MudGrid>
+
+        <!-- Support Section -->
+        <MudPaper Elevation="2" Class="pa-6 mt-4" Style="border-radius: 12px; background: #F9F9F9;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="6">
+                <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                    <MudIcon Icon="@Icons.Material.Filled.Email" Style="color: #6A3D9A;" />
+                    <MudText Typo="Typo.caption" Style="color: #666;">Email Support</MudText>
+                    <MudLink Href="mailto:support@alxreservecloud.com" Style="color: #FF8C00; font-weight: 600;">
+                        support@alxreservecloud.com
+                    </MudLink>
+                </MudStack>
+                <MudDivider Vertical="true" FlexItem="true" />
+                <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                    <MudIcon Icon="@Icons.Material.Filled.Phone" Style="color: #6A3D9A;" />
+                    <MudText Typo="Typo.caption" Style="color: #666;">Phone Support</MudText>
+                    <MudLink Href="tel:+18005551234" Style="color: #FF8C00; font-weight: 600;">
+                        (800) 555-1234
+                    </MudLink>
+                </MudStack>
+                <MudDivider Vertical="true" FlexItem="true" />
+                <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                    <MudIcon Icon="@Icons.Material.Filled.Help" Style="color: #6A3D9A;" />
+                    <MudText Typo="Typo.caption" Style="color: #666;">Help Center</MudText>
+                    <MudLink Href="/help" Style="color: #FF8C00; font-weight: 600;">
+                        Visit Help Center
+                    </MudLink>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private Tenant? _tenant;
+    private BillingStatusDto? _billingStatus;
+    private List<InvoiceDto> _invoices = new();
+    private bool _loading = true;
+    private bool _loadingInvoices = false;
+    private bool _processing = false;
+    private int activeTab = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBillingDataAsync();
+    }
+
+    private async Task LoadBillingDataAsync()
+    {
+        try
+        {
+            if (!TenantContext.TenantId.HasValue)
+            {
+                Nav.NavigateTo("/");
+                return;
+            }
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
+
+            if (_tenant != null)
+            {
+                // Load billing status directly from database (instead of HTTP call)
+                try
+                {
+                    int communitiesUsed = 0;
+                    int specialistsUsed = 0;
+                    bool ownerExists = false;
+                    
+                    try
+                    {
+                        // Count communities (with IgnoreQueryFilters to bypass tenant filtering issues)
+                        communitiesUsed = await db.Communities
+                            .IgnoreQueryFilters()
+                            .Where(c => c.TenantId == _tenant.Id)
+                            .CountAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Snackbar.Add($"Error counting communities: {ex.Message}", Severity.Warning);
+                    }
+                    
+                    try
+                    {
+                        // Get TenantOwner and TenantSpecialist role IDs
+                        var specialistRoleNames = new[] { "TenantSpecialist", "TenantOwner" };
+                        var specialistRoleIds = await db.Set<CRS.Models.Security.Role>()
+                            .Where(r => specialistRoleNames.Contains(r.Name))
+                            .Select(r => r.Id)
+                            .ToListAsync();
+                        
+                        // Count specialists using the role IDs
+                        if (specialistRoleIds.Any())
+                        {
+                            specialistsUsed = await db.Set<CRS.Models.Security.UserRoleAssignment>()
+                                .Where(a => a.TenantId == _tenant.Id && specialistRoleIds.Contains(a.RoleId))
+                                .Select(a => a.UserId)
+                                .Distinct()
+                                .CountAsync();
+                        }
+                        
+                        // Check if owner exists
+                        var ownerRoleId = specialistRoleIds.FirstOrDefault();
+                        if (ownerRoleId != Guid.Empty)
+                        {
+                            ownerExists = await db.Set<CRS.Models.Security.UserRoleAssignment>()
+                                .AnyAsync(a => a.TenantId == _tenant.Id && a.RoleId == ownerRoleId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Snackbar.Add($"Error counting specialists: {ex.Message}", Severity.Warning);
+                    }
+
+                    string? interval = null;
+                    if (!string.IsNullOrWhiteSpace(_tenant.StripeSubscriptionId))
+                    {
+                        try
+                        {
+                            var client = StripeClientFactory.CreateClient();
+                            var svc = new SubscriptionService(client);
+                            var sub = await svc.GetAsync(_tenant.StripeSubscriptionId);
+                            var firstPrice = sub.Items.Data.FirstOrDefault()?.Price;
+                            interval = firstPrice?.Recurring?.Interval;
+                        }
+                        catch { }
+                    }
+
+                    _billingStatus = new BillingStatusDto(
+                        _tenant.Id,
+                        _tenant.Tier?.ToString() ?? "None",
+                        _tenant.SubscriptionStatus.ToString(),
+                        interval,
+                        _tenant.MaxCommunities,
+                        communitiesUsed,
+                        _tenant.MaxSpecialistUsers,
+                        specialistsUsed,
+                        _tenant.StripeCustomerId,
+                        _tenant.StripeSubscriptionId,
+                        _tenant.IsActive,
+                        _tenant.PendingOwnerEmail,
+                        ownerExists
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Error loading billing status: {ex.Message}", Severity.Warning);
+                }
+
+                // Load invoices
+                await LoadInvoicesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading billing information: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadInvoicesAsync()
+    {
+        if (_tenant == null) return;
+
+        _loadingInvoices = true;
+        try
+        {
+            _invoices = (await BillingService.GetRecentInvoicesAsync(_tenant.Id, 10)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading invoices: {ex.Message}", Severity.Warning);
+        }
+        finally
+        {
+            _loadingInvoices = false;
+        }
+    }
+
+    private async Task OpenBillingPortalAsync()
+    {
+        if (_tenant == null) return;
+
+        _processing = true;
+        StateHasChanged();
+
+        try
+        {
+            var portalUrl = await BillingService.CreateBillingPortalSessionAsync(_tenant.Id);
+            Nav.NavigateTo(portalUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error accessing billing portal: {ex.Message}", Severity.Error);
+            _processing = false;
+        }
+    }
+
+    // Helper Methods
+    private string GetPlanName(SubscriptionTier? tier) => tier?.ToString() ?? "None";
+
+    private string GetPlanPrice(SubscriptionTier? tier, string? interval) => tier switch
+    {
+        SubscriptionTier.Startup => interval == "year" ? "$159" : "$199",
+        SubscriptionTier.Pro => interval == "year" ? "$399" : "$499",
+        SubscriptionTier.Enterprise => "Custom",
+        _ => "N/A"
+    };
+
+    private string GetBillingCycle(string? interval) => interval switch
+    {
+        "month" => "/month",
+        "year" => "/month (billed annually)",
+        _ => ""
+    };
+
+    private string GetStatusText(string status) => status.ToLower() switch
+    {
+        "active" => "Active",
+        "trialing" => "Trial Active",
+        "past_due" => "Past Due",
+        "canceled" => "Canceled",
+        "incomplete" => "Incomplete",
+        _ => "Unknown"
+    };
+
+    private Color GetStatusColor(string status) => status.ToLower() switch
+    {
+        "active" => Color.Success,
+        "trialing" => Color.Warning,
+        "past_due" => Color.Error,
+        "canceled" => Color.Default,
+        _ => Color.Default
+    };
+
+    private Color GetInvoiceStatusColor(string status) => status.ToLower() switch
+    {
+        "paid" => Color.Success,
+        "open" => Color.Warning,
+        "void" => Color.Default,
+        "uncollectible" => Color.Error,
+        _ => Color.Default
+    };
+
+    private double GetUsagePercentage(int used, int max) => max > 0 ? (double)used / max * 100 : 0;
+
+    private Color GetUsageColor(int used, int max)
+    {
+        var percentage = GetUsagePercentage(used, max);
+        return percentage >= 90 ? Color.Error : percentage >= 75 ? Color.Warning : Color.Success;
+    }
+
+    private bool IsNearLimit(int used, int max) => GetUsagePercentage(used, max) >= 75;
+
+    private string FormatCurrency(long amountCents, string currency)
+    {
+        var amount = amountCents / 100.0;
+        return currency.ToUpper() == "USD" ? $"${amount:N2}" : $"{amount:N2} {currency.ToUpper()}";
+    }
+
+    // DTOs
+    private record BillingStatusDto(
+        int TenantId,
+        string Tier,
+        string Status,
+        string? Interval,
+        int MaxCommunities,
+        int CommunitiesUsed,
+        int MaxSpecialists,
+        int SpecialistsUsed,
+        string? StripeCustomerId,
+        string? StripeSubscriptionId,
+        bool Active,
+        string? PendingOwnerEmail,
+        bool OwnerExists
+    );
+}
+
+<style>
+    .quick-action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
+        border-color: #6A3D9A !important;
+    }
+
+    .mud-nav-link-active {
+        background-color: rgba(106, 61, 154, 0.1) !important;
+        color: #6A3D9A !important;
+        font-weight: 600 !important;
+    }
+
+    .mud-table {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+</style>

@@ -403,16 +403,16 @@
                                                     <MudTd colspan="4">
                                                         <MudGrid>
                                                             <MudItem xs="3">
-                                                                <LabeledField Label="Measurement Type" Value="@childContext.ElementMeasurementOptions?.DisplayText" />
+                                                                <LabeledField Label="Measurement Type" Value="@childContext.MeasurementOption?.DisplayText" />
                                                             </MudItem>
                                                             <MudItem xs="3">
                                                                 <LabeledField Label="Last Replaced" Value="@(childContext.LastServiced?.ToString("MM/dd/yyyy") ?? "N/A")" />
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <LabeledField Label="Useful Life" Value="@childContext.ElementUsefulLifeOptions?.DisplayText" />
+                                                                <LabeledField Label="Useful Life" Value="@childContext.UsefulLifeOption?.DisplayText" />
                                                             </MudItem>
                                                             <MudItem xs="3">
-                                                                <LabeledField Label="Remaining Life" Value="@childContext.ElementRemainingLifeOptions?.DisplayText" />
+                                                                <LabeledField Label="Remaining Life" Value="@childContext.RemainingLifeOption?.DisplayText" />
                                                             </MudItem>
                                                         </MudGrid>
                                                     </MudTd>
@@ -683,26 +683,26 @@
                 .AsNoTracking()
                 .Where(be => be.ReserveStudyId == Id)
                 .Include(be => be.BuildingElement)
-                .Include(be => be.ElementMeasurementOptions)
-                .Include(be => be.ElementUsefulLifeOptions)
-                .Include(be => be.ElementRemainingLifeOptions)
+                .Include(be => be.MeasurementOption)
+                .Include(be => be.UsefulLifeOption)
+                .Include(be => be.RemainingLifeOption)
                 .ToListAsync();
 
             var commonElements = await context.ReserveStudyCommonElements
                 .AsNoTracking()
                 .Where(ce => ce.ReserveStudyId == Id)
                 .Include(ce => ce.CommonElement)
-                .Include(ce => ce.ElementMeasurementOptions)
-                .Include(ce => ce.ElementUsefulLifeOptions)
-                .Include(ce => ce.ElementRemainingLifeOptions)
+                .Include(ce => ce.MeasurementOption)
+                .Include(ce => ce.UsefulLifeOption)
+                .Include(ce => ce.RemainingLifeOption)
                 .ToListAsync();
 
             var additionalElements = await context.ReserveStudyAdditionalElements
                 .AsNoTracking()
                 .Where(ae => ae.ReserveStudyId == Id)
-                .Include(ae => ae.ElementMeasurementOptions)
-                .Include(ae => ae.ElementUsefulLifeOptions)
-                .Include(ae => ae.ElementRemainingLifeOptions)
+                .Include(ae => ae.MeasurementOption)
+                .Include(ae => ae.UsefulLifeOption)
+                .Include(ae => ae.RemainingLifeOption)
                 .ToListAsync();
 
             if (reserveStudy != null) {

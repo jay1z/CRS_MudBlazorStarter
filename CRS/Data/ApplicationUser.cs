@@ -5,6 +5,7 @@ namespace CRS.Data {
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public string? Title { get; set; }
+        public string? CompanyName { get; set; }
         public IList<string>? Roles { get; set; }
         public StatusEnum Status { get; set; } = StatusEnum.Active;
 

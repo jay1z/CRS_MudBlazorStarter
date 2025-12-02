@@ -1,0 +1,167 @@
+﻿@using CRS.Data
+@using Microsoft.AspNetCore.Identity
+@using FluentValidation
+@inject UserManager<ApplicationUser> UserManager
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-width: 600px; padding: 0;">
+            <MudText Typo="Typo.h6" Class="mb-4">Edit User Details</MudText>
+
+            @if (User != null)
+            {
+                <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+                    <FluentValidationValidator />
+                    <MudStack Spacing="3">
+                        <!-- Name Fields -->
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="model.FirstName" 
+                                              Label="First Name *" 
+                                              Variant="Variant.Outlined"
+                                              For="@(() => model.FirstName)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="model.LastName" 
+                                              Label="Last Name *" 
+                                              Variant="Variant.Outlined"
+                                              For="@(() => model.LastName)" />
+                            </MudItem>
+                        </MudGrid>
+
+                        <!-- Email (Read-only) -->
+                        <MudTextField Value="@User.Email" 
+                                      Label="Email Address" 
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="true"
+                                      HelperText="Email cannot be changed" />
+
+                        <!-- Title -->
+                        <MudTextField @bind-Value="model.Title" 
+                                      Label="Job Title (Optional)" 
+                                      Variant="Variant.Outlined"
+                                      Placeholder="e.g., Senior Reserve Specialist"
+                                      For="@(() => model.Title)" />
+
+                        <!-- Status -->
+                        <MudSelect @bind-Value="model.Status" 
+                                   Label="Status" 
+                                   Variant="Variant.Outlined"
+                                   For="@(() => model.Status)">
+                            <MudSelectItem Value="@StatusEnum.Active">Active</MudSelectItem>
+                            <MudSelectItem Value="@StatusEnum.Inactive">Inactive</MudSelectItem>
+                            <MudSelectItem Value="@StatusEnum.LockedOut">Locked Out</MudSelectItem>
+                        </MudSelect>
+
+                        <ValidationSummary />
+                    </MudStack>
+                </EditForm>
+            }
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="HandleSubmit"
+                   Disabled="isSubmitting">
+            @if (isSubmitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Changes</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public ApplicationUser? User { get; set; }
+
+    private EditUserModel model = new();
+    private bool isSubmitting;
+
+    protected override void OnParametersSet()
+    {
+        if (User != null)
+        {
+            model = new EditUserModel
+            {
+                FirstName = User.FirstName,
+                LastName = User.LastName,
+                Title = User.Title,
+                Status = User.Status
+            };
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (isSubmitting || User == null) return;
+
+        isSubmitting = true;
+        try
+        {
+            User.FirstName = model.FirstName;
+            User.LastName = model.LastName;
+            User.Title = model.Title;
+            User.Status = model.Status;
+
+            var result = await UserManager.UpdateAsync(User);
+
+            if (result.Succeeded)
+            {
+                Snackbar.Add($"Successfully updated {User.FullName}", MudBlazor.Severity.Success);
+                MudDialog.Close(DialogResult.Ok(User));
+            }
+            else
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                Snackbar.Add($"Failed to update user: {errors}", MudBlazor.Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating user: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class EditUserModel
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Title { get; set; }
+        public StatusEnum Status { get; set; }
+    }
+
+    public class EditUserModelValidator : AbstractValidator<EditUserModel>
+    {
+        public EditUserModelValidator()
+        {
+            RuleFor(x => x.FirstName)
+                .NotEmpty().WithMessage("First name is required")
+                .MaximumLength(50).WithMessage("First name must be 50 characters or less");
+
+            RuleFor(x => x.LastName)
+                .NotEmpty().WithMessage("Last name is required")
+                .MaximumLength(50).WithMessage("Last name must be 50 characters or less");
+
+            RuleFor(x => x.Title)
+                .MaximumLength(100).WithMessage("Title must be 100 characters or less");
+        }
+    }
+}

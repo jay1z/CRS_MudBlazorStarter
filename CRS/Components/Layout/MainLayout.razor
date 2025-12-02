@@ -23,6 +23,7 @@
 @inject UserStateService UserState
 @inject IMessageService MessageService
 @inject CRS.Services.Layout.ILayoutService LayoutService
+@inject CRS.Services.Storage.ILogoStorageService LogoStorage
 
 <!-- Layout uses MudBlazor defaults for styling; custom CSS removed per request. -->
 <!-- Unified MudBlazor providers -->
@@ -32,11 +33,18 @@
 <MudPopoverProvider />
 
 <MudLayout>
-    <MudAppBar Class="top-appbar" Elevation="25">
+    <MudAppBar Elevation="25" Style="background-color: white; color: #333;">
         @if (!_hideNav) {
             <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
         }
-        <MudText Typo="Typo.h5" Class="ml-3" Style="font-weight:600;letter-spacing:0.2px">@(TenantContext?.TenantName ?? "ALX Reserve Cloud")</MudText>
+        @if (!string.IsNullOrWhiteSpace(_tenantLogoUrl))
+        {
+            <MudImage Src="@_tenantLogoUrl" Alt="@TenantContext?.TenantName" Style="max-height: 40px; max-width: 200px; object-fit: contain; margin-left: 12px;" />
+        }
+        else
+        {
+            <MudText Typo="Typo.h5" Class="ml-3" Style="font-weight:600;letter-spacing:0.2px">@(TenantContext?.TenantName ?? "ALX Reserve Cloud")</MudText>
+        }
         <MudSpacer />
         @if (_authResolved && TenantContext?.TenantId != null && TenantContext.IsResolvedByLogin == false && _isPlatformAdmin) {
             <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Class="mx-2" StartIcon="@Icons.Material.Filled.PersonSearch">
@@ -80,7 +88,7 @@
     }
 
     <!-- Centered content card like screenshot -->
-    <div class="content-stage">
+    <div class="content-stage" style="padding-top: 80px;">
         <div class="content-card">
             <MudMainContent id="main-content" Class="pa-0">
                 <ErrorBoundary>
@@ -117,6 +125,7 @@
     private bool _hasTenant = false; // sticky tenant presence
     private bool _hideNav = false;
     private bool _isAuthenticated = false;
+    private string? _tenantLogoUrl;
 
     protected override async Task OnInitializedAsync() {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
@@ -148,6 +157,8 @@
                             TenantContext.IsActive = t.IsActive;
                             TenantContext.BrandingJson = t.BrandingJson;
                             try { ThemeService.ApplyTenantBrandingIfAvailableAndChanged(); } catch { }
+                            // Load tenant logo
+                            try { _tenantLogoUrl = await LogoStorage.GetLogoUrlAsync(_claimTenantId); } catch { }
                         }
                     } catch { }
                 } else if (TenantContext?.TenantId != null) {
@@ -191,8 +202,10 @@
     }
 
     private void UpdateHideNavEffective() {
-        // Hide nav if either the page explicitly requests it or the user is not authenticated
-        _hideNav = LayoutService.HideNav || !_isAuthenticated;
+        // Hide nav if the page explicitly requests it (like Login page)
+        // But DON'T hide nav just because _isAuthenticated is false during initial render
+        // The AuthenticationStateProvider will resolve asynchronously
+        _hideNav = LayoutService.HideNav;
     }
 
     private async void RefreshUserFlagsOnChange() {
