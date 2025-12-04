@@ -4,9 +4,16 @@
 @using CRS.Services.Interfaces
 @using CRS.Services.Tenant
 @using CRS.Models
+@using CRS.Components.AppHome.ViewModels
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 @inject ISystemSettingsService SystemSettingsService
 @inject ITenantUserRoleService RoleService
 @inject ITenantContext TenantContext
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IReserveStudyService ReserveStudyService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Dashboard - @TenantName</PageTitle>
 
@@ -138,15 +145,84 @@
                         </MudText>
                     </MudStack>
                     
-                    <MudPaper Elevation="0" Class="pa-8" Style="border: 2px dashed #e0e0e0; border-radius: 12px; text-align: center; background: #fafafa;">
-                        <MudStack AlignItems="AlignItems.Center" Spacing="3">
-                            <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 64px; color: #ccc;" />
-                            <MudText Typo="Typo.h6" Style="font-weight: 600;">No studies available yet</MudText>
-                            <MudText Typo="Typo.body2" Style="color: #666;">
-                                Your reserve studies will appear here once they're published
-                            </MudText>
-                        </MudStack>
-                    </MudPaper>
+                    @if (isLoadingStudies)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+                    }
+                    else if (!hoaUserStudies.Any())
+                    {
+                        <MudPaper Elevation="0" Class="pa-8" Style="border: 2px dashed #e0e0e0; border-radius: 12px; text-align: center; background: #fafafa;">
+                            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                                <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Style="font-size: 64px; color: #ccc;" />
+                                <MudText Typo="Typo.h6" Style="font-weight: 600;">No studies available yet</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                    Your reserve studies will appear here once they're published
+                                </MudText>
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           Href="/ReserveStudies/Request"
+                                           Style="text-transform: none;">
+                                    Request a Reserve Study
+                                </MudButton>
+                            </MudStack>
+                        </MudPaper>
+                    }
+                    else
+                    {
+                        <MudTable Items="@hoaUserStudies" Dense="true" Hover="true" Elevation="0" Style="border-radius: 8px;">
+                            <HeaderContent>
+                                <MudTh Style="font-weight: 600;">Community</MudTh>
+                                <MudTh Style="font-weight: 600;">Status</MudTh>
+                                <MudTh Style="font-weight: 600;">Created</MudTh>
+                                <MudTh Style="font-weight: 600; text-align: right;">Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Community">
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Community?.Name</MudText>
+                                        <MudText Typo="Typo.caption" Style="color: #999;">
+                                            @(context.Community?.Addresses?.FirstOrDefault()?.City ?? ""), @(context.Community?.Addresses?.FirstOrDefault()?.State ?? "")
+                                        </MudText>
+                                    </MudStack>
+                                </MudTd>
+                                <MudTd DataLabel="Status">
+                                    <MudChip T="string" 
+                                             Size="Size.Small" 
+                                             Color="@GetStudyStatusColor(context)"
+                                             Variant="Variant.Filled">
+                                        @GetStudyStatusText(context)
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Created">
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        @(context.DateCreated?.ToString("MMM dd, yyyy") ?? "N/A")
+                                    </MudText>
+                                </MudTd>
+                                <MudTd DataLabel="Actions" Style="text-align: right;">
+                                    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
+                                        <MudButton Variant="Variant.Text" 
+                                                   Color="Color.Primary" 
+                                                   Size="Size.Small"
+                                                   Href="@($"/ReserveStudies/{context.Id}/Details")"
+                                                   StartIcon="@Icons.Material.Filled.Visibility">
+                                            View
+                                        </MudButton>
+                                        @if (CanEditStudy(context))
+                                        {
+                                            <MudButton Variant="Variant.Text" 
+                                                       Color="Color.Info" 
+                                                       Size="Size.Small"
+                                                       Href="@($"/ReserveStudies/{context.Id}/Edit")"
+                                                       StartIcon="@Icons.Material.Filled.Edit">
+                                                Edit
+                                            </MudButton>
+                                        }
+                                    </MudStack>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
                 </MudPaper>
             </MudItem>
 
@@ -597,37 +673,148 @@
     private bool bannerDismissed = false;
 
     // KPI Metrics
-    private int KpiProperties => Properties.Count;
-    private int KpiActiveStudies => PipelineScreening + PipelineEnrollment;
-    private int KpiReports => 0;
-    private int KpiCustomerAccounts => 0;
+    private int KpiProperties { get; set; } = 0;
+    private int KpiActiveStudies { get; set; } = 0;
+    private int KpiReports { get; set; } = 0;
+    private int KpiCustomerAccounts { get; set; } = 0;
 
-    // Pipeline metrics
-    private int PipelineScreening => 0;
-    private int PipelineEnrollment => 0;
-    private int PipelineComplete => 0;
+// Pipeline metrics
+private int PipelineScreening { get; set; } = 0;
+private int PipelineEnrollment { get; set; } = 0;
+private int PipelineComplete { get; set; } = 0;
 
-    private List<PropertyRow> Properties { get; set; } = new();
-    private List<ActivityItem> Activity { get; set; } = new();
-    private List<TicketItem> Tickets { get; set; } = new();
+private List<PropertyRow> Properties { get; set; } = new();
+private List<ActivityItem> Activity { get; set; } = new();
+private List<TicketItem> Tickets { get; set; } = new();
+private List<ReserveStudy> hoaUserStudies { get; set; } = new();
+private bool isLoadingStudies = false;
+private Guid? currentUserId = null;
 
-    protected override async Task OnInitializedAsync()
+protected override async Task OnInitializedAsync()
+{
+    // Initialize role service
+    await RoleService.InitializeAsync();
+        
+    // Load global banner from system settings
+    globalBanner = await SystemSettingsService.GetGlobalBannerInfoAsync();
+    
+    // Get current user ID for HOA user study checks
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+    if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
     {
-        // Initialize role service
-        await RoleService.InitializeAsync();
-        
-        // Load global banner from system settings
-        globalBanner = await SystemSettingsService.GetGlobalBannerInfoAsync();
-        
-        // TODO: Load real data from services based on role
-        // if (RoleService.IsHOAUser || RoleService.IsHOAAuditor) {
-        //     LoadHOAStudiesAsync();
-        // } else {
-        //     LoadPropertiesAsync();
-        //     LoadActivityAsync();
-        //     LoadTicketsAsync();
-        // }
+        currentUserId = userId;
     }
+        
+    // Load real data from services based on role and tenant context
+    await LoadDashboardDataAsync();
+    
+    // Load HOA user studies if applicable
+    if ((RoleService.IsHOAUser || RoleService.IsHOAAuditor) && currentUserId.HasValue)
+    {
+        await LoadHOAUserStudiesAsync();
+    }
+}
+
+private async Task LoadDashboardDataAsync()
+{
+    try
+    {
+        // Only load data if we have a valid tenant context
+        if (!TenantContext.TenantId.HasValue)
+        {
+            return;
+        }
+
+        var tenantId = TenantContext.TenantId.Value;
+
+        // Use TenantHomepageDataService if available, otherwise fall back to direct queries
+        var kpis = await LoadKpiDataAsync(tenantId);
+        if (kpis != null)
+        {
+            KpiProperties = kpis.Properties;
+            KpiActiveStudies = kpis.StudiesActive;
+            KpiReports = kpis.ReportsRecent;
+            KpiCustomerAccounts = kpis.CustomerAccounts;
+        }
+
+        // Load pipeline data
+        await LoadPipelineDataAsync(tenantId);
+    }
+    catch (Exception)
+    {
+        // Silently fail - dashboard will show zeros
+    }
+}
+
+private async Task<TenantKpisVm?> LoadKpiDataAsync(int tenantId)
+{
+    // Count properties (communities) for this tenant
+    await using var context = await DbFactory.CreateDbContextAsync();
+        
+    var properties = await context.Communities
+        .CountAsync(c => c.TenantId == tenantId);
+        
+    // Count active reserve studies for this tenant
+    var studiesActive = await context.ReserveStudies
+        .Include(rs => rs.Community)
+        .CountAsync(rs => rs.Community != null && 
+                         rs.Community.TenantId == tenantId && 
+                         rs.IsActive && 
+                         !rs.IsComplete);
+        
+    // Count completed reports in the last 6 months for this tenant
+    var reportsRecent = await context.ReserveStudies
+        .Include(rs => rs.Community)
+        .CountAsync(rs => rs.Community != null && 
+                         rs.Community.TenantId == tenantId && 
+                         rs.IsComplete && 
+                         rs.DateCreated.HasValue &&
+                         rs.DateCreated.Value > DateTime.UtcNow.AddMonths(-6));
+        
+    // TODO: Count customer accounts when the model is available
+    var customerAccounts = 0;
+        
+    return new TenantKpisVm 
+    { 
+        Properties = properties, 
+        StudiesActive = studiesActive, 
+        ReportsRecent = reportsRecent, 
+        CustomerAccounts = customerAccounts 
+    };
+}
+
+private async Task LoadPipelineDataAsync(int tenantId)
+{
+    await using var context = await DbFactory.CreateDbContextAsync();
+        
+    // Count studies by status for this tenant
+    // Screening = early stage statuses (RequestCreated through ProposalSent)
+    PipelineScreening = await context.ReserveStudies
+        .Include(rs => rs.Community)
+        .CountAsync(rs => rs.Community != null && 
+                         rs.Community.TenantId == tenantId && 
+                         rs.IsActive && 
+                         !rs.IsComplete &&
+                         (int)rs.Status <= 5); // RequestCreated through ProposalSent
+        
+    // Enrollment = mid-stage statuses (ProposalAccepted through SiteVisitDataEntered)
+    PipelineEnrollment = await context.ReserveStudies
+        .Include(rs => rs.Community)
+        .CountAsync(rs => rs.Community != null && 
+                         rs.Community.TenantId == tenantId && 
+                         rs.IsActive && 
+                         !rs.IsComplete &&
+                         (int)rs.Status >= 6 && (int)rs.Status <= 16);
+        
+    // Complete = final stage (completed studies)
+    PipelineComplete = await context.ReserveStudies
+        .Include(rs => rs.Community)
+        .CountAsync(rs => rs.Community != null && 
+                         rs.Community.TenantId == tenantId && 
+                         rs.IsActive && 
+                         rs.IsComplete);
+}
 
     private string GetUserGreeting()
     {
@@ -678,6 +865,90 @@
     {
         globalBanner = null;
         bannerDismissed = true;
+    }
+
+    private async Task LoadHOAUserStudiesAsync()
+    {
+        try
+        {
+            isLoadingStudies = true;
+            
+            if (!currentUserId.HasValue || !TenantContext.TenantId.HasValue)
+            {
+                return;
+            }
+
+            await using var context = await DbFactory.CreateDbContextAsync();
+            
+            // Get reserve studies owned by this HOA user
+            hoaUserStudies = await context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.Community)
+                    .ThenInclude(c => c.Addresses)
+                .Where(rs => rs.ApplicationUserId == currentUserId.Value && 
+                            rs.IsActive &&
+                            rs.TenantId == TenantContext.TenantId.Value)
+                .OrderByDescending(rs => rs.DateCreated)
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            // Silently fail - dashboard will show empty list
+            hoaUserStudies = new List<ReserveStudy>();
+        }
+        finally
+        {
+            isLoadingStudies = false;
+        }
+    }
+
+    private bool CanEditStudy(ReserveStudy study)
+    {
+        if (study == null) return false;
+        
+        // Only the owner can edit
+        if (study.ApplicationUserId != currentUserId) return false;
+        
+        // Use the service method to check if study is in editable state
+        return ReserveStudyService.CanUpdateReserveStudy(study);
+    }
+
+    private string GetStudyStatusText(ReserveStudy study)
+    {
+        if (study == null) return "Unknown";
+        
+        if (study.IsComplete) return "Complete";
+        
+        return study.Status switch
+        {
+            ReserveStudy.WorkflowStatus.RequestCreated => "Draft",
+            ReserveStudy.WorkflowStatus.ProposalCreated => "Under Review",
+            ReserveStudy.WorkflowStatus.ProposalSent => "Proposal Sent",
+            ReserveStudy.WorkflowStatus.ProposalAccepted => "In Progress",
+            ReserveStudy.WorkflowStatus.SiteVisitScheduled => "Visit Scheduled",
+            ReserveStudy.WorkflowStatus.SiteVisitCompleted => "Visit Complete",
+            ReserveStudy.WorkflowStatus.ReportComplete => "Report Ready",
+            _ => "In Progress"
+        };
+    }
+
+    private Color GetStudyStatusColor(ReserveStudy study)
+    {
+        if (study == null) return Color.Default;
+        
+        if (study.IsComplete) return Color.Success;
+        
+        return study.Status switch
+        {
+            ReserveStudy.WorkflowStatus.RequestCreated => Color.Info,
+            ReserveStudy.WorkflowStatus.ProposalCreated => Color.Warning,
+            ReserveStudy.WorkflowStatus.ProposalSent => Color.Warning,
+            ReserveStudy.WorkflowStatus.ProposalAccepted => Color.Primary,
+            ReserveStudy.WorkflowStatus.SiteVisitScheduled => Color.Primary,
+            ReserveStudy.WorkflowStatus.SiteVisitCompleted => Color.Primary,
+            ReserveStudy.WorkflowStatus.ReportComplete => Color.Success,
+            _ => Color.Primary
+        };
     }
 
     public class PropertyRow

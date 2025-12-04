@@ -3,7 +3,7 @@
 
 @using System.Security.Claims
 @using CRS.Components.Layout
-@using CRS.Components.Pages.ReserveStudyPages.Steps
+@using CRS.Components.Pages.ReserveStudyPages.Steps.Create
 @using CRS.Data
 @using CRS.Models
 @using CRS.Services
@@ -109,10 +109,10 @@ else {
     private bool isExistingCommunity;
     private int activeStep;
 
-    private Step1? step1;
-    private Step2? step2;
-    private Step3? step3;
-    private Step4? step4;
+    private Step1Create? step1;
+    private Step2Create? step2;
+    private Step3Create? step3;
+    private Step4Create? step4;
 
     private List<StepDefinition> steps = new();
 
@@ -137,10 +137,10 @@ else {
 
     private void InitializeSteps() {
         steps = new List<StepDefinition> {
-            new(0, "Community Information", @<Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated" OnExistingCommunityChanged="@((bool isExisting) => isExistingCommunity = isExisting)" />),
-            new(1, "Property Manager", @<Step2 @ref="step2" Model="Model" StepValidated="OnStepValidated" />),
-            new(2, "Property Elements", @<Step3 @ref="step3" Model="Model" StepValidated="OnStepValidated" />),
-            new(3, "Acknowledgement", @<Step4 @ref="step4" Model="Model" StepValidated="OnStepValidated" AcceptTerms="@AcceptTerms" AcceptTermsChanged="@OnAcceptTermsChanged" />)
+            new(0, "Community Information", @<Step1Create @ref="step1" Model="Model" StepValidated="OnStepValidated" OnExistingCommunityChanged="@((bool isExisting) => isExistingCommunity = isExisting)" />),
+            new(1, "Property Manager", @<Step2Create @ref="step2" Model="Model" StepValidated="OnStepValidated" />),
+            new(2, "Property Elements", @<Step3Create @ref="step3" Model="Model" StepValidated="OnStepValidated" />),
+            new(3, "Acknowledgement", @<Step4Create @ref="step4" Model="Model" StepValidated="OnStepValidated" AcceptTerms="@AcceptTerms" AcceptTermsChanged="@OnAcceptTermsChanged" />)
         };
     }
 

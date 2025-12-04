@@ -884,6 +884,7 @@ namespace CRS.Migrations
                     State = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Zip = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsMailingAddress = table.Column<bool>(type: "bit", nullable: false),
+                    AddressType = table.Column<int>(type: "int", nullable: false),
                     CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),

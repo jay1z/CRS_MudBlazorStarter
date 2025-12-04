@@ -45,12 +45,39 @@ namespace CRS.Services {
                 var existingCommunity = await context.Communities
                     .AsNoTracking()
                     .FirstOrDefaultAsync(c => c.Id == reserveStudy.CommunityId);
-                    
+
                 if (existingCommunity == null) {
-                    throw new InvalidOperationException("The specified community does not exist.");
+                    // Defensive: if a Community object is provided, create it instead of failing
+                    if (reserveStudy.Community != null) {
+                        // Ensure tenant and ids
+                        if (reserveStudy.Community.TenantId != tenantId) {
+                            reserveStudy.Community.TenantId = tenantId;
+                        }
+                        if (reserveStudy.Community.Id == Guid.Empty) {
+                            // use provided reference if any (handle nullable Guid?)
+                            reserveStudy.Community.Id = reserveStudy.CommunityId.GetValueOrDefault();
+                            if (reserveStudy.Community.Id == Guid.Empty) {
+                                reserveStudy.Community.Id = Guid.CreateVersion7();
+                            }
+                        }
+
+                        // Ensure address ids
+                        foreach (var addr in reserveStudy.Community.Addresses ?? Enumerable.Empty<Address>()) {
+                            if (addr.Id == Guid.Empty) addr.Id = Guid.CreateVersion7();
+                        }
+
+                        await context.Communities.AddAsync(reserveStudy.Community);
+                        await context.SaveChangesAsync();
+
+                        // After creation, ensure CommunityId is aligned
+                        reserveStudy.CommunityId = reserveStudy.Community.Id;
+                    }
+                    else {
+                        throw new InvalidOperationException("The specified community does not exist.");
+                    }
                 }
-                
-                if (existingCommunity.TenantId != tenantId) {
+
+                if (existingCommunity != null && existingCommunity.TenantId != tenantId) {
                     throw new UnauthorizedAccessException("You cannot create a reserve study for a community that belongs to a different organization.");
                 }
             }
@@ -74,6 +101,7 @@ namespace CRS.Services {
             if (reserveStudy.Contact != null && reserveStudy.ContactId == null) {
                 reserveStudy.Contact.Id = Guid.CreateVersion7();
                 if (reserveStudy.Contact.TenantId == 0) reserveStudy.Contact.TenantId = tenantId;
+                context.Contacts.Add(reserveStudy.Contact);
             } else if (reserveStudy.ContactId != null) {
                 reserveStudy.Contact = null;
             }
@@ -81,6 +109,7 @@ namespace CRS.Services {
             if (reserveStudy.PropertyManager != null && reserveStudy.PropertyManagerId == null) {
                 reserveStudy.PropertyManager.Id = Guid.CreateVersion7();
                 if (reserveStudy.PropertyManager.TenantId == 0) reserveStudy.PropertyManager.TenantId = tenantId;
+                context.PropertyManagers.Add(reserveStudy.PropertyManager);
             } else if (reserveStudy.PropertyManagerId != null) {
                 reserveStudy.PropertyManager = null;
             }
@@ -114,6 +143,146 @@ namespace CRS.Services {
 
             await context.SaveChangesAsync();
             return true;
+        }
+
+        /// <summary>
+        /// Updates an existing reserve study. 
+        /// HOA users can only update if the proposal has not been accepted (Status < ProposalAccepted).
+        /// Staff/specialists can update at any time before completion.
+        /// </summary>
+        public async Task<ReserveStudy> UpdateReserveStudyAsync(ReserveStudy reserveStudy) {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+
+            // SECURITY: Require tenant context
+            if (!_tenantContext.TenantId.HasValue) {
+                throw new InvalidOperationException("Tenant context is required to update a reserve study.");
+            }
+
+            var tenantId = _tenantContext.TenantId.Value;
+
+            // Fetch the existing study with tracking
+            var existingStudy = await context.ReserveStudies
+                .Include(rs => rs.Community)
+                .Include(rs => rs.Contact)
+                .Include(rs => rs.PropertyManager)
+                .FirstOrDefaultAsync(rs => rs.Id == reserveStudy.Id && rs.IsActive);
+
+            if (existingStudy == null) {
+                throw new InvalidOperationException("Reserve study not found or is no longer active.");
+            }
+
+            // SECURITY: Verify tenant ownership
+            if (existingStudy.TenantId != tenantId) {
+                throw new UnauthorizedAccessException("You cannot update a reserve study that belongs to a different organization.");
+            }
+
+            // Check if the study can be updated based on its status
+            if (!CanUpdateReserveStudy(existingStudy)) {
+                throw new InvalidOperationException("This reserve study can no longer be modified. The proposal has already been accepted.");
+            }
+
+            // Update allowed fields
+            // Contact information
+            if (reserveStudy.Contact != null && existingStudy.Contact != null) {
+                existingStudy.Contact.FirstName = reserveStudy.Contact.FirstName;
+                existingStudy.Contact.LastName = reserveStudy.Contact.LastName;
+                existingStudy.Contact.Email = reserveStudy.Contact.Email;
+                existingStudy.Contact.Phone = reserveStudy.Contact.Phone;
+                existingStudy.Contact.Extension = reserveStudy.Contact.Extension;
+                existingStudy.Contact.CompanyName = reserveStudy.Contact.CompanyName;
+            }
+
+            // Property Manager information
+            if (reserveStudy.PropertyManager != null && existingStudy.PropertyManager != null) {
+                existingStudy.PropertyManager.FirstName = reserveStudy.PropertyManager.FirstName;
+                existingStudy.PropertyManager.LastName = reserveStudy.PropertyManager.LastName;
+                existingStudy.PropertyManager.Email = reserveStudy.PropertyManager.Email;
+                existingStudy.PropertyManager.Phone = reserveStudy.PropertyManager.Phone;
+                existingStudy.PropertyManager.Extension = reserveStudy.PropertyManager.Extension;
+                existingStudy.PropertyManager.CompanyName = reserveStudy.PropertyManager.CompanyName;
+            }
+
+            // Update community information if allowed
+            if (reserveStudy.Community != null && existingStudy.Community != null) {
+                // SECURITY: Verify the community belongs to the same tenant
+                if (existingStudy.Community.TenantId == tenantId) {
+                    existingStudy.Community.Name = reserveStudy.Community.Name;
+                    
+                    // Load existing addresses for proper tracking
+                    await context.Entry(existingStudy.Community).Collection(c => c.Addresses).LoadAsync();
+                    
+                    // Update addresses - handle additions, updates, and deletions
+                    if (reserveStudy.Community.Addresses != null) {
+                        // Update or add addresses
+                        foreach (var updatedAddr in reserveStudy.Community.Addresses) {
+                            var existingAddr = existingStudy.Community.Addresses?
+                                .FirstOrDefault(a => a.Id != Guid.Empty && a.Id == updatedAddr.Id);
+                            
+                            if (existingAddr != null) {
+                                // Update existing address
+                                existingAddr.Street = updatedAddr.Street;
+                                existingAddr.City = updatedAddr.City;
+                                existingAddr.State = updatedAddr.State;
+                                existingAddr.Zip = updatedAddr.Zip;
+                                existingAddr.IsMailingAddress = updatedAddr.IsMailingAddress;
+                            }
+                            else {
+                                // Add new address - EF Core will set CommunityId automatically via relationship
+                                if (updatedAddr.Id == Guid.Empty) {
+                                    updatedAddr.Id = Guid.CreateVersion7();
+                                }
+                                existingStudy.Community.Addresses ??= new List<Address>();
+                                existingStudy.Community.Addresses.Add(updatedAddr);
+                                context.Addresses.Add(updatedAddr);
+                            }
+                        }
+                        
+                        // Remove addresses that are no longer in the updated collection
+                        var updatedAddressIds = reserveStudy.Community.Addresses
+                            .Where(a => a.Id != Guid.Empty)
+                            .Select(a => a.Id)
+                            .ToHashSet();
+                        
+                        var addressesToRemove = existingStudy.Community.Addresses?
+                            .Where(a => !updatedAddressIds.Contains(a.Id))
+                            .ToList();
+                        
+                        if (addressesToRemove != null && addressesToRemove.Any()) {
+                            foreach (var addr in addressesToRemove) {
+                                existingStudy.Community.Addresses?.Remove(addr);
+                                context.Remove(addr);
+                            }
+                        }
+                    }
+                }
+            }
+
+            existingStudy.LastModified = DateTime.UtcNow;
+            await context.SaveChangesAsync();
+
+            return existingStudy;
+        }
+
+        /// <summary>
+        /// Determines if a reserve study can be updated by checking its workflow status.
+        /// Reserve studies can only be updated before the proposal is accepted.
+        /// </summary>
+        public bool CanUpdateReserveStudy(ReserveStudy reserveStudy) {
+            if (reserveStudy == null) {
+                return false;
+            }
+
+            // Cannot update if the study is complete or cancelled
+            if (reserveStudy.IsComplete || 
+                reserveStudy.Status == ReserveStudy.WorkflowStatus.RequestCompleted ||
+                reserveStudy.Status == ReserveStudy.WorkflowStatus.RequestCancelled ||
+                reserveStudy.Status == ReserveStudy.WorkflowStatus.RequestArchived) {
+                return false;
+            }
+
+            // HOA users can only update before the proposal is accepted
+            // Status values 0-5 are before ProposalAccepted (which is 6)
+            return (int)reserveStudy.Status < (int)ReserveStudy.WorkflowStatus.ProposalAccepted;
         }
 
         /// <summary>

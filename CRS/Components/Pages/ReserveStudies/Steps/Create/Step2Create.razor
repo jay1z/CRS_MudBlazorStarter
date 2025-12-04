@@ -1,4 +1,4 @@
-﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps
+﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps.Create
 
 @using MudBlazor
 @using CRS.Data
@@ -9,6 +9,7 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IContactService ContactService
 @inject UserStateService UserState
+@inject ISnackbar Snackbar
 
 <MudForm Model="Model" @ref="form">
     <MudGrid>
@@ -155,20 +156,17 @@
 </MudForm>
 
 @code {
-[Parameter]
-public ReserveStudy Model { get; set; }
+    [Parameter]
+    public ReserveStudy Model { get; set; }
 
-[Parameter]
-public EventCallback<bool> StepValidated { get; set; }
+    [Parameter]
+    public EventCallback<bool> StepValidated { get; set; }
 
-[Parameter]
-public EventCallback<bool> OnExistingContactChanged { get; set; }
+    [Parameter]
+    public EventCallback<bool> OnExistingContactChanged { get; set; }
 
-[Parameter]
-public bool IsEdit { get; set; } = false;
-
-private MudForm form;
-private bool useExistingContact;
+    private MudForm form;
+    private bool useExistingContact;
     private bool useExistingPropertyManager;
     private bool _includePropertyManager = false;
     private Contact selectedContact;
@@ -176,7 +174,7 @@ private bool useExistingContact;
     private List<Contact> existingContacts = new();
     private List<PropertyManager> existingPropertyManagers = new();
 
-    // Property with logic to initialize PropertyManager when checked
+    // Simplified property - just manages checkbox state
     private bool includePropertyManager
     {
         get => _includePropertyManager;
@@ -188,17 +186,12 @@ private bool useExistingContact;
             
             if (value)
             {
-                // When checking the box, initialize PropertyManager and default to "Enter New"
+                // Initialize PropertyManager when checking the box
                 useExistingPropertyManager = false;
                 if (Model != null && Model.PropertyManager == null)
                 {
                     Model.PropertyManager = new PropertyManager();
                 }
-            }
-            else
-            {
-                // When unchecking, we'll clear the property manager in validation
-                useExistingPropertyManager = false;
             }
             
             StateHasChanged();
@@ -209,8 +202,8 @@ private bool useExistingContact;
         await LoadUserContacts();
         await LoadUserPropertyManagers();
         
-        // Initialize includePropertyManager based on existing data
-        // Check if PropertyManager exists AND has meaningful data (not just empty strings)
+        // For CREATE mode: Check if PropertyManager has any meaningful data
+        // This handles navigation back to this step after filling in data
         if (Model?.PropertyManager != null) {
             var hasData = !string.IsNullOrWhiteSpace(Model.PropertyManager.FirstName) ||
                          !string.IsNullOrWhiteSpace(Model.PropertyManager.LastName) ||
@@ -218,12 +211,12 @@ private bool useExistingContact;
                          !string.IsNullOrWhiteSpace(Model.PropertyManager.Email) ||
                          !string.IsNullOrWhiteSpace(Model.PropertyManager.Phone);
             
-            if (hasData || IsEdit) {
+            if (hasData) {
                 _includePropertyManager = true;
             }
         }
         
-        // Ensure Property Manager is initialized when needed
+        // Ensure PropertyManager is initialized if checkbox is checked
         if (_includePropertyManager && Model?.PropertyManager == null) {
             Model.PropertyManager = new PropertyManager();
         }
@@ -239,7 +232,6 @@ private bool useExistingContact;
             }
         }
         catch (Exception) {
-            // Handle or log errors as needed
             existingContacts = new List<Contact>();
         }
     }
@@ -253,7 +245,6 @@ private bool useExistingContact;
                 .ToListAsync();
         }
         catch (Exception) {
-            // Handle or log errors as needed
             existingPropertyManagers = new List<PropertyManager>();
         }
     }
@@ -274,21 +265,6 @@ private bool useExistingContact;
         }
     }
 
-    private async Task OnPropertyManagerTypeChanged(bool useExisting) {
-        useExistingPropertyManager = useExisting;
-        if (!useExisting) {
-            selectedPropertyManager = null;
-            Model.PropertyManager = new PropertyManager();
-        }
-        else {
-            // When switching to existing, ensure we have a property manager instance
-            if (Model.PropertyManager == null) {
-                Model.PropertyManager = new PropertyManager();
-            }
-        }
-        await OnExistingContactChanged.InvokeAsync(useExistingPropertyManager);
-    }
-
     private void OnExistingPropertyManagerSelected() {
         if (selectedPropertyManager != null) {
             Model.PropertyManager = selectedPropertyManager;
@@ -297,10 +273,9 @@ private bool useExistingContact;
     }
 
     public async Task<bool> ValidateAsync() {
-        // Only clear property manager if explicitly unchecked AND there's no meaningful data
-        // This prevents accidentally clearing data when navigating between steps
+        // Simple validation for CREATE mode
         if (!includePropertyManager) {
-            // Only clear if the PropertyManager is empty or was just initialized
+            // Only clear if PropertyManager is truly empty
             if (Model.PropertyManager != null && 
                 string.IsNullOrWhiteSpace(Model.PropertyManager.FirstName) &&
                 string.IsNullOrWhiteSpace(Model.PropertyManager.LastName) &&
@@ -308,12 +283,11 @@ private bool useExistingContact;
                 Model.PropertyManager = null;
                 Model.PropertyManagerId = null;
             }
-            // If there IS data but checkbox is unchecked, keep the data
             else if (Model.PropertyManager != null) {
-                // Property manager has data but checkbox is unchecked - keep the data
-                // This handles the case where user filled it in, navigated away, and came back
-                _includePropertyManager = true; // Re-check the box to match the data
+                // Has data but checkbox unchecked - preserve data and re-check
+                _includePropertyManager = true;
             }
+            
             Model.PointOfContactType = ReserveStudy.PointOfContactTypeEnum.Contact;
         }
         

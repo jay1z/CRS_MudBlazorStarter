@@ -147,6 +147,19 @@ namespace CRS.Data {
                 .WithOne(s => s.StudyRequest)
                 .HasForeignKey<StudyRequest>(r => r.Id);
 
+            // Configure optional relationships for Contact and PropertyManager
+            builder.Entity<ReserveStudy>()
+                .HasOne(r => r.Contact)
+                .WithMany()
+                .HasForeignKey(r => r.ContactId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReserveStudy>()
+                .HasOne(r => r.PropertyManager)
+                .WithMany()
+                .HasForeignKey(r => r.PropertyManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Security entities
             builder.Entity<Role>(entity => {
                 entity.ToTable("Roles");

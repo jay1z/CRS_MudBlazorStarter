@@ -5,6 +5,7 @@ using CRS.Models.Emails;
 namespace CRS.Services.Interfaces {
     public interface IReserveStudyService {
         Task<ReserveStudy> CreateReserveStudyAsync(ReserveStudy reserveStudy);
+        Task<ReserveStudy> UpdateReserveStudyAsync(ReserveStudy reserveStudy);
         Task<bool> DeleteReserveStudyAsync(Guid id);
         Task<ReserveStudy?> GetReserveStudyByIdAsync(Guid studyId);
         Task<List<ReserveStudy>> GetAllReserveStudiesAsync();
@@ -17,5 +18,6 @@ namespace CRS.Services.Interfaces {
         Task<Guid> GenerateAccessTokenAsync(Guid requestId);
         Task<Guid?> ValidateAccessTokenAsync(Guid token);
         Task RevokeAccessTokenAsync(Guid token);
+        bool CanUpdateReserveStudy(ReserveStudy reserveStudy);
     }
 }

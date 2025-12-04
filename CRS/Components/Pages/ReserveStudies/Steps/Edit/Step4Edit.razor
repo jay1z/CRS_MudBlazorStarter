@@ -1,0 +1,65 @@
+﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps.Edit
+
+@using MudBlazor
+
+<MudForm @ref="form">
+    <MudGrid>
+        <!-- Acknowledgement Header -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Class="mb-4">Please Acknowledge</MudText>
+        </MudItem>
+
+        <!-- Acknowledgement Notice -->
+        <MudItem xs="12">
+            <MudPaper Class="pa-4" Elevation="1" Style="background-color: #fff3cd; border: 1px dashed #ffc107;">
+                <MudGrid>
+                    <MudItem xs="12" sm="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Warning" Size="Size.Large" />
+                    </MudItem>
+                    <MudItem xs="12" sm="11">
+                        <MudText Typo="Typo.body1" Class="mb-4">
+                            By checking this box, the Association acknowledges it has read and understands the definition of "COMMON ELEMENTS" as set forth in the Association's Declarations and Bylaws.
+                        </MudText>
+                        <MudText Typo="Typo.body1" Class="text-gray-700 mb-4">
+                            Furthermore, the Association acknowledges that the common elements have been identified and agreed upon by the Board of Directors for purposes of this Reserve Study.
+                        </MudText>                        
+                        <MudCheckBox T="bool" @bind-Value="AcceptTerms" Label="Accepts the terms of agreement." Required="true" RequiredError="You must accept the terms to proceed." Color="Color.Warning" />
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudForm>
+
+@code {
+    private MudForm form;
+    private bool acceptTerms;
+
+    [Parameter]
+    public bool AcceptTerms
+    {
+        get => acceptTerms;
+        set
+        {
+            if (acceptTerms == value) return;
+            acceptTerms = value;
+            AcceptTermsChanged.InvokeAsync(value);
+        }
+    }
+    [Parameter]
+    public EventCallback<bool> AcceptTermsChanged { get; set; }
+
+    [Parameter]
+    public ReserveStudy? Model { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> StepValidated { get; set; }
+
+    public async Task<bool> ValidateAsync()
+    {
+        await form.Validate();
+        bool valid = form.IsValid;
+        await StepValidated.InvokeAsync(valid);
+        return valid;
+    }
+}

@@ -43,7 +43,7 @@
         }
         else
         {
-            <MudText Typo="Typo.h5" Class="ml-3" Style="font-weight:600;letter-spacing:0.2px">@(TenantContext?.TenantName ?? "ALX Reserve Cloud")</MudText>
+            <MudText Typo="Typo.h5" Class="ml-3" Style="font-family: 'Google Sans Code', monospace; font-weight:600;letter-spacing:0.2px">@(TenantContext?.TenantName ?? "ALX Reserve Cloud")</MudText>
         }
         <MudSpacer />
         @if (_authResolved && TenantContext?.TenantId != null && TenantContext.IsResolvedByLogin == false && _isPlatformAdmin) {

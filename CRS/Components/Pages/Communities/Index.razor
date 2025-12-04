@@ -3,6 +3,7 @@
 
 @using CRS.Components.Pages.ReserveStudy.Dialogs
 @using CRS.Data
+@using CRS.Models
 @using CRS.Services
 @using CRS.Services.Interfaces
 @using Microsoft.AspNetCore.Identity
@@ -46,10 +47,10 @@
                 <MudTable T="Community" Items="@(FilteredCommunities)" Dense="true" Hover="true" Elevation="0" Loading="@isLoading" SortLabel="Sort by">
                     <HeaderContent>
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Name)">NAME</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.Street)">STREET</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.City)">CITY</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.State)">STATE</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault()?.Zip)">ZIP</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault(a => a.AddressType == AddressType.Physical)?.Street)">STREET</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault(a => a.AddressType == AddressType.Physical)?.City)">CITY</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault(a => a.AddressType == AddressType.Physical)?.State)">STATE</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Addresses?.FirstOrDefault(a => a.AddressType == AddressType.Physical)?.Zip)">ZIP</MudTableSortLabel></MudTh>
                         <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.DateCreated)">Created</MudTableSortLabel></MudTh>
                         <MudTh></MudTh>
                     </HeaderContent>
@@ -58,16 +59,16 @@
                             <MudText Typo="Typo.h5" Class="fw-bold">@community.Name</MudText>
                         </MudTd>
                         <MudTd DataLabel="Street">
-                            @community.Addresses?.FirstOrDefault()?.Street
+                            @community.Addresses?.FirstOrDefault(a => a.AddressType == AddressType.Physical)?.Street
                         </MudTd>
                         <MudTd DataLabel="City">
-                            @community.Addresses?.FirstOrDefault()?.City
+                            @community.Addresses?.FirstOrDefault(a => a.AddressType == AddressType.Physical)?.City
                         </MudTd>
                         <MudTd DataLabel="State">
-                            @community.Addresses?.FirstOrDefault()?.State
+                            @community.Addresses?.FirstOrDefault(a => a.AddressType == AddressType.Physical)?.State
                         </MudTd>
                         <MudTd DataLabel="Zip">
-                            @community.Addresses?.FirstOrDefault()?.Zip
+                            @community.Addresses?.FirstOrDefault(a => a.AddressType == AddressType.Physical)?.Zip
                         </MudTd>
                         <MudTd DataLabel="Created">
                             @community.DateCreated.ToString()

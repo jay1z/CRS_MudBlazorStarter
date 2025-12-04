@@ -3,7 +3,7 @@
 
 @using System.Security.Claims
 @using CRS.Components.Layout
-@using CRS.Components.Pages.ReserveStudyPages.Steps
+@using CRS.Components.Pages.ReserveStudyPages.Steps.Create
 @using CRS.Data
 @using CRS.Models
 @using CRS.Services
@@ -171,10 +171,10 @@ else {
     private bool isExistingCommunity;
     private int activeStep;
 
-    private Step1? step1;
-    private Step2? step2;
-    private Step3? step3;
-    private Step4? step4;
+    private Step1Create? step1;
+    private Step2Create? step2;
+    private Step3Create? step3;
+    private Step4Create? step4;
 
     private List<StepDefinition> steps = new();
 
@@ -208,10 +208,10 @@ else {
 
     private void InitializeSteps() {
         steps = new List<StepDefinition> {
-            new(0, "Community Information", @<Step1 @ref="step1" Model="Model" StepValidated="OnStepValidated" OnExistingCommunityChanged="@((bool isExisting) => isExistingCommunity = isExisting)" />),
-            new(1, "Property Manager", @<Step2 @ref="step2" Model="Model" StepValidated="OnStepValidated" />),
-            new(2, "Property Elements", @<Step3 @ref="step3" Model="Model" StepValidated="OnStepValidated" />),
-            new(3, "Acknowledgement", @<Step4 @ref="step4" Model="Model" StepValidated="OnStepValidated" AcceptTerms="@AcceptTerms" AcceptTermsChanged="@OnAcceptTermsChanged" />)
+            new(0, "Community Information", @<Step1Create @ref="step1" Model="Model" StepValidated="OnStepValidated" OnExistingCommunityChanged="@((bool isExisting) => isExistingCommunity = isExisting)" />),
+            new(1, "Property Manager", @<Step2Create @ref="step2" Model="Model" StepValidated="OnStepValidated" />),
+            new(2, "Property Elements", @<Step3Create @ref="step3" Model="Model" StepValidated="OnStepValidated" />),
+            new(3, "Acknowledgement", @<Step4Create @ref="step4" Model="Model" StepValidated="OnStepValidated" AcceptTerms="@AcceptTerms" AcceptTermsChanged="@OnAcceptTermsChanged" />)
         };
     }
 
@@ -309,6 +309,16 @@ else {
 
         isSubmitting = true;
         try {
+            // IMPORTANT: Save new community first if needed (same as Create.razor)
+            if (step1 != null) {
+                var communitySaved = await step1.SaveNewCommunityIfNeededAsync();
+                if (!communitySaved) {
+                    Snackbar.Add("Failed to save community. Please try again.", Severity.Error);
+                    isSubmitting = false;
+                    return;
+                }
+            }
+
             PrepareModelForSubmission();
 
             // Use workflow service so the StudyRequest is created and state machine is initialized
@@ -335,19 +345,22 @@ else {
         var tenantId = TenantContext.TenantId!.Value;
         Model!.TenantId = tenantId;
         
-        if (isExistingCommunity && Model?.Community?.Id != null) {
-            // For existing community, just set the reference
+        // Ensure CommunityId is set properly
+        if (Model?.Community != null && Model.Community.Id != Guid.Empty) {
+            // Set the CommunityId reference
             Model.CommunityId = Model.Community.Id;
-            Model.Community = null;
-        }
-        else if (Model?.Community != null) {
-            // For new community, ensure it's tracked as a new entity
-            Model.Community.Id = Guid.CreateVersion7();
-            Model.Community.TenantId = tenantId; // SECURITY: Force tenant ID
-            
-            foreach (var address in Model.Community.Addresses ?? Enumerable.Empty<Address>()) {
-                address.Id = Guid.CreateVersion7();
+            Logger.LogInformation("PrepareModelForSubmission: Setting CommunityId to {CommunityId}", Model.CommunityId);
+
+            // Detach only if user selected an existing community
+            if (isExistingCommunity) {
+                Model.Community = null;
             }
+        }
+        else {
+            Logger.LogWarning("PrepareModelForSubmission: Community is null or has empty ID. Community: {IsNull}, ID: {CommunityId}", 
+                Model?.Community == null ? "NULL" : "NOT NULL", 
+                Model?.Community?.Id ?? Guid.Empty);
+            // For new community, keep the Community object so the service can persist it
         }
         
         // SECURITY: Ensure all related entities have correct tenant ID

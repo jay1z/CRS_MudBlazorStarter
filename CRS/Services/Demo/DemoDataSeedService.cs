@@ -70,12 +70,24 @@ namespace CRS.Services.Demo
                 Name = name,
                 Addresses = new List<Address>
                 {
+                    // Primary physical address
                     new Address
                     {
                         Street = GetSampleAddress(size),
                         City = GetSampleCity(size),
                         State = GetSampleState(size),
                         Zip = GetSampleZip(size),
+                        AddressType = AddressType.Physical,
+                        IsMailingAddress = false
+                    },
+                    // Mailing address (same as physical for demo)
+                    new Address
+                    {
+                        Street = GetSampleAddress(size),
+                        City = GetSampleCity(size),
+                        State = GetSampleState(size),
+                        Zip = GetSampleZip(size),
+                        AddressType = AddressType.Mailing,
                         IsMailingAddress = true
                     }
                 },
