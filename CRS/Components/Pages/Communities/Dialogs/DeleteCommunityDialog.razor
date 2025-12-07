@@ -21,7 +21,7 @@
                         <MudText><strong>Community:</strong> @Community?.Name</MudText>
                     </MudListItem>
                     <MudListItem>
-                        <MudText><strong>Address:</strong> @Community?.Addresses?.FirstOrDefault()?.FullAddress</MudText>
+                        <MudText><strong>Address:</strong> @Community?.PhysicalAddress?.FullAddress</MudText>
                     </MudListItem>
                     <MudListItem>
                         <MudText><strong>Created:</strong> @Community?.DateCreated?.ToShortDateString()</MudText>

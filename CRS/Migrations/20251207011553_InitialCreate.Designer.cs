@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251204163709_InitialCreate")]
+    [Migration("20251207011553_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,7 +20,6 @@ namespace CRS.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("crs")
                 .HasAnnotation("ProductVersion", "9.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
@@ -115,7 +114,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("AspNetUsers", "crs");
+                    b.ToTable("AspNetUsers", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.AccessToken", b =>
@@ -153,7 +152,7 @@ namespace CRS.Migrations
                     b.HasIndex("Token")
                         .IsUnique();
 
-                    b.ToTable("AccessTokens", "crs");
+                    b.ToTable("AccessTokens");
                 });
 
             modelBuilder.Entity("CRS.Models.Address", b =>
@@ -162,14 +161,8 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("AddressType")
-                        .HasColumnType("int");
-
                     b.Property<string>("City")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("CommunityId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -179,9 +172,6 @@ namespace CRS.Migrations
 
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsMailingAddress")
-                        .HasColumnType("bit");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -200,9 +190,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CommunityId");
-
-                    b.ToTable("Addresses", "crs");
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("CRS.Models.AuditLog", b =>
@@ -280,7 +268,7 @@ namespace CRS.Migrations
 
                     SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TableName", "CreatedAt"), new[] { "RecordId", "ColumnName", "Action" });
 
-                    b.ToTable("AuditLogs", "crs");
+                    b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("CRS.Models.AuditLogArchive", b =>
@@ -359,7 +347,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("AuditLogArchives", "crs");
+                    b.ToTable("AuditLogArchives");
                 });
 
             modelBuilder.Entity("CRS.Models.Billing.StripeEventLog", b =>
@@ -398,7 +386,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StripeEventLogs", "crs");
+                    b.ToTable("StripeEventLogs");
                 });
 
             modelBuilder.Entity("CRS.Models.BuildingElement", b =>
@@ -440,7 +428,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BuildingElements", "crs");
+                    b.ToTable("BuildingElements");
                 });
 
             modelBuilder.Entity("CRS.Models.CalendarEvent", b =>
@@ -598,7 +586,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CalendarEvents", "crs");
+                    b.ToTable("CalendarEvents");
                 });
 
             modelBuilder.Entity("CRS.Models.CommonElement", b =>
@@ -640,7 +628,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CommonElements", "crs");
+                    b.ToTable("CommonElements");
                 });
 
             modelBuilder.Entity("CRS.Models.Community", b =>
@@ -673,6 +661,9 @@ namespace CRS.Migrations
                     b.Property<bool>("IsDemo")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("MailingAddressId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
@@ -681,6 +672,9 @@ namespace CRS.Migrations
 
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PhysicalAddressId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -696,12 +690,16 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("MailingAddressId");
+
+                    b.HasIndex("PhysicalAddressId");
+
                     b.HasIndex("TenantId");
 
                     b.HasIndex("TenantId", "IsActive")
                         .HasDatabaseName("IX_Community_Tenant_Active");
 
-                    b.ToTable("Communities", "crs");
+                    b.ToTable("Communities");
                 });
 
             modelBuilder.Entity("CRS.Models.Contact", b =>
@@ -759,7 +757,7 @@ namespace CRS.Migrations
                         .HasDatabaseName("IX_Contact_Tenant_User_NotDeleted")
                         .HasFilter("[DateDeleted] IS NULL");
 
-                    b.ToTable("Contacts", "crs");
+                    b.ToTable("Contacts");
                 });
 
             modelBuilder.Entity("CRS.Models.ContactGroup", b =>
@@ -797,7 +795,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("ContactGroups", "crs");
+                    b.ToTable("ContactGroups");
                 });
 
             modelBuilder.Entity("CRS.Models.ContactXContactGroup", b =>
@@ -833,7 +831,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("ContactId");
 
-                    b.ToTable("ContactXContactGroups", "crs");
+                    b.ToTable("ContactXContactGroups");
                 });
 
             modelBuilder.Entity("CRS.Models.CustomerAccount", b =>
@@ -881,7 +879,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("CustomerAccounts", "crs");
+                    b.ToTable("CustomerAccounts", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.Demo.DemoSession", b =>
@@ -952,7 +950,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("DemoTenantId");
 
-                    b.ToTable("DemoSessions", "crs");
+                    b.ToTable("DemoSessions");
                 });
 
             modelBuilder.Entity("CRS.Models.ElementOption", b =>
@@ -1006,7 +1004,7 @@ namespace CRS.Migrations
                     b.HasIndex("OptionType", "IsActive", "ZOrder")
                         .HasDatabaseName("IX_ElementOption_Type_Active_Order");
 
-                    b.ToTable("ElementOptions", "crs");
+                    b.ToTable("ElementOptions", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.FinancialInfo", b =>
@@ -1080,7 +1078,7 @@ namespace CRS.Migrations
                         .HasDatabaseName("IX_FinancialInfo_Tenant_Study_NotDeleted")
                         .HasFilter("[DateDeleted] IS NULL");
 
-                    b.ToTable("FinancialInfos", "crs");
+                    b.ToTable("FinancialInfos");
                 });
 
             modelBuilder.Entity("CRS.Models.KanbanTask", b =>
@@ -1131,7 +1129,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("KanbanTasks", "crs");
+                    b.ToTable("KanbanTasks");
                 });
 
             modelBuilder.Entity("CRS.Models.Message", b =>
@@ -1170,7 +1168,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Messages", "crs");
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("CRS.Models.Notification", b =>
@@ -1207,7 +1205,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Notifications", "crs");
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("CRS.Models.Profile", b =>
@@ -1253,7 +1251,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("Profiles", "crs");
+                    b.ToTable("Profiles");
                 });
 
             modelBuilder.Entity("CRS.Models.PropertyManager", b =>
@@ -1307,7 +1305,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("PropertyManagers", "crs");
+                    b.ToTable("PropertyManagers");
                 });
 
             modelBuilder.Entity("CRS.Models.Proposal", b =>
@@ -1374,7 +1372,7 @@ namespace CRS.Migrations
                         .HasDatabaseName("IX_Proposal_Tenant_Study_Approved_NotDeleted")
                         .HasFilter("[DateDeleted] IS NULL");
 
-                    b.ToTable("Proposals", "crs");
+                    b.ToTable("Proposals");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>
@@ -1430,9 +1428,6 @@ namespace CRS.Migrations
 
                     b.Property<bool>("IsDemo")
                         .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastModified")
-                        .HasColumnType("datetime2");
 
                     b.Property<decimal?>("MonthlyReserveContribution")
                         .HasPrecision(18, 2)
@@ -1501,7 +1496,7 @@ namespace CRS.Migrations
                     b.HasIndex("TenantId", "Status", "IsActive")
                         .HasDatabaseName("IX_ReserveStudy_Tenant_Status_Active");
 
-                    b.ToTable("ReserveStudies", "crs");
+                    b.ToTable("ReserveStudies");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudyAdditionalElement", b =>
@@ -1565,7 +1560,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("UsefulLifeOptionId");
 
-                    b.ToTable("ReserveStudyAdditionalElements", "crs");
+                    b.ToTable("ReserveStudyAdditionalElements");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudyBuildingElement", b =>
@@ -1628,7 +1623,7 @@ namespace CRS.Migrations
                     b.HasIndex("ReserveStudyId", "BuildingElementId")
                         .HasDatabaseName("IX_RSBuildingElement_Study_Element");
 
-                    b.ToTable("ReserveStudyBuildingElements", "crs");
+                    b.ToTable("ReserveStudyBuildingElements");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudyCommonElement", b =>
@@ -1720,7 +1715,7 @@ namespace CRS.Migrations
                     b.HasIndex("ReserveStudyId", "CommonElementId")
                         .HasDatabaseName("IX_RSCommonElement_Study_Element");
 
-                    b.ToTable("ReserveStudyCommonElements", "crs");
+                    b.ToTable("ReserveStudyCommonElements");
                 });
 
             modelBuilder.Entity("CRS.Models.Security.Role", b =>
@@ -1742,7 +1737,7 @@ namespace CRS.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Roles", "crs");
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.Security.UserRoleAssignment", b =>
@@ -1768,7 +1763,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserRoleAssignments", "crs");
+                    b.ToTable("UserRoleAssignments", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.ServiceContact", b =>
@@ -1812,7 +1807,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ServiceContacts", "crs");
+                    b.ToTable("ServiceContacts");
                 });
 
             modelBuilder.Entity("CRS.Models.Settings", b =>
@@ -1863,7 +1858,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("Settings", "crs");
+                    b.ToTable("Settings");
                 });
 
             modelBuilder.Entity("CRS.Models.SupportTicket", b =>
@@ -1917,7 +1912,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("SupportTickets", "crs");
+                    b.ToTable("SupportTickets", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.SystemSettings", b =>
@@ -2098,7 +2093,7 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SystemSettings", "crs");
+                    b.ToTable("SystemSettings");
                 });
 
             modelBuilder.Entity("CRS.Models.Tenant", b =>
@@ -2217,7 +2212,7 @@ namespace CRS.Migrations
                     b.HasIndex("Subdomain")
                         .IsUnique();
 
-                    b.ToTable("Tenants", "crs");
+                    b.ToTable("Tenants", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.TenantHomepage", b =>
@@ -2271,7 +2266,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId", "IsPublished");
 
-                    b.ToTable("TenantHomepages", "crs");
+                    b.ToTable("TenantHomepages", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.Workflow.StudyRequest", b =>
@@ -2320,7 +2315,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId", "StateChangedAt");
 
-                    b.ToTable("StudyRequests", "crs");
+                    b.ToTable("StudyRequests");
                 });
 
             modelBuilder.Entity("CRS.Models.Workflow.StudyStatusHistory", b =>
@@ -2375,7 +2370,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId", "ToStatus", "ChangedAt");
 
-                    b.ToTable("StudyStatusHistories", "crs");
+                    b.ToTable("StudyStatusHistories");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -2403,7 +2398,7 @@ namespace CRS.Migrations
                         .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
-                    b.ToTable("AspNetRoles", "crs");
+                    b.ToTable("AspNetRoles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -2427,7 +2422,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", "crs");
+                    b.ToTable("AspNetRoleClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
@@ -2451,7 +2446,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", "crs");
+                    b.ToTable("AspNetUserClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
@@ -2472,7 +2467,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", "crs");
+                    b.ToTable("AspNetUserLogins", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
@@ -2487,7 +2482,7 @@ namespace CRS.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", "crs");
+                    b.ToTable("AspNetUserRoles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
@@ -2506,14 +2501,7 @@ namespace CRS.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", "crs");
-                });
-
-            modelBuilder.Entity("CRS.Models.Address", b =>
-                {
-                    b.HasOne("CRS.Models.Community", null)
-                        .WithMany("Addresses")
-                        .HasForeignKey("CommunityId");
+                    b.ToTable("AspNetUserTokens", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.AuditLog", b =>
@@ -2532,6 +2520,24 @@ namespace CRS.Migrations
                         .HasForeignKey("ApplicationUserId");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CRS.Models.Community", b =>
+                {
+                    b.HasOne("CRS.Models.Address", "MailingAddress")
+                        .WithMany()
+                        .HasForeignKey("MailingAddressId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CRS.Models.Address", "PhysicalAddress")
+                        .WithMany()
+                        .HasForeignKey("PhysicalAddressId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MailingAddress");
+
+                    b.Navigation("PhysicalAddress");
                 });
 
             modelBuilder.Entity("CRS.Models.Contact", b =>
@@ -2636,11 +2642,13 @@ namespace CRS.Migrations
 
                     b.HasOne("CRS.Models.Contact", "Contact")
                         .WithMany()
-                        .HasForeignKey("ContactId");
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CRS.Models.PropertyManager", "PropertyManager")
                         .WithMany()
-                        .HasForeignKey("PropertyManagerId");
+                        .HasForeignKey("PropertyManagerId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CRS.Data.ApplicationUser", "Specialist")
                         .WithMany()
@@ -2894,11 +2902,6 @@ namespace CRS.Migrations
             modelBuilder.Entity("CRS.Models.CommonElement", b =>
                 {
                     b.Navigation("ReserveStudyCommonElements");
-                });
-
-            modelBuilder.Entity("CRS.Models.Community", b =>
-                {
-                    b.Navigation("Addresses");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>

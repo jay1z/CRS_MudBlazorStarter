@@ -63,34 +63,25 @@ namespace CRS.Services.Demo
         
         private Community CreateSampleProperty(int tenantId, string name, int units, string size)
         {
-            // Phase 1: Updated to use Addresses collection instead of duplicate fields
+            // Create addresses first
+            var physicalAddress = new Address
+            {
+                Id = Guid.CreateVersion7(),
+                Street = GetSampleAddress(size),
+                City = GetSampleCity(size),
+                State = GetSampleState(size),
+                Zip = GetSampleZip(size)
+            };
+
             return new Community
             {
                 TenantId = tenantId,
                 Name = name,
-                Addresses = new List<Address>
-                {
-                    // Primary physical address
-                    new Address
-                    {
-                        Street = GetSampleAddress(size),
-                        City = GetSampleCity(size),
-                        State = GetSampleState(size),
-                        Zip = GetSampleZip(size),
-                        AddressType = AddressType.Physical,
-                        IsMailingAddress = false
-                    },
-                    // Mailing address (same as physical for demo)
-                    new Address
-                    {
-                        Street = GetSampleAddress(size),
-                        City = GetSampleCity(size),
-                        State = GetSampleState(size),
-                        Zip = GetSampleZip(size),
-                        AddressType = AddressType.Mailing,
-                        IsMailingAddress = true
-                    }
-                },
+                PhysicalAddress = physicalAddress,
+                PhysicalAddressId = physicalAddress.Id,
+                // No separate mailing address for demo - uses physical address
+                MailingAddress = null,
+                MailingAddressId = null,
                 PhoneNumber = "(555) 123-4567",
                 Email = $"info@{name.ToLower().Replace(" ", "")}.com",
                 NumberOfUnits = units,

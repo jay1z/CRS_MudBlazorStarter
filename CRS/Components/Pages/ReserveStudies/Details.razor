@@ -56,7 +56,7 @@
                                     @reserveStudy.Community?.Name
                                 </MudText>
                                 <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.9);">
-                                    @reserveStudy.Community?.Addresses?.FirstOrDefault()?.FullAddress
+                                    @reserveStudy.Community?.PhysicalAddress?.FullAddress
                                 </MudText>
                             </div>
                         </MudStack>
@@ -943,11 +943,11 @@ private int activeTabIndex = 0;
         if (status == ReserveStudy.WorkflowStatus.FinancialInfoRequested) return reserveStudy?.FinancialInfo?.DateCreated;
         if (status == ReserveStudy.WorkflowStatus.FinancialInfoSubmitted) return reserveStudy?.FinancialInfo?.DateSubmitted;
         if (status == ReserveStudy.WorkflowStatus.FinancialInfoReviewed) return reserveStudy?.FinancialInfo?.DateReviewed;
-        if (status == ReserveStudy.WorkflowStatus.SiteVisitCompleted) return reserveStudy?.LastModified;
-        if (status == ReserveStudy.WorkflowStatus.ReportComplete) return reserveStudy?.LastModified;
-        if (status == ReserveStudy.WorkflowStatus.FundingPlanReady) return reserveStudy?.LastModified;
-        if (status == ReserveStudy.WorkflowStatus.RequestArchived) return reserveStudy?.LastModified;
-        if (status == ReserveStudy.WorkflowStatus.RequestCancelled) return reserveStudy?.LastModified;
+        if (status == ReserveStudy.WorkflowStatus.SiteVisitCompleted) return reserveStudy?.DateModified;
+        if (status == ReserveStudy.WorkflowStatus.ReportComplete) return reserveStudy?.DateModified;
+        if (status == ReserveStudy.WorkflowStatus.FundingPlanReady) return reserveStudy?.DateModified;
+        if (status == ReserveStudy.WorkflowStatus.RequestArchived) return reserveStudy?.DateModified;
+        if (status == ReserveStudy.WorkflowStatus.RequestCancelled) return reserveStudy?.DateModified;
         return null;
     }
 
@@ -967,7 +967,7 @@ private int activeTabIndex = 0;
             using var context = await DbFactory.CreateDbContextAsync();
             reserveStudy = await context.ReserveStudies
                 .AsNoTracking()
-                .Include(rs => rs.Community).ThenInclude(c => c.Addresses)
+                .Include(rs => rs.Community).ThenInclude(c => c.PhysicalAddress)
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)

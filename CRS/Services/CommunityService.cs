@@ -40,7 +40,8 @@ namespace CRS.Services {
             using var context = await _dbFactory.CreateDbContextAsync();
             return await context.Communities
                 .AsNoTracking()
-                .Include(c => c.Addresses)
+                .Include(c => c.PhysicalAddress)
+                .Include(c => c.MailingAddress)
                 .Where(c => c.IsActive)
                 .OrderBy(c => c.Name)
                 .AsSplitQuery()
@@ -66,17 +67,18 @@ namespace CRS.Services {
                 .ToListAsync();
 
             return await context.Communities
-                .AsNoTracking()
-                .Include(c => c.Addresses)
-                .Where(c => c.IsActive && communityIds.Contains(c.Id))
-                .OrderBy(c => c.Name)
-                .AsSplitQuery()
-                .ToListAsync();
-        }
+                    .AsNoTracking()
+                    .Include(c => c.PhysicalAddress)
+                    .Include(c => c.MailingAddress)
+                    .Where(c => c.IsActive && communityIds.Contains(c.Id))
+                    .OrderBy(c => c.Name)
+                    .AsSplitQuery()
+                    .ToListAsync();
+            }
 
-        /// <summary>
-        /// Gets communities owned by a user
-        /// </summary>
+            /// <summary>
+            /// Gets communities owned by a user
+            /// </summary>
         public async Task<List<Community>> GetOwnedCommunitiesAsync(Guid userId) {
             if (userId == Guid.Empty) {
                 return new List<Community>();
@@ -93,17 +95,18 @@ namespace CRS.Services {
                 .ToListAsync();
 
             return await context.Communities
-                .AsNoTracking()
-                .Include(c => c.Addresses)
-                .Where(c => c.IsActive && communityIds.Contains(c.Id))
-                .OrderBy(c => c.Name)
-                .AsSplitQuery()
-                .ToListAsync();
-        }
+                    .AsNoTracking()
+                    .Include(c => c.PhysicalAddress)
+                    .Include(c => c.MailingAddress)
+                    .Where(c => c.IsActive && communityIds.Contains(c.Id))
+                    .OrderBy(c => c.Name)
+                    .AsSplitQuery()
+                    .ToListAsync();
+            }
 
-        /// <summary>
-        /// Gets communities for the current user based on their role and permissions
-        /// </summary>
+            /// <summary>
+            /// Gets communities for the current user based on their role and permissions
+            /// </summary>
         public async Task<List<Community>> GetUserCommunitiesAsync(ApplicationUser currentUser, IList<string> userRoles) {
             if (currentUser == null || userRoles == null) {
                 return new List<Community>();
@@ -139,15 +142,13 @@ namespace CRS.Services {
             }
 
             searchString = searchString.Trim().ToLower();
-            return communities.Where(community =>
-                community.Name?.ToLower().Contains(searchString) == true ||
-                community.Addresses?.Any(address =>
-                    address.Street?.ToLower().Contains(searchString) == true ||
-                    address.City?.ToLower().Contains(searchString) == true ||
-                    address.State?.ToLower().Contains(searchString) == true ||
-                    address.Zip?.ToLower().Contains(searchString) == true
-                ) == true
-            );
-        }
+                return communities.Where(community =>
+                    community.Name?.ToLower().Contains(searchString) == true ||
+                    community.PhysicalAddress?.Street?.ToLower().Contains(searchString) == true ||
+                    community.PhysicalAddress?.City?.ToLower().Contains(searchString) == true ||
+                    community.PhysicalAddress?.State?.ToLower().Contains(searchString) == true ||
+                    community.PhysicalAddress?.Zip?.ToLower().Contains(searchString) == true
+                );
+            }
     }
 }

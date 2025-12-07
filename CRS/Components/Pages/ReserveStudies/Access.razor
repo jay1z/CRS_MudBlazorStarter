@@ -39,7 +39,7 @@
                                     <MudText><b>Created:</b> @(reserveStudy.DateCreated?.ToString("MMM dd, yyyy") ?? "N/A")</MudText>
                                 </MudListItem>
                                 <MudListItem>
-                                    <MudText><b>Last Modified:</b> @(reserveStudy.LastModified?.ToString("MMM dd, yyyy") ?? "N/A")</MudText>
+                                    <MudText><b>Last Modified:</b> @(reserveStudy.DateModified?.ToString("MMM dd, yyyy") ?? "N/A")</MudText>
                                 </MudListItem>
                                 @if (reserveStudy.DateApproved.HasValue) {
                                     <MudListItem>

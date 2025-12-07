@@ -52,7 +52,7 @@
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <MudText Typo="Typo.h6">@reserveStudy.Community.Name</MudText>
-                                <MudText Typo="Typo.body1">@reserveStudy.Community.Addresses[0].FullAddress</MudText>
+                                <MudText Typo="Typo.body1">@reserveStudy.Community.PhysicalAddress?.FullAddress</MudText>
                             </CardHeaderContent>
                         </MudCardHeader>
                         <MudCardContent>
@@ -330,7 +330,7 @@
             context = await DbFactory.CreateDbContextAsync();
 
             reserveStudy = context.ReserveStudies
-                .Include(rs => rs.Community).ThenInclude(c => c.Addresses)
+                .Include(rs => rs.Community).ThenInclude(c => c.PhysicalAddress)
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)

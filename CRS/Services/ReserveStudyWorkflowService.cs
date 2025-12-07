@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -103,7 +103,7 @@ namespace CRS.Services {
 
             // Map back to legacy and persist
             study.Status = StatusMapper.ToLegacy(desired);
-            study.LastModified = DateTime.UtcNow;
+            study.DateModified = DateTime.UtcNow;
 
             // History row
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
@@ -136,7 +136,7 @@ namespace CRS.Services {
             if (!ok) return false;
 
             study.Status = StatusMapper.ToLegacy(desired);
-            study.LastModified = DateTime.UtcNow;
+            study.DateModified = DateTime.UtcNow;
 
             await AppendHistoryAsync(db, sr, from, desired, approvedBy);
             await db.SaveChangesAsync();
@@ -160,7 +160,7 @@ namespace CRS.Services {
             if (!ok) return false;
 
             study.Status = StatusMapper.ToLegacy(desired);
-            study.LastModified = DateTime.UtcNow;
+            study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
             await db.SaveChangesAsync();
 
@@ -200,7 +200,7 @@ namespace CRS.Services {
             if (!ok) return false;
 
             study.Status = StatusMapper.ToLegacy(desired);
-            study.LastModified = DateTime.UtcNow;
+            study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
             await db.SaveChangesAsync();
 
@@ -233,7 +233,7 @@ namespace CRS.Services {
             if (!ok) return false;
 
             study.Status = StatusMapper.ToLegacy(desired);
-            study.LastModified = DateTime.UtcNow;
+            study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, desired, reviewedBy);
             await db.SaveChangesAsync();
 
@@ -256,7 +256,7 @@ namespace CRS.Services {
 
             study.IsComplete = true;
             study.Status = StatusMapper.ToLegacy(desired);
-            study.LastModified = DateTime.UtcNow;
+            study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
             await db.SaveChangesAsync();
 
@@ -296,7 +296,7 @@ namespace CRS.Services {
             var ok = await _engine.TryTransitionAsync(sr, targetStatus, actor ?? GetActor());
             if (!ok) return false;
             study.Status = StatusMapper.ToLegacy(targetStatus);
-            study.LastModified = DateTime.UtcNow;
+            study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, targetStatus, actor ?? GetActor());
             await db.SaveChangesAsync();
             return true;

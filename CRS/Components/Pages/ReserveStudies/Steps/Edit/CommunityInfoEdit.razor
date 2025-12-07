@@ -1,0 +1,243 @@
+﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps.Edit
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@inherits OwningComponentBase
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject UserStateService UserState
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+
+<MudForm Model="Model" @ref="form">
+    <MudGrid>
+        <!-- Header Section -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Class="mb-4">Community Details</MudText>
+            <MudText Typo="Typo.body2" Class="text-muted">
+                Edit the community information for this reserve study.
+            </MudText>
+        </MudItem>
+
+        <!-- Community Name -->
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Model.Community.Name"
+                          Label="Community Name"
+                          Required="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.TwoTone.LocationCity"
+                          Immediate="true" />
+        </MudItem>
+
+        <!-- PHYSICAL ADDRESS SECTION -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h6" Class="mb-2 mt-2">Physical Address</MudText>
+        </MudItem>
+
+        <!-- Street Address -->
+        <MudItem xs="12">
+            <MudTextField @bind-Value="physicalAddress.Street"
+                          Label="Street Address"
+                          Required="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.TwoTone.EditRoad"
+                          Immediate="true" />
+        </MudItem>
+
+        <!-- State, City, Zip -->
+        <MudItem xs="12">
+            <MudGrid>
+                <!-- State -->
+                <MudItem xs="12" sm="4">
+                    <MudSelect @bind-Value="physicalAddress.State"
+                               Label="State"
+                               Required="true"
+                               Immediate="true">
+                        @foreach (var state in States) {
+                            <MudSelectItem Value="@state">@state</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <!-- City -->
+                <MudItem xs="12" sm="5">
+                    <MudTextField @bind-Value="physicalAddress.City"
+                                  Label="City"
+                                  Required="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.TwoTone.LocationOn"
+                                  Immediate="true" />
+                </MudItem>
+
+                <!-- Zip Code -->
+                <MudItem xs="12" sm="3">
+                    <MudTextField @bind-Value="physicalAddress.Zip"
+                                  Label="Zip Code"
+                                  Required="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.TwoTone.Mail"
+                                  Immediate="true" />
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Mailing Address Checkbox -->
+        <MudItem xs="12" Class="mt-4">
+            <MudCheckBox T="bool"
+                         @bind-Value="usePhysicalAsMailingAddress"
+                         Label="Use physical address as mailing address"
+                         Color="Color.Primary" />
+        </MudItem>
+
+        <!-- MAILING ADDRESS SECTION - displays only when checkbox is unchecked -->
+        @if (!usePhysicalAsMailingAddress) {
+            <MudItem xs="12">
+                <MudText Typo="Typo.h6" Class="mb-2 mt-2">Mailing Address</MudText>
+            </MudItem>
+
+            <!-- Street Address -->
+            <MudItem xs="12">
+                <MudTextField @bind-Value="mailingAddress.Street"
+                              Label="Street Address"
+                              Required="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.TwoTone.EditRoad"
+                              Immediate="true" />
+            </MudItem>
+
+            <!-- State, City, Zip -->
+            <MudItem xs="12">
+                <MudGrid>
+                    <!-- State -->
+                    <MudItem xs="12" sm="4">
+                        <MudSelect @bind-Value="mailingAddress.State"
+                                   Label="State"
+                                   Required="true"
+                                   Immediate="true">
+                            @foreach (var state in States) {
+                                <MudSelectItem Value="@state">@state</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <!-- City -->
+                    <MudItem xs="12" sm="5">
+                        <MudTextField @bind-Value="mailingAddress.City"
+                                      Label="City"
+                                      Required="true"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.TwoTone.LocationOn"
+                                      Immediate="true" />
+                    </MudItem>
+
+                    <!-- Zip Code -->
+                    <MudItem xs="12" sm="3">
+                        <MudTextField @bind-Value="mailingAddress.Zip"
+                                      Label="Zip Code"
+                                      Required="true"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.TwoTone.Mail"
+                                      Immediate="true" />
+                    </MudItem>
+                </MudGrid>
+            </MudItem>
+        }
+
+        <!-- Annual Meeting Date -->
+        <MudItem xs="12" sm="6">
+            <MudDatePicker @bind-Date="annualMeetingDate" 
+                           Label="Annual Meeting Date" 
+                           Placeholder="Select annual meeting date (if known)" 
+                           Variant="Variant.Outlined" />
+        </MudItem>
+    </MudGrid>
+</MudForm>
+
+@code {
+    [Parameter]
+    public ReserveStudy Model { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> StepValidated { get; set; }
+
+    private MudForm form;
+    private bool usePhysicalAsMailingAddress = true;
+    
+    // Address objects bound to the form
+    private Address physicalAddress = new Address();
+    private Address mailingAddress = new Address();
+    
+    // Local variable for Annual Meeting Date to ensure proper binding
+    private DateTime? annualMeetingDate;
+
+    private List<string> States = new() {
+        "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
+        "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS",
+        "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK",
+        "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV",
+        "WI", "WY"
+    };
+
+    protected override void OnInitialized() {
+        InitializeAddresses();
+    }
+
+    private void InitializeAddresses() {
+        // Initialize physical address from model or create new
+        if (Model.Community.PhysicalAddress != null) {
+            physicalAddress = Model.Community.PhysicalAddress;
+        } else {
+            physicalAddress = new Address();
+            Model.Community.PhysicalAddress = physicalAddress;
+        }
+
+        // Initialize mailing address from model or create new
+        if (Model.Community.MailingAddress != null) {
+            mailingAddress = Model.Community.MailingAddress;
+            usePhysicalAsMailingAddress = false;
+        } else {
+            mailingAddress = new Address();
+            usePhysicalAsMailingAddress = true;
+        }
+        
+        // Initialize annual meeting date from model
+        annualMeetingDate = Model.Community.AnnualMeetingDate;
+
+        // Set tenant ID on new community
+        if (TenantContext.TenantId.HasValue && Model.Community.TenantId == 0) {
+            Model.Community.TenantId = TenantContext.TenantId.Value;
+        }
+    }
+
+    public async Task<bool> ValidateAsync() {
+        if (!TenantContext.TenantId.HasValue) {
+            Snackbar.Add("Unable to determine tenant context.", Severity.Error);
+            await StepValidated.InvokeAsync(false);
+            return false;
+        }
+        
+        await form.Validate();
+        bool valid = form.IsValid;
+
+        // Sync addresses and annual meeting date to model before saving
+        Model.Community.PhysicalAddress = physicalAddress;
+        Model.Community.AnnualMeetingDate = annualMeetingDate;
+        
+        if (usePhysicalAsMailingAddress) {
+            Model.Community.MailingAddress = null;
+            Model.Community.MailingAddressId = null;
+        } else {
+            Model.Community.MailingAddress = mailingAddress;
+        }
+        
+        if (Model.Community.TenantId != TenantContext.TenantId.Value) {
+            Model.Community.TenantId = TenantContext.TenantId.Value;
+        }
+
+        await StepValidated.InvokeAsync(valid);
+        return valid;
+    }
+}

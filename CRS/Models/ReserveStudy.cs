@@ -107,8 +107,6 @@ namespace CRS.Models {
         [DataType(DataType.DateTime)]
         public DateTime? DateApproved { get; set; }
 
-        public DateTime? LastModified { get; set; }
-
         public enum PointOfContactTypeEnum {
             Contact = 0,
             PropertyManager = 1

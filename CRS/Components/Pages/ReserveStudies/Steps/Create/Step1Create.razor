@@ -38,7 +38,7 @@
                            For="@(() => selectedCommunity)" SelectedValuesChanged="@OnExistingCommunitySelected">
                     @foreach (var community in existingCommunities) {
                         <MudSelectItem Value="@community">
-                            @($"{community.Name} - {community.Addresses?.FirstOrDefault()?.City}, {community.Addresses?.FirstOrDefault()?.State}")
+                            @($"{community.Name} - {community.PhysicalAddress?.City}, {community.PhysicalAddress?.State}")
                         </MudSelectItem>
                     }
                 </MudSelect>
@@ -62,7 +62,7 @@
 
             <!-- Street Address -->
             <MudItem xs="12">
-                <MudTextField @bind-Value="Model.Community.Addresses[0].Street"
+                <MudTextField @bind-Value="physicalAddress.Street"
                               Label="Street Address"
                               Required="true"
                               Adornment="Adornment.Start"
@@ -75,7 +75,7 @@
                 <MudGrid>
                     <!-- State -->
                     <MudItem xs="12" sm="4">
-                        <MudSelect @bind-Value="Model.Community.Addresses[0].State"
+                        <MudSelect @bind-Value="physicalAddress.State"
                                    Label="State"
                                    Required="true"
                                    Immediate="true">
@@ -87,7 +87,7 @@
 
                     <!-- City -->
                     <MudItem xs="12" sm="5">
-                        <MudTextField @bind-Value="Model.Community.Addresses[0].City"
+                        <MudTextField @bind-Value="physicalAddress.City"
                                       Label="City"
                                       Required="true"
                                       Adornment="Adornment.Start"
@@ -97,7 +97,7 @@
 
                     <!-- Zip Code -->
                     <MudItem xs="12" sm="3">
-                        <MudTextField @bind-Value="Model.Community.Addresses[0].Zip"
+                        <MudTextField @bind-Value="physicalAddress.Zip"
                                       Label="Zip Code"
                                       Required="true"
                                       Adornment="Adornment.Start"
@@ -190,64 +190,11 @@
     private bool useExistingCommunity;
     private Community selectedCommunity;
     private List<Community> existingCommunities = new();
-    private bool _usePhysicalAsMailingAddress = true;
-    private Address mailingAddress = new Address { 
-        IsMailingAddress = true, 
-        AddressType = AddressType.Mailing 
-    };
-
-    private bool usePhysicalAsMailingAddress 
-    {
-        get => _usePhysicalAsMailingAddress;
-        set 
-        {
-            if (_usePhysicalAsMailingAddress == value) return;
-            
-            _usePhysicalAsMailingAddress = value;
-
-            if (value) {
-                // Copy physical address to create mailing address
-                var physicalAddresses = Model.Community.Addresses
-                    .Where(a => a.AddressType == AddressType.Physical)
-                    .ToList();
-                    
-                Model.Community.Addresses.Clear();
-                Model.Community.Addresses.AddRange(physicalAddresses);
-
-                if (physicalAddresses.Any()) {
-                    var firstPhysical = physicalAddresses[0];
-                    var copiedMailingAddress = new Address {
-                        Street = firstPhysical.Street,
-                        City = firstPhysical.City,
-                        State = firstPhysical.State,
-                        Zip = firstPhysical.Zip,
-                        IsMailingAddress = true,
-                        AddressType = AddressType.Mailing
-                    };
-                    Model.Community.Addresses.Add(copiedMailingAddress);
-                }
-            }
-            else {
-                // Separate mailing address
-                var physicalAddresses = Model.Community.Addresses
-                    .Where(a => a.AddressType == AddressType.Physical)
-                    .ToList();
-                    
-                Model.Community.Addresses.Clear();
-                Model.Community.Addresses.AddRange(physicalAddresses);
-                
-                if (!Model.Community.Addresses.Any(a => a.IsMailingAddress)) {
-                    mailingAddress = new Address { 
-                        IsMailingAddress = true, 
-                        AddressType = AddressType.Mailing 
-                    };
-                    Model.Community.Addresses.Add(mailingAddress);
-                }
-            }
-            
-            StateHasChanged();
-        }
-    }
+    private bool usePhysicalAsMailingAddress = true;
+    
+    // Address objects bound to the form
+    private Address physicalAddress = new Address();
+    private Address mailingAddress = new Address();
 
     private List<string> States = new() {
         "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
@@ -259,17 +206,27 @@
 
     protected override async Task OnInitializedAsync() {
         await LoadUserCommunities();
-        
-        // Ensure addresses collection is initialized
-        if (Model.Community.Addresses == null || !Model.Community.Addresses.Any()) {
-            Model.Community.Addresses = new List<Address> { 
-                new Address { 
-                    AddressType = AddressType.Physical,
-                    IsMailingAddress = false 
-                } 
-            };
+        InitializeAddresses();
+    }
+
+    private void InitializeAddresses() {
+        // Initialize physical address from model or create new
+        if (Model.Community.PhysicalAddress != null) {
+            physicalAddress = Model.Community.PhysicalAddress;
+        } else {
+            physicalAddress = new Address();
+            Model.Community.PhysicalAddress = physicalAddress;
         }
-        
+
+        // Initialize mailing address from model or create new
+        if (Model.Community.MailingAddress != null) {
+            mailingAddress = Model.Community.MailingAddress;
+            usePhysicalAsMailingAddress = false;
+        } else {
+            mailingAddress = new Address();
+            usePhysicalAsMailingAddress = true;
+        }
+
         // Set tenant ID on new community
         if (TenantContext.TenantId.HasValue && Model.Community.TenantId == 0) {
             Model.Community.TenantId = TenantContext.TenantId.Value;
@@ -304,7 +261,8 @@
         }
 
         existingCommunities = await context.Communities
-            .Include(c => c.Addresses)
+            .Include(c => c.PhysicalAddress)
+            .Include(c => c.MailingAddress)
             .AsNoTracking()
             .Where(c => userStudyCommunityIds.Contains(c.Id))
             .OrderBy(c => c.Name)
@@ -315,13 +273,10 @@
         useExistingCommunity = useExisting;
         if (!useExisting) {
             selectedCommunity = null;
-            Model.Community = new Community { 
-                Addresses = new List<Address> { 
-                    new Address { 
-                        AddressType = AddressType.Physical,
-                        IsMailingAddress = false 
-                    } 
-                }
+            physicalAddress = new Address();
+            mailingAddress = new Address();
+            Model.Community = new Community {
+                PhysicalAddress = physicalAddress
             };
             
             if (TenantContext.TenantId.HasValue) {
@@ -329,10 +284,6 @@
             }
             
             usePhysicalAsMailingAddress = true;
-            mailingAddress = new Address { 
-                IsMailingAddress = true, 
-                AddressType = AddressType.Mailing 
-            };
         }
         await OnExistingCommunityChanged.InvokeAsync(IsExistingCommunity());
     }
@@ -340,6 +291,7 @@
     private void OnExistingCommunitySelected() {
         if (selectedCommunity != null) {
             Model.Community = selectedCommunity;
+            InitializeAddresses();
         }
     }
 
@@ -361,9 +313,15 @@
         await form.Validate();
         bool valid = form.IsValid;
 
-        if (!useExistingCommunity && !usePhysicalAsMailingAddress) {
-            if (!Model.Community.Addresses.Any(a => a.IsMailingAddress)) {
-                Model.Community.Addresses.Add(mailingAddress);
+        // Sync addresses to model before saving
+        if (!useExistingCommunity) {
+            Model.Community.PhysicalAddress = physicalAddress;
+            
+            if (usePhysicalAsMailingAddress) {
+                Model.Community.MailingAddress = null;
+                Model.Community.MailingAddressId = null;
+            } else {
+                Model.Community.MailingAddress = mailingAddress;
             }
         }
         
@@ -396,17 +354,25 @@
                 Model.Community.Id = Guid.CreateVersion7();
             }
 
-            var savedCommunityId = Model.Community.Id;
-
-            foreach (var address in Model.Community.Addresses ?? Enumerable.Empty<Address>()) {
-                if (address.Id == Guid.Empty) {
-                    address.Id = Guid.CreateVersion7();
+            // Ensure physical address has an ID and set the FK
+            if (Model.Community.PhysicalAddress != null) {
+                if (Model.Community.PhysicalAddress.Id == Guid.Empty) {
+                    Model.Community.PhysicalAddress.Id = Guid.CreateVersion7();
                 }
+                Model.Community.PhysicalAddressId = Model.Community.PhysicalAddress.Id;
+            }
+
+            // Ensure mailing address has an ID if provided
+            if (Model.Community.MailingAddress != null) {
+                if (Model.Community.MailingAddress.Id == Guid.Empty) {
+                    Model.Community.MailingAddress.Id = Guid.CreateVersion7();
+                }
+                Model.Community.MailingAddressId = Model.Community.MailingAddress.Id;
             }
 
             context.Communities.Add(Model.Community);
             await context.SaveChangesAsync();
-            context.Entry(Model.Community).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+            context.Entry(Model.Community).State = EntityState.Detached;
 
             return true;
         }

@@ -91,10 +91,10 @@
             data.Add(new { x = name, y = new[] { new DateTimeOffset(start).ToUnixTimeMilliseconds(), new DateTimeOffset(end).ToUnixTimeMilliseconds() }, fillColor = GetColorByWorkflowStatus(name) });
         }
 
-        AddWorkflowStatusData("Request Created", startDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalCreated ? ReserveStudy.LastModified ?? today : today);
+        AddWorkflowStatusData("Request Created", startDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalCreated ? ReserveStudy.DateModified ?? today : today);
 
         if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalCreated) {
-            var proposalDate = ReserveStudy.Proposal?.DateCreated ?? ReserveStudy.LastModified ?? startDate.AddDays(7);
+            var proposalDate = ReserveStudy.Proposal?.DateCreated ?? ReserveStudy.DateModified ?? startDate.AddDays(7);
             AddWorkflowStatusData("Proposal Phase", proposalDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalAccepted ? ReserveStudy.Proposal?.DateApproved ?? today : today);
         }
 
@@ -114,7 +114,7 @@
         }
 
         if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ReportComplete) {
-            var completionDate = ReserveStudy.Status == ReserveStudy.WorkflowStatus.RequestCompleted ? ReserveStudy.LastModified ?? startDate.AddDays(45) : startDate.AddDays(45);
+            var completionDate = ReserveStudy.Status == ReserveStudy.WorkflowStatus.RequestCompleted ? ReserveStudy.DateModified ?? startDate.AddDays(45) : startDate.AddDays(45);
             AddWorkflowStatusData("Study Completion", completionDate.AddDays(-5), completionDate);
         }
 

@@ -10,6 +10,7 @@ using CRS.Services.Tenant;
 using CRS.Services.Billing; // feature guard
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CRS.Services {
     public class ReserveStudyService : IReserveStudyService {
@@ -18,13 +19,15 @@ namespace CRS.Services {
         private readonly string _baseUrl;
         private readonly ITenantContext _tenantContext;
         private readonly IFeatureGuardService _featureGuard;
+        private readonly ILogger<ReserveStudyService> _logger;
 
-        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext, IFeatureGuardService featureGuard) {
+        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext, IFeatureGuardService featureGuard, ILogger<ReserveStudyService> logger) {
             _dbFactory = dbFactory;
             _dispatcher = dispatcher;
             _baseUrl = configuration["Application:BaseUrl"] ?? "https://yourdomain.com";
             _tenantContext = tenantContext;
             _featureGuard = featureGuard;
+            _logger = logger;
         }
 
         public async Task<ReserveStudy> CreateReserveStudyAsync(ReserveStudy reserveStudy) {
@@ -61,9 +64,20 @@ namespace CRS.Services {
                             }
                         }
 
-                        // Ensure address ids
-                        foreach (var addr in reserveStudy.Community.Addresses ?? Enumerable.Empty<Address>()) {
-                            if (addr.Id == Guid.Empty) addr.Id = Guid.CreateVersion7();
+                        // Ensure physical address has an ID and set the FK
+                        if (reserveStudy.Community.PhysicalAddress != null) {
+                            if (reserveStudy.Community.PhysicalAddress.Id == Guid.Empty) {
+                                reserveStudy.Community.PhysicalAddress.Id = Guid.CreateVersion7();
+                            }
+                            reserveStudy.Community.PhysicalAddressId = reserveStudy.Community.PhysicalAddress.Id;
+                        }
+
+                        // Ensure mailing address has an ID if provided
+                        if (reserveStudy.Community.MailingAddress != null) {
+                            if (reserveStudy.Community.MailingAddress.Id == Guid.Empty) {
+                                reserveStudy.Community.MailingAddress.Id = Guid.CreateVersion7();
+                            }
+                            reserveStudy.Community.MailingAddressId = reserveStudy.Community.MailingAddress.Id;
                         }
 
                         await context.Communities.AddAsync(reserveStudy.Community);
@@ -114,13 +128,66 @@ namespace CRS.Services {
                 reserveStudy.PropertyManager = null;
             }
 
+            // Ensure ReserveStudy has an ID before processing elements
+            if (reserveStudy.Id == Guid.Empty) {
+                reserveStudy.Id = Guid.CreateVersion7();
+            }
+
+            // Log incoming element counts for debugging
+            _logger.LogInformation("CreateReserveStudyAsync: Study ID: {StudyId}", reserveStudy.Id);
+            _logger.LogInformation("CreateReserveStudyAsync: BuildingElements count: {Count}", 
+                reserveStudy.ReserveStudyBuildingElements?.Count ?? 0);
+            _logger.LogInformation("CreateReserveStudyAsync: CommonElements count: {Count}", 
+                reserveStudy.ReserveStudyCommonElements?.Count ?? 0);
+            _logger.LogInformation("CreateReserveStudyAsync: AdditionalElements count: {Count}", 
+                reserveStudy.ReserveStudyAdditionalElements?.Count ?? 0);
+
+            // Process Building Elements
+            if (reserveStudy.ReserveStudyBuildingElements != null && reserveStudy.ReserveStudyBuildingElements.Any()) {
+                foreach (var element in reserveStudy.ReserveStudyBuildingElements) {
+                    if (element.Id == Guid.Empty) {
+                        element.Id = Guid.CreateVersion7();
+                    }
+                    element.ReserveStudyId = reserveStudy.Id;
+                    // Don't track the BuildingElement navigation property to avoid duplicate tracking
+                    element.BuildingElement = null;
+                    _logger.LogInformation("CreateReserveStudyAsync: Processing BuildingElement {ElementId} -> {BuildingElementId}", 
+                        element.Id, element.BuildingElementId);
+                }
+            }
+
+            // Process Common Elements
+            if (reserveStudy.ReserveStudyCommonElements != null && reserveStudy.ReserveStudyCommonElements.Any()) {
+                foreach (var element in reserveStudy.ReserveStudyCommonElements) {
+                    if (element.Id == Guid.Empty) {
+                        element.Id = Guid.CreateVersion7();
+                    }
+                    element.ReserveStudyId = reserveStudy.Id;
+                    // Don't track the CommonElement navigation property to avoid duplicate tracking
+                    element.CommonElement = null;
+                    _logger.LogInformation("CreateReserveStudyAsync: Processing CommonElement {ElementId} -> {CommonElementId}", 
+                        element.Id, element.CommonElementId);
+                }
+            }
+
+            // Process Additional Elements
+            if (reserveStudy.ReserveStudyAdditionalElements != null && reserveStudy.ReserveStudyAdditionalElements.Any()) {
+                foreach (var element in reserveStudy.ReserveStudyAdditionalElements) {
+                    if (element.Id == Guid.Empty) {
+                        element.Id = Guid.CreateVersion7();
+                    }
+                    element.ReserveStudyId = reserveStudy.Id;
+                }
+            }
+
             context.ReserveStudies.Add(reserveStudy);
             await context.SaveChangesAsync();
 
             var community = await context.Communities
-                .AsNoTracking()
-                .Include(c => c.Addresses)
-                .FirstOrDefaultAsync(c => c.Id == reserveStudy.CommunityId);
+            .AsNoTracking()
+            .Include(c => c.PhysicalAddress)
+            .Include(c => c.MailingAddress)
+            .FirstOrDefaultAsync(c => c.Id == reserveStudy.CommunityId);
             if (community != null) reserveStudy.Community = community;
 
             var createdEvent = new ReserveStudyCreatedEvent(reserveStudy);
@@ -160,11 +227,28 @@ namespace CRS.Services {
 
             var tenantId = _tenantContext.TenantId.Value;
 
+            // Log incoming data for debugging
+            _logger.LogInformation("UpdateReserveStudyAsync: Starting update for study {StudyId}", reserveStudy.Id);
+            _logger.LogInformation("UpdateReserveStudyAsync: Incoming BuildingElements count: {Count}", 
+                reserveStudy.ReserveStudyBuildingElements?.Count ?? 0);
+            _logger.LogInformation("UpdateReserveStudyAsync: Incoming CommonElements count: {Count}", 
+                reserveStudy.ReserveStudyCommonElements?.Count ?? 0);
+            _logger.LogInformation("UpdateReserveStudyAsync: Incoming AdditionalElements count: {Count}", 
+                reserveStudy.ReserveStudyAdditionalElements?.Count ?? 0);
+            _logger.LogInformation("UpdateReserveStudyAsync: Incoming MailingAddress: {HasAddress}", 
+                reserveStudy.Community?.MailingAddress != null ? $"Yes - {reserveStudy.Community.MailingAddress.Street}" : "No");
+
             // Fetch the existing study with tracking
             var existingStudy = await context.ReserveStudies
                 .Include(rs => rs.Community)
+                    .ThenInclude(c => c.PhysicalAddress)
+                .Include(rs => rs.Community)
+                    .ThenInclude(c => c.MailingAddress)
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
+                .Include(rs => rs.ReserveStudyBuildingElements)
+                .Include(rs => rs.ReserveStudyCommonElements)
+                .Include(rs => rs.ReserveStudyAdditionalElements)
                 .FirstOrDefaultAsync(rs => rs.Id == reserveStudy.Id && rs.IsActive);
 
             if (existingStudy == null) {
@@ -192,72 +276,227 @@ namespace CRS.Services {
                 existingStudy.Contact.CompanyName = reserveStudy.Contact.CompanyName;
             }
 
-            // Property Manager information
-            if (reserveStudy.PropertyManager != null && existingStudy.PropertyManager != null) {
-                existingStudy.PropertyManager.FirstName = reserveStudy.PropertyManager.FirstName;
-                existingStudy.PropertyManager.LastName = reserveStudy.PropertyManager.LastName;
-                existingStudy.PropertyManager.Email = reserveStudy.PropertyManager.Email;
-                existingStudy.PropertyManager.Phone = reserveStudy.PropertyManager.Phone;
-                existingStudy.PropertyManager.Extension = reserveStudy.PropertyManager.Extension;
-                existingStudy.PropertyManager.CompanyName = reserveStudy.PropertyManager.CompanyName;
+            // Property Manager information - handle add, update, and remove scenarios
+            if (reserveStudy.PropertyManager != null) {
+                if (existingStudy.PropertyManager != null) {
+                    // Update existing property manager
+                    existingStudy.PropertyManager.FirstName = reserveStudy.PropertyManager.FirstName;
+                    existingStudy.PropertyManager.LastName = reserveStudy.PropertyManager.LastName;
+                    existingStudy.PropertyManager.Email = reserveStudy.PropertyManager.Email;
+                    existingStudy.PropertyManager.Phone = reserveStudy.PropertyManager.Phone;
+                    existingStudy.PropertyManager.Extension = reserveStudy.PropertyManager.Extension;
+                    existingStudy.PropertyManager.CompanyName = reserveStudy.PropertyManager.CompanyName;
+                } else {
+                    // Add new property manager
+                    var newPropertyManager = new PropertyManager {
+                        Id = Guid.CreateVersion7(),
+                        FirstName = reserveStudy.PropertyManager.FirstName,
+                        LastName = reserveStudy.PropertyManager.LastName,
+                        Email = reserveStudy.PropertyManager.Email,
+                        Phone = reserveStudy.PropertyManager.Phone,
+                        Extension = reserveStudy.PropertyManager.Extension,
+                        CompanyName = reserveStudy.PropertyManager.CompanyName,
+                        TenantId = tenantId
+                    };
+                    context.PropertyManagers.Add(newPropertyManager);
+                    existingStudy.PropertyManagerId = newPropertyManager.Id;
+                    existingStudy.PropertyManager = newPropertyManager;
+                }
+            } else if (existingStudy.PropertyManager != null) {
+                // Property manager was removed - clear the reference
+                existingStudy.PropertyManagerId = null;
+                existingStudy.PropertyManager = null;
             }
+
+            // Update Point of Contact Type
+            existingStudy.PointOfContactType = reserveStudy.PointOfContactType;
 
             // Update community information if allowed
             if (reserveStudy.Community != null && existingStudy.Community != null) {
                 // SECURITY: Verify the community belongs to the same tenant
                 if (existingStudy.Community.TenantId == tenantId) {
                     existingStudy.Community.Name = reserveStudy.Community.Name;
+                    existingStudy.Community.AnnualMeetingDate = reserveStudy.Community.AnnualMeetingDate;
                     
-                    // Load existing addresses for proper tracking
-                    await context.Entry(existingStudy.Community).Collection(c => c.Addresses).LoadAsync();
-                    
-                    // Update addresses - handle additions, updates, and deletions
-                    if (reserveStudy.Community.Addresses != null) {
-                        // Update or add addresses
-                        foreach (var updatedAddr in reserveStudy.Community.Addresses) {
-                            var existingAddr = existingStudy.Community.Addresses?
-                                .FirstOrDefault(a => a.Id != Guid.Empty && a.Id == updatedAddr.Id);
-                            
-                            if (existingAddr != null) {
-                                // Update existing address
-                                existingAddr.Street = updatedAddr.Street;
-                                existingAddr.City = updatedAddr.City;
-                                existingAddr.State = updatedAddr.State;
-                                existingAddr.Zip = updatedAddr.Zip;
-                                existingAddr.IsMailingAddress = updatedAddr.IsMailingAddress;
-                            }
-                            else {
-                                // Add new address - EF Core will set CommunityId automatically via relationship
-                                if (updatedAddr.Id == Guid.Empty) {
-                                    updatedAddr.Id = Guid.CreateVersion7();
-                                }
-                                existingStudy.Community.Addresses ??= new List<Address>();
-                                existingStudy.Community.Addresses.Add(updatedAddr);
-                                context.Addresses.Add(updatedAddr);
-                            }
+                    // Update physical address
+                    if (reserveStudy.Community.PhysicalAddress != null) {
+                        if (existingStudy.Community.PhysicalAddress != null) {
+                            existingStudy.Community.PhysicalAddress.Street = reserveStudy.Community.PhysicalAddress.Street;
+                            existingStudy.Community.PhysicalAddress.City = reserveStudy.Community.PhysicalAddress.City;
+                            existingStudy.Community.PhysicalAddress.State = reserveStudy.Community.PhysicalAddress.State;
+                            existingStudy.Community.PhysicalAddress.Zip = reserveStudy.Community.PhysicalAddress.Zip;
+                        } else {
+                            // Create new physical address
+                            var newPhysicalAddr = new Address {
+                                Id = Guid.CreateVersion7(),
+                                Street = reserveStudy.Community.PhysicalAddress.Street,
+                                City = reserveStudy.Community.PhysicalAddress.City,
+                                State = reserveStudy.Community.PhysicalAddress.State,
+                                Zip = reserveStudy.Community.PhysicalAddress.Zip
+                            };
+                            context.Addresses.Add(newPhysicalAddr);
+                            existingStudy.Community.PhysicalAddressId = newPhysicalAddr.Id;
+                            existingStudy.Community.PhysicalAddress = newPhysicalAddr;
                         }
-                        
-                        // Remove addresses that are no longer in the updated collection
-                        var updatedAddressIds = reserveStudy.Community.Addresses
-                            .Where(a => a.Id != Guid.Empty)
-                            .Select(a => a.Id)
-                            .ToHashSet();
-                        
-                        var addressesToRemove = existingStudy.Community.Addresses?
-                            .Where(a => !updatedAddressIds.Contains(a.Id))
-                            .ToList();
-                        
-                        if (addressesToRemove != null && addressesToRemove.Any()) {
-                            foreach (var addr in addressesToRemove) {
-                                existingStudy.Community.Addresses?.Remove(addr);
-                                context.Remove(addr);
-                            }
+                    }
+
+                    // Update mailing address
+                    if (reserveStudy.Community.MailingAddress != null) {
+                        if (existingStudy.Community.MailingAddress != null) {
+                            existingStudy.Community.MailingAddress.Street = reserveStudy.Community.MailingAddress.Street;
+                            existingStudy.Community.MailingAddress.City = reserveStudy.Community.MailingAddress.City;
+                            existingStudy.Community.MailingAddress.State = reserveStudy.Community.MailingAddress.State;
+                            existingStudy.Community.MailingAddress.Zip = reserveStudy.Community.MailingAddress.Zip;
+                        } else {
+                            // Create new mailing address
+                            var newMailingAddr = new Address {
+                                Id = Guid.CreateVersion7(),
+                                Street = reserveStudy.Community.MailingAddress.Street,
+                                City = reserveStudy.Community.MailingAddress.City,
+                                State = reserveStudy.Community.MailingAddress.State,
+                                Zip = reserveStudy.Community.MailingAddress.Zip
+                            };
+                            context.Addresses.Add(newMailingAddr);
+                            existingStudy.Community.MailingAddressId = newMailingAddr.Id;
+                            existingStudy.Community.MailingAddress = newMailingAddr;
                         }
+                    } else if (existingStudy.Community.MailingAddressId != null) {
+                        // Mailing address was removed - set to null (use physical as mailing)
+                        existingStudy.Community.MailingAddressId = null;
+                        existingStudy.Community.MailingAddress = null;
                     }
                 }
             }
 
-            existingStudy.LastModified = DateTime.UtcNow;
+            // Update Building Elements - handle additions and removals
+            if (reserveStudy.ReserveStudyBuildingElements != null) {
+                var existingBuildingElementIds = existingStudy.ReserveStudyBuildingElements?
+                    .Select(e => e.BuildingElementId).ToHashSet() ?? new HashSet<Guid>();
+                var updatedBuildingElementIds = reserveStudy.ReserveStudyBuildingElements
+                    .Select(e => e.BuildingElementId).ToHashSet();
+
+                // Add new building elements
+                foreach (var element in reserveStudy.ReserveStudyBuildingElements) {
+                    if (!existingBuildingElementIds.Contains(element.BuildingElementId)) {
+                        if (element.Id == Guid.Empty) {
+                            element.Id = Guid.CreateVersion7();
+                        }
+                        element.ReserveStudyId = existingStudy.Id;
+                        element.BuildingElement = null; // Prevent navigation property tracking issues
+                        existingStudy.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
+                        existingStudy.ReserveStudyBuildingElements.Add(element);
+                        context.Add(element);
+                    }
+                }
+
+                // Remove building elements that are no longer selected
+                var buildingElementsToRemove = existingStudy.ReserveStudyBuildingElements?
+                    .Where(e => !updatedBuildingElementIds.Contains(e.BuildingElementId))
+                    .ToList();
+                if (buildingElementsToRemove != null && buildingElementsToRemove.Any()) {
+                    foreach (var element in buildingElementsToRemove) {
+                        existingStudy.ReserveStudyBuildingElements?.Remove(element);
+                        context.Remove(element);
+                    }
+                }
+            }
+
+            // Update Common Elements - handle additions and removals
+            if (reserveStudy.ReserveStudyCommonElements != null) {
+                var existingCommonElementIds = existingStudy.ReserveStudyCommonElements?
+                    .Select(e => e.CommonElementId).ToHashSet() ?? new HashSet<Guid>();
+                var updatedCommonElementIds = reserveStudy.ReserveStudyCommonElements
+                    .Select(e => e.CommonElementId).ToHashSet();
+
+                // Add new common elements
+                foreach (var element in reserveStudy.ReserveStudyCommonElements) {
+                    if (!existingCommonElementIds.Contains(element.CommonElementId)) {
+                        if (element.Id == Guid.Empty) {
+                            element.Id = Guid.CreateVersion7();
+                        }
+                        element.ReserveStudyId = existingStudy.Id;
+                        element.CommonElement = null; // Prevent navigation property tracking issues
+                        existingStudy.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
+                        existingStudy.ReserveStudyCommonElements.Add(element);
+                        context.Add(element);
+                    }
+                }
+
+                // Remove common elements that are no longer selected
+                var commonElementsToRemove = existingStudy.ReserveStudyCommonElements?
+                    .Where(e => !updatedCommonElementIds.Contains(e.CommonElementId))
+                    .ToList();
+                if (commonElementsToRemove != null && commonElementsToRemove.Any()) {
+                    foreach (var element in commonElementsToRemove) {
+                        existingStudy.ReserveStudyCommonElements?.Remove(element);
+                        context.Remove(element);
+                    }
+                }
+            }
+
+            // Update Additional Elements - handle additions, updates, and removals
+            if (reserveStudy.ReserveStudyAdditionalElements != null) {
+                _logger.LogInformation("UpdateReserveStudyAsync: Processing {Count} incoming additional elements", 
+                    reserveStudy.ReserveStudyAdditionalElements.Count);
+                
+                // Get IDs of elements that already exist in the database
+                var existingAdditionalElementIds = existingStudy.ReserveStudyAdditionalElements?
+                    .Select(e => e.Id).ToHashSet() ?? new HashSet<Guid>();
+                    
+                _logger.LogInformation("UpdateReserveStudyAsync: Existing additional element IDs in DB: {Count}", 
+                    existingAdditionalElementIds.Count);
+
+                // Get IDs of incoming elements that exist in the database (for removal check)
+                var incomingElementIds = reserveStudy.ReserveStudyAdditionalElements
+                    .Select(e => e.Id).ToHashSet();
+
+                // Add or update additional elements
+                foreach (var element in reserveStudy.ReserveStudyAdditionalElements) {
+                    // Check if this element exists in the database
+                    bool existsInDb = existingAdditionalElementIds.Contains(element.Id);
+                    
+                    _logger.LogInformation("UpdateReserveStudyAsync: Processing additional element Id={Id}, Name={Name}, ExistsInDb={Exists}", 
+                        element.Id, element.Name, existsInDb);
+                    
+                    if (!existsInDb) {
+                        // New element - only add if it has a name
+                        if (!string.IsNullOrWhiteSpace(element.Name)) {
+                            element.ReserveStudyId = existingStudy.Id;
+                            existingStudy.ReserveStudyAdditionalElements ??= new List<ReserveStudyAdditionalElement>();
+                            existingStudy.ReserveStudyAdditionalElements.Add(element);
+                            context.Add(element);
+                            _logger.LogInformation("UpdateReserveStudyAsync: Added new additional element {Name} with Id {Id}", element.Name, element.Id);
+                        }
+                    } else {
+                        // Update existing element
+                        var existingElement = existingStudy.ReserveStudyAdditionalElements?
+                            .FirstOrDefault(e => e.Id == element.Id);
+                        if (existingElement != null) {
+                            existingElement.Name = element.Name;
+                            existingElement.NeedsService = element.NeedsService;
+                            _logger.LogInformation("UpdateReserveStudyAsync: Updated additional element {Name}", element.Name);
+                        }
+                    }
+                }
+
+                // Remove additional elements that are no longer in the incoming collection
+                var additionalElementsToRemove = existingStudy.ReserveStudyAdditionalElements?
+                    .Where(e => !incomingElementIds.Contains(e.Id))
+                    .ToList();
+                    
+                _logger.LogInformation("UpdateReserveStudyAsync: Elements to remove: {Count}", 
+                    additionalElementsToRemove?.Count ?? 0);
+                    
+                if (additionalElementsToRemove != null && additionalElementsToRemove.Any()) {
+                    foreach (var element in additionalElementsToRemove) {
+                        _logger.LogInformation("UpdateReserveStudyAsync: Removing additional element {Name}", element.Name);
+                        existingStudy.ReserveStudyAdditionalElements?.Remove(element);
+                        context.Remove(element);
+                    }
+                }
+            }
+
+            existingStudy.DateModified = DateTime.UtcNow;
             await context.SaveChangesAsync();
 
             return existingStudy;
@@ -398,12 +637,10 @@ namespace CRS.Services {
                 study.Community?.Name?.ToLower().Contains(searchString) == true ||
                 study.Contact?.FullName?.ToLower().Contains(searchString) == true ||
                 study.PropertyManager?.FullName?.ToLower().Contains(searchString) == true ||
-                study.Community?.Addresses?.Any(address =>
-                    address.Street?.ToLower().Contains(searchString) == true ||
-                    address.City?.ToLower().Contains(searchString) == true ||
-                    address.State?.ToLower().Contains(searchString) == true ||
-                    address.Zip?.ToLower().Contains(searchString) == true
-                ) == true
+                study.Community?.PhysicalAddress?.Street?.ToLower().Contains(searchString) == true ||
+                study.Community?.PhysicalAddress?.City?.ToLower().Contains(searchString) == true ||
+                study.Community?.PhysicalAddress?.State?.ToLower().Contains(searchString) == true ||
+                study.Community?.PhysicalAddress?.Zip?.ToLower().Contains(searchString) == true
             );
         }
 

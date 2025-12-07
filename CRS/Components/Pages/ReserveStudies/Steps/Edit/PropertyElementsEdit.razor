@@ -1,9 +1,10 @@
-﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps
+﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps.Edit
 
 @using CRS.Data
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ILogger<PropertyElementsEdit> Logger
 
 <MudForm Model="Model" @ref="form">
     <MudGrid>
@@ -17,16 +18,12 @@
             <MudText Typo="Typo.h6" Class="mb-4">Building Elements</MudText>
             @if (buildingElements != null && buildingElements.Any()) {
                 @foreach (var element in buildingElements) {
-                    var elementId = element.Id;
-                    var isChecked = buildingElementSelections.GetValueOrDefault(elementId, false);
-                    var studyElement = Model.ReserveStudyBuildingElements?.FirstOrDefault(e => e.BuildingElementId == elementId);
-                    var needsService = element.NeedsService;
-                    
+                    var capturedElement = element; // Capture for closure
                     <MudCheckBox T="bool" 
-                                 Checked="@isChecked" 
-                                 CheckedChanged="@((bool val) => OnBuildingElementChanged(val, element))">
+                                 Value="@buildingElementSelections.GetValueOrDefault(capturedElement.Id, false)" 
+                                 ValueChanged="@((bool val) => OnBuildingElementChanged(val, capturedElement))">
                         <MudText Typo="Typo.body2">
-                            @element.Name@(needsService ? " *" : "")
+                            @capturedElement.Name@(capturedElement.NeedsService ? " *" : "")
                         </MudText>
                     </MudCheckBox>
                 }
@@ -44,16 +41,12 @@
             <MudText Typo="Typo.h6" Class="mb-4">Common Elements</MudText>
             @if (commonElements != null && commonElements.Any()) {
                 @foreach (var element in commonElements) {
-                    var elementId = element.Id;
-                    var isChecked = commonElementSelections.GetValueOrDefault(elementId, false);
-                    var studyElement = Model.ReserveStudyCommonElements?.FirstOrDefault(e => e.CommonElementId == elementId);
-                    var needsService = element.NeedsService;
-                    
+                    var capturedElement = element; // Capture for closure
                     <MudCheckBox T="bool" 
-                                 Checked="@isChecked" 
-                                 CheckedChanged="@((bool val) => OnCommonElementChanged(val, element))">
+                                 Value="@commonElementSelections.GetValueOrDefault(capturedElement.Id, false)" 
+                                 ValueChanged="@((bool val) => OnCommonElementChanged(val, capturedElement))">
                         <MudText Typo="Typo.body2">
-                            @element.Name@(needsService ? " *" : "")
+                            @capturedElement.Name@(capturedElement.NeedsService ? " *" : "")
                         </MudText>
                     </MudCheckBox>
                 }
@@ -70,7 +63,7 @@
         <MudItem xs="12">
             <MudText Typo="Typo.h6" Class="mb-4">Additional Elements</MudText>
             <MudList T="ReserveStudyAdditionalElement">
-                @foreach (var additionalElement in Model.ReserveStudyAdditionalElements) {
+                @foreach (var additionalElement in Model.ReserveStudyAdditionalElements.OrderBy(ae => ae.DateCreated)) {
                     <MudListItem>
                         <MudGrid>
                             <MudItem xs="7">
@@ -113,34 +106,50 @@ private List<CommonElement>? commonElements;
     private Dictionary<Guid, bool> buildingElementSelections = new();
     private Dictionary<Guid, bool> commonElementSelections = new();
     private MudForm? form;
+    private Guid? lastModelId; // Track the last model ID to avoid re-initializing on every render
 
     protected override async Task OnInitializedAsync() {
         context = await DbFactory.CreateDbContextAsync();
 
         buildingElements = await context.BuildingElements.OrderBy(be => be.ZOrder).ToListAsync();
         commonElements = await context.CommonElements.ToListAsync();
+        
+        // Initialize all checkboxes to false
+        foreach (var element in buildingElements) {
+            buildingElementSelections[element.Id] = false;
+        }
+        foreach (var element in commonElements) {
+            commonElementSelections[element.Id] = false;
+        }
 
         // Initialize collections if null
         if (Model != null) {
             Model.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
             Model.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
             Model.ReserveStudyAdditionalElements ??= new List<ReserveStudyAdditionalElement>();
+            
+            // Only update selections from Model if the Model has actual data
+            if (Model.ReserveStudyBuildingElements.Any() || Model.ReserveStudyCommonElements.Any()) {
+                UpdateSelectionsFromModel();
+            }
+            lastModelId = Model.Id;
         }
     }
 
     protected override void OnParametersSet() {
-        // Re-evaluate selections whenever parameters change (Model populated/updated)
+        // Only re-evaluate selections when the Model ID changes (new model loaded)
+        // NOT on every parameter set (which happens during normal rendering)
         if (Model != null && buildingElements != null && commonElements != null) {
-            UpdateSelections();
+            if (lastModelId != Model.Id) {
+                lastModelId = Model.Id;
+                UpdateSelectionsFromModel();
+            }
         }
     }
-
-    private void UpdateSelections() {
-        // Clear and rebuild selections
-        buildingElementSelections.Clear();
-        commonElementSelections.Clear();
-
-        // Initialize selections based on Model's current elements
+    
+    private void UpdateSelectionsFromModel() {
+        // Update selections based on Model's current elements
+        // Only set to true for elements that exist in the Model
         foreach (var element in buildingElements ?? Enumerable.Empty<BuildingElement>()) {
             buildingElementSelections[element.Id] = Model.ReserveStudyBuildingElements?.Any(e => e.BuildingElementId == element.Id) ?? false;
         }
@@ -160,6 +169,9 @@ private List<CommonElement>? commonElements;
     }
 
     private void OnBuildingElementChanged(bool isSelected, BuildingElement element) {
+        Logger.LogInformation("OnBuildingElementChanged: {Name} -> {Selected}, Dict count before: {Count}", 
+            element.Name, isSelected, buildingElementSelections.Count);
+        
         buildingElementSelections[element.Id] = isSelected;
         
         if (isSelected) {
@@ -167,7 +179,6 @@ private List<CommonElement>? commonElements;
             if (!Model.ReserveStudyBuildingElements.Any(e => e.BuildingElementId == element.Id)) {
                 Model.ReserveStudyBuildingElements.Add(new ReserveStudyBuildingElement { 
                     BuildingElementId = element.Id, 
-                    BuildingElement = element,
                     ReserveStudyId = Model.Id 
                 });
             }
@@ -178,6 +189,9 @@ private List<CommonElement>? commonElements;
                 Model.ReserveStudyBuildingElements.Remove(itemToRemove);
             }
         }
+        
+        Logger.LogInformation("OnBuildingElementChanged: After update, true count: {TrueCount}", 
+            buildingElementSelections.Count(x => x.Value));
     }
 
     private void OnCommonElementChanged(bool isSelected, CommonElement element) {
@@ -188,7 +202,6 @@ private List<CommonElement>? commonElements;
             if (!Model.ReserveStudyCommonElements.Any(e => e.CommonElementId == element.Id)) {
                 Model.ReserveStudyCommonElements.Add(new ReserveStudyCommonElement { 
                     CommonElementId = element.Id, 
-                    CommonElement = element,
                     ReserveStudyId = Model.Id 
                 });
             }
@@ -213,8 +226,64 @@ private List<CommonElement>? commonElements;
     public async Task<bool> ValidateAsync() {
         await form.Validate();
         bool valid = form.IsValid;
+        
+        // IMPORTANT: Sync selections back to Model before saving
+        // This ensures any checkbox changes are reflected in the Model's collections
+        SyncSelectionsToModel();
+        
+        // Log the current state of collections for debugging
+        System.Diagnostics.Debug.WriteLine($"PropertyElementsEdit.ValidateAsync: BuildingElements count: {Model?.ReserveStudyBuildingElements?.Count ?? 0}");
+        System.Diagnostics.Debug.WriteLine($"PropertyElementsEdit.ValidateAsync: CommonElements count: {Model?.ReserveStudyCommonElements?.Count ?? 0}");
+        System.Diagnostics.Debug.WriteLine($"PropertyElementsEdit.ValidateAsync: AdditionalElements count: {Model?.ReserveStudyAdditionalElements?.Count ?? 0}");
+        
         await StepValidated.InvokeAsync(valid);
         return valid;
+    }
+
+    /// <summary>
+    /// Syncs the checkbox selections back to the Model's collections.
+    /// </summary>
+    private void SyncSelectionsToModel() {
+        if (Model == null) return;
+        
+        // Rebuild BuildingElements collection from selections
+        Model.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
+        var currentBuildingElementIds = Model.ReserveStudyBuildingElements.Select(e => e.BuildingElementId).ToHashSet();
+        
+        foreach (var kvp in buildingElementSelections) {
+            if (kvp.Value && !currentBuildingElementIds.Contains(kvp.Key)) {
+                Model.ReserveStudyBuildingElements.Add(new ReserveStudyBuildingElement {
+                    BuildingElementId = kvp.Key,
+                    ReserveStudyId = Model.Id
+                });
+            } else if (!kvp.Value && currentBuildingElementIds.Contains(kvp.Key)) {
+                var toRemove = Model.ReserveStudyBuildingElements.FirstOrDefault(e => e.BuildingElementId == kvp.Key);
+                if (toRemove != null) {
+                    Model.ReserveStudyBuildingElements.Remove(toRemove);
+                }
+            }
+        }
+        
+        // Rebuild CommonElements collection from selections
+        Model.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
+        var currentCommonElementIds = Model.ReserveStudyCommonElements.Select(e => e.CommonElementId).ToHashSet();
+        
+        foreach (var kvp in commonElementSelections) {
+            if (kvp.Value && !currentCommonElementIds.Contains(kvp.Key)) {
+                Model.ReserveStudyCommonElements.Add(new ReserveStudyCommonElement {
+                    CommonElementId = kvp.Key,
+                    ReserveStudyId = Model.Id
+                });
+            } else if (!kvp.Value && currentCommonElementIds.Contains(kvp.Key)) {
+                var toRemove = Model.ReserveStudyCommonElements.FirstOrDefault(e => e.CommonElementId == kvp.Key);
+                if (toRemove != null) {
+                    Model.ReserveStudyCommonElements.Remove(toRemove);
+                }
+            }
+        }
+        
+        Logger.LogInformation("SyncSelectionsToModel: BuildingElements: {Building}, CommonElements: {Common}", 
+            Model.ReserveStudyBuildingElements.Count, Model.ReserveStudyCommonElements.Count);
     }
 
     /// <summary>
@@ -222,7 +291,7 @@ private List<CommonElement>? commonElements;
     /// </summary>
     public void RefreshSelections() {
         if (Model != null && buildingElements != null && commonElements != null) {
-            UpdateSelections();
+            UpdateSelectionsFromModel();
             StateHasChanged();
         }
     }

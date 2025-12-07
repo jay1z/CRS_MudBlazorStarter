@@ -225,9 +225,7 @@ else {
             Community = new Community {
                 Name = string.Empty,
                 TenantId = tenantId, // SECURITY: Force tenant ID on community
-                Addresses = new List<Address> {
-                    new Address { Street = string.Empty, City = string.Empty, State = string.Empty, Zip = string.Empty }
-                }
+                PhysicalAddress = new Address { Street = string.Empty, City = string.Empty, State = string.Empty, Zip = string.Empty }
             },
             Contact = new Contact { 
                 FirstName = string.Empty, 
@@ -244,6 +242,8 @@ else {
                 Phone = string.Empty,
                 TenantId = tenantId // SECURITY: Force tenant ID
             },
+            ReserveStudyBuildingElements = new List<ReserveStudyBuildingElement>(),
+            ReserveStudyCommonElements = new List<ReserveStudyCommonElement>(),
             ReserveStudyAdditionalElements = new List<ReserveStudyAdditionalElement>(),
             IsActive = true
         };
@@ -317,6 +317,11 @@ else {
                     isSubmitting = false;
                     return;
                 }
+            }
+
+            // IMPORTANT: Validate step 3 to sync building/common elements to the Model
+            if (step3 != null) {
+                await step3.ValidateAsync();
             }
 
             PrepareModelForSubmission();

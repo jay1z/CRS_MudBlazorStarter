@@ -1,0 +1,188 @@
+﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps.Edit
+
+@using MudBlazor
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IContactService ContactService
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+
+<MudForm Model="Model" @ref="form">
+    <MudGrid>
+        <!-- Board Member Contact Section -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.h5" Class="mb-4">Board Member Contact</MudText>
+            <MudText Typo="Typo.body2" Class="text-muted mb-4">
+                Edit the contact information for this reserve study.
+            </MudText>
+        </MudItem>
+
+        <!-- First Name and Last Name -->
+        <MudItem xs="12">
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="Model.Contact.FirstName" Label="First Name" Required="true" Immediate="true" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField @bind-Value="Model.Contact.LastName" Label="Last Name" Required="true" Immediate="true" />
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Email -->
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Model.Contact.Email" Label="Email" Required="true" Immediate="true" />
+        </MudItem>
+
+        <!-- Phone and Extension -->
+        <MudItem xs="12">
+            <MudGrid>
+                <MudItem xs="5">
+                    <MudTextField @bind-Value="Model.Contact.Phone" Label="Phone" Required="true" Immediate="true" />
+                </MudItem>
+                <MudItem xs="3">
+                    <MudTextField @bind-Value="Model.Contact.Extension" Label="Extension" Immediate="true" />
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Property Manager Section -->
+        <MudItem xs="12" Class="mt-4">
+            <MudText Typo="Typo.h5" Class="mb-4">Property Manager Contact</MudText>
+        </MudItem>
+
+        <!-- Property Manager Optional Checkbox -->
+        <MudItem xs="12">
+            <MudCheckBox T="bool"
+                         @bind-Value="includePropertyManager"
+                         Label="Include Property Manager Contact (Optional)"
+                         Color="Color.Primary" />
+        </MudItem>
+
+        @if (includePropertyManager && Model != null) {
+            <!-- First Name and Last Name -->
+            <MudItem xs="12">
+                <MudGrid>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="Model.PropertyManager.FirstName" Label="First Name" Required="true" Immediate="true" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="Model.PropertyManager.LastName" Label="Last Name" Required="true" Immediate="true" />
+                    </MudItem>
+                </MudGrid>
+            </MudItem>
+
+            <!-- Company Name -->
+            <MudItem xs="12">
+                <MudTextField @bind-Value="Model.PropertyManager.CompanyName" Label="Company Name" Required="true" Immediate="true" />
+            </MudItem>
+
+            <!-- Email -->
+            <MudItem xs="12">
+                <MudTextField @bind-Value="Model.PropertyManager.Email" Label="Email" Required="true" Immediate="true" />
+            </MudItem>
+
+            <!-- Phone and Extension -->
+            <MudItem xs="12">
+                <MudGrid>
+                    <MudItem xs="5">
+                        <MudTextField @bind-Value="Model.PropertyManager.Phone" Label="Phone" Required="true" Immediate="true" />
+                    </MudItem>
+                    <MudItem xs="3">
+                        <MudTextField @bind-Value="Model.PropertyManager.Extension" Label="Extension" Immediate="true" />
+                    </MudItem>
+                </MudGrid>
+            </MudItem>
+        }
+
+        <!-- Preferred Point of Contact -->
+        <MudItem xs="12" Class="mt-4">
+            <MudText Typo="Typo.h5" Class="mb-4">Preferred Point of Contact</MudText>
+            <MudRadioGroup @bind-Value="Model.PointOfContactType">
+                <MudRadio Value="ReserveStudy.PointOfContactTypeEnum.Contact" Label="Contact" />
+                @if (includePropertyManager) {
+                    <MudRadio Value="ReserveStudy.PointOfContactTypeEnum.PropertyManager" Label="Property Manager" />
+                }
+            </MudRadioGroup>
+        </MudItem>
+    </MudGrid>
+</MudForm>
+
+@code {
+    [Parameter]
+    public ReserveStudy Model { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> StepValidated { get; set; }
+
+    private MudForm form;
+    private bool _includePropertyManager = false;
+
+    // Property that manages checkbox state and initializes PropertyManager when needed
+    private bool includePropertyManager
+    {
+        get => _includePropertyManager;
+        set
+        {
+            if (_includePropertyManager == value) return;
+            
+            _includePropertyManager = value;
+            
+            if (value && Model != null && Model.PropertyManager == null)
+            {
+                Model.PropertyManager = new PropertyManager();
+            }
+            
+            StateHasChanged();
+        }
+    }
+
+    protected override void OnInitialized() {
+        // Check if PropertyManager has any meaningful data
+        if (Model?.PropertyManager != null) {
+            var hasData = !string.IsNullOrWhiteSpace(Model.PropertyManager.FirstName) ||
+                         !string.IsNullOrWhiteSpace(Model.PropertyManager.LastName) ||
+                         !string.IsNullOrWhiteSpace(Model.PropertyManager.CompanyName) ||
+                         !string.IsNullOrWhiteSpace(Model.PropertyManager.Email) ||
+                         !string.IsNullOrWhiteSpace(Model.PropertyManager.Phone);
+            
+            if (hasData) {
+                _includePropertyManager = true;
+            }
+        }
+        
+        // Ensure PropertyManager is initialized if checkbox is checked
+        if (_includePropertyManager && Model?.PropertyManager == null) {
+            Model.PropertyManager = new PropertyManager();
+        }
+    }
+
+    public async Task<bool> ValidateAsync() {
+        // Handle property manager based on checkbox state
+        if (!includePropertyManager) {
+            // Only clear if PropertyManager is truly empty
+            if (Model.PropertyManager != null && 
+                string.IsNullOrWhiteSpace(Model.PropertyManager.FirstName) &&
+                string.IsNullOrWhiteSpace(Model.PropertyManager.LastName) &&
+                string.IsNullOrWhiteSpace(Model.PropertyManager.CompanyName)) {
+                Model.PropertyManager = null;
+                Model.PropertyManagerId = null;
+            }
+            else if (Model.PropertyManager != null) {
+                // Has data but checkbox unchecked - preserve data and re-check
+                _includePropertyManager = true;
+            }
+            
+            Model.PointOfContactType = ReserveStudy.PointOfContactTypeEnum.Contact;
+        }
+        
+        await form.Validate();
+        bool valid = form.IsValid;
+        await StepValidated.InvokeAsync(valid);
+        return valid;
+    }
+}

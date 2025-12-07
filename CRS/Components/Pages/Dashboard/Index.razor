@@ -182,7 +182,7 @@
                                     <MudStack Spacing="0">
                                         <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Community?.Name</MudText>
                                         <MudText Typo="Typo.caption" Style="color: #999;">
-                                            @(context.Community?.Addresses?.FirstOrDefault()?.City ?? ""), @(context.Community?.Addresses?.FirstOrDefault()?.State ?? "")
+                                            @(context.Community?.PhysicalAddress?.City ?? ""), @(context.Community?.PhysicalAddress?.State ?? "")
                                         </MudText>
                                     </MudStack>
                                 </MudTd>
@@ -884,7 +884,7 @@ private async Task LoadPipelineDataAsync(int tenantId)
             hoaUserStudies = await context.ReserveStudies
                 .AsNoTracking()
                 .Include(rs => rs.Community)
-                    .ThenInclude(c => c.Addresses)
+                    .ThenInclude(c => c.PhysicalAddress)
                 .Where(rs => rs.ApplicationUserId == currentUserId.Value && 
                             rs.IsActive &&
                             rs.TenantId == TenantContext.TenantId.Value)

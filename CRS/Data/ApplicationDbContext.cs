@@ -45,13 +45,28 @@ namespace CRS.Data {
         protected override void OnModelCreating(ModelBuilder builder) {
             base.OnModelCreating(builder);
 
-            builder.HasDefaultSchema(DefaultSchema);
+            //builder.HasDefaultSchema(DefaultSchema);
 
             ConfigureEntities(builder);
 
             // Phase 1: Performance Indexes - Single column indexes for tenant queries
             builder.Entity<Community>().HasIndex(e => e.TenantId);
             builder.Entity<Contact>().HasIndex(e => e.TenantId);
+
+            // Community address FK relationships
+            builder.Entity<Community>()
+                .HasOne(c => c.PhysicalAddress)
+                .WithMany()
+                .HasForeignKey(c => c.PhysicalAddressId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Community>()
+                .HasOne(c => c.MailingAddress)
+                .WithMany()
+                .HasForeignKey(c => c.MailingAddressId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+
             builder.Entity<PropertyManager>().HasIndex(e => e.TenantId);
             builder.Entity<ReserveStudy>().HasIndex(e => e.TenantId);
             builder.Entity<FinancialInfo>().HasIndex(e => e.TenantId);

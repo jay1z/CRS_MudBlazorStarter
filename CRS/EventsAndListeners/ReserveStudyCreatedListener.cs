@@ -30,7 +30,7 @@ namespace CRS.EventsAndListeners {
                     Start = annualMeetingDate,
                     End = annualMeetingDate.AddHours(2),
                     Description = "Annual meeting for the community.",
-                    Location = string.Join(", ", reserveStudy.Community.Addresses.Select(a => a.FullAddress)),
+                    Location = reserveStudy.Community.PhysicalAddress?.FullAddress ?? string.Empty,
                     ApplicationUserId = reserveStudy.ApplicationUserId,
                     SpecialistUserId = reserveStudy.SpecialistUserId,
                     IsPublic = true

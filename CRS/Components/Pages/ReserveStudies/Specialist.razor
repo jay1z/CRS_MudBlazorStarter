@@ -88,11 +88,10 @@ Manage HOA Users
     || (i.Contact?.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
     || (i.PropertyManager?.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
     || (FormatStatus(i.Status).Contains(search, StringComparison.OrdinalIgnoreCase))
-    || (i.Community?.Addresses?.Any(a =>
-    (a.Street?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
-    || (a.City?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
-    || (a.State?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
-    || (a.Zip?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)) ?? false)
+    || (i.Community?.PhysicalAddress?.Street?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (i.Community?.PhysicalAddress?.City?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (i.Community?.PhysicalAddress?.State?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
+    || (i.Community?.PhysicalAddress?.Zip?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
     );
 
     protected override async Task OnInitializedAsync() {

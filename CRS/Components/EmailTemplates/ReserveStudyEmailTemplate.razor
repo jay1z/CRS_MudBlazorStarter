@@ -24,8 +24,8 @@
             @if (Model.ReserveStudy?.DateApproved != null) {
                 <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Date Approved:</span> @(Model.ReserveStudy?.DateApproved?.ToString("MM/dd/yyyy") ?? "N/A")</div>
             }
-            @if (Model.ReserveStudy?.LastModified != null) {
-                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Last Modified:</span> @(Model.ReserveStudy?.LastModified?.ToString("MM/dd/yyyy") ?? "N/A")</div>
+            @if (Model.ReserveStudy?.DateModified != null) {
+                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Last Modified:</span> @(Model.ReserveStudy?.DateModified?.ToString("MM/dd/yyyy") ?? "N/A")</div>
             }
             <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Status:</span> @(Model.ReserveStudy?.IsComplete == true ? "Complete" : "In Progress")</div>
         </div>

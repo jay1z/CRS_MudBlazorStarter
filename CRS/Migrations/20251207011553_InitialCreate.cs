@@ -11,12 +11,8 @@ namespace CRS.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.EnsureSchema(
-                name: "crs");
-
             migrationBuilder.CreateTable(
                 name: "AccessTokens",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -34,8 +30,26 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Addresses",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Street = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    City = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    State = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Zip = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Addresses", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoles",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -50,7 +64,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUsers",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -84,7 +97,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "BuildingElements",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -105,7 +117,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "CalendarEvents",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -165,7 +176,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "CommonElements",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -185,34 +195,7 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Communities",
-                schema: "crs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    TenantId = table.Column<int>(type: "int", nullable: false),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NumberOfUnits = table.Column<int>(type: "int", nullable: true),
-                    YearBuilt = table.Column<int>(type: "int", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Communities", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "CustomerAccounts",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -234,7 +217,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ElementOptions",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -257,7 +239,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "KanbanTasks",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -281,7 +262,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Messages",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -301,7 +281,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Notifications",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -320,7 +299,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Roles",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -334,7 +312,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ServiceContacts",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -356,7 +333,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "StripeEventLogs",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
@@ -377,7 +353,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "SupportTickets",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -400,7 +375,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "SystemSettings",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -469,7 +443,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "TenantHomepages",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -493,7 +466,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Tenants",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -537,8 +509,46 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Communities",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PhysicalAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MailingAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NumberOfUnits = table.Column<int>(type: "int", nullable: true),
+                    YearBuilt = table.Column<int>(type: "int", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Communities", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Communities_Addresses_MailingAddressId",
+                        column: x => x.MailingAddressId,
+                        principalTable: "Addresses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Communities_Addresses_PhysicalAddressId",
+                        column: x => x.PhysicalAddressId,
+                        principalTable: "Addresses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -553,7 +563,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
                         column: x => x.RoleId,
-                        principalSchema: "crs",
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -561,7 +570,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserClaims",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -576,7 +584,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserClaims_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -584,7 +591,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserLogins",
-                schema: "crs",
                 columns: table => new
                 {
                     LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -598,7 +604,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserLogins_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -606,7 +611,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserRoles",
-                schema: "crs",
                 columns: table => new
                 {
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -618,14 +622,12 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
                         column: x => x.RoleId,
-                        principalSchema: "crs",
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_AspNetUserRoles_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -633,7 +635,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserTokens",
-                schema: "crs",
                 columns: table => new
                 {
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -647,7 +648,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserTokens_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -655,7 +655,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AuditLogArchives",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -687,14 +686,12 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_AuditLogArchives_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "AuditLogs",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -724,14 +721,12 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_AuditLogs_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "ContactGroups",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -749,7 +744,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_ContactGroups_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -757,7 +751,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Contacts",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -780,14 +773,12 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_Contacts_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "Profiles",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -808,7 +799,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_Profiles_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -816,7 +806,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "PropertyManagers",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -839,14 +828,12 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_PropertyManagers_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "Settings",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -867,44 +854,13 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_Settings_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Addresses",
-                schema: "crs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Street = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    City = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    State = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Zip = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsMailingAddress = table.Column<bool>(type: "bit", nullable: false),
-                    AddressType = table.Column<int>(type: "int", nullable: false),
-                    CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Addresses", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Addresses_Communities_CommunityId",
-                        column: x => x.CommunityId,
-                        principalSchema: "crs",
-                        principalTable: "Communities",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "DemoSessions",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -931,14 +887,12 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_DemoSessions_Tenants_DemoTenantId",
                         column: x => x.DemoTenantId,
-                        principalSchema: "crs",
                         principalTable: "Tenants",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "UserRoleAssignments",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -952,28 +906,24 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_UserRoleAssignments_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_UserRoleAssignments_Roles_RoleId",
                         column: x => x.RoleId,
-                        principalSchema: "crs",
                         principalTable: "Roles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_UserRoleAssignments_Tenants_TenantId",
                         column: x => x.TenantId,
-                        principalSchema: "crs",
                         principalTable: "Tenants",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "ContactXContactGroups",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -990,14 +940,12 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_ContactXContactGroups_ContactGroups_ContactGroupId",
                         column: x => x.ContactGroupId,
-                        principalSchema: "crs",
                         principalTable: "ContactGroups",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ContactXContactGroups_Contacts_ContactId",
                         column: x => x.ContactId,
-                        principalSchema: "crs",
                         principalTable: "Contacts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -1005,7 +953,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ReserveStudies",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -1020,7 +967,6 @@ namespace CRS.Migrations
                     IsComplete = table.Column<bool>(type: "bit", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    LastModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     TenantId = table.Column<int>(type: "int", nullable: false),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
                     IsDemo = table.Column<bool>(type: "bit", nullable: false),
@@ -1044,38 +990,34 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_ReserveStudies_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudies_AspNetUsers_SpecialistUserId",
                         column: x => x.SpecialistUserId,
-                        principalSchema: "crs",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudies_Communities_CommunityId",
                         column: x => x.CommunityId,
-                        principalSchema: "crs",
                         principalTable: "Communities",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudies_Contacts_ContactId",
                         column: x => x.ContactId,
-                        principalSchema: "crs",
                         principalTable: "Contacts",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ReserveStudies_PropertyManagers_PropertyManagerId",
                         column: x => x.PropertyManagerId,
-                        principalSchema: "crs",
                         principalTable: "PropertyManagers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
                 name: "FinancialInfos",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -1102,7 +1044,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_FinancialInfos_ReserveStudies_ReserveStudyId",
                         column: x => x.ReserveStudyId,
-                        principalSchema: "crs",
                         principalTable: "ReserveStudies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -1110,7 +1051,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Proposals",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -1135,7 +1075,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_Proposals_ReserveStudies_ReserveStudyId",
                         column: x => x.ReserveStudyId,
-                        principalSchema: "crs",
                         principalTable: "ReserveStudies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -1143,7 +1082,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ReserveStudyAdditionalElements",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -1167,38 +1105,32 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_ReserveStudyAdditionalElements_ElementOptions_MeasurementOptionId",
                         column: x => x.MeasurementOptionId,
-                        principalSchema: "crs",
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyAdditionalElements_ElementOptions_RemainingLifeOptionId",
                         column: x => x.RemainingLifeOptionId,
-                        principalSchema: "crs",
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyAdditionalElements_ElementOptions_UsefulLifeOptionId",
                         column: x => x.UsefulLifeOptionId,
-                        principalSchema: "crs",
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyAdditionalElements_ReserveStudies_ReserveStudyId",
                         column: x => x.ReserveStudyId,
-                        principalSchema: "crs",
                         principalTable: "ReserveStudies",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyAdditionalElements_ServiceContacts_ServiceContactId",
                         column: x => x.ServiceContactId,
-                        principalSchema: "crs",
                         principalTable: "ServiceContacts",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "ReserveStudyBuildingElements",
-                schema: "crs",
                 columns: table => new
                 {
                     ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -1221,46 +1153,39 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_ReserveStudyBuildingElements_BuildingElements_BuildingElementId",
                         column: x => x.BuildingElementId,
-                        principalSchema: "crs",
                         principalTable: "BuildingElements",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ReserveStudyBuildingElements_ElementOptions_MeasurementOptionId",
                         column: x => x.MeasurementOptionId,
-                        principalSchema: "crs",
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyBuildingElements_ElementOptions_RemainingLifeOptionId",
                         column: x => x.RemainingLifeOptionId,
-                        principalSchema: "crs",
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyBuildingElements_ElementOptions_UsefulLifeOptionId",
                         column: x => x.UsefulLifeOptionId,
-                        principalSchema: "crs",
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyBuildingElements_ReserveStudies_ReserveStudyId",
                         column: x => x.ReserveStudyId,
-                        principalSchema: "crs",
                         principalTable: "ReserveStudies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ReserveStudyBuildingElements_ServiceContacts_ServiceContactId",
                         column: x => x.ServiceContactId,
-                        principalSchema: "crs",
                         principalTable: "ServiceContacts",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "ReserveStudyCommonElements",
-                schema: "crs",
                 columns: table => new
                 {
                     ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -1292,46 +1217,39 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_ReserveStudyCommonElements_CommonElements_CommonElementId",
                         column: x => x.CommonElementId,
-                        principalSchema: "crs",
                         principalTable: "CommonElements",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ReserveStudyCommonElements_ElementOptions_MeasurementOptionId",
                         column: x => x.MeasurementOptionId,
-                        principalSchema: "crs",
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyCommonElements_ElementOptions_RemainingLifeOptionId",
                         column: x => x.RemainingLifeOptionId,
-                        principalSchema: "crs",
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyCommonElements_ElementOptions_UsefulLifeOptionId",
                         column: x => x.UsefulLifeOptionId,
-                        principalSchema: "crs",
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ReserveStudyCommonElements_ReserveStudies_ReserveStudyId",
                         column: x => x.ReserveStudyId,
-                        principalSchema: "crs",
                         principalTable: "ReserveStudies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ReserveStudyCommonElements_ServiceContacts_ServiceContactId",
                         column: x => x.ServiceContactId,
-                        principalSchema: "crs",
                         principalTable: "ServiceContacts",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
                 name: "StudyRequests",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -1351,7 +1269,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_StudyRequests_ReserveStudies_Id",
                         column: x => x.Id,
-                        principalSchema: "crs",
                         principalTable: "ReserveStudies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -1359,7 +1276,6 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateTable(
                 name: "StudyStatusHistories",
-                schema: "crs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -1380,7 +1296,6 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_StudyStatusHistories_StudyRequests_RequestId",
                         column: x => x.RequestId,
-                        principalSchema: "crs",
                         principalTable: "StudyRequests",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -1388,26 +1303,17 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_AccessTokens_Token",
-                schema: "crs",
                 table: "AccessTokens",
                 column: "Token",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Addresses_CommunityId",
-                schema: "crs",
-                table: "Addresses",
-                column: "CommunityId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
-                schema: "crs",
                 table: "AspNetRoleClaims",
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "RoleNameIndex",
-                schema: "crs",
                 table: "AspNetRoles",
                 column: "NormalizedName",
                 unique: true,
@@ -1415,37 +1321,31 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserClaims_UserId",
-                schema: "crs",
                 table: "AspNetUserClaims",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserLogins_UserId",
-                schema: "crs",
                 table: "AspNetUserLogins",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserRoles_RoleId",
-                schema: "crs",
                 table: "AspNetUserRoles",
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
-                schema: "crs",
                 table: "AspNetUsers",
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUsers_TenantId",
-                schema: "crs",
                 table: "AspNetUsers",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
-                schema: "crs",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true,
@@ -1453,420 +1353,362 @@ namespace CRS.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogArchives_ApplicationUserId",
-                schema: "crs",
                 table: "AuditLogArchives",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLog_Table_Created_Covering",
-                schema: "crs",
                 table: "AuditLogs",
                 columns: new[] { "TableName", "CreatedAt" })
                 .Annotation("SqlServer:Include", new[] { "RecordId", "ColumnName", "Action" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_ApplicationUserId",
-                schema: "crs",
                 table: "AuditLogs",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Communities_MailingAddressId",
+                table: "Communities",
+                column: "MailingAddressId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Communities_PhysicalAddressId",
+                table: "Communities",
+                column: "PhysicalAddressId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Communities_TenantId",
-                schema: "crs",
                 table: "Communities",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Community_Tenant_Active",
-                schema: "crs",
                 table: "Communities",
                 columns: new[] { "TenantId", "IsActive" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContactGroups_ApplicationUserId",
-                schema: "crs",
                 table: "ContactGroups",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Contact_Tenant_User_NotDeleted",
-                schema: "crs",
                 table: "Contacts",
                 columns: new[] { "TenantId", "ApplicationUserId" },
                 filter: "[DateDeleted] IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Contacts_ApplicationUserId",
-                schema: "crs",
                 table: "Contacts",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Contacts_TenantId",
-                schema: "crs",
                 table: "Contacts",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContactXContactGroups_ContactGroupId",
-                schema: "crs",
                 table: "ContactXContactGroups",
                 column: "ContactGroupId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ContactXContactGroups_ContactId",
-                schema: "crs",
                 table: "ContactXContactGroups",
                 column: "ContactId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CustomerAccounts_TenantId",
-                schema: "crs",
                 table: "CustomerAccounts",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DemoSessions_DemoTenantId",
-                schema: "crs",
                 table: "DemoSessions",
                 column: "DemoTenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ElementOption_Type_Active_Order",
-                schema: "crs",
                 table: "ElementOptions",
                 columns: new[] { "OptionType", "IsActive", "ZOrder" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_FinancialInfo_Tenant_Study_NotDeleted",
-                schema: "crs",
                 table: "FinancialInfos",
                 columns: new[] { "TenantId", "ReserveStudyId" },
                 filter: "[DateDeleted] IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_FinancialInfos_ReserveStudyId",
-                schema: "crs",
                 table: "FinancialInfos",
                 column: "ReserveStudyId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_FinancialInfos_TenantId",
-                schema: "crs",
                 table: "FinancialInfos",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Profiles_ApplicationUserId",
-                schema: "crs",
                 table: "Profiles",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PropertyManagers_ApplicationUserId",
-                schema: "crs",
                 table: "PropertyManagers",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PropertyManagers_TenantId",
-                schema: "crs",
                 table: "PropertyManagers",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Proposal_Tenant_Study_Approved_NotDeleted",
-                schema: "crs",
                 table: "Proposals",
                 columns: new[] { "TenantId", "ReserveStudyId", "IsApproved" },
                 filter: "[DateDeleted] IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Proposals_ReserveStudyId",
-                schema: "crs",
                 table: "Proposals",
                 column: "ReserveStudyId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Proposals_TenantId",
-                schema: "crs",
                 table: "Proposals",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_ApplicationUserId",
-                schema: "crs",
                 table: "ReserveStudies",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_CommunityId",
-                schema: "crs",
                 table: "ReserveStudies",
                 column: "CommunityId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_ContactId",
-                schema: "crs",
                 table: "ReserveStudies",
                 column: "ContactId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_PropertyManagerId",
-                schema: "crs",
                 table: "ReserveStudies",
                 column: "PropertyManagerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_SpecialistUserId",
-                schema: "crs",
                 table: "ReserveStudies",
                 column: "SpecialistUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_TenantId",
-                schema: "crs",
                 table: "ReserveStudies",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudy_Tenant_Active_Created_Covering",
-                schema: "crs",
                 table: "ReserveStudies",
                 columns: new[] { "TenantId", "IsActive", "DateCreated" })
                 .Annotation("SqlServer:Include", new[] { "CommunityId", "ApplicationUserId", "SpecialistUserId", "Status" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudy_Tenant_Specialist_Active",
-                schema: "crs",
                 table: "ReserveStudies",
                 columns: new[] { "TenantId", "SpecialistUserId", "IsActive" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudy_Tenant_Status_Active",
-                schema: "crs",
                 table: "ReserveStudies",
                 columns: new[] { "TenantId", "Status", "IsActive" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudy_Tenant_User_Community",
-                schema: "crs",
                 table: "ReserveStudies",
                 columns: new[] { "TenantId", "ApplicationUserId", "CommunityId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyAdditionalElements_MeasurementOptionId",
-                schema: "crs",
                 table: "ReserveStudyAdditionalElements",
                 column: "MeasurementOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyAdditionalElements_RemainingLifeOptionId",
-                schema: "crs",
                 table: "ReserveStudyAdditionalElements",
                 column: "RemainingLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyAdditionalElements_ReserveStudyId",
-                schema: "crs",
                 table: "ReserveStudyAdditionalElements",
                 column: "ReserveStudyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyAdditionalElements_ServiceContactId",
-                schema: "crs",
                 table: "ReserveStudyAdditionalElements",
                 column: "ServiceContactId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyAdditionalElements_UsefulLifeOptionId",
-                schema: "crs",
                 table: "ReserveStudyAdditionalElements",
                 column: "UsefulLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyBuildingElements_BuildingElementId",
-                schema: "crs",
                 table: "ReserveStudyBuildingElements",
                 column: "BuildingElementId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyBuildingElements_MeasurementOptionId",
-                schema: "crs",
                 table: "ReserveStudyBuildingElements",
                 column: "MeasurementOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyBuildingElements_RemainingLifeOptionId",
-                schema: "crs",
                 table: "ReserveStudyBuildingElements",
                 column: "RemainingLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyBuildingElements_ServiceContactId",
-                schema: "crs",
                 table: "ReserveStudyBuildingElements",
                 column: "ServiceContactId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyBuildingElements_UsefulLifeOptionId",
-                schema: "crs",
                 table: "ReserveStudyBuildingElements",
                 column: "UsefulLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RSBuildingElement_Study_Element",
-                schema: "crs",
                 table: "ReserveStudyBuildingElements",
                 columns: new[] { "ReserveStudyId", "BuildingElementId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyCommonElements_CommonElementId",
-                schema: "crs",
                 table: "ReserveStudyCommonElements",
                 column: "CommonElementId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyCommonElements_MeasurementOptionId",
-                schema: "crs",
                 table: "ReserveStudyCommonElements",
                 column: "MeasurementOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyCommonElements_RemainingLifeOptionId",
-                schema: "crs",
                 table: "ReserveStudyCommonElements",
                 column: "RemainingLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyCommonElements_ServiceContactId",
-                schema: "crs",
                 table: "ReserveStudyCommonElements",
                 column: "ServiceContactId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyCommonElements_UsefulLifeOptionId",
-                schema: "crs",
                 table: "ReserveStudyCommonElements",
                 column: "UsefulLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RSCommonElement_Study_Element",
-                schema: "crs",
                 table: "ReserveStudyCommonElements",
                 columns: new[] { "ReserveStudyId", "CommonElementId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Roles_Name",
-                schema: "crs",
                 table: "Roles",
                 column: "Name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Settings_ApplicationUserId",
-                schema: "crs",
                 table: "Settings",
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyRequests_CommunityId",
-                schema: "crs",
                 table: "StudyRequests",
                 column: "CommunityId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyRequests_TenantId",
-                schema: "crs",
                 table: "StudyRequests",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyRequests_TenantId_CurrentStatus",
-                schema: "crs",
                 table: "StudyRequests",
                 columns: new[] { "TenantId", "CurrentStatus" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyRequests_TenantId_StateChangedAt",
-                schema: "crs",
                 table: "StudyRequests",
                 columns: new[] { "TenantId", "StateChangedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyStatusHistories_RequestId",
-                schema: "crs",
                 table: "StudyStatusHistories",
                 column: "RequestId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyStatusHistories_TenantId",
-                schema: "crs",
                 table: "StudyStatusHistories",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyStatusHistories_TenantId_RequestId_ChangedAt",
-                schema: "crs",
                 table: "StudyStatusHistories",
                 columns: new[] { "TenantId", "RequestId", "ChangedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyStatusHistories_TenantId_ToStatus_ChangedAt",
-                schema: "crs",
                 table: "StudyStatusHistories",
                 columns: new[] { "TenantId", "ToStatus", "ChangedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_SupportTickets_TenantId",
-                schema: "crs",
                 table: "SupportTickets",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TenantHomepages_TenantId",
-                schema: "crs",
                 table: "TenantHomepages",
                 column: "TenantId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_TenantHomepages_TenantId_IsPublished",
-                schema: "crs",
                 table: "TenantHomepages",
                 columns: new[] { "TenantId", "IsPublished" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tenants_PublicId",
-                schema: "crs",
                 table: "Tenants",
                 column: "PublicId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tenants_Subdomain",
-                schema: "crs",
                 table: "Tenants",
                 column: "Subdomain",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserRoleAssignments_RoleId",
-                schema: "crs",
                 table: "UserRoleAssignments",
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserRoleAssignments_TenantId",
-                schema: "crs",
                 table: "UserRoleAssignments",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserRoleAssignments_UserId",
-                schema: "crs",
                 table: "UserRoleAssignments",
                 column: "UserId");
         }
@@ -1875,176 +1717,133 @@ namespace CRS.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "AccessTokens",
-                schema: "crs");
+                name: "AccessTokens");
 
             migrationBuilder.DropTable(
-                name: "Addresses",
-                schema: "crs");
+                name: "AspNetRoleClaims");
 
             migrationBuilder.DropTable(
-                name: "AspNetRoleClaims",
-                schema: "crs");
+                name: "AspNetUserClaims");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserClaims",
-                schema: "crs");
+                name: "AspNetUserLogins");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserLogins",
-                schema: "crs");
+                name: "AspNetUserRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserRoles",
-                schema: "crs");
+                name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserTokens",
-                schema: "crs");
+                name: "AuditLogArchives");
 
             migrationBuilder.DropTable(
-                name: "AuditLogArchives",
-                schema: "crs");
+                name: "AuditLogs");
 
             migrationBuilder.DropTable(
-                name: "AuditLogs",
-                schema: "crs");
+                name: "CalendarEvents");
 
             migrationBuilder.DropTable(
-                name: "CalendarEvents",
-                schema: "crs");
+                name: "ContactXContactGroups");
 
             migrationBuilder.DropTable(
-                name: "ContactXContactGroups",
-                schema: "crs");
+                name: "CustomerAccounts");
 
             migrationBuilder.DropTable(
-                name: "CustomerAccounts",
-                schema: "crs");
+                name: "DemoSessions");
 
             migrationBuilder.DropTable(
-                name: "DemoSessions",
-                schema: "crs");
+                name: "FinancialInfos");
 
             migrationBuilder.DropTable(
-                name: "FinancialInfos",
-                schema: "crs");
+                name: "KanbanTasks");
 
             migrationBuilder.DropTable(
-                name: "KanbanTasks",
-                schema: "crs");
+                name: "Messages");
 
             migrationBuilder.DropTable(
-                name: "Messages",
-                schema: "crs");
+                name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "Notifications",
-                schema: "crs");
+                name: "Profiles");
 
             migrationBuilder.DropTable(
-                name: "Profiles",
-                schema: "crs");
+                name: "Proposals");
 
             migrationBuilder.DropTable(
-                name: "Proposals",
-                schema: "crs");
+                name: "ReserveStudyAdditionalElements");
 
             migrationBuilder.DropTable(
-                name: "ReserveStudyAdditionalElements",
-                schema: "crs");
+                name: "ReserveStudyBuildingElements");
 
             migrationBuilder.DropTable(
-                name: "ReserveStudyBuildingElements",
-                schema: "crs");
+                name: "ReserveStudyCommonElements");
 
             migrationBuilder.DropTable(
-                name: "ReserveStudyCommonElements",
-                schema: "crs");
+                name: "Settings");
 
             migrationBuilder.DropTable(
-                name: "Settings",
-                schema: "crs");
+                name: "StripeEventLogs");
 
             migrationBuilder.DropTable(
-                name: "StripeEventLogs",
-                schema: "crs");
+                name: "StudyStatusHistories");
 
             migrationBuilder.DropTable(
-                name: "StudyStatusHistories",
-                schema: "crs");
+                name: "SupportTickets");
 
             migrationBuilder.DropTable(
-                name: "SupportTickets",
-                schema: "crs");
+                name: "SystemSettings");
 
             migrationBuilder.DropTable(
-                name: "SystemSettings",
-                schema: "crs");
+                name: "TenantHomepages");
 
             migrationBuilder.DropTable(
-                name: "TenantHomepages",
-                schema: "crs");
+                name: "UserRoleAssignments");
 
             migrationBuilder.DropTable(
-                name: "UserRoleAssignments",
-                schema: "crs");
+                name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetRoles",
-                schema: "crs");
+                name: "ContactGroups");
 
             migrationBuilder.DropTable(
-                name: "ContactGroups",
-                schema: "crs");
+                name: "BuildingElements");
 
             migrationBuilder.DropTable(
-                name: "BuildingElements",
-                schema: "crs");
+                name: "CommonElements");
 
             migrationBuilder.DropTable(
-                name: "CommonElements",
-                schema: "crs");
+                name: "ElementOptions");
 
             migrationBuilder.DropTable(
-                name: "ElementOptions",
-                schema: "crs");
+                name: "ServiceContacts");
 
             migrationBuilder.DropTable(
-                name: "ServiceContacts",
-                schema: "crs");
+                name: "StudyRequests");
 
             migrationBuilder.DropTable(
-                name: "StudyRequests",
-                schema: "crs");
+                name: "Roles");
 
             migrationBuilder.DropTable(
-                name: "Roles",
-                schema: "crs");
+                name: "Tenants");
 
             migrationBuilder.DropTable(
-                name: "Tenants",
-                schema: "crs");
+                name: "ReserveStudies");
 
             migrationBuilder.DropTable(
-                name: "ReserveStudies",
-                schema: "crs");
+                name: "Communities");
 
             migrationBuilder.DropTable(
-                name: "Communities",
-                schema: "crs");
+                name: "Contacts");
 
             migrationBuilder.DropTable(
-                name: "Contacts",
-                schema: "crs");
+                name: "PropertyManagers");
 
             migrationBuilder.DropTable(
-                name: "PropertyManagers",
-                schema: "crs");
+                name: "Addresses");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers",
-                schema: "crs");
+                name: "AspNetUsers");
         }
     }
 }

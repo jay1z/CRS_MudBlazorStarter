@@ -64,7 +64,7 @@
                 .ToList();
             foreach (var c in byCommunity)
             {
-                var addr = c.Community.Addresses?.FirstOrDefault();
+                var addr = c.Community.PhysicalAddress;
                 var addressStr = addr == null ? string.Empty : string.Join(", ", new[]{addr.Street, addr.City, addr.State, addr.Zip}.Where(x => !string.IsNullOrWhiteSpace(x)));
                 var last = c.LastStudy;
                 var nextDue = last?.AddYears(3); // placeholder cycle

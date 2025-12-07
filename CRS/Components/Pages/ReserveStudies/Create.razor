@@ -25,8 +25,7 @@
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
         <MudText Typo="Typo.h5" Class="mt-4">Loading Reserve Studies...</MudText>
     </MudPaper>
-}
-else {
+} else {
     <MudText Typo="Typo.h4" Class="mb-4">Create New Reserve Study</MudText>
     <MudContainer MaxWidth="MaxWidth.Medium">
         <MudCard Elevation="25">
@@ -57,25 +56,22 @@ else {
                                     </MudButton>
                                 </MudItem>
                                 <MudItem>
-                                    @if (activeStep < steps.Count -1) {
+                                    @if (activeStep < steps.Count - 1) {
                                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="isSubmitting" OnClick="NextStep">
                                             Continue
                                             <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Class="ml-2" />
                                         </MudButton>
-                                    }
-                                    else if (AcceptTerms) {
+                                    } else if (AcceptTerms) {
                                         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                                    OnClick="SubmitForm" Disabled="isSubmitting || !IsFormValid()">
                                             @if (isSubmitting) {
                                                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                                                 <span>Submitting...</span>
-                                            }
-                                            else {
+                                            } else {
                                                 <span>Submit</span>
                                             }
                                         </MudButton>
-                                    }
-                                    else {
+                                    } else {
                                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="true">
                                             <MudTooltip Text="You must accept the terms to proceed">
                                                 Submit
@@ -126,11 +122,9 @@ else {
 
             InitializeModel();
             InitializeSteps();
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             LogAndDisplayError("Error initializing", ex);
-        }
-        finally {
+        } finally {
             isLoading = false;
         }
     }
@@ -147,18 +141,18 @@ else {
     private void InitializeModel() {
         // Start with empty placeholders; steps will collect actual data
         Model = new ReserveStudy {
-                ApplicationUserId = GetCurrentUserId(UserState.ClaimsPrincipal),
-                Community = new Community {
-                    Name = string.Empty,
-                    Addresses = new List<Address> {
-                    new Address { Street = string.Empty, City = string.Empty, State = string.Empty, Zip = string.Empty }
-                }
-                },
-                Contact = new Contact { FirstName = string.Empty, LastName = string.Empty, Email = string.Empty, Phone = string.Empty },
-                PropertyManager = new PropertyManager { FirstName = string.Empty, LastName = string.Empty, CompanyName = string.Empty, Email = string.Empty, Phone = string.Empty },
-                ReserveStudyAdditionalElements = new List<ReserveStudyAdditionalElement>(),
-                IsActive = true
-            };
+            ApplicationUserId = GetCurrentUserId(UserState.ClaimsPrincipal),
+            Community = new Community {
+                Name = string.Empty,
+                PhysicalAddress = new Address { Street = string.Empty, City = string.Empty, State = string.Empty, Zip = string.Empty }
+            },
+            Contact = new Contact { FirstName = string.Empty, LastName = string.Empty, Email = string.Empty, Phone = string.Empty },
+            PropertyManager = new PropertyManager { FirstName = string.Empty, LastName = string.Empty, CompanyName = string.Empty, Email = string.Empty, Phone = string.Empty },
+            ReserveStudyBuildingElements = new List<ReserveStudyBuildingElement>(),
+            ReserveStudyCommonElements = new List<ReserveStudyCommonElement>(),
+            ReserveStudyAdditionalElements = new List<ReserveStudyAdditionalElement>(),
+            IsActive = true
+        };
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
@@ -170,118 +164,125 @@ else {
                 activeStep++;
                 await stepper!.NextStepAsync();
             }
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             LogAndDisplayError("Error validating step", ex);
         }
     }
 
     private async Task<bool> ValidateCurrentStep() {
         bool isValid = activeStep switch {
-0 => step1 != null && await step1.ValidateAsync(),
-1 => step2 != null && await step2.ValidateAsync(),
-2 => step3 != null && await step3.ValidateAsync(),
-3 => step4 != null && await step4.ValidateAsync(),
- _ => false
- };
+            0 => step1 != null && await step1.ValidateAsync(),
+            1 => step2 != null && await step2.ValidateAsync(),
+            2 => step3 != null && await step3.ValidateAsync(),
+            3 => step4 != null && await step4.ValidateAsync(),
+            _ => false
+        };
 
- if (!isValid) {
- Snackbar.Add(activeStep ==3
- ? "You must accept the terms to proceed."
- : "Please correct the errors before proceeding.",
- Severity.Warning);
- }
+        if (!isValid) {
+            Snackbar.Add(activeStep == 3
+            ? "You must accept the terms to proceed."
+            : "Please correct the errors before proceeding.",
+            Severity.Warning);
+        }
 
- return isValid;
- }
+        return isValid;
+    }
 
- private async Task PreviousStep() {
- if (activeStep >0) {
- activeStep--;
- await stepper!.PreviousStepAsync();
- }
- }
+    private async Task PreviousStep() {
+        if (activeStep > 0) {
+            activeStep--;
+            await stepper!.PreviousStepAsync();
+        }
+    }
 
- private bool IsFormValid() =>
- steps.All(step => stepValidationState.GetValueOrDefault(step.Index)) && AcceptTerms;
+    private bool IsFormValid() =>
+    steps.All(step => stepValidationState.GetValueOrDefault(step.Index)) && AcceptTerms;
 
- private async Task SubmitForm() {
- if (isSubmitting) return; // guard double submit
- if (!IsFormValid()) {
- Snackbar.Add("Please complete all required fields.", Severity.Warning);
- return;
- }
+    private async Task SubmitForm() {
+        if (isSubmitting) return; // guard double submit
+        if (!IsFormValid()) {
+            Snackbar.Add("Please complete all required fields.", Severity.Warning);
+            return;
+        }
 
- isSubmitting = true;
- try {
- // IMPORTANT: Save new community first if needed
- if (step1 != null && !await step1.SaveNewCommunityIfNeededAsync()) {
- Snackbar.Add("Failed to save community. Please try again.", Severity.Error);
- return;
- }
+        isSubmitting = true;
+        try {
+            // IMPORTANT: Save new community first if needed
+            if (step1 != null && !await step1.SaveNewCommunityIfNeededAsync()) {
+                Snackbar.Add("Failed to save community. Please try again.", Severity.Error);
+                return;
+            }
 
- PrepareModelForSubmission();
+            // Log the current state of elements before submission
+            Logger.LogInformation("SubmitForm: step3 is {Null}, BuildingElements: {Building}, CommonElements: {Common}", 
+                step3 == null ? "NULL" : "not null",
+                Model?.ReserveStudyBuildingElements?.Count ?? 0,
+                Model?.ReserveStudyCommonElements?.Count ?? 0);
 
- // Use workflow service so the StudyRequest is created and state machine is initialized
- var created = await WorkflowService.CreateReserveStudyRequestAsync(Model!);
+            // Validate step 3 to sync building/common elements to the Model (if component is available)
+            if (step3 != null) {
+                await step3.ValidateAsync();
+            }
 
- Snackbar.Add("Reserve Study submitted successfully!", Severity.Success);
- _completed = true;
- await stepper!.NextStepAsync();
+            PrepareModelForSubmission();
 
- // Navigate to details for immediate verification and further actions
- NavigationManager.NavigateTo($"/ReserveStudies/{created.Id}/Details");
- }
- catch (Exception ex) {
- LogAndDisplayError("Error submitting form", ex);
- }
- finally {
- isSubmitting = false;
- }
- }
+            // Use workflow service so the StudyRequest is created and state machine is initialized
+            var created = await WorkflowService.CreateReserveStudyRequestAsync(Model!);
 
- private void PrepareModelForSubmission() {
- if (isExistingCommunity && Model?.Community?.Id != null && Model.Community.Id != Guid.Empty) {
- // For existing community, just set the reference without trying to attach
- Model.CommunityId = Model.Community.Id;
- // Detach the Community from the Model to prevent tracking conflicts
- Model.Community = null;
- }
- else if (Model?.Community != null) {
- // For new community that was just saved, set the CommunityId reference
- if (Model.Community.Id != Guid.Empty) {
- Model.CommunityId = Model.Community.Id;
- // Detach the Community to prevent duplicate tracking
- Model.Community = null;
- }
- }
- }
+            Snackbar.Add("Reserve Study submitted successfully!", Severity.Success);
+            _completed = true;
+            await stepper!.NextStepAsync();
 
- private void LogAndDisplayError(string message, Exception ex) {
- Logger.LogError($"{message}: {ex}");
- Snackbar.Add($"{message}: {ex.Message}", Severity.Error);
+            // Navigate to details for immediate verification and further actions
+            NavigationManager.NavigateTo($"/ReserveStudies/{created.Id}/Details");
+        } catch (Exception ex) {
+            LogAndDisplayError("Error submitting form", ex);
+        } finally {
+            isSubmitting = false;
+        }
+    }
 
- if (ex.InnerException != null) {
- Snackbar.Add($"Additional details: {ex.InnerException.Message}", Severity.Error);
- }
- }
+    private void PrepareModelForSubmission() {
+        if (isExistingCommunity && Model?.Community?.Id != null && Model.Community.Id != Guid.Empty) {
+            // For existing community, just set the reference without trying to attach
+            Model.CommunityId = Model.Community.Id;
+            // Detach the Community from the Model to prevent tracking conflicts
+            Model.Community = null;
+        } else if (Model?.Community != null) {
+            // For new community that was just saved, set the CommunityId reference
+            if (Model.Community.Id != Guid.Empty) {
+                Model.CommunityId = Model.Community.Id;
+                // Detach the Community to prevent duplicate tracking
+                Model.Community = null;
+            }
+        }
+    }
 
- private Task OnAcceptTermsChanged(bool value) {
- AcceptTerms = value;
- stepValidationState[3] = value;
- return Task.CompletedTask;
- }
+    private void LogAndDisplayError(string message, Exception ex) {
+        Logger.LogError($"{message}: {ex}");
+        Snackbar.Add($"{message}: {ex.Message}", Severity.Error);
 
- private void OnStepValidated(bool isValid) {
- stepValidationState[activeStep] = isValid;
- StateHasChanged();
- }
+        if (ex.InnerException != null) {
+            Snackbar.Add($"Additional details: {ex.InnerException.Message}", Severity.Error);
+        }
+    }
 
- private Guid? GetCurrentUserId(ClaimsPrincipal user) {
- var userIdString = user.FindFirstValue(ClaimTypes.NameIdentifier);
- if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId)) {
- throw new InvalidOperationException("User ID not found or invalid");
- }
- return userId;
- }
+    private Task OnAcceptTermsChanged(bool value) {
+        AcceptTerms = value;
+        stepValidationState[3] = value;
+        return Task.CompletedTask;
+    }
+
+    private void OnStepValidated(bool isValid) {
+        stepValidationState[activeStep] = isValid;
+        StateHasChanged();
+    }
+
+    private Guid? GetCurrentUserId(ClaimsPrincipal user) {
+        var userIdString = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId)) {
+            throw new InvalidOperationException("User ID not found or invalid");
+        }
+        return userId;
+    }
 }
