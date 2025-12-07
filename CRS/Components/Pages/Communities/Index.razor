@@ -6,6 +6,7 @@
 @using CRS.Models
 @using CRS.Services
 @using CRS.Services.Interfaces
+@using CRS.Services.Tenant
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject UserStateService UserState
@@ -15,96 +16,230 @@
 @inject IReserveStudyService ReserveStudyService
 @inject ICommunityService CommunityService
 @inject IDialogService DialogService
+@inject ITenantContext TenantContext
 
-<PageTitle>Communities</PageTitle>
+<PageTitle>Communities - @(TenantContext.TenantName ?? "ALX Reserve Cloud")</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header Section -->
+    <MudPaper Elevation="0" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 12px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.LocationCity" Class="mr-2" Style="vertical-align: middle;" />
+                    Communities
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    Manage your community properties and associations
+                </MudText>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
     @if (isLoading) {
-        <MudPaper Elevation="0" Class="pa-8">
+        <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-            <MudText Typo="Typo.h5" Class="mt-4">Loading Communities...</MudText>
+            <div class="pa-8 text-center">
+                <MudText Typo="Typo.h6" Style="color: #666;">Loading communities...</MudText>
+            </div>
         </MudPaper>
     }
-    else if (communities == null || !communities.Any()) {
-        <MudAlert Severity="Severity.Warning">
-            <MudText Typo="Typo.body1">No communities found.</MudText>
-        </MudAlert>
-    }
     else {
-        <MudCard Elevation="0" Outlined="false">
-            <MudCardHeader>
-                <MudGrid>
-                    <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.h5" Class="mb-4">My Communities</MudText>
-                        <MudText Typo="Typo.h6" Color=Color.Primary Class="mt-1">@communities.Count Active Communities</MudText>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" Class="d-flex justify-end align-center gap-2">
-                        <MudTextField @bind-Value="searchString" Placeholder="Search..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Class="mt-0" />
-                    </MudItem>
-                </MudGrid>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudTable T="Community" Items="@(FilteredCommunities)" Dense="true" Hover="true" Elevation="0" Loading="@isLoading" SortLabel="Sort by">
+        <!-- Stats Cards -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #F3E8FF; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.LocationCity" Style="color: #6A3D9A; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@(communities?.Count ?? 0)</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">Total Communities</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #FFF5E6; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Map" Style="color: #FF8C00; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetUniqueStatesCount()</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">States</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #E3F2FD; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Apartment" Style="color: #1976D2; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetUniqueCitiesCount()</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">Cities</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Search and Filter Section -->
+        <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius: 12px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
+                <MudTextField @bind-Value="searchString" 
+                              Placeholder="Search by name, address, city, state, or zip..." 
+                              Adornment="Adornment.Start" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" 
+                              Immediate="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Style="flex: 1; min-width: 250px; max-width: 400px;" />
+                <MudSelect @bind-Value="stateFilter" 
+                           Label="Filter by State" 
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Style="min-width: 180px;">
+                    <MudSelectItem Value="@((string?)null)">All States</MudSelectItem>
+                    @foreach (var state in GetUniqueStates()) {
+                        <MudSelectItem Value="@state">@state</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (!string.IsNullOrEmpty(searchString) || stateFilter != null)
+                {
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Secondary" 
+                               StartIcon="@Icons.Material.Filled.Clear"
+                               OnClick="ClearFilters">
+                        Clear
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Table Section -->
+        <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
+            @if (communities == null || !communities.Any()) {
+                <div class="pa-8 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.LocationOff" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+                    <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No communities found</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999; margin-bottom: 16px;">
+                        Communities are created when you submit a reserve study request
+                    </MudText>
+                    <AuthorizeView Policy="RequireTenantStaff">
+                        <Authorized>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       Href="/ReserveStudies/Create">
+                                Create Reserve Study
+                            </MudButton>
+                        </Authorized>
+                    </AuthorizeView>
+                </div>
+            }
+            else if (!FilteredCommunities.Any()) {
+                <div class="pa-8 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.SearchOff" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+                    <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No matching communities found</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999;">
+                        Try adjusting your search or filter criteria
+                    </MudText>
+                </div>
+            }
+            else {
+                <MudTable T="Community" 
+                          Items="@FilteredCommunities" 
+                          Hover="true" 
+                          Elevation="0"
+                          Breakpoint="Breakpoint.Sm">
                     <HeaderContent>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.Name)">NAME</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.PhysicalAddress?.Street)">STREET</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.PhysicalAddress?.City)">CITY</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.PhysicalAddress?.State)">STATE</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.PhysicalAddress?.Zip)">ZIP</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="Community" SortBy="@(x => x.DateCreated)">Created</MudTableSortLabel></MudTh>
-                        <MudTh></MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="Community" SortBy="@(x => x.Name)">Community</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="Community" SortBy="@(x => x.PhysicalAddress?.City)">Location</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="Community" SortBy="@(x => x.PhysicalAddress?.State)">State</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="Community" SortBy="@(x => x.DateCreated)">Created</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600; text-align: right;">Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate Context="community">
-                        <MudTd DataLabel="Name">
-                            <MudText Typo="Typo.h5" Class="fw-bold">@community.Name</MudText>
+                        <MudTd DataLabel="Community">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudAvatar Color="Color.Primary" Size="Size.Small" Style="background: #F3E8FF; color: #6A3D9A;">
+                                    <MudIcon Icon="@Icons.Material.Filled.LocationCity" Size="Size.Small" />
+                                </MudAvatar>
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500;">@community.Name</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #999;">@community.PhysicalAddress?.Street</MudText>
+                                </MudStack>
+                            </MudStack>
                         </MudTd>
-                        <MudTd DataLabel="Street">
-                            @community.PhysicalAddress?.Street
-                        </MudTd>
-                        <MudTd DataLabel="City">
-                            @community.PhysicalAddress?.City
+                        <MudTd DataLabel="Location">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@community.PhysicalAddress?.City</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #999;">@community.PhysicalAddress?.Zip</MudText>
+                            </MudStack>
                         </MudTd>
                         <MudTd DataLabel="State">
-                            @community.PhysicalAddress?.State
-                        </MudTd>
-                        <MudTd DataLabel="Zip">
-                            @community.PhysicalAddress?.Zip
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                @community.PhysicalAddress?.State
+                            </MudChip>
                         </MudTd>
                         <MudTd DataLabel="Created">
-                            @community.DateCreated.ToString()
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@community.DateCreated?.ToString("MMM dd, yyyy")</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #999;">@community.DateCreated?.ToString("h:mm tt")</MudText>
+                            </MudStack>
                         </MudTd>
-                        <MudTd>
-                            <MudButton Href="@($"/Communities/Details/{community.Id}")" Size="Size.Small" Variant="Variant.Filled">
-                                View
-                            </MudButton>
-                            <AuthorizeView Policy="RequireTenantStaff" Context="authState">
-                                <Authorized>
-                                    <MudButton OnClick="@(() => OpenDeleteDialog(community))" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
-                                        Delete
-                                    </MudButton>
-                                </Authorized>
-                            </AuthorizeView>
+                        <MudTd DataLabel="Actions" Style="text-align: right;">
+                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" 
+                                     Size="Size.Small" 
+                                     Dense="true"
+                                     AnchorOrigin="Origin.BottomRight"
+                                     TransformOrigin="Origin.TopRight">
+                                <MudMenuItem Icon="@Icons.Material.Filled.Visibility" 
+                                             Href="@($"/Communities/Details/{community.Id}")">
+                                    View Details
+                                </MudMenuItem>
+                                <AuthorizeView Policy="RequireTenantStaff" Context="authEdit">
+                                    <Authorized>
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" 
+                                                     Href="@($"/Communities/Update/{community.Id}")">
+                                            Edit Community
+                                        </MudMenuItem>
+                                        <MudDivider />
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" 
+                                                     OnClick="@(() => OpenDeleteDialog(community))"
+                                                     IconColor="Color.Error">
+                                            Delete
+                                        </MudMenuItem>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </MudMenu>
                         </MudTd>
                     </RowTemplate>
-                    <LoadingContent>
-                        <MudText>Loading Communities...</MudText>
-                    </LoadingContent>
-                    <NoRecordsContent>
-                        <MudText>No matching records found</MudText>
-                    </NoRecordsContent>
                     <PagerContent>
-                        <MudTablePager />
+                        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
                     </PagerContent>
                 </MudTable>
-            </MudCardContent>
-        </MudCard>
+            }
+        </MudPaper>
     }
 </MudContainer>
 
 @code {
-    private List<Community> communities;
+    private List<Community> communities = new();
     private bool isLoading = true;
     private string searchString = "";
+    private string? stateFilter;
 
     protected override async Task OnParametersSetAsync() {
         await LoadData();
@@ -149,8 +284,54 @@
         }
     }
 
-    private IEnumerable<Community> FilteredCommunities =>
-        CommunityService.FilterCommunities(communities, searchString);
+    private IEnumerable<Community> FilteredCommunities {
+        get {
+            var filtered = communities?.AsEnumerable() ?? Enumerable.Empty<Community>();
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(searchString)) {
+                var search = searchString.Trim().ToLower();
+                filtered = filtered.Where(community =>
+                    community.Name?.ToLower().Contains(search) == true ||
+                    community.PhysicalAddress?.Street?.ToLower().Contains(search) == true ||
+                    community.PhysicalAddress?.City?.ToLower().Contains(search) == true ||
+                    community.PhysicalAddress?.State?.ToLower().Contains(search) == true ||
+                    community.PhysicalAddress?.Zip?.ToLower().Contains(search) == true);
+            }
+
+            // Apply state filter
+            if (!string.IsNullOrWhiteSpace(stateFilter)) {
+                filtered = filtered.Where(c => c.PhysicalAddress?.State == stateFilter);
+            }
+
+            return filtered;
+        }
+    }
+
+    private void ClearFilters() {
+        searchString = "";
+        stateFilter = null;
+    }
+
+    private IEnumerable<string> GetUniqueStates() {
+        return communities?
+            .Where(c => !string.IsNullOrWhiteSpace(c.PhysicalAddress?.State))
+            .Select(c => c.PhysicalAddress!.State!)
+            .Distinct()
+            .OrderBy(s => s) ?? Enumerable.Empty<string>();
+    }
+
+    private int GetUniqueStatesCount() {
+        return GetUniqueStates().Count();
+    }
+
+    private int GetUniqueCitiesCount() {
+        return communities?
+            .Where(c => !string.IsNullOrWhiteSpace(c.PhysicalAddress?.City))
+            .Select(c => c.PhysicalAddress!.City!)
+            .Distinct()
+            .Count() ?? 0;
+    }
 
     private async Task OpenDeleteDialog(Community community) {
         var parameters = new DialogParameters {

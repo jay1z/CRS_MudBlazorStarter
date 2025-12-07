@@ -2,6 +2,7 @@
 @attribute [Authorize]
 
 @using CRS.Components.Custom
+@using CRS.Components.Pages.ReserveStudies.Dialogs
 @using CRS.Data
 @using CRS.EventsAndListeners
 @using CRS.Models.Emails
@@ -117,18 +118,32 @@
                     <!-- Specialist Card -->
                     <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px; overflow: hidden;">
                         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px;">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudAvatar Size="Size.Large" Style="background: white; color: #667eea;">
-                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
-                                </MudAvatar>
-                                <div>
-                                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9); font-weight: 600; text-transform: uppercase;">
-                                        Reserve Specialist
-                                    </MudText>
-                                    <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">
-                                        @(reserveStudy.Specialist?.FullName ?? "Not Assigned")
-                                    </MudText>
-                                </div>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudAvatar Size="Size.Large" Style="background: white; color: #667eea;">
+                                        @if (reserveStudy.Specialist != null) {
+                                            <MudText>@reserveStudy.Specialist.Initials</MudText>
+                                        } else {
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                                        }
+                                    </MudAvatar>
+                                    <div>
+                                        <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9); font-weight: 600; text-transform: uppercase;">
+                                            Reserve Specialist
+                                        </MudText>
+                                        <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">
+                                            @(reserveStudy.Specialist?.FullName ?? "Not Assigned")
+                                        </MudText>
+                                    </div>
+                                </MudStack>
+                                <AuthorizeView Policy="RequireTenantOwner">
+                                    <Authorized>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                       Size="Size.Small" 
+                                                       Style="color: white;"
+                                                       OnClick="OpenAssignSpecialistDialog" />
+                                    </Authorized>
+                                </AuthorizeView>
                             </MudStack>
                         </div>
                         <MudCardContent>
@@ -148,10 +163,32 @@
                                                OnClick="OpenComposeMessage">
                                         Send Message
                                     </MudButton>
+                                    <AuthorizeView Policy="RequireTenantOwner">
+                                        <Authorized>
+                                            <MudButton Variant="Variant.Text" 
+                                                       Color="Color.Primary" 
+                                                       FullWidth="true"
+                                                       StartIcon="@Icons.Material.Filled.SwapHoriz"
+                                                       OnClick="OpenAssignSpecialistDialog">
+                                                Reassign Specialist
+                                            </MudButton>
+                                        </Authorized>
+                                    </AuthorizeView>
                                 } else {
                                     <MudAlert Severity="Severity.Info" Dense="true">
                                         A specialist will be assigned to your request shortly.
                                     </MudAlert>
+                                    <AuthorizeView Policy="RequireTenantOwner">
+                                        <Authorized>
+                                            <MudButton Variant="Variant.Filled" 
+                                                       Color="Color.Primary" 
+                                                       FullWidth="true"
+                                                       StartIcon="@Icons.Material.Filled.PersonAdd"
+                                                       OnClick="OpenAssignSpecialistDialog">
+                                                Assign Specialist
+                                            </MudButton>
+                                        </Authorized>
+                                    </AuthorizeView>
                                 }
                             </MudStack>
                         </MudCardContent>
@@ -1080,21 +1117,23 @@ private int activeTabIndex = 0;
             // Now load service contacts
             using var context = await DbFactory.CreateDbContextAsync();
 
-            // Load building elements with service contacts - moved the NeedsService filter to client side
+            // Load building elements with service contacts and BuildingElement for NeedsService check
             var buildingElementContacts = await context.ReserveStudyBuildingElements
                 .AsNoTracking()
                 .Where(be => be.ReserveStudyId == Id)
+                .Include(be => be.BuildingElement)
                 .Include(be => be.ServiceContact)
                 .ToListAsync();
 
-            // Load common elements with service contacts - moved the NeedsService filter to client side
+            // Load common elements with service contacts and CommonElement for NeedsService check
             var commonElementContacts = await context.ReserveStudyCommonElements
                 .AsNoTracking()
                 .Where(ce => ce.ReserveStudyId == Id)
+                .Include(ce => ce.CommonElement)
                 .Include(ce => ce.ServiceContact)
                 .ToListAsync();
 
-            // Load additional elements with service contacts - moved the NeedsService filter to client side
+            // Load additional elements with service contacts (NeedsService is stored directly)
             var additionalElementContacts = await context.ReserveStudyAdditionalElements
                 .AsNoTracking()
                 .Where(ae => ae.ReserveStudyId == Id)
@@ -1102,7 +1141,7 @@ private int activeTabIndex = 0;
                 .ToListAsync();
 
             // Find matching elements in the loaded elements and update their service contacts
-            // Only process elements that need service - apply the filter on the client side
+            // NeedsService filter now works because BuildingElement/CommonElement are loaded
             foreach (var element in buildingElementContacts.Where(e => e.NeedsService)) {
                 var match = reserveStudy.ReserveStudyBuildingElements?.FirstOrDefault(e => e.Id == element.Id);
                 if (match != null) {
@@ -1369,6 +1408,57 @@ private int activeTabIndex = 0;
         var parameters = new DialogParameters { ["ToUserId"] = reserveStudy.SpecialistUserId.Value, ["ToUserName"] = reserveStudy.Specialist?.Email ?? string.Empty };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
         DialogService.ShowAsync<CRS.Components.Pages.Messages.ComposeMessageDialog>("Send Message", parameters, options);
+    }
+
+    private async Task OpenAssignSpecialistDialog() {
+        try {
+            // Load specialists (users with TenantSpecialist role)
+            var specialists = new List<ApplicationUser>();
+            var allUsers = await UserManager.Users.ToListAsync();
+            
+            foreach (var user in allUsers) {
+                var roles = await UserManager.GetRolesAsync(user);
+                if (roles.Contains("TenantSpecialist") || roles.Contains("TenantOwner")) {
+                    specialists.Add(user);
+                }
+            }
+
+            if (!specialists.Any()) {
+                Snackbar.Add("No specialists available to assign.", Severity.Warning);
+                return;
+            }
+
+            var parameters = new DialogParameters { ["specialists"] = specialists };
+            var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small };
+            var dialog = await DialogService.ShowAsync<AssignSpecialistDialog>("Assign Specialist", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled && result.Data is ApplicationUser selectedSpecialist) {
+                await AssignSpecialistAsync(selectedSpecialist);
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading specialists: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AssignSpecialistAsync(ApplicationUser specialist) {
+        if (reserveStudy == null) return;
+
+        try {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var study = await context.ReserveStudies.FindAsync(reserveStudy.Id);
+            
+            if (study != null) {
+                study.SpecialistUserId = specialist.Id;
+                study.DateModified = DateTime.UtcNow;
+                await context.SaveChangesAsync();
+
+                Snackbar.Add($"Specialist {specialist.FullName} assigned successfully!", Severity.Success);
+                await ReloadAfterChange();
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error assigning specialist: {ex.Message}", Severity.Error);
+        }
     }
 
     // Helper methods for status display

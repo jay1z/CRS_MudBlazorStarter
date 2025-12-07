@@ -1,17 +1,85 @@
-@using CRS.Data
+﻿@using CRS.Data
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 
 <MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Start New Conversation</MudText>
+        </MudStack>
+    </TitleContent>
     <DialogContent>
-        <MudText Typo="Typo.h6">Start Conversation</MudText>
-        <MudAutocomplete T="ApplicationUser" @bind-Value="selectedUser" ToStringFunc="(u) => (u == null ? string.Empty : (string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName))"
-                         Label="User" Dense="true" ResetValueOnEmptyText="true" Clearable="true" SearchFunc="SearchUsers" />
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body2" Style="color: #666;">
+                Search for a user by name or email to start a conversation.
+            </MudText>
+            
+            <MudAutocomplete T="ApplicationUser" 
+                             @bind-Value="selectedUser" 
+                             ToStringFunc="FormatUserDisplay"
+                             Label="Search for a user" 
+                             Placeholder="Type a name or email..."
+                             Variant="Variant.Outlined"
+                             Dense="false" 
+                             ResetValueOnEmptyText="true" 
+                             Clearable="true" 
+                             SearchFunc="SearchUsers"
+                             ShowProgressIndicator="true"
+                             ProgressIndicatorColor="Color.Primary"
+                             MinCharacters="2">
+                <ItemTemplate Context="user">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudAvatar Size="Size.Small" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            @GetInitials(user.FirstName, user.LastName)
+                        </MudAvatar>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body1">
+                                @(string.IsNullOrWhiteSpace(user.FullName) ? user.Email : user.FullName)
+                            </MudText>
+                            @if (!string.IsNullOrWhiteSpace(user.FullName)) {
+                                <MudText Typo="Typo.caption" Style="color: #999;">@user.Email</MudText>
+                            }
+                        </MudStack>
+                    </MudStack>
+                </ItemTemplate>
+                <NoItemsTemplate>
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Style="color: #ccc; font-size: 32px;" />
+                        <MudText Typo="Typo.body2" Style="color: #999;">No users found</MudText>
+                    </MudStack>
+                </NoItemsTemplate>
+            </MudAutocomplete>
+
+            @if (selectedUser != null) {
+                <MudPaper Elevation="1" Class="pa-3" Style="background: #f0f4ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudAvatar Size="Size.Medium" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            @GetInitials(selectedUser.FirstName, selectedUser.LastName)
+                        </MudAvatar>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                                @(string.IsNullOrWhiteSpace(selectedUser.FullName) ? selectedUser.Email : selectedUser.FullName)
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">@selectedUser.Email</MudText>
+                        </MudStack>
+                        <MudSpacer />
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Disabled="@(_selectedUserId == Guid.Empty)" OnClick="Submit">Open</MudButton>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Chat"
+                   Disabled="@(_selectedUserId == Guid.Empty)" 
+                   OnClick="Submit">
+            Start Chat
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -21,20 +89,31 @@
     private Guid _selectedUserId => selectedUser?.Id ?? Guid.Empty;
 
     private Task<IEnumerable<ApplicationUser>> SearchUsers(string value, CancellationToken _)
-    => string.IsNullOrWhiteSpace(value) ? Task.FromResult(Enumerable.Empty<ApplicationUser>()) : FindUsersAsync(value);
+        => string.IsNullOrWhiteSpace(value) ? Task.FromResult(Enumerable.Empty<ApplicationUser>()) : FindUsersAsync(value);
 
     private async Task<IEnumerable<ApplicationUser>> FindUsersAsync(string term) {
         try {
             await using var db = await DbFactory.CreateDbContextAsync();
             term = term.ToLowerInvariant();
             var q = await db.Users.Where(u => (u.Email != null && u.Email.ToLower().Contains(term))
-            || (u.FirstName != null && u.FirstName.ToLower().Contains(term))
-            || (u.LastName != null && u.LastName.ToLower().Contains(term)))
-            .OrderBy(u => u.FirstName).ThenBy(u => u.LastName)
-            .Take(20)
-            .ToListAsync();
+                || (u.FirstName != null && u.FirstName.ToLower().Contains(term))
+                || (u.LastName != null && u.LastName.ToLower().Contains(term)))
+                .OrderBy(u => u.FirstName).ThenBy(u => u.LastName)
+                .Take(20)
+                .ToListAsync();
             return q;
         } catch { return Enumerable.Empty<ApplicationUser>(); }
+    }
+
+    private static string FormatUserDisplay(ApplicationUser? u) {
+        if (u == null) return string.Empty;
+        return string.IsNullOrWhiteSpace(u.FullName) ? (u.Email ?? string.Empty) : u.FullName;
+    }
+
+    private static string GetInitials(string? first, string? last) {
+        var a = string.IsNullOrWhiteSpace(first) ? string.Empty : first![0].ToString().ToUpperInvariant();
+        var b = string.IsNullOrWhiteSpace(last) ? string.Empty : last![0].ToString().ToUpperInvariant();
+        return string.IsNullOrWhiteSpace(a + b) ? "?" : a + b;
     }
 
     private void Submit() => MudDialog.Close(DialogResult.Ok(_selectedUserId));

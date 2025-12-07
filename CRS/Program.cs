@@ -117,6 +117,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<ICommunityService, CommunityService>();
     builder.Services.AddScoped<IContactService, ContactService>();
     builder.Services.AddScoped<IDashboardService, DashboardService>();
+    builder.Services.AddScoped<IElementService, ElementService>();
     builder.Services.AddScoped<IReserveStudyService, ReserveStudyService>();
     builder.Services.AddScoped<IReserveStudyWorkflowService, ReserveStudyWorkflowService>();
     builder.Services.AddScoped<ISignalRService, SignalRService>();

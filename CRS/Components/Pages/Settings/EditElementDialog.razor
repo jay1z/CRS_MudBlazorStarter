@@ -1,0 +1,180 @@
+﻿@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using Microsoft.EntityFrameworkCore
+@inject IElementService ElementService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+            Edit Element
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="isValid">
+            <MudStack Spacing="3">
+                @if (IsGlobal)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">
+                        <MudText Typo="Typo.caption">
+                            This is a global element. You can set a custom display name for your organization, 
+                            but you cannot modify the original element.
+                        </MudText>
+                    </MudAlert>
+                    
+                    <MudTextField Value="@OriginalName" 
+                                  Label="Original Name" 
+                                  Variant="Variant.Outlined"
+                                  ReadOnly="true"
+                                  Disabled="true" />
+                    
+                    <MudTextField @bind-Value="customName" 
+                                  Label="Custom Display Name (Optional)" 
+                                  Variant="Variant.Outlined"
+                                  HelperText="Leave empty to use the original name" />
+                }
+                else
+                {
+                    <MudTextField @bind-Value="elementName" 
+                                  Label="Element Name" 
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  RequiredError="Name is required" />
+                    
+                    <MudCheckBox @bind-Value="needsService" 
+                                 Label="Requires Service Contact"
+                                 Color="Color.Primary">
+                        <MudText Typo="Typo.body2">
+                            Check this if a service provider contact is typically required for this element
+                        </MudText>
+                    </MudCheckBox>
+                }
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Submit" 
+                   Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   Disabled="@(!isValid || isSubmitting)">
+            @if (isSubmitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Changes</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Guid ElementId { get; set; }
+
+    [Parameter]
+    public ElementType ElementType { get; set; }
+
+    [Parameter]
+    public string OriginalName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? CustomName { get; set; }
+
+    [Parameter]
+    public bool NeedsService { get; set; }
+
+    [Parameter]
+    public bool IsGlobal { get; set; }
+
+    private MudForm? form;
+    private bool isValid = true;
+    private bool isSubmitting;
+
+    private string elementName = string.Empty;
+    private string? customName;
+    private bool needsService;
+
+    protected override void OnInitialized()
+    {
+        elementName = OriginalName;
+        customName = CustomName;
+        needsService = NeedsService;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (form != null)
+        {
+            await form.Validate();
+            if (!isValid) return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            if (IsGlobal)
+            {
+                // For global elements, save custom name as an override
+                // Get the current order to preserve it
+                await using var context = await DbFactory.CreateDbContextAsync();
+                var order = await context.TenantElementOrders
+                    .FirstOrDefaultAsync(o => o.ElementId == ElementId && o.ElementType == ElementType);
+                
+                var zOrder = order?.ZOrder ?? 0;
+                var isHidden = order?.IsHidden ?? false;
+                
+                await ElementService.SaveElementOrderAsync(ElementId, ElementType, zOrder, isHidden, customName);
+            }
+            else
+            {
+                // For tenant-specific elements, update the element directly
+                await using var context = await DbFactory.CreateDbContextAsync();
+                
+                if (ElementType == ElementType.Building)
+                {
+                    var element = await context.BuildingElements.FirstOrDefaultAsync(e => e.Id == ElementId);
+                    if (element != null)
+                    {
+                        element.Name = elementName;
+                        element.NeedsService = needsService;
+                        element.DateModified = DateTime.UtcNow;
+                        await context.SaveChangesAsync();
+                    }
+                }
+                else
+                {
+                    var element = await context.CommonElements.FirstOrDefaultAsync(e => e.Id == ElementId);
+                    if (element != null)
+                    {
+                        element.Name = elementName;
+                        element.NeedsService = needsService;
+                        element.DateModified = DateTime.UtcNow;
+                        await context.SaveChangesAsync();
+                    }
+                }
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving element: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

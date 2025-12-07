@@ -1,4 +1,5 @@
 ﻿@page "/messages/inbox"
+@page "/messages"
 @attribute [Authorize]
 @using CRS.Services
 @using CRS.Models
@@ -10,32 +11,101 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
+@inject IDialogService DialogService
 
-<PageTitle>Inbox</PageTitle>
-<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6">
-    <MudCard>
-        <MudCardHeader>
-            <MudText Typo="Typo.h5">Inbox</MudText>
-        </MudCardHeader>
-        <MudCardContent>
+<PageTitle>Messages</PageTitle>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <!-- Hero Header -->
+    <MudPaper Elevation="3" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Email" Style="color: white; font-size: 48px;" />
+                <div>
+                    <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                        Messages
+                    </MudText>
+                    <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.9);">
+                        @if (unreadCount > 0) {
+                            <span>You have <strong>@unreadCount</strong> unread message@(unreadCount == 1 ? "" : "s")</span>
+                        } else {
+                            <span>Stay connected with your team</span>
+                        }
+                    </MudText>
+                </div>
+            </MudStack>
+            <MudButton Variant="Variant.Filled" 
+                       Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenNewConversation"
+                       Style="background: white; color: #667eea; font-weight: 600;">
+                New Message
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <!-- Conversations List -->
+    <MudCard Elevation="2" Style="border-radius: 12px; overflow: hidden;">
+        <MudCardContent Class="pa-0">
             @if (isLoading) {
-                <MudProgressCircular Indeterminate="true" />
+                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                    <MudText Typo="Typo.body1" Class="mt-4" Style="color: #666;">Loading conversations...</MudText>
+                </MudStack>
             } else if (!items.Any()) {
-                <MudAlert Severity="Severity.Info">No messages.</MudAlert>
+                <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="pa-8">
+                    <MudIcon Icon="@Icons.Material.Filled.Forum" Style="font-size: 64px; color: #ccc;" />
+                    <MudText Typo="Typo.h6" Style="color: #666;">No conversations yet</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999;">
+                        Start a new conversation to get in touch with your team or clients.
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenNewConversation"
+                               Class="mt-2">
+                        Start a Conversation
+                    </MudButton>
+                </MudStack>
             } else {
-                <MudList T="InboxItem">
+                <MudList T="InboxItem" Dense="false" Class="py-0">
                     @foreach (var it in items) {
-                        <MudListItem T="InboxItem" Class="d-flex justify-space-between align-center" @onclick="() => OpenConversation(it.OtherUserId)">
-                            <div>
-                                <MudText Typo="Typo.subtitle1">@it.DisplayName</MudText>
-                                <MudText Typo="Typo.caption">@it.Snippet</MudText>
-                            </div>
-                            <div class="d-flex align-center gap-2">
-                                <MudText Typo="Typo.caption">@it.Date.ToLocalTime()</MudText>
-                                @if (it.Unread) {
-                                    <MudBadge Color="Color.Primary" Dot="true" />
-                                }
-                            </div>
+                        <MudListItem T="InboxItem" 
+                                     Class="@GetListItemClass(it.Unread)" 
+                                     OnClick="() => OpenConversation(it.OtherUserId)"
+                                     Style="border-bottom: 1px solid #eee; cursor: pointer;">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="py-2 w-100">
+                                <!-- Avatar -->
+                                <MudBadge Visible="@it.Unread" 
+                                          Color="Color.Primary" 
+                                          Overlap="true" 
+                                          Dot="true"
+                                          Origin="Origin.TopRight">
+                                    <MudAvatar Size="Size.Large" 
+                                               Style="@(it.Unread ? "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;" : "background: #e0e0e0; color: #666;")">
+                                        @GetInitials(it.DisplayName)
+                                    </MudAvatar>
+                                </MudBadge>
+
+                                <!-- Message Content -->
+                                <MudStack Spacing="0" Style="flex: 1; min-width: 0;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudText Typo="Typo.subtitle1" 
+                                                 Style="@(it.Unread ? "font-weight: 700; color: #333;" : "font-weight: 500; color: #555;")">
+                                            @it.DisplayName
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Style="color: #999; white-space: nowrap;">
+                                            @FormatRelativeTime(it.Date)
+                                        </MudText>
+                                    </MudStack>
+                                    <MudText Typo="Typo.body2" 
+                                             Style="@(it.Unread ? "color: #333; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;" : "color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;")">
+                                        @TruncateSnippet(it.Snippet, 80)
+                                    </MudText>
+                                </MudStack>
+
+                                <!-- Arrow Icon -->
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="color: #ccc;" />
+                            </MudStack>
                         </MudListItem>
                     }
                 </MudList>
@@ -48,6 +118,7 @@
     private bool isLoading = true;
     private List<InboxItem> items = new();
     private Dictionary<Guid, string> userNames = new();
+    private int unreadCount = 0;
 
     private sealed record InboxItem(Guid OtherUserId, string DisplayName, string Snippet, DateTime Date, bool Unread);
 
@@ -55,6 +126,10 @@
         try {
             await UserState.InitializeAsync();
             if (UserState.CurrentUser == null) return;
+            
+            // Get unread count
+            unreadCount = await MessageService.GetUnreadCountAsync(UserState.CurrentUser.Id);
+            
             var latest = await MessageService.GetLatestConversationsAsync(UserState.CurrentUser.Id);
             var otherIds = latest.Select(m => m.FromUserId == UserState.CurrentUser.Id ? m.ToUserId : m.FromUserId).Distinct();
             await PreloadUserNames(otherIds);
@@ -90,5 +165,47 @@
 
     private void OpenConversation(Guid otherUserId) {
         NavigationManager.NavigateTo($"/messages/conversation/{otherUserId}");
+    }
+
+    private async Task OpenNewConversation() {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<NewConversationDialog>("New Conversation", options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled && result.Data is Guid userId && userId != Guid.Empty) {
+            NavigationManager.NavigateTo($"/messages/conversation/{userId}");
+        }
+    }
+
+    private static string GetInitials(string name) {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2) {
+            return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+        }
+        return parts.Length > 0 && parts[0].Length > 0 ? parts[0][0].ToString().ToUpperInvariant() : "?";
+    }
+
+    private static string TruncateSnippet(string text, int maxLength) {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        text = text.Replace("\n", " ").Replace("\r", " ").Trim();
+        return text.Length <= maxLength ? text : text[..(maxLength - 3)] + "...";
+    }
+
+    private static string FormatRelativeTime(DateTime date) {
+        var local = date.ToLocalTime();
+        var now = DateTime.Now;
+        var diff = now - local;
+
+        if (diff.TotalMinutes < 1) return "Just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        if (local.Year == now.Year) return local.ToString("MMM d");
+        return local.ToString("MMM d, yyyy");
+    }
+
+    private static string GetListItemClass(bool unread) {
+        return unread ? "hover:mud-primary-lighten" : "";
     }
 }

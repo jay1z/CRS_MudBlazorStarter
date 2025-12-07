@@ -114,17 +114,21 @@ namespace CRS.Services {
 
             try {
                 // Based on role, call the appropriate method
-                if (userRoles.Contains("Admin")) {
+                // PlatformAdmin or TenantOwner can see all communities
+                if (userRoles.Contains("PlatformAdmin") || userRoles.Contains("TenantOwner")) {
                     return await GetAllCommunitiesAsync();
                 }
-                else if (userRoles.Contains("Specialist")) {
+                // TenantSpecialist sees assigned communities
+                else if (userRoles.Contains("TenantSpecialist")) {
                     return await GetAssignedCommunitiesAsync(currentUser.Id);
                 }
-                else if (userRoles.Contains("User")) {
+                // TenantViewer, HOAUser, or other authenticated users see their owned communities
+                else if (userRoles.Contains("TenantViewer") || userRoles.Contains("HOAUser") || userRoles.Contains("HOAAuditor")) {
                     return await GetOwnedCommunitiesAsync(currentUser.Id);
                 }
                 else {
-                    return new List<Community>();
+                    // Fallback: try to load owned communities for any authenticated user
+                    return await GetOwnedCommunitiesAsync(currentUser.Id);
                 }
             }
             catch (Exception) {

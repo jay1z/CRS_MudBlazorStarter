@@ -1,0 +1,609 @@
+﻿@page "/Admin/Elements"
+@page "/Settings/Elements"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IElementService ElementService
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Element Management</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <!-- Header Section -->
+    <MudPaper Elevation="0" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 12px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Category" Class="mr-2" Style="vertical-align: middle;" />
+                    Element Management
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    Manage building and common elements for your organization
+                </MudText>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (!TenantContext.TenantId.HasValue)
+    {
+        <MudAlert Severity="Severity.Warning">No tenant context available.</MudAlert>
+    }
+    else
+    {
+        <MudGrid Spacing="4">
+            <!-- Left Navigation Panel -->
+            <MudItem xs="12" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; position: sticky; top: 100px;">
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold mb-3" Style="color: #666; text-transform: uppercase; letter-spacing: 1px;">
+                        Element Types
+                    </MudText>
+                    <MudNavMenu>
+                        <MudNavLink Icon="@Icons.Material.Filled.Home" 
+                                    IconColor="@(activeTab == 0 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 0 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 0)">
+                            Building Elements
+                        </MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.Park" 
+                                    IconColor="@(activeTab == 1 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 1 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 1)">
+                            Common Elements
+                        </MudNavLink>
+                    </MudNavMenu>
+                    
+                    <MudDivider Class="my-4" />
+                    
+                    <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Text" Class="mt-2">
+                        <MudText Typo="Typo.caption">
+                            <strong>Global elements</strong> are shared across all tenants. 
+                            <strong>Custom elements</strong> are specific to your organization.
+                        </MudText>
+                    </MudAlert>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Right Content Panel -->
+            <MudItem xs="12" md="9">
+                @if (isLoading)
+                {
+                    <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                        <MudText Typo="Typo.body1" Class="mt-4" Align="Align.Center">Loading elements...</MudText>
+                    </MudPaper>
+                }
+                else if (activeTab == 0)
+                {
+                    <!-- Building Elements -->
+                    <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+                        <MudStack Spacing="4">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <div>
+                                    <MudText Typo="Typo.h5" Class="fw-bold mb-2">Building Elements</MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        Manage elements that appear on building structures
+                                    </MudText>
+                                </div>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="OpenAddBuildingElementDialog">
+                                    Add Custom Element
+                                </MudButton>
+                            </MudStack>
+
+                            <MudDivider />
+
+                            <MudTable Items="@buildingElements" Hover="true" Dense="true" Elevation="0"
+                                      RowClass="element-row">
+                                <HeaderContent>
+                                    <MudTh Style="width: 50px;">Order</MudTh>
+                                    <MudTh>Name</MudTh>
+                                    <MudTh Style="width: 120px;">Type</MudTh>
+                                    <MudTh Style="width: 120px;">Needs Service</MudTh>
+                                    <MudTh Style="width: 100px;">Visibility</MudTh>
+                                    <MudTh Style="width: 150px;">Actions</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" 
+                                                           Size="Size.Small" 
+                                                           OnClick="@(() => MoveElementUp(context, ElementType.Building))"
+                                                           Disabled="@(GetEffectiveZOrder(context.Id, ElementType.Building) <= 0)" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" 
+                                                           Size="Size.Small" 
+                                                           OnClick="@(() => MoveElementDown(context, ElementType.Building))" />
+                                        </MudStack>
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            @if (IsHidden(context.Id, ElementType.Building))
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.VisibilityOff" Size="Size.Small" Style="color: #999;" />
+                                            }
+                                            <MudText Style="@(IsHidden(context.Id, ElementType.Building) ? "color: #999; text-decoration: line-through;" : "")">
+                                                @GetDisplayName(context.Id, context.Name, ElementType.Building)
+                                            </MudText>
+                                        </MudStack>
+                                    </MudTd>
+                                    <MudTd>
+                                        @if (context.TenantId.HasValue)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">Custom</MudChip>
+                                        }
+                                        else
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Global</MudChip>
+                                        }
+                                    </MudTd>
+                                    <MudTd>
+                                        @if (context.NeedsService)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small" />
+                                        }
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudSwitch T="bool" 
+                                                   Value="@(!IsHidden(context.Id, ElementType.Building))"
+                                                   ValueChanged="@((bool visible) => ToggleVisibility(context.Id, ElementType.Building, !visible))"
+                                                   Color="Color.Success"
+                                                   Size="Size.Small" />
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudStack Row="true" Spacing="1">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                           Size="Size.Small" 
+                                                           Color="Color.Primary"
+                                                           OnClick="@(() => OpenEditBuildingElementDialog(context))" />
+                                            @if (context.TenantId.HasValue)
+                                            {
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                               Size="Size.Small" 
+                                                               Color="Color.Error"
+                                                               OnClick="@(() => DeleteBuildingElement(context))" />
+                                            }
+                                        </MudStack>
+                                    </MudTd>
+                                </RowTemplate>
+                                <NoRecordsContent>
+                                    <MudText Align="Align.Center" Class="py-6">No building elements found.</MudText>
+                                </NoRecordsContent>
+                            </MudTable>
+                        </MudStack>
+                    </MudPaper>
+                }
+                else if (activeTab == 1)
+                {
+                    <!-- Common Elements -->
+                    <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+                        <MudStack Spacing="4">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <div>
+                                    <MudText Typo="Typo.h5" Class="fw-bold mb-2">Common Elements</MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        Manage shared property elements like pools, clubhouses, etc.
+                                    </MudText>
+                                </div>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="OpenAddCommonElementDialog">
+                                    Add Custom Element
+                                </MudButton>
+                            </MudStack>
+
+                            <MudDivider />
+
+                            <MudTable Items="@commonElements" Hover="true" Dense="true" Elevation="0"
+                                      RowClass="element-row">
+                                <HeaderContent>
+                                    <MudTh Style="width: 50px;">Order</MudTh>
+                                    <MudTh>Name</MudTh>
+                                    <MudTh Style="width: 120px;">Type</MudTh>
+                                    <MudTh Style="width: 120px;">Needs Service</MudTh>
+                                    <MudTh Style="width: 100px;">Visibility</MudTh>
+                                    <MudTh Style="width: 150px;">Actions</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" 
+                                                           Size="Size.Small" 
+                                                           OnClick="@(() => MoveElementUp(context, ElementType.Common))"
+                                                           Disabled="@(GetEffectiveZOrder(context.Id, ElementType.Common) <= 0)" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" 
+                                                           Size="Size.Small" 
+                                                           OnClick="@(() => MoveElementDown(context, ElementType.Common))" />
+                                        </MudStack>
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            @if (IsHidden(context.Id, ElementType.Common))
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.VisibilityOff" Size="Size.Small" Style="color: #999;" />
+                                            }
+                                            <MudText Style="@(IsHidden(context.Id, ElementType.Common) ? "color: #999; text-decoration: line-through;" : "")">
+                                                @GetDisplayName(context.Id, context.Name, ElementType.Common)
+                                            </MudText>
+                                        </MudStack>
+                                    </MudTd>
+                                    <MudTd>
+                                        @if (context.TenantId.HasValue)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">Custom</MudChip>
+                                        }
+                                        else
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Global</MudChip>
+                                        }
+                                    </MudTd>
+                                    <MudTd>
+                                        @if (context.NeedsService)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small" />
+                                        }
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudSwitch T="bool" 
+                                                   Value="@(!IsHidden(context.Id, ElementType.Common))"
+                                                   ValueChanged="@((bool visible) => ToggleVisibility(context.Id, ElementType.Common, !visible))"
+                                                   Color="Color.Success"
+                                                   Size="Size.Small" />
+                                    </MudTd>
+                                    <MudTd>
+                                        <MudStack Row="true" Spacing="1">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                           Size="Size.Small" 
+                                                           Color="Color.Primary"
+                                                           OnClick="@(() => OpenEditCommonElementDialog(context))" />
+                                            @if (context.TenantId.HasValue)
+                                            {
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                               Size="Size.Small" 
+                                                               Color="Color.Error"
+                                                               OnClick="@(() => DeleteCommonElement(context))" />
+                                            }
+                                        </MudStack>
+                                    </MudTd>
+                                </RowTemplate>
+                                <NoRecordsContent>
+                                    <MudText Align="Align.Center" Class="py-6">No common elements found.</MudText>
+                                </NoRecordsContent>
+                            </MudTable>
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private int activeTab = 0;
+    private bool isLoading = true;
+    
+    private List<BuildingElement> buildingElements = new();
+    private List<CommonElement> commonElements = new();
+    private Dictionary<Guid, TenantElementOrder> buildingElementOrders = new();
+    private Dictionary<Guid, TenantElementOrder> commonElementOrders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadElements();
+    }
+
+    private async Task LoadElements()
+    {
+        if (!TenantContext.TenantId.HasValue)
+        {
+            isLoading = false;
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            await using var context = await DbFactory.CreateDbContextAsync();
+            
+            // Load building elements (global + tenant-specific)
+            buildingElements = await context.BuildingElements
+                .IgnoreQueryFilters()
+                .Where(be => be.IsActive && (be.TenantId == null || be.TenantId == TenantContext.TenantId))
+                .OrderBy(be => be.ZOrder)
+                .ThenBy(be => be.Name)
+                .ToListAsync();
+
+            // Load common elements (global + tenant-specific)
+            commonElements = await context.CommonElements
+                .IgnoreQueryFilters()
+                .Where(ce => ce.IsActive && (ce.TenantId == null || ce.TenantId == TenantContext.TenantId))
+                .OrderBy(ce => ce.ZOrder)
+                .ThenBy(ce => ce.Name)
+                .ToListAsync();
+
+            // Load ordering overrides for this tenant
+            var orders = await context.TenantElementOrders
+                .Where(o => o.TenantId == TenantContext.TenantId)
+                .ToListAsync();
+
+            buildingElementOrders = orders
+                .Where(o => o.ElementType == ElementType.Building)
+                .ToDictionary(o => o.ElementId, o => o);
+
+            commonElementOrders = orders
+                .Where(o => o.ElementType == ElementType.Common)
+                .ToDictionary(o => o.ElementId, o => o);
+
+            // Re-sort elements by effective ZOrder
+            buildingElements = buildingElements
+                .OrderBy(be => GetEffectiveZOrder(be.Id, ElementType.Building))
+                .ThenBy(be => be.Name)
+                .ToList();
+
+            commonElements = commonElements
+                .OrderBy(ce => GetEffectiveZOrder(ce.Id, ElementType.Common))
+                .ThenBy(ce => ce.Name)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading elements: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private int GetEffectiveZOrder(Guid elementId, ElementType elementType)
+    {
+        var orders = elementType == ElementType.Building ? buildingElementOrders : commonElementOrders;
+        if (orders.TryGetValue(elementId, out var order))
+        {
+            return order.ZOrder;
+        }
+        
+        // Fall back to element's default ZOrder
+        if (elementType == ElementType.Building)
+        {
+            var element = buildingElements.FirstOrDefault(e => e.Id == elementId);
+            return element?.ZOrder ?? 999;
+        }
+        else
+        {
+            var element = commonElements.FirstOrDefault(e => e.Id == elementId);
+            return element?.ZOrder ?? 999;
+        }
+    }
+
+    private bool IsHidden(Guid elementId, ElementType elementType)
+    {
+        var orders = elementType == ElementType.Building ? buildingElementOrders : commonElementOrders;
+        if (orders.TryGetValue(elementId, out var order))
+        {
+            return order.IsHidden;
+        }
+        return false;
+    }
+
+    private string GetDisplayName(Guid elementId, string defaultName, ElementType elementType)
+    {
+        var orders = elementType == ElementType.Building ? buildingElementOrders : commonElementOrders;
+        if (orders.TryGetValue(elementId, out var order) && !string.IsNullOrWhiteSpace(order.CustomName))
+        {
+            return order.CustomName;
+        }
+        return defaultName;
+    }
+
+    private async Task ToggleVisibility(Guid elementId, ElementType elementType, bool isHidden)
+    {
+        try
+        {
+            var zOrder = GetEffectiveZOrder(elementId, elementType);
+            var orders = elementType == ElementType.Building ? buildingElementOrders : commonElementOrders;
+            var customName = orders.TryGetValue(elementId, out var existing) ? existing.CustomName : null;
+            
+            await ElementService.SaveElementOrderAsync(elementId, elementType, zOrder, isHidden, customName);
+            await LoadElements();
+            Snackbar.Add(isHidden ? "Element hidden" : "Element visible", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task MoveElementUp(object element, ElementType elementType)
+    {
+        var elementId = elementType == ElementType.Building 
+            ? ((BuildingElement)element).Id 
+            : ((CommonElement)element).Id;
+        
+        var currentZOrder = GetEffectiveZOrder(elementId, elementType);
+        if (currentZOrder > 0)
+        {
+            await SaveElementOrder(elementId, elementType, currentZOrder - 1);
+        }
+    }
+
+    private async Task MoveElementDown(object element, ElementType elementType)
+    {
+        var elementId = elementType == ElementType.Building 
+            ? ((BuildingElement)element).Id 
+            : ((CommonElement)element).Id;
+        
+        var currentZOrder = GetEffectiveZOrder(elementId, elementType);
+        await SaveElementOrder(elementId, elementType, currentZOrder + 1);
+    }
+
+    private async Task SaveElementOrder(Guid elementId, ElementType elementType, int newZOrder)
+    {
+        try
+        {
+            var orders = elementType == ElementType.Building ? buildingElementOrders : commonElementOrders;
+            var isHidden = orders.TryGetValue(elementId, out var existing) && existing.IsHidden;
+            var customName = existing?.CustomName;
+            
+            await ElementService.SaveElementOrderAsync(elementId, elementType, newZOrder, isHidden, customName);
+            await LoadElements();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating order: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenAddBuildingElementDialog()
+    {
+        var parameters = new DialogParameters<AddElementDialog>
+        {
+            { x => x.ElementType, ElementType.Building }
+        };
+        
+        var dialog = await DialogService.ShowAsync<AddElementDialog>("Add Building Element", parameters);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            await LoadElements();
+            Snackbar.Add("Building element added successfully", Severity.Success);
+        }
+    }
+
+    private async Task OpenAddCommonElementDialog()
+    {
+        var parameters = new DialogParameters<AddElementDialog>
+        {
+            { x => x.ElementType, ElementType.Common }
+        };
+        
+        var dialog = await DialogService.ShowAsync<AddElementDialog>("Add Common Element", parameters);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            await LoadElements();
+            Snackbar.Add("Common element added successfully", Severity.Success);
+        }
+    }
+
+    private async Task OpenEditBuildingElementDialog(BuildingElement element)
+    {
+        var customName = GetDisplayName(element.Id, element.Name, ElementType.Building);
+        var parameters = new DialogParameters<EditElementDialog>
+        {
+            { x => x.ElementId, element.Id },
+            { x => x.ElementType, ElementType.Building },
+            { x => x.OriginalName, element.Name },
+            { x => x.CustomName, customName == element.Name ? null : customName },
+            { x => x.NeedsService, element.NeedsService },
+            { x => x.IsGlobal, !element.TenantId.HasValue }
+        };
+        
+        var dialog = await DialogService.ShowAsync<EditElementDialog>("Edit Element", parameters);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            await LoadElements();
+            Snackbar.Add("Element updated successfully", Severity.Success);
+        }
+    }
+
+    private async Task OpenEditCommonElementDialog(CommonElement element)
+    {
+        var customName = GetDisplayName(element.Id, element.Name, ElementType.Common);
+        var parameters = new DialogParameters<EditElementDialog>
+        {
+            { x => x.ElementId, element.Id },
+            { x => x.ElementType, ElementType.Common },
+            { x => x.OriginalName, element.Name },
+            { x => x.CustomName, customName == element.Name ? null : customName },
+            { x => x.NeedsService, element.NeedsService },
+            { x => x.IsGlobal, !element.TenantId.HasValue }
+        };
+        
+        var dialog = await DialogService.ShowAsync<EditElementDialog>("Edit Element", parameters);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            await LoadElements();
+            Snackbar.Add("Element updated successfully", Severity.Success);
+        }
+    }
+
+    private async Task DeleteBuildingElement(BuildingElement element)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Element",
+            $"Are you sure you want to delete '{element.Name}'? This cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            try
+            {
+                await using var context = await DbFactory.CreateDbContextAsync();
+                var dbElement = await context.BuildingElements.FirstOrDefaultAsync(e => e.Id == element.Id);
+                if (dbElement != null)
+                {
+                    dbElement.IsActive = false;
+                    dbElement.DateDeleted = DateTime.UtcNow;
+                    await context.SaveChangesAsync();
+                    await LoadElements();
+                    Snackbar.Add("Element deleted", Severity.Success);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting element: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task DeleteCommonElement(CommonElement element)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Element",
+            $"Are you sure you want to delete '{element.Name}'? This cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            try
+            {
+                await using var context = await DbFactory.CreateDbContextAsync();
+                var dbElement = await context.CommonElements.FirstOrDefaultAsync(e => e.Id == element.Id);
+                if (dbElement != null)
+                {
+                    dbElement.IsActive = false;
+                    dbElement.DateDeleted = DateTime.UtcNow;
+                    await context.SaveChangesAsync();
+                    await LoadElements();
+                    Snackbar.Add("Element deleted", Severity.Success);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting element: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

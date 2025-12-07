@@ -37,14 +37,20 @@ namespace CRS.Services.Tenant {
                 // Tenant Staff (Owner or Specialist)
                 options.AddPolicy("RequireTenantStaff", policy => policy.RequireAssertion(ctx => {
                     var roles = ctx.User?.FindAll(ClaimTypes.Role)?.Select(c => c.Value).ToHashSet() ?? new HashSet<string>();
+                    var alxRoles = ctx.User?.FindAll("alx_role")?.Select(c => c.Value).ToHashSet() ?? new HashSet<string>();
                     var tenantClaim = ctx.User?.FindFirst(TenantClaimTypes.TenantId)?.Value;
+                    // PlatformAdmin can access all tenant staff pages
+                    if (roles.Contains("PlatformAdmin") || alxRoles.Contains("PlatformAdmin")) return true;
                     return (roles.Contains("TenantOwner") || roles.Contains("TenantSpecialist")) && !string.IsNullOrEmpty(tenantClaim);
                 }));
 
                 // Tenant Viewer (Owner, Specialist, or Viewer)
                 options.AddPolicy("RequireTenantViewer", policy => policy.RequireAssertion(ctx => {
                     var roles = ctx.User?.FindAll(ClaimTypes.Role)?.Select(c => c.Value).ToHashSet() ?? new HashSet<string>();
+                    var alxRoles = ctx.User?.FindAll("alx_role")?.Select(c => c.Value).ToHashSet() ?? new HashSet<string>();
                     var tenantClaim = ctx.User?.FindFirst(TenantClaimTypes.TenantId)?.Value;
+                    // PlatformAdmin can access all tenant viewer pages
+                    if (roles.Contains("PlatformAdmin") || alxRoles.Contains("PlatformAdmin")) return true;
                     return (roles.Contains("TenantOwner") || roles.Contains("TenantSpecialist") || roles.Contains("TenantViewer")) && !string.IsNullOrEmpty(tenantClaim);
                 }));
 

@@ -247,8 +247,11 @@ namespace CRS.Services {
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.ReserveStudyBuildingElements)
+                    .ThenInclude(be => be.ServiceContact)
                 .Include(rs => rs.ReserveStudyCommonElements)
+                    .ThenInclude(ce => ce.ServiceContact)
                 .Include(rs => rs.ReserveStudyAdditionalElements)
+                    .ThenInclude(ae => ae.ServiceContact)
                 .FirstOrDefaultAsync(rs => rs.Id == reserveStudy.Id && rs.IsActive);
 
             if (existingStudy == null) {
@@ -368,16 +371,17 @@ namespace CRS.Services {
                 }
             }
 
-            // Update Building Elements - handle additions and removals
+            // Update Building Elements - handle additions, removals, and service contacts
             if (reserveStudy.ReserveStudyBuildingElements != null) {
                 var existingBuildingElementIds = existingStudy.ReserveStudyBuildingElements?
                     .Select(e => e.BuildingElementId).ToHashSet() ?? new HashSet<Guid>();
                 var updatedBuildingElementIds = reserveStudy.ReserveStudyBuildingElements
                     .Select(e => e.BuildingElementId).ToHashSet();
 
-                // Add new building elements
+                // Add new building elements or update existing ones
                 foreach (var element in reserveStudy.ReserveStudyBuildingElements) {
                     if (!existingBuildingElementIds.Contains(element.BuildingElementId)) {
+                        // New element
                         if (element.Id == Guid.Empty) {
                             element.Id = Guid.CreateVersion7();
                         }
@@ -386,6 +390,13 @@ namespace CRS.Services {
                         existingStudy.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
                         existingStudy.ReserveStudyBuildingElements.Add(element);
                         context.Add(element);
+                    } else {
+                        // Update existing element's service contact
+                        var existingElement = existingStudy.ReserveStudyBuildingElements?
+                            .FirstOrDefault(e => e.BuildingElementId == element.BuildingElementId);
+                        if (existingElement != null && element.ServiceContact != null) {
+                            UpdateServiceContact(existingElement, element.ServiceContact);
+                        }
                     }
                 }
 
@@ -401,16 +412,17 @@ namespace CRS.Services {
                 }
             }
 
-            // Update Common Elements - handle additions and removals
+            // Update Common Elements - handle additions, removals, and service contacts
             if (reserveStudy.ReserveStudyCommonElements != null) {
                 var existingCommonElementIds = existingStudy.ReserveStudyCommonElements?
                     .Select(e => e.CommonElementId).ToHashSet() ?? new HashSet<Guid>();
                 var updatedCommonElementIds = reserveStudy.ReserveStudyCommonElements
                     .Select(e => e.CommonElementId).ToHashSet();
 
-                // Add new common elements
+                // Add new common elements or update existing ones
                 foreach (var element in reserveStudy.ReserveStudyCommonElements) {
                     if (!existingCommonElementIds.Contains(element.CommonElementId)) {
+                        // New element
                         if (element.Id == Guid.Empty) {
                             element.Id = Guid.CreateVersion7();
                         }
@@ -419,6 +431,13 @@ namespace CRS.Services {
                         existingStudy.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
                         existingStudy.ReserveStudyCommonElements.Add(element);
                         context.Add(element);
+                    } else {
+                        // Update existing element's service contact
+                        var existingElement = existingStudy.ReserveStudyCommonElements?
+                            .FirstOrDefault(e => e.CommonElementId == element.CommonElementId);
+                        if (existingElement != null && element.ServiceContact != null) {
+                            UpdateServiceContact(existingElement, element.ServiceContact);
+                        }
                     }
                 }
 
@@ -474,6 +493,10 @@ namespace CRS.Services {
                         if (existingElement != null) {
                             existingElement.Name = element.Name;
                             existingElement.NeedsService = element.NeedsService;
+                            // Update service contact
+                            if (element.ServiceContact != null) {
+                                UpdateServiceContact(existingElement, element.ServiceContact);
+                            }
                             _logger.LogInformation("UpdateReserveStudyAsync: Updated additional element {Name}", element.Name);
                         }
                     }
@@ -500,6 +523,22 @@ namespace CRS.Services {
             await context.SaveChangesAsync();
 
             return existingStudy;
+        }
+
+        /// <summary>
+        /// Updates the service contact on a reserve study element.
+        /// </summary>
+        private void UpdateServiceContact(IReserveStudyElement existingElement, ServiceContact incomingContact) {
+            if (existingElement.ServiceContact == null) {
+                existingElement.ServiceContact = new ServiceContact();
+            }
+            
+            existingElement.ServiceContact.CompanyName = incomingContact.CompanyName;
+            existingElement.ServiceContact.FirstName = incomingContact.FirstName;
+            existingElement.ServiceContact.LastName = incomingContact.LastName;
+            existingElement.ServiceContact.Email = incomingContact.Email;
+            existingElement.ServiceContact.Phone = incomingContact.Phone;
+            existingElement.ServiceContact.Extension = incomingContact.Extension;
         }
 
         /// <summary>

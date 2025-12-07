@@ -69,6 +69,14 @@ namespace CRS.Data {
 
             builder.Entity<PropertyManager>().HasIndex(e => e.TenantId);
             builder.Entity<ReserveStudy>().HasIndex(e => e.TenantId);
+            
+            // BuildingElement and CommonElement tenant indexes for tenant-specific elements
+            builder.Entity<BuildingElement>()
+                .HasIndex(be => new { be.TenantId, be.IsActive })
+                .HasDatabaseName("IX_BuildingElement_Tenant_Active");
+            builder.Entity<CommonElement>()
+                .HasIndex(ce => new { ce.TenantId, ce.IsActive })
+                .HasDatabaseName("IX_CommonElement_Tenant_Active");
             builder.Entity<FinancialInfo>().HasIndex(e => e.TenantId);
             builder.Entity<Proposal>().HasIndex(e => e.TenantId);
             builder.Entity<StudyRequest>().HasIndex(e => e.TenantId);
@@ -324,6 +332,17 @@ namespace CRS.Data {
                 entity.Property(e => e.DisplayText).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Unit).IsRequired().HasMaxLength(50);
             });
+
+            // TenantElementOrder configuration for tenant-specific element ordering
+            builder.Entity<TenantElementOrder>(entity => {
+                entity.ToTable("TenantElementOrders");
+                entity.HasIndex(e => new { e.TenantId, e.ElementType, e.ElementId })
+                    .IsUnique()
+                    .HasDatabaseName("IX_TenantElementOrder_Tenant_Type_Element");
+                entity.HasIndex(e => new { e.TenantId, e.ElementType, e.ZOrder })
+                    .HasDatabaseName("IX_TenantElementOrder_Tenant_Type_Order");
+                entity.Property(e => e.CustomName).HasMaxLength(200);
+            });
         }
 
         // Apply owned type configurations
@@ -457,6 +476,9 @@ namespace CRS.Data {
         
         // Demo environment
         public DbSet<CRS.Models.Demo.DemoSession> DemoSessions { get; set; }
+        
+        // Tenant-specific element ordering
+        public DbSet<TenantElementOrder> TenantElementOrders { get; set; }
         #endregion
 
         #region Seed Data

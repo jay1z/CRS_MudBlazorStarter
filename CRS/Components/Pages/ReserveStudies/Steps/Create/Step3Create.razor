@@ -1,9 +1,11 @@
 ﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps.Create
 
 @using CRS.Data
+@using CRS.Services.Interfaces
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IElementService ElementService
 @inject ILogger<Step3Create> Logger
 
 <MudForm Model="Model" @ref="form">
@@ -111,8 +113,9 @@ private List<CommonElement>? commonElements;
     protected override async Task OnInitializedAsync() {
         context = await DbFactory.CreateDbContextAsync();
 
-        buildingElements = await context.BuildingElements.OrderBy(be => be.ZOrder).ToListAsync();
-        commonElements = await context.CommonElements.ToListAsync();
+        // Use ElementService for tenant-aware element loading with proper ordering
+        buildingElements = await ElementService.GetBuildingElementsAsync();
+        commonElements = await ElementService.GetCommonElementsAsync();
         
         // Initialize all checkboxes to false
         foreach (var element in buildingElements) {

@@ -1,0 +1,112 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+@inject IElementService ElementService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+            Add @(ElementType == ElementType.Building ? "Building" : "Common") Element
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="isValid">
+            <MudStack Spacing="3">
+                <MudTextField @bind-Value="name" 
+                              Label="Element Name" 
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              RequiredError="Name is required"
+                              HelperText="Enter a unique name for this element" />
+                
+                <MudCheckBox @bind-Value="needsService" 
+                             Label="Requires Service Contact"
+                             Color="Color.Primary">
+                    <MudText Typo="Typo.body2">
+                        Check this if a service provider contact is typically required for this element
+                    </MudText>
+                </MudCheckBox>
+
+                <MudNumericField @bind-Value="zOrder" 
+                                 Label="Display Order" 
+                                 Variant="Variant.Outlined"
+                                 Min="0"
+                                 HelperText="Lower numbers appear first in the list" />
+
+                <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Text">
+                    <MudText Typo="Typo.caption">
+                        This element will be available only for your organization.
+                    </MudText>
+                </MudAlert>
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Submit" 
+                   Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   Disabled="@(!isValid || isSubmitting)">
+            @if (isSubmitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Adding...</span>
+            }
+            else
+            {
+                <span>Add Element</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public ElementType ElementType { get; set; }
+
+    private MudForm? form;
+    private bool isValid;
+    private bool isSubmitting;
+
+    private string name = string.Empty;
+    private bool needsService = false;
+    private int zOrder = 100;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (form != null)
+        {
+            await form.Validate();
+            if (!isValid) return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            if (ElementType == ElementType.Building)
+            {
+                await ElementService.CreateTenantBuildingElementAsync(name, needsService, zOrder);
+            }
+            else
+            {
+                await ElementService.CreateTenantCommonElementAsync(name, needsService, zOrder);
+            }
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error adding element: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

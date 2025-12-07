@@ -1,4 +1,4 @@
-@using CRS.Models
+﻿@using CRS.Models
 @using CRS.Services
 @using CRS.Services.Interfaces
 @using MudBlazor
@@ -7,17 +7,53 @@
 @inject ISnackbar Snackbar
 
 <MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Send" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">New Message</MudText>
+        </MudStack>
+    </TitleContent>
     <DialogContent>
-        <MudText Typo="Typo.h6">Send Message</MudText>
-        <MudForm @ref="form" Model="messageModel">
-            <MudTextField @bind-Value="messageModel.Body" Label="Message" Required="true" Lines="6" Immediate="true" />
-            <MudText Class="mt-1" Color="Color.Error">@validationMessage</MudText>
-            <MudStack Row="true" Spacing="2" Class="mt-2">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitMessage">Send</MudButton>
-                <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
-            </MudStack>
-        </MudForm>
+        <MudStack Spacing="3">
+            <!-- Recipient Display -->
+            <MudPaper Elevation="0" Class="pa-3" Style="background: #f5f5f5; border-radius: 8px;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">To:</MudText>
+                    <MudAvatar Size="Size.Small" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        @GetInitials(ToUserName)
+                    </MudAvatar>
+                    <MudText Typo="Typo.body1" Style="font-weight: 500;">@ToUserName</MudText>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Message Input -->
+            <MudTextField @bind-Value="messageModel.Body" 
+                          Label="Message" 
+                          Placeholder="Type your message here..."
+                          Required="true" 
+                          Lines="6" 
+                          MaxLines="10"
+                          Immediate="true"
+                          Variant="Variant.Outlined"
+                          Counter="500"
+                          MaxLength="500"
+                          HelperText="@($"{(messageModel.Body?.Length ?? 0)}/500 characters")" />
+            
+            @if (!string.IsNullOrEmpty(validationMessage)) {
+                <MudAlert Severity="Severity.Error" Dense="true">@validationMessage</MudAlert>
+            }
+        </MudStack>
     </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Send"
+                   Disabled="@(string.IsNullOrWhiteSpace(messageModel.Body))"
+                   OnClick="SubmitMessage">
+            Send Message
+        </MudButton>
+    </DialogActions>
 </MudDialog>
 
 @code {
@@ -33,7 +69,6 @@
     public EventCallback OnSent { get; set; }
 
     private Message messageModel = new();
-    private MudForm? form;
     private string? validationMessage;
 
     protected override async Task OnInitializedAsync() {
@@ -48,27 +83,34 @@
 
     private async Task SubmitMessage() {
         validationMessage = null;
-        if (form is not null) {
-            await form.Validate();
-            if (!form.IsValid) {
-                validationMessage = "Please enter a message.";
-                return;
-            }
+        
+        if (string.IsNullOrWhiteSpace(messageModel.Body)) {
+            validationMessage = "Please enter a message.";
+            return;
         }
+        
         try {
-            // Derive subject from body
             var body = (messageModel.Body ?? string.Empty).Trim();
             messageModel.Subject = string.IsNullOrWhiteSpace(body)
                 ? "Message"
-                : (body.Length >40 ? body[..40] : body);
+                : (body.Length > 40 ? body[..40] : body);
             messageModel.DateSent = DateTime.UtcNow;
             await MessageService.SendMessageAsync(messageModel);
-            Snackbar.Add("Message sent", Severity.Success);
+            Snackbar.Add("Message sent successfully!", Severity.Success);
             await OnSent.InvokeAsync();
             MudDialog.Close(DialogResult.Ok(true));
         } catch (Exception ex) {
             Snackbar.Add($"Failed to send message: {ex.Message}", Severity.Error);
         }
+    }
+
+    private static string GetInitials(string name) {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2) {
+            return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+        }
+        return parts.Length > 0 && parts[0].Length > 0 ? parts[0][0].ToString().ToUpperInvariant() : "?";
     }
 
     private void Cancel() => MudDialog.Cancel();

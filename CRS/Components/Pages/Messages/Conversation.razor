@@ -12,36 +12,120 @@
 @inject NavigationManager NavigationManager
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 
-<PageTitle>Conversation</PageTitle>
-<MudContainer Class="mt-6">
-    <MudCard>
-        <MudCardHeader>
-            <MudText Typo="Typo.h5">Conversation with @otherUserName</MudText>
-        </MudCardHeader>
-        <MudCardContent>
+<PageTitle>@(string.IsNullOrEmpty(otherUserName) ? "Conversation" : $"Chat with {otherUserName}")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4 mb-4">
+    <MudCard Elevation="3" Style="border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; height: calc(100vh - 140px); min-height: 500px;">
+        <!-- Header -->
+        <MudPaper Elevation="0" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); flex-shrink: 0;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="pa-4">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" 
+                               Style="color: white;" 
+                               OnClick="NavigateBack" />
+                <MudAvatar Size="Size.Medium" Style="background: white; color: #667eea;">
+                    @otherInitials
+                </MudAvatar>
+                <MudStack Spacing="0" Style="flex: 1;">
+                    <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">
+                        @otherUserName
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">
+                        @if (messages.Any()) {
+                            var lastMessage = messages.Last();
+                            <span>Last message @FormatRelativeTime(lastMessage.DateSent)</span>
+                        } else {
+                            <span>Start a conversation</span>
+                        }
+                    </MudText>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Messages Area -->
+        <MudPaper Elevation="0" Class="pa-4" Style="flex: 1; overflow-y: auto; background: #f5f5f5;" @ref="messagesContainer" id="messages-container">
             @if (isLoading) {
-                <MudProgressCircular Indeterminate="true" />
+                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                    <MudText Typo="Typo.body1" Class="mt-4" Style="color: #666;">Loading messages...</MudText>
+                </MudStack>
             } else if (!isAuthorized) {
-                <MudAlert Severity="Severity.Error">You are not authorized to view this conversation.</MudAlert>
+                <MudAlert Severity="Severity.Error" Class="ma-4">
+                    <MudText Typo="Typo.body1">You are not authorized to view this conversation.</MudText>
+                </MudAlert>
+            } else if (!messages.Any()) {
+                <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="pa-8">
+                    <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Style="font-size: 64px; color: #ccc;" />
+                    <MudText Typo="Typo.h6" Style="color: #666;">No messages yet</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999;">
+                        Send a message to start the conversation
+                    </MudText>
+                </MudStack>
             } else {
-                <MudPaper Class="pa-2" Style="max-height:60vh; overflow-y:auto;">
+                <MudStack Spacing="3">
+                    @{
+                        DateTime? lastDate = null;
+                    }
                     @foreach (var m in messages) {
                         var isMe = m.FromUserId == UserState.CurrentUser!.Id;
-                        <MudChat ChatPosition="@(isMe? ChatBubblePosition.End: ChatBubblePosition.Start)">
-                            <MudChatBubble>
-                                <MudText Typo="Typo.body2">@m.Body</MudText>
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@m.DateSent.ToLocalTime()</MudText>
-                            </MudChatBubble>
-                        </MudChat>
+                        var messageDate = m.DateSent.ToLocalTime().Date;
+                        
+                        @if (lastDate == null || lastDate != messageDate) {
+                            <MudStack AlignItems="AlignItems.Center" Class="my-2">
+                                <MudChip T="string" Size="Size.Small" Style="background: #e0e0e0; color: #666; font-size: 0.75rem;">
+                                    @FormatDateHeader(messageDate)
+                                </MudChip>
+                            </MudStack>
+                            lastDate = messageDate;
+                        }
+                        
+                        <div style="@(isMe ? "display: flex; justify-content: flex-end;" : "display: flex; justify-content: flex-start;")">
+                            <MudStack Row="true" AlignItems="AlignItems.End" Spacing="2" Style="max-width: 75%;">
+                                @if (!isMe) {
+                                    <MudAvatar Size="Size.Small" Style="background: #667eea; color: white; flex-shrink: 0;">
+                                        @otherInitials
+                                    </MudAvatar>
+                                }
+                                <MudPaper Elevation="1" 
+                                          Class="pa-3" 
+                                          Style="@(isMe 
+                                              ? "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 16px 16px 4px 16px;" 
+                                              : "background: white; color: #333; border-radius: 16px 16px 16px 4px;")">
+                                    <MudText Typo="Typo.body1" Style="word-break: break-word;">@m.Body</MudText>
+                                    <MudText Typo="Typo.caption" Style="@(isMe ? "color: rgba(255,255,255,0.7); margin-top: 4px; text-align: right;" : "color: #999; margin-top: 4px; text-align: right;")">
+                                        @m.DateSent.ToLocalTime().ToString("h:mm tt")
+                                        @if (isMe && m.IsRead) {
+                                            <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Style="margin-left: 4px; font-size: 14px;" />
+                                        }
+                                    </MudText>
+                                </MudPaper>
+                            </MudStack>
+                        </div>
                     }
-                </MudPaper>
-                <MudDivider Class="my-2" />
-                <MudStack Row="true" Spacing="2" Class="w-100">
-                    <MudTextField @bind-Value="replyText" Placeholder="Type a message" Lines="2" Class="flex-grow-1" />
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!isAuthorized)" OnClick="SendTextAsync">Send</MudButton>
                 </MudStack>
             }
-        </MudCardContent>
+        </MudPaper>
+
+        <!-- Input Area -->
+        @if (isAuthorized) {
+            <MudPaper Elevation="0" Class="pa-3" Style="border-top: 1px solid #eee; background: white; flex-shrink: 0;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudTextField @ref="messageInput"
+                                  @bind-Value="replyText" 
+                                  Placeholder="Type your message..." 
+                                  Variant="Variant.Outlined"
+                                  Immediate="true"
+                                  Style="flex: 1;"
+                                  Class="rounded-lg"
+                                  OnKeyUp="HandleKeyUp" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Send" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Large"
+                                   Disabled="@(string.IsNullOrWhiteSpace(replyText))"
+                                   OnClick="SendTextAsync"
+                                   Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%;" />
+                </MudStack>
+            </MudPaper>
+        }
     </MudCard>
 </MudContainer>
 
@@ -54,6 +138,8 @@
     private string currentUserName = string.Empty;
     private string otherInitials = string.Empty;
     private string replyText = string.Empty;
+    private MudPaper? messagesContainer;
+    private MudTextField<string>? messageInput;
 
     protected override async Task OnParametersSetAsync() {
         isLoading = true;
@@ -65,11 +151,16 @@
             await LoadUserNamesAsync();
             messages = await MessageService.GetConversationAsync(UserState.CurrentUser.Id, OtherUserId);
             await MarkInboxAsReadAsync();
-            await ScrollToBottomAsync();
         } catch (Exception ex) {
             Snackbar.Add(ex.Message, Severity.Error);
         } finally {
             isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (!isLoading && messages.Any()) {
+            await ScrollToBottomAsync();
         }
     }
 
@@ -87,7 +178,7 @@
                 if (string.IsNullOrWhiteSpace(otherUserName)) otherUserName = u.Email ?? OtherUserId.ToString();
                 otherInitials = GetInitials(u.FirstName, u.LastName);
             }
-        } catch { otherUserName = OtherUserId.ToString(); }
+        } catch { otherUserName = OtherUserId.ToString(); otherInitials = "?"; }
     }
 
     private static string GetInitials(string? first, string? last) {
@@ -97,7 +188,7 @@
     }
 
     private async Task<bool> AuthorizeConversationAsync(Guid currentUserId, Guid otherUserId) {
-        if (UserState.IsInRole("Admin") || UserState.IsInRole("Specialist")) return true;
+        if (UserState.IsInRole("Admin") || UserState.IsInRole("Specialist") || UserState.IsInRole("TenantOwner") || UserState.IsInRole("TenantSpecialist")) return true;
         try {
             await using var db = await DbFactory.CreateDbContextAsync();
             var exists = await db.ReserveStudies.AsNoTracking()
@@ -117,6 +208,12 @@
         }
     }
 
+    private async Task HandleKeyUp(KeyboardEventArgs e) {
+        if (e.Key == "Enter" && !e.ShiftKey) {
+            await SendTextAsync();
+        }
+    }
+
     private async Task SendTextAsync() {
         try {
             var text = replyText?.Trim();
@@ -131,18 +228,50 @@
             };
             await MessageService.SendMessageAsync(entity);
             messages.Add(entity);
+            
+            // Clear the input field
             replyText = string.Empty;
-            StateHasChanged();
+            if (messageInput != null) {
+                await messageInput.Clear();
+            }
+            
+            await InvokeAsync(StateHasChanged);
             await ScrollToBottomAsync();
         } catch (Exception ex) {
             Snackbar.Add($"Failed to send: {ex.Message}", Severity.Error);
         }
     }
 
-    [Inject] IJSRuntime JS { get; set; }
+    private void NavigateBack() {
+        NavigationManager.NavigateTo("/messages/inbox");
+    }
+
+    private static string FormatRelativeTime(DateTime date) {
+        var local = date.ToLocalTime();
+        var now = DateTime.Now;
+        var diff = now - local;
+
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        if (local.Year == now.Year) return local.ToString("MMM d");
+        return local.ToString("MMM d, yyyy");
+    }
+
+    private static string FormatDateHeader(DateTime date) {
+        var now = DateTime.Now.Date;
+        if (date == now) return "Today";
+        if (date == now.AddDays(-1)) return "Yesterday";
+        if (date > now.AddDays(-7)) return date.ToString("dddd");
+        if (date.Year == now.Year) return date.ToString("MMMM d");
+        return date.ToString("MMMM d, yyyy");
+    }
+
+    [Inject] IJSRuntime JS { get; set; } = default!;
     private async Task ScrollToBottomAsync() {
         try {
-            await JS.InvokeVoidAsync("crsChat.scrollToBottom");
+            await JS.InvokeVoidAsync("eval", "document.getElementById('messages-container')?.scrollTo({ top: document.getElementById('messages-container')?.scrollHeight, behavior: 'smooth' })");
         } catch { }
     }
 }

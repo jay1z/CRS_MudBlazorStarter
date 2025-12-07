@@ -5,6 +5,7 @@
 @using CRS.Data
 @using CRS.Services
 @using CRS.Services.Interfaces
+@using CRS.Services.Tenant
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
@@ -14,110 +15,289 @@
 @inject ISnackbar Snackbar
 @inject IReserveStudyService ReserveStudyService
 @inject IDialogService DialogService
+@inject ITenantContext TenantContext
 
-<PageTitle>Active Studies</PageTitle>
+<PageTitle>Reserve Studies - @(TenantContext.TenantName ?? "ALX Reserve Cloud")</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header Section -->
+    <MudPaper Elevation="0" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 12px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-2" Style="vertical-align: middle;" />
+                    Reserve Studies
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    Manage and track all reserve study requests
+                </MudText>
+            </MudStack>
+            <AuthorizeView Policy="RequireTenantStaff">
+                <Authorized>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Surface" 
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               Href="/ReserveStudies/Create"
+                               Style="color: #FF8C00; font-weight: 600;">
+                        New Study
+                    </MudButton>
+                </Authorized>
+            </AuthorizeView>
+            <AuthorizeView Policy="RequireHOAUser">
+                <Authorized>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Surface" 
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.RequestQuote"
+                               Href="/ReserveStudies/Request"
+                               Style="color: #FF8C00; font-weight: 600;">
+                        Request Study
+                    </MudButton>
+                </Authorized>
+            </AuthorizeView>
+        </MudStack>
+    </MudPaper>
+
     @if (isLoading) {
-        <MudPaper Elevation="0" Class="pa-8">
+        <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-            <MudText Typo="Typo.h5" Class="mt-4">Loading Reserve Studies...</MudText>
+            <div class="pa-8 text-center">
+                <MudText Typo="Typo.h6" Style="color: #666;">Loading reserve studies...</MudText>
+            </div>
         </MudPaper>
     }
-    else if (reserveStudies == null || !reserveStudies.Any()) {
-        <MudAlert Severity="Severity.Warning">
-            <MudText Typo="Typo.body1">No reserve studies found.</MudText>
-        </MudAlert>
-    }
     else {
-        <MudCard Elevation="0" Outlined="false">
-            <MudCardHeader>
-                <MudGrid>
-                    <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.h5" Class="mb-4">My Requests</MudText>
-                        <MudText Typo="Typo.h6" Color=Color.Primary Class="mt-1">@reserveStudies.Count Active Studies</MudText>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" Class="d-flex justify-end align-center gap-2">
-                        <MudTextField @bind-Value="searchString" Placeholder="Search..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Class="mt-0" />
-                    </MudItem>
-                </MudGrid>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudTable Items="@(FilteredStudies)"
-                          Dense="true"
+        <!-- Stats Cards -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #F3E8FF; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Assignment" Style="color: #6A3D9A; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@(reserveStudies?.Count ?? 0)</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">Total Studies</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #FFF5E6; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Pending" Style="color: #FF8C00; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetStatusCount(ReserveStudy.WorkflowStatus.RequestCreated)</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">New Requests</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #E3F2FD; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Engineering" Style="color: #1976D2; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetInProgressCount()</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">In Progress</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #E8F5E9; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #28a745; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetStatusCount(ReserveStudy.WorkflowStatus.RequestCompleted)</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">Completed</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Search and Filter Section -->
+        <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius: 12px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
+                <MudTextField @bind-Value="searchString" 
+                              Placeholder="Search by community, contact, or specialist..." 
+                              Adornment="Adornment.Start" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" 
+                              Immediate="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Style="flex: 1; min-width: 250px; max-width: 400px;" />
+                <MudSelect T="ReserveStudy.WorkflowStatus?" 
+                           @bind-Value="statusFilter" 
+                           Label="Filter by Status" 
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Style="min-width: 200px;">
+                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)null)">All Statuses</MudSelectItem>
+                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.RequestCreated)">New Request</MudSelectItem>
+                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.ProposalCreated)">Proposal Created</MudSelectItem>
+                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.ProposalSent)">Proposal Sent</MudSelectItem>
+                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.ProposalAccepted)">Proposal Accepted</MudSelectItem>
+                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.RequestCompleted)">Completed</MudSelectItem>
+                </MudSelect>
+                @if (!string.IsNullOrEmpty(searchString) || statusFilter != null)
+                {
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Secondary" 
+                               StartIcon="@Icons.Material.Filled.Clear"
+                               OnClick="ClearFilters">
+                        Clear
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Table Section -->
+        <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
+            @if (reserveStudies == null || !reserveStudies.Any()) {
+                <div class="pa-8 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.FolderOff" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+                    <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No reserve studies found</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999; margin-bottom: 16px;">
+                        Get started by creating your first reserve study request
+                    </MudText>
+                    <AuthorizeView Policy="RequireTenantStaff">
+                        <Authorized>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       Href="/ReserveStudies/Create">
+                                Create New Study
+                            </MudButton>
+                        </Authorized>
+                    </AuthorizeView>
+                </div>
+            }
+            else if (!FilteredStudies.Any()) {
+                <div class="pa-8 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.SearchOff" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+                    <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No matching studies found</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999;">
+                        Try adjusting your search or filter criteria
+                    </MudText>
+                </div>
+            }
+            else {
+                <MudTable Items="@FilteredStudies"
                           Hover="true"
                           Elevation="0"
-                          Loading="@isLoading"
-                          SortLabel="Sort by"
-                          Filter="@(study => FilterFunc(study, searchString))">
+                          Breakpoint="Breakpoint.Sm">
                     <HeaderContent>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Community.Name)">COMMUNITY</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact.FullNameInverted)">CONTACT</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact.Email)">EMAIL</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact.Phone)">PHONE</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Specialist.FullName)">SPECIALIST</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.DateCreated)">CREATED</MudTableSortLabel></MudTh>
-                        <MudTh>ACTIONS</MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Community?.Name)">Community</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Status)">Status</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact?.FullName)">Contact</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Specialist?.FullName)">Specialist</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.DateCreated)">Created</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600; text-align: right;">Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate Context="study">
                         <MudTd DataLabel="Community">
-                            <MudText Typo="Typo.h5" Class="fw-bold">@study.Community.Name</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Contact">
-                            <MudText Typo="Typo.body1">@study.PointOfContact?.FullNameInverted</MudText>
-                            <MudText Typo="Typo.caption">@study.PointOfContact?.CompanyName</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Email">
-                            <MudLink Href="@($"mailto:{study.PointOfContact?.Email}")">@study.PointOfContact?.Email</MudLink>
-                        </MudTd>
-                        <MudTd DataLabel="Phone">
-                            <MudText Typo="Typo.body1">@study.PointOfContact?.Phone
-                            @if (!string.IsNullOrEmpty(study.PointOfContact?.Extension)) {
-                                <MudText Typo="Typo.caption">@($" x{study.PointOfContact?.Extension}")</MudText>
-                            }
-                            </MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Specialist">
-                            <MudText Typo="Typo.body1">@study.Specialist?.FullName</MudText>
-                            <MudText Typo="Typo.caption">@study.Specialist?.Email</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Created">
-                            <MudText Typo="Typo.body1">@($"{study.DateCreated?.ToShortDateString()} {study.DateCreated?.ToShortTimeString()}")</MudText>
-                        </MudTd>
-                        <MudTd>
-                            <MudStack Row>
-                                <MudButton Href="@($"/ReserveStudies/{study.Id}/Details")" Size="Size.Small" Variant="Variant.Filled">
-                                    View
-                                </MudButton>
-                                <AuthorizeView Policy="RequireTenantStaff">
-                                    <Authorized Context="auth">
-                                        <MudButton OnClick="@(() => OpenDeleteDialog(study))" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
-                                            Delete
-                                        </MudButton>
-                                    </Authorized>
-                                </AuthorizeView>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudAvatar Color="Color.Primary" Size="Size.Small" Style="background: #F3E8FF; color: #6A3D9A;">
+                                    <MudIcon Icon="@Icons.Material.Filled.LocationCity" Size="Size.Small" />
+                                </MudAvatar>
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500;">@study.Community?.Name</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #999;">@study.Community?.PhysicalAddress?.City, @study.Community?.PhysicalAddress?.State</MudText>
+                                </MudStack>
                             </MudStack>
                         </MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" 
+                                     Size="Size.Small" 
+                                     Color="@GetStatusColor(study.Status)"
+                                     Variant="Variant.Filled">
+                                @GetStatusDisplayName(study.Status)
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Contact">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@study.PointOfContact?.FullName</MudText>
+                                <MudLink Typo="Typo.caption" Href="@($"mailto:{study.PointOfContact?.Email}")" Style="color: #999;">
+                                    @study.PointOfContact?.Email
+                                </MudLink>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Specialist">
+                            @if (study.Specialist != null) {
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudAvatar Color="Color.Secondary" Size="Size.Small">
+                                        @study.Specialist.Initials
+                                    </MudAvatar>
+                                    <MudText Typo="Typo.body2">@study.Specialist.FullName</MudText>
+                                </MudStack>
+                            } else {
+                                <MudText Typo="Typo.body2" Style="color: #999; font-style: italic;">Unassigned</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Created">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@study.DateCreated?.ToString("MMM dd, yyyy")</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #999;">@study.DateCreated?.ToString("h:mm tt")</MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Actions" Style="text-align: right;">
+                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" 
+                                     Size="Size.Small" 
+                                     Dense="true"
+                                     AnchorOrigin="Origin.BottomRight"
+                                     TransformOrigin="Origin.TopRight">
+                                <MudMenuItem Icon="@Icons.Material.Filled.Visibility" 
+                                             Href="@($"/ReserveStudies/{study.Id}/Details")">
+                                    View Details
+                                </MudMenuItem>
+                                <AuthorizeView Policy="RequireTenantStaff" Context="authEdit">
+                                    <Authorized>
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" 
+                                                     Href="@($"/ReserveStudies/{study.Id}/Edit")">
+                                            Edit Study
+                                        </MudMenuItem>
+                                        <MudDivider />
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" 
+                                                     OnClick="@(() => OpenDeleteDialog(study))"
+                                                     IconColor="Color.Error">
+                                            Delete
+                                        </MudMenuItem>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </MudMenu>
+                        </MudTd>
                     </RowTemplate>
-                    <LoadingContent>
-                        <MudText>Loading studies...</MudText>
-                    </LoadingContent>
-                    <NoRecordsContent>
-                        <MudText>No matching records found</MudText>
-                    </NoRecordsContent>
                     <PagerContent>
-                        <MudTablePager />
+                        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
                     </PagerContent>
                 </MudTable>
-            </MudCardContent>
-        </MudCard>
+            }
+        </MudPaper>
     }
 </MudContainer>
 
 @code {
-    private List<ReserveStudy> reserveStudies;
+    private List<ReserveStudy> reserveStudies = new();
     private bool isLoading = true;
     private string searchString = "";
+    private ReserveStudy.WorkflowStatus? statusFilter;
 
     protected override async Task OnParametersSetAsync() {
         await LoadData();
@@ -148,17 +328,21 @@
         try {
             await UserState.InitializeAsync();
             if (UserState.UserRoles != null) {
-                if (UserState.UserRoles.Contains("Admin")) {
+                // PlatformAdmin or TenantOwner can see all reserve studies
+                if (UserState.UserRoles.Contains("PlatformAdmin") || UserState.UserRoles.Contains("TenantOwner")) {
                     reserveStudies = await ReserveStudyService.GetAllReserveStudiesAsync();
                 }
-                else if (UserState.UserRoles.Contains("Specialist")) {
+                // TenantSpecialist sees assigned studies
+                else if (UserState.UserRoles.Contains("TenantSpecialist")) {
                     reserveStudies = await ReserveStudyService.GetAssignedReserveStudiesAsync(UserState.CurrentUser.Id);
                 }
-                else if (UserState.UserRoles.Contains("User")) {
+                // TenantViewer, HOAUser, or other authenticated users see their owned studies
+                else if (UserState.UserRoles.Contains("TenantViewer") || UserState.UserRoles.Contains("HOAUser") || UserState.UserRoles.Contains("HOAAuditor")) {
                     reserveStudies = await ReserveStudyService.GetOwnedReserveStudiesAsync(UserState.CurrentUser.Id);
                 }
                 else {
-                    reserveStudies = new List<ReserveStudy>();
+                    // Fallback: try to load owned studies for any authenticated user
+                    reserveStudies = await ReserveStudyService.GetOwnedReserveStudiesAsync(UserState.CurrentUser.Id);
                 }
             }
             else {
@@ -171,17 +355,72 @@
         }
     }
 
-    private IEnumerable<ReserveStudy> FilteredStudies => reserveStudies.Where(study => FilterFunc(study, searchString));
-    private bool FilterFunc(ReserveStudy study, string searchString) {
-        if (string.IsNullOrWhiteSpace(searchString)) {
-            return true;
-        }
+    private IEnumerable<ReserveStudy> FilteredStudies {
+        get {
+            var filtered = reserveStudies.AsEnumerable();
 
-        searchString = searchString.Trim().ToLower();
-        return study.Community?.Name?.ToLower().Contains(searchString) == true ||
-               study.PointOfContact?.FullName?.ToLower().Contains(searchString) == true ||
-               study.PointOfContact?.Email?.ToLower().Contains(searchString) == true ||
-               study.Specialist?.FullName?.ToLower().Contains(searchString) == true;
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(searchString)) {
+                var search = searchString.Trim().ToLower();
+                filtered = filtered.Where(study =>
+                    study.Community?.Name?.ToLower().Contains(search) == true ||
+                    study.PointOfContact?.FullName?.ToLower().Contains(search) == true ||
+                    study.PointOfContact?.Email?.ToLower().Contains(search) == true ||
+                    study.Specialist?.FullName?.ToLower().Contains(search) == true);
+            }
+
+            // Apply status filter
+            if (statusFilter.HasValue) {
+                filtered = filtered.Where(study => study.Status == statusFilter.Value);
+            }
+
+            return filtered;
+        }
+    }
+
+    private void ClearFilters() {
+        searchString = "";
+        statusFilter = null;
+    }
+
+    private int GetStatusCount(ReserveStudy.WorkflowStatus status) {
+        return reserveStudies?.Count(s => s.Status == status) ?? 0;
+    }
+
+    private int GetInProgressCount() {
+        return reserveStudies?.Count(s => 
+            s.Status != ReserveStudy.WorkflowStatus.RequestCreated && 
+            s.Status != ReserveStudy.WorkflowStatus.RequestCompleted &&
+            s.Status != ReserveStudy.WorkflowStatus.RequestCancelled &&
+            s.Status != ReserveStudy.WorkflowStatus.RequestArchived) ?? 0;
+    }
+
+    private Color GetStatusColor(ReserveStudy.WorkflowStatus status) {
+        return status switch {
+            ReserveStudy.WorkflowStatus.RequestCreated => Color.Warning,
+            ReserveStudy.WorkflowStatus.ProposalCreated => Color.Info,
+            ReserveStudy.WorkflowStatus.ProposalReviewed => Color.Info,
+            ReserveStudy.WorkflowStatus.ProposalSent => Color.Primary,
+            ReserveStudy.WorkflowStatus.ProposalAccepted => Color.Success,
+            ReserveStudy.WorkflowStatus.RequestCompleted => Color.Success,
+            ReserveStudy.WorkflowStatus.RequestCancelled => Color.Error,
+            ReserveStudy.WorkflowStatus.RequestArchived => Color.Default,
+            _ => Color.Secondary
+        };
+    }
+
+    private string GetStatusDisplayName(ReserveStudy.WorkflowStatus status) {
+        return status switch {
+            ReserveStudy.WorkflowStatus.RequestCreated => "New Request",
+            ReserveStudy.WorkflowStatus.ProposalCreated => "Proposal Created",
+            ReserveStudy.WorkflowStatus.ProposalReviewed => "Under Review",
+            ReserveStudy.WorkflowStatus.ProposalSent => "Proposal Sent",
+            ReserveStudy.WorkflowStatus.ProposalAccepted => "Accepted",
+            ReserveStudy.WorkflowStatus.RequestCompleted => "Completed",
+            ReserveStudy.WorkflowStatus.RequestCancelled => "Cancelled",
+            ReserveStudy.WorkflowStatus.RequestArchived => "Archived",
+            _ => status.ToString()
+        };
     }
 
     private async Task OpenDeleteDialog(ReserveStudy study) {
