@@ -17,7 +17,6 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IJSRuntime JSRuntime
 
 <PageTitle>Reserve Study Proposal</PageTitle>
 
@@ -38,7 +37,7 @@
                 </CardHeaderContent>
                 <CardHeaderActions>
                     <MudTooltip Text="Return to Study Details">
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudy/Details/{studyId}")" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudy/{studyId}/Details")" />
                     </MudTooltip>
                 </CardHeaderActions>
             </MudCardHeader>
@@ -150,7 +149,12 @@
                                           Placeholder="e.g., 50% due upon acceptance, 50% due upon completion" />
                         </MudItem>
                         <MudItem xs="12">
-                            <MudHtmlEditorField @bind-Value="proposal.Comments" Id="proposalCommentsEditor" />
+                            <MudTextField T="string"
+                                          Label="Comments"
+                                          @bind-Value="proposal.Comments"
+                                          Variant="Variant.Outlined"
+                                          Lines="5"
+                                          Placeholder="Additional comments or notes for the proposal" />
                         </MudItem>
                     </MudGrid>
 
@@ -161,7 +165,7 @@
                                    Variant="Variant.Outlined"
                                    Color="Color.Primary"
                                    Class="mr-2"
-                                   OnClick="@(() => Navigation.NavigateTo($"/ReserveStudy/Details/{studyId}"))">
+                                   OnClick="@(() => Navigation.NavigateTo($"/ReserveStudy/{studyId}/Details"))">
                             Cancel
                         </MudButton>
                         <MudButton ButtonType="ButtonType.Submit"
@@ -181,8 +185,6 @@
         </MudCard>
     }
 </MudContainer>
-
-<script src="/js/editor-interop.js"></script>
 
 @code {
     [Parameter]
@@ -229,16 +231,6 @@
     private async Task HandleValidSubmit() {
         isSaving = true;
         try {
-            // Ensure we capture editor HTML content (fallback if binding didn't propagate)
-            try {
-                var html = await JSRuntime.InvokeAsync<string>("getMudHtmlEditorContent", "proposalCommentsEditor");
-                if (!string.IsNullOrEmpty(html)) {
-                    proposal.Comments = html;
-                }
-            } catch (Exception jsEx) {
-                Console.WriteLine(jsEx.Message);
-            }
-
             // Map from view model to entity model
             var proposalEntity = new Models.Proposal {
                 ReserveStudyId = proposal.ReserveStudyId,
@@ -251,7 +243,7 @@
             var result = await WorkflowService.SendProposalAsync(studyId, proposalEntity);
             if (result) {
                 Snackbar.Add("Proposal sent successfully", Severity.Success);
-                Navigation.NavigateTo($"/ReserveStudy/Details/{studyId}");
+                Navigation.NavigateTo($"/ReserveStudy/{studyId}/Details");
             } else {
                 Snackbar.Add("Failed to send proposal", Severity.Error);
             }

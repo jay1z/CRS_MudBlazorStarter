@@ -175,21 +175,50 @@
                                             </MudButton>
                                         </Authorized>
                                     </AuthorizeView>
-                                } else {
-                                    <MudAlert Severity="Severity.Info" Dense="true">
-                                        A specialist will be assigned to your request shortly.
-                                    </MudAlert>
-                                    <AuthorizeView Policy="RequireTenantOwner">
-                                        <Authorized>
-                                            <MudButton Variant="Variant.Filled" 
-                                                       Color="Color.Primary" 
-                                                       FullWidth="true"
-                                                       StartIcon="@Icons.Material.Filled.PersonAdd"
-                                                       OnClick="OpenAssignSpecialistDialog">
-                                                Assign Specialist
-                                            </MudButton>
-                                        </Authorized>
-                                    </AuthorizeView>
+                } else {
+                                    @if (CanAssignSpecialist()) {
+                                        <MudAlert Severity="Severity.Success" Dense="true">
+                                            Request approved! You can now assign a specialist.
+                                        </MudAlert>
+                                        <AuthorizeView Policy="RequireTenantOwner">
+                                            <Authorized>
+                                                <MudButton Variant="Variant.Filled" 
+                                                           Color="Color.Primary" 
+                                                           FullWidth="true"
+                                                           StartIcon="@Icons.Material.Filled.PersonAdd"
+                                                           OnClick="OpenAssignSpecialistDialog">
+                                                    Assign Specialist
+                                                </MudButton>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    } else if (NeedsApproval()) {
+                                        <MudAlert Severity="Severity.Warning" Dense="true">
+                                            Request pending approval before specialist can be assigned.
+                                        </MudAlert>
+                                        <AuthorizeView Policy="RequireTenantOwner">
+                                            <Authorized>
+                                                <MudButton Variant="Variant.Filled" 
+                                                           Color="Color.Success" 
+                                                           FullWidth="true"
+                                                           StartIcon="@Icons.Material.Filled.CheckCircle"
+                                                           OnClick="ApproveRequestAsync">
+                                                    Approve Request
+                                                </MudButton>
+                                                <MudButton Variant="Variant.Outlined" 
+                                                           Color="Color.Warning" 
+                                                           FullWidth="true"
+                                                           StartIcon="@Icons.Material.Filled.Info"
+                                                           Class="mt-2"
+                                                           OnClick="RequestMoreInfoAsync">
+                                                    Request More Info
+                                                </MudButton>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    } else {
+                                        <MudAlert Severity="Severity.Info" Dense="true">
+                                            A specialist will be assigned to your request shortly.
+                                        </MudAlert>
+                                    }
                                 }
                             </MudStack>
                         </MudCardContent>
@@ -321,65 +350,23 @@
                                                    OnClick="SendRequestLink">
                                             Send Request Link
                                         </MudButton>
-                                        <MudButton Variant="Variant.Outlined" 
+                            <MudButton Variant="Variant.Outlined" 
                                                    Color="Color.Secondary" 
                                                    FullWidth="true"
                                                    StartIcon="@Icons.Material.Filled.VpnKey"
                                                    OnClick="SendAccessTokenLink">
                                             Send Access Token
                                         </MudButton>
-                                        
-                                        <MudDivider Class="my-2" />
-                                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Workflow Debugger</MudText>
-                                        <MudText Typo="Typo.caption" Style="color: #666;">
-                                            Select next state for testing
-                                        </MudText>
-                                        
-                                        <MudSelect T="StudyStatus?" 
-                                                   @bind-Value="selectedNextStudy" 
-                                                   Label="Next State" 
-                                                   Variant="Variant.Outlined" 
-                                                   Dense="true"
-                                                   Clearable="true">
-                                            @foreach (var s in allowedNextStudy) {
-                                                <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)s)">
-                                                    @s.ToString()
-                                                </MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                        
-                                        <MudStack Row="true" Spacing="1">
+                                        @if (reserveStudy?.Proposal == null && reserveStudy?.SpecialistUserId != null) {
+                                            <MudDivider Class="my-2" />
                                             <MudButton Variant="Variant.Filled" 
-                                                       Color="Color.Info" 
-                                                       Size="Size.Small"
-                                                       Disabled="@(selectedNextStudy == null)" 
-                                                       OnClick="@ApplySelectedStudyTransition">
-                                                Apply
+                                                       Color="Color.Success" 
+                                                       FullWidth="true"
+                                                       StartIcon="@Icons.Material.Filled.Send"
+                                                       Href="@($"/ReserveStudies/{Id}/Proposal")">
+                                                Create Proposal
                                             </MudButton>
-                                            <MudButton Variant="Variant.Outlined" 
-                                                       Color="Color.Default" 
-                                                       Size="Size.Small"
-                                                       OnClick="LoadAllowedTransitions">
-                                                Refresh
-                                            </MudButton>
-                                        </MudStack>
-                                        
-                                        <MudDivider Class="my-2" />
-                                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Quick Actions</MudText>
-                                        <MudStack Row="true" Spacing="1">
-                                            <MudButton Variant="Variant.Outlined" 
-                                                       Color="Color.Primary" 
-                                                       Size="Size.Small"
-                                                       OnClick="@(() => SendProposalAsync(Id))">
-                                                Send Proposal
-                                            </MudButton>
-                                            <MudButton Variant="Variant.Outlined" 
-                                                       Color="Color.Primary" 
-                                                       Size="Size.Small"
-                                                       OnClick="@(() => RequestFinancialInfoAsync(Id))">
-                                                Request Info
-                                            </MudButton>
-                                        </MudStack>
+                                        }
                                     </MudStack>
                                 </MudCardContent>
                             </MudCard>
@@ -895,7 +882,6 @@ private CRS.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel? ac
 private bool hasValidAcceptance = false;
 
     private List<StudyStatus> allowedNextStudy = new();
-    private StudyStatus? selectedNextStudy;
 
     private List<StudyStatusHistory> statusHistory = new();
 
@@ -1092,6 +1078,7 @@ private bool hasValidAcceptance = false;
                 .Include(rs => rs.Specialist)
                 .Include(rs => rs.Proposal)
                 .Include(rs => rs.FinancialInfo)
+                .Include(rs => rs.StudyRequest)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(rs => rs.Id == Id);
 
@@ -1381,28 +1368,16 @@ private bool hasValidAcceptance = false;
     private async Task SendProposalAsync(Guid studyId) {
         if (reserveStudy == null) return;
 
-        try {
-            if (reserveStudy.Proposal == null) {
-                var proposal = new Models.Proposal {
-                    ReserveStudyId = reserveStudy.Id,
-                    ProposalScope = "Test Scope",
-                    EstimatedCost = 5000.00m,
-                    Comments = "Test proposal created automatically",
-                    DateSent = DateTime.Now
-                };
-
-                var result = await WorkflowService.SendProposalAsync(Id, proposal);
-                if (result) {
-                    Snackbar.Add("Proposal sent successfully", Severity.Success);
-                    await ReloadAfterChange();
-                } else {
-                    Snackbar.Add("Failed to send proposal", Severity.Error);
-                }
-            } else {
+        // If no proposal exists yet, navigate to the proposal creation page
+        if (reserveStudy.Proposal == null) {
+            NavigationManager.NavigateTo($"/ReserveStudies/{studyId}/Proposal");
+        } else {
+            // If proposal already exists, try to transition to ProposalPendingESign
+            try {
                 await ApplyTransition(StudyStatus.ProposalPendingESign);
+            } catch (Exception ex) {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
             }
-        } catch (Exception ex) {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
     }
 
@@ -1440,19 +1415,12 @@ private bool hasValidAcceptance = false;
         try {
             var studyAllowed = await WorkflowService.GetAllowedStudyTransitionsAsync(Id);
             allowedNextStudy = studyAllowed.ToList();
-            if (!allowedNextStudy.Contains(selectedNextStudy ?? default)) selectedNextStudy = null;
         } catch {
             allowedNextStudy.Clear();
-            selectedNextStudy = null;
         }
         // Rebuild the timeline since history/allowed may influence displayed metadata
         InitializeTimelineItems();
         StateHasChanged();
-    }
-
-    private async Task ApplySelectedStudyTransition() {
-        if (selectedNextStudy == null) return;
-        await ApplyTransition(selectedNextStudy.Value);
     }
 
     private async Task ApplyTransition(StudyStatus status) {
@@ -1538,12 +1506,54 @@ private bool hasValidAcceptance = false;
                 study.DateModified = DateTime.UtcNow;
                 await context.SaveChangesAsync();
 
+                // Transition to Assigned status if allowed
+                if (allowedNextStudy.Contains(StudyStatus.Assigned)) {
+                    await ApplyTransition(StudyStatus.Assigned);
+                }
+
                 Snackbar.Add($"Specialist {specialist.FullName} assigned successfully!", Severity.Success);
                 await ReloadAfterChange();
             }
         } catch (Exception ex) {
             Snackbar.Add($"Error assigning specialist: {ex.Message}", Severity.Error);
         }
+    }
+
+    // Workflow helper methods
+    private bool NeedsApproval() {
+        var currentStatus = GetCurrentEngineStatus();
+        return currentStatus == StudyStatus.ReadyForReview || 
+               currentStatus == StudyStatus.PendingDetails ||
+               currentStatus == StudyStatus.NewRequest;
+    }
+
+    private bool CanAssignSpecialist() {
+        var currentStatus = GetCurrentEngineStatus();
+        return currentStatus == StudyStatus.Approved && reserveStudy?.SpecialistUserId == null;
+    }
+
+    private StudyStatus GetCurrentEngineStatus() {
+        return reserveStudy?.StudyRequest?.CurrentStatus ?? StudyStatus.NewRequest;
+    }
+
+    private async Task ApproveRequestAsync() {
+        var success = await ExecuteActionAsync(
+            async () => await WorkflowService.TryTransitionStudyAsync(Id, StudyStatus.Approved),
+            "Request approved successfully! You can now assign a specialist.",
+            "Failed to approve request"
+        );
+
+        if (success) await ReloadAfterChange();
+    }
+
+    private async Task RequestMoreInfoAsync() {
+        var success = await ExecuteActionAsync(
+            async () => await WorkflowService.TryTransitionStudyAsync(Id, StudyStatus.NeedsInfo),
+            "Request returned for more information.",
+            "Failed to request more info"
+        );
+
+        if (success) await ReloadAfterChange();
     }
 
     // Helper methods for status display
