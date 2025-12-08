@@ -1,0 +1,286 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+@using CRS.Services.Storage
+@using CRS.Services.Tenant
+
+@inject ISiteVisitPhotoService PhotoService
+@inject IPhotoStorageService PhotoStorage
+@inject ITenantContext TenantContext
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Color="Color.Primary" Size="Size.Large" />
+            <MudText Typo="Typo.h6" Style="font-weight: 600;">Site Visit Photos</MudText>
+            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                @photos.Count photos
+            </MudChip>
+        </MudStack>
+        
+        @if (CanEdit)
+        {
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.AddAPhoto"
+                       OnClick="OpenUploadDialog"
+                       Size="Size.Small">
+                Add Photos
+            </MudButton>
+        }
+    </MudStack>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+        <MudText Typo="Typo.body2" Align="Align.Center" Style="color: #666;">Loading photos...</MudText>
+    }
+    else if (!photos.Any())
+    {
+        <MudPaper Elevation="0" Class="pa-8 text-center" Style="background: #f9f9f9; border-radius: 12px;">
+            <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+            <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No photos yet</MudText>
+            <MudText Typo="Typo.body2" Style="color: #999; margin-bottom: 16px;">
+                Add photos from your site visit to document property conditions
+            </MudText>
+            @if (CanEdit)
+            {
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.AddAPhoto"
+                           OnClick="OpenUploadDialog">
+                    Upload Photos
+                </MudButton>
+            }
+        </MudPaper>
+    }
+    else
+    {
+        <!-- Category Filter -->
+        <MudStack Row="true" Spacing="2" Class="mb-4" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.body2" Style="color: #666;">Filter:</MudText>
+            <MudChipSet T="PhotoCategory?" @bind-SelectedValue="selectedCategory" SelectionMode="SelectionMode.SingleSelection">
+                <MudChip T="PhotoCategory?" Value="@((PhotoCategory?)null)" Color="Color.Default" Variant="Variant.Text">
+                    All
+                </MudChip>
+                @foreach (var category in GetUsedCategories())
+                {
+                    <MudChip T="PhotoCategory?" Value="@category" Color="Color.Primary" Variant="Variant.Text">
+                        @GetCategoryDisplayName(category)
+                    </MudChip>
+                }
+            </MudChipSet>
+        </MudStack>
+
+        <!-- Photo Grid -->
+        <MudGrid Spacing="3">
+            @foreach (var photo in FilteredPhotos)
+            {
+                <MudItem xs="6" sm="4" md="3">
+                    <MudCard Elevation="2" Class="photo-card" Style="border-radius: 12px; overflow: hidden; cursor: pointer; position: relative;"
+                             @onclick="@(() => OpenPhotoViewer(photo))">
+                        @if (photo.IsPrimary)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" 
+                                     Style="position: absolute; top: 8px; left: 8px; z-index: 1;">
+                                Primary
+                            </MudChip>
+                        }
+                        @if (photo.IncludeInReport)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Description" 
+                                     Style="position: absolute; top: 8px; right: 8px; color: white; background: rgba(0,0,0,0.5); border-radius: 50%; padding: 4px; font-size: 20px;" />
+                        }
+                        
+                        <MudImage Src="@GetThumbnailUrl(photo)" 
+                                  Alt="@(photo.Caption ?? "Site visit photo")"
+                                  ObjectFit="ObjectFit.Cover"
+                                  Style="width: 100%; aspect-ratio: 4/3;" />
+                        
+                        <MudCardContent Class="pa-2">
+                            <MudStack Spacing="1">
+                                @if (!string.IsNullOrEmpty(photo.Caption))
+                                {
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @photo.Caption
+                                    </MudText>
+                                }
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudChip T="string" Size="Size.Small" Color="@GetConditionColor(photo.Condition)" Variant="Variant.Outlined">
+                                        @GetConditionDisplayName(photo.Condition)
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption" Style="color: #999;">
+                                        @photo.PhotoTakenAt.ToString("MMM dd")
+                                    </MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudPaper>
+
+<style>
+    .photo-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+        transition: all 0.2s ease;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    [Parameter]
+    public bool CanEdit { get; set; } = false;
+
+    [Parameter]
+    public EventCallback OnPhotosChanged { get; set; }
+
+    private List<SiteVisitPhoto> photos = new();
+    private bool isLoading = true;
+    private PhotoCategory? selectedCategory = null;
+
+    private IEnumerable<SiteVisitPhoto> FilteredPhotos => selectedCategory == null 
+        ? photos 
+        : photos.Where(p => p.Category == selectedCategory.Value);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPhotos();
+    }
+
+    private async Task LoadPhotos()
+    {
+        try
+        {
+            isLoading = true;
+            photos = (await PhotoService.GetByReserveStudyAsync(ReserveStudyId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading photos: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OpenUploadDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "ReserveStudyId", ReserveStudyId }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<PhotoUploadDialog>("Upload Photos", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadPhotos();
+            await OnPhotosChanged.InvokeAsync();
+        }
+    }
+
+    private async Task OpenPhotoViewer(SiteVisitPhoto photo)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Photo", photo },
+            { "AllPhotos", photos },
+            { "CanEdit", CanEdit }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<PhotoViewerDialog>("", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadPhotos();
+            await OnPhotosChanged.InvokeAsync();
+        }
+    }
+
+    private string GetThumbnailUrl(SiteVisitPhoto photo)
+    {
+        if (!string.IsNullOrEmpty(photo.ThumbnailUrl))
+        {
+            return PhotoStorage.GetSasUrl(photo.ThumbnailUrl);
+        }
+        return PhotoStorage.GetSasUrl(photo.StorageUrl);
+    }
+
+    private IEnumerable<PhotoCategory> GetUsedCategories()
+    {
+        return photos.Select(p => p.Category).Distinct().OrderBy(c => (int)c);
+    }
+
+    private string GetCategoryDisplayName(PhotoCategory category)
+    {
+        return category switch
+        {
+            PhotoCategory.General => "General",
+            PhotoCategory.Exterior => "Exterior",
+            PhotoCategory.Interior => "Interior",
+            PhotoCategory.Roof => "Roof",
+            PhotoCategory.Foundation => "Foundation",
+            PhotoCategory.Mechanical => "Mechanical",
+            PhotoCategory.Electrical => "Electrical",
+            PhotoCategory.Plumbing => "Plumbing",
+            PhotoCategory.CommonArea => "Common Area",
+            PhotoCategory.Amenity => "Amenity",
+            PhotoCategory.Damage => "Damage",
+            PhotoCategory.BeforeAfter => "Before/After",
+            _ => category.ToString()
+        };
+    }
+
+    private string GetConditionDisplayName(ElementCondition condition)
+    {
+        return condition switch
+        {
+            ElementCondition.NotAssessed => "Not Assessed",
+            ElementCondition.Excellent => "Excellent",
+            ElementCondition.Good => "Good",
+            ElementCondition.Fair => "Fair",
+            ElementCondition.Poor => "Poor",
+            ElementCondition.Critical => "Critical",
+            ElementCondition.NeedsReplacement => "Replace",
+            _ => condition.ToString()
+        };
+    }
+
+    private Color GetConditionColor(ElementCondition condition)
+    {
+        return condition switch
+        {
+            ElementCondition.Excellent => Color.Success,
+            ElementCondition.Good => Color.Success,
+            ElementCondition.Fair => Color.Warning,
+            ElementCondition.Poor => Color.Error,
+            ElementCondition.Critical => Color.Error,
+            ElementCondition.NeedsReplacement => Color.Error,
+            _ => Color.Default
+        };
+    }
+}

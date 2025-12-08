@@ -1,0 +1,509 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+@using CRS.Services
+@using CRS.Data
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject IStudyNoteService NoteService
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudPaper Elevation="0" Class="pa-4">
+    <MudStack Spacing="3">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Notes" Class="mr-2" Style="vertical-align: middle;" />
+                Notes & Comments
+            </MudText>
+            <AuthorizeView Policy="RequireTenantStaff">
+                <Authorized>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenAddNoteDialog">
+                        Add Note
+                    </MudButton>
+                </Authorized>
+            </AuthorizeView>
+        </MudStack>
+
+        <!-- Filter Tabs -->
+        <MudChipSet T="string" @bind-SelectedValue="selectedFilter" Mandatory="true">
+            <MudChip Value="@("all")" Variant="Variant.Text" Color="Color.Default">All</MudChip>
+            <MudChip Value="@("pinned")" Variant="Variant.Text" Color="Color.Warning">
+                <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="mr-1" /> Pinned
+            </MudChip>
+            <MudChip Value="@("action")" Variant="Variant.Text" Color="Color.Error">Action Items</MudChip>
+            <MudChip Value="@("resolved")" Variant="Variant.Text" Color="Color.Success">Resolved</MudChip>
+        </MudChipSet>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (!FilteredNotes.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.StickyNote2" Style="font-size: 48px; color: #999;" />
+                    <MudText Typo="Typo.body1">No notes yet</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        @if (isStaff)
+                        {
+                            <text>Add notes to track important information about this study.</text>
+                        }
+                        else
+                        {
+                            <text>No comments are available for this study yet.</text>
+                        }
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
+        else
+        {
+            <!-- Notes List -->
+            <MudStack Spacing="2">
+                @foreach (var note in FilteredNotes)
+                {
+                    <MudCard Elevation="1" Style="@GetNoteStyle(note)">
+                        <MudCardContent Class="pa-3">
+                            <MudStack Spacing="2">
+                                <!-- Header Row -->
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        @if (note.IsPinned)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Color="Color.Warning" />
+                                        }
+                                        <MudChip T="string" Size="Size.Small" Color="@GetTypeColor(note.Type)" Variant="Variant.Outlined">
+                                            @GetTypeDisplayName(note.Type)
+                                        </MudChip>
+                                        @if (isStaff)
+                                        {
+                                            @if (note.Visibility == NoteVisibility.Internal)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="mr-1" />
+                                                    Internal
+                                                </MudChip>
+                                            }
+                                            else if (note.Visibility == NoteVisibility.Private)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                                    <MudIcon Icon="@Icons.Material.Filled.VisibilityOff" Size="Size.Small" Class="mr-1" />
+                                                    Private
+                                                </MudChip>
+                                            }
+                                        }
+                                        @if (note.Visibility == NoteVisibility.ClientVisible)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                                                <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Class="mr-1" />
+                                                Client Visible
+                                            </MudChip>
+                                        }
+                                        @if (note.IsResolved)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                                                Resolved
+                                            </MudChip>
+                                        }
+                                    </MudStack>
+                                    
+                                    <AuthorizeView Policy="RequireTenantStaff">
+                                        <Authorized>
+                                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
+                                                <MudMenuItem Icon="@(note.IsPinned ? Icons.Material.Filled.PushPin : Icons.Material.Outlined.PushPin)"
+                                                             OnClick="@(() => TogglePin(note))">
+                                                    @(note.IsPinned ? "Unpin" : "Pin")
+                                                </MudMenuItem>
+                                                @if (note.Type == NoteType.ActionItem && !note.IsResolved)
+                                                {
+                                                    <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle"
+                                                                 OnClick="@(() => MarkResolved(note))">
+                                                        Mark Resolved
+                                                    </MudMenuItem>
+                                                }
+                                                <MudMenuItem Icon="@Icons.Material.Filled.Reply"
+                                                             OnClick="@(() => OpenReplyDialog(note))">
+                                                    Reply
+                                                </MudMenuItem>
+                                                <MudDivider />
+                                                <MudMenuItem Icon="@Icons.Material.Filled.Delete"
+                                                             OnClick="@(() => DeleteNote(note))"
+                                                             IconColor="Color.Error">
+                                                    Delete
+                                                </MudMenuItem>
+                                            </MudMenu>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </MudStack>
+
+                                <!-- Content -->
+                                <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@note.Content</MudText>
+
+                                <!-- Footer -->
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                            @(note.Author?.FirstName?.FirstOrDefault())@(note.Author?.LastName?.FirstOrDefault())
+                                        </MudAvatar>
+                                        <MudText Typo="Typo.caption" Style="color: #666;">
+                                            @note.Author?.FullName
+                                        </MudText>
+                                    </MudStack>
+                                    <MudText Typo="Typo.caption" Style="color: #999;">
+                                        @FormatDate(note.DateCreated)
+                                    </MudText>
+                                </MudStack>
+
+                                <!-- Replies -->
+                                @if (note.Replies?.Any(r => CanViewNote(r)) == true)
+                                {
+                                    <MudDivider Class="my-2" />
+                                    <MudStack Spacing="2" Class="ml-4" Style="border-left: 2px solid #e0e0e0; padding-left: 12px;">
+                                        @foreach (var reply in note.Replies.Where(r => CanViewNote(r)).OrderBy(r => r.DateCreated))
+                                        {
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@reply.Content</MudText>
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                                    <MudText Typo="Typo.caption" Style="color: #666;">
+                                                        @reply.Author?.FullName
+                                                    </MudText>
+                                                    <MudText Typo="Typo.caption" Style="color: #999;">
+                                                        @FormatDate(reply.DateCreated)
+                                                    </MudText>
+                                                </MudStack>
+                                            </MudStack>
+                                        }
+                                    </MudStack>
+                                }
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                }
+            </MudStack>
+        }
+    </MudStack>
+</MudPaper>
+
+<!-- Add Note Dialog -->
+<MudDialog @bind-Visible="showAddDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.NoteAdd" Class="mr-2" />
+            @(replyToNote != null ? "Reply to Note" : "Add Note")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="newNoteContent" 
+                          Label="Note" 
+                          Variant="Variant.Outlined"
+                          Lines="4"
+                          Required="true" />
+            
+            @if (replyToNote == null)
+            {
+                <MudSelect T="NoteType" @bind-Value="newNoteType" Label="Type" Variant="Variant.Outlined">
+                    @foreach (NoteType type in Enum.GetValues<NoteType>())
+                    {
+                        <MudSelectItem T="NoteType" Value="@type">@GetTypeDisplayName(type)</MudSelectItem>
+                    }
+                </MudSelect>
+                
+                <MudSelect T="NoteVisibility" @bind-Value="newNoteVisibility" Label="Visibility" Variant="Variant.Outlined">
+                    <MudSelectItem T="NoteVisibility" Value="NoteVisibility.Internal">Internal Only</MudSelectItem>
+                    <MudSelectItem T="NoteVisibility" Value="NoteVisibility.ClientVisible">Client Visible</MudSelectItem>
+                    <MudSelectItem T="NoteVisibility" Value="NoteVisibility.Private">Private (Only Me)</MudSelectItem>
+                </MudSelect>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveNote" Disabled="@(string.IsNullOrWhiteSpace(newNoteContent))">
+            @(replyToNote != null ? "Reply" : "Add Note")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+[Parameter]
+public Guid ReserveStudyId { get; set; }
+
+private List<StudyNote> notes = new();
+private bool isLoading = true;
+private string selectedFilter = "all";
+    
+// User context
+private bool isStaff = false;
+private bool isHOAUser = false;
+private Guid currentUserId = Guid.Empty;
+
+// Dialog state
+private bool showAddDialog = false;
+private string newNoteContent = "";
+private NoteType newNoteType = NoteType.General;
+private NoteVisibility newNoteVisibility = NoteVisibility.Internal;
+private StudyNote? replyToNote = null;
+
+private IEnumerable<StudyNote> FilteredNotes
+{
+    get
+    {
+        // Start with top-level notes only
+        var filtered = notes.Where(n => n.ParentNoteId == null);
+            
+        // Apply visibility filtering based on user role
+        filtered = filtered.Where(n => CanViewNote(n));
+
+        // Apply UI filter
+        return selectedFilter switch
+        {
+            "pinned" => filtered.Where(n => n.IsPinned),
+            "action" => filtered.Where(n => n.Type == NoteType.ActionItem && !n.IsResolved),
+            "resolved" => filtered.Where(n => n.IsResolved),
+            _ => filtered
+        };
+    }
+}
+    
+/// <summary>
+/// Determines if the current user can view a note based on its visibility.
+/// </summary>
+private bool CanViewNote(StudyNote note)
+{
+    // Staff can see everything except other users' private notes
+    if (isStaff)
+    {
+        // Staff can see Internal and ClientVisible
+        // Private notes only visible to the author
+        if (note.Visibility == NoteVisibility.Private)
+        {
+            return note.AuthorUserId == currentUserId;
+        }
+        return true;
+    }
+        
+    // HOA/Client users can only see ClientVisible notes
+    if (isHOAUser)
+    {
+        return note.Visibility == NoteVisibility.ClientVisible;
+    }
+        
+    // Default: only show ClientVisible
+    return note.Visibility == NoteVisibility.ClientVisible;
+}
+
+protected override async Task OnInitializedAsync()
+{
+    await DetermineUserRole();
+    await LoadNotes();
+}
+    
+private async Task DetermineUserRole()
+{
+    try
+    {
+        await UserState.InitializeAsync();
+        currentUserId = UserState.CurrentUser?.Id ?? Guid.Empty;
+            
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+            
+        // Check if user is staff (TenantOwner, TenantSpecialist, PlatformAdmin)
+        isStaff = user.IsInRole("TenantOwner") || 
+                  user.IsInRole("TenantSpecialist") || 
+                  user.IsInRole("TenantViewer") ||
+                  user.IsInRole("PlatformAdmin") ||
+                  user.IsInRole("Admin");
+            
+        // Check if user is HOA user
+        isHOAUser = user.IsInRole("HOAUser") || user.IsInRole("HOAAuditor");
+    }
+    catch (Exception ex)
+    {
+        // Default to most restrictive if we can't determine role
+        isStaff = false;
+        isHOAUser = false;
+    }
+}
+
+    private async Task LoadNotes()
+    {
+        try
+        {
+            isLoading = true;
+            var result = await NoteService.GetByReserveStudyAsync(ReserveStudyId);
+            notes = result.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading notes: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenAddNoteDialog()
+    {
+        replyToNote = null;
+        newNoteContent = "";
+        newNoteType = NoteType.General;
+        newNoteVisibility = NoteVisibility.Internal;
+        showAddDialog = true;
+    }
+
+    private void OpenReplyDialog(StudyNote note)
+    {
+        replyToNote = note;
+        newNoteContent = "";
+        showAddDialog = true;
+    }
+
+    private void CloseDialog()
+    {
+        showAddDialog = false;
+        replyToNote = null;
+        newNoteContent = "";
+    }
+
+    private async Task SaveNote()
+    {
+        if (string.IsNullOrWhiteSpace(newNoteContent)) return;
+
+        try
+        {
+            await UserState.InitializeAsync();
+            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+
+            var note = new StudyNote
+            {
+                ReserveStudyId = ReserveStudyId,
+                Content = newNoteContent.Trim(),
+                Type = replyToNote != null ? replyToNote.Type : newNoteType,
+                Visibility = replyToNote != null ? replyToNote.Visibility : newNoteVisibility,
+                AuthorUserId = userId,
+                ParentNoteId = replyToNote?.Id
+            };
+
+            await NoteService.CreateAsync(note);
+            Snackbar.Add(replyToNote != null ? "Reply added" : "Note added", Severity.Success);
+            
+            CloseDialog();
+            await LoadNotes();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving note: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task TogglePin(StudyNote note)
+    {
+        try
+        {
+            await NoteService.SetPinnedAsync(note.Id, !note.IsPinned);
+            note.IsPinned = !note.IsPinned;
+            Snackbar.Add(note.IsPinned ? "Note pinned" : "Note unpinned", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task MarkResolved(StudyNote note)
+    {
+        try
+        {
+            await UserState.InitializeAsync();
+            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+            await NoteService.ResolveAsync(note.Id, userId);
+            note.IsResolved = true;
+            note.ResolvedAt = DateTime.UtcNow;
+            Snackbar.Add("Note marked as resolved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteNote(StudyNote note)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete Note",
+            "Are you sure you want to delete this note?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await NoteService.DeleteAsync(note.Id);
+                notes.Remove(note);
+                Snackbar.Add("Note deleted", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private string GetNoteStyle(StudyNote note)
+    {
+        if (note.IsPinned) return "border-left: 4px solid #FFA726; border-radius: 8px;";
+        if (note.Type == NoteType.ActionItem && !note.IsResolved) return "border-left: 4px solid #EF5350; border-radius: 8px;";
+        if (note.IsResolved) return "border-left: 4px solid #66BB6A; border-radius: 8px; opacity: 0.8;";
+        return "border-radius: 8px;";
+    }
+
+    private Color GetTypeColor(NoteType type) => type switch
+    {
+        NoteType.ActionItem => Color.Error,
+        NoteType.Question => Color.Info,
+        NoteType.Issue => Color.Warning,
+        NoteType.Resolution => Color.Success,
+        NoteType.ClientFeedback => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private string GetTypeDisplayName(NoteType type) => type switch
+    {
+        NoteType.General => "General",
+        NoteType.Question => "Question",
+        NoteType.ActionItem => "Action Item",
+        NoteType.Issue => "Issue",
+        NoteType.Resolution => "Resolution",
+        NoteType.ClientFeedback => "Client Feedback",
+        NoteType.InternalReview => "Internal Review",
+        NoteType.StatusUpdate => "Status Update",
+        _ => type.ToString()
+    };
+
+    private string FormatDate(DateTime? date)
+    {
+        if (!date.HasValue) return "";
+        var local = date.Value.ToLocalTime();
+        var diff = DateTime.Now - local;
+        
+        if (diff.TotalMinutes < 1) return "Just now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        
+        return local.ToString("MMM dd, yyyy");
+    }
+}

@@ -150,6 +150,18 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.Interfaces.IMessageService, CRS.Services.MessageService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IAppNotificationService, CRS.Services.AppNotificationService>();
     
+    // High Priority Schema Services
+    builder.Services.AddScoped<CRS.Services.Interfaces.IDocumentService, CRS.Services.DocumentService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.IEmailLogService, CRS.Services.EmailLogService>();
+    
+    // Medium Priority Schema Services
+    builder.Services.AddScoped<CRS.Services.Interfaces.ISiteVisitPhotoService, CRS.Services.SiteVisitPhotoService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.IStudyNoteService, CRS.Services.StudyNoteService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.IGeneratedReportService, CRS.Services.GeneratedReportService>();
+    
+    // Click-Wrap Agreement Services
+    builder.Services.AddScoped<CRS.Services.Interfaces.IProposalAcceptanceService, CRS.Services.ProposalAcceptanceService>();
+    
     // System-wide settings
     builder.Services.AddScoped<CRS.Services.Interfaces.ISystemSettingsService, CRS.Services.SystemSettingsService>();
 
@@ -174,6 +186,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
 
     // Register Coravel
     builder.Services.AddMailer(builder.Configuration);
+    builder.Services.AddEmailLogging(); // Wrap IMailer with logging
     builder.Services.AddScheduler(); // Add Coravel scheduler for background jobs
     builder.Services.AddScoped<ReserveStudyCreatedListener>();
     builder.Services.AddScoped<ProposalSentListener>();
@@ -251,15 +264,19 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.Provisioning.IOwnerProvisioningService, CRS.Services.Provisioning.OwnerProvisioningService>();
 
     // Azure Blob Storage for logo uploads
-    var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
-    if (!string.IsNullOrWhiteSpace(azureStorageConnectionString)) {
-        builder.Services.AddSingleton(x => new Azure.Storage.Blobs.BlobServiceClient(azureStorageConnectionString));
-        builder.Services.AddScoped<CRS.Services.Storage.ILogoStorageService, CRS.Services.Storage.LogoStorageService>();
-    } else {
-        // Fallback to null service if no connection string (development)
-        builder.Services.AddScoped<CRS.Services.Storage.ILogoStorageService, CRS.Services.Storage.NullLogoStorageService>();
+        var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
+        if (!string.IsNullOrWhiteSpace(azureStorageConnectionString)) {
+            builder.Services.AddSingleton(x => new Azure.Storage.Blobs.BlobServiceClient(azureStorageConnectionString));
+            builder.Services.AddScoped<CRS.Services.Storage.ILogoStorageService, CRS.Services.Storage.LogoStorageService>();
+            builder.Services.AddScoped<CRS.Services.Storage.IPhotoStorageService, CRS.Services.Storage.PhotoStorageService>();
+            builder.Services.AddScoped<CRS.Services.Storage.IDocumentStorageService, CRS.Services.Storage.DocumentStorageService>();
+        } else {
+            // Fallback to null service if no connection string (development)
+            builder.Services.AddScoped<CRS.Services.Storage.ILogoStorageService, CRS.Services.Storage.NullLogoStorageService>();
+            builder.Services.AddScoped<CRS.Services.Storage.IPhotoStorageService, CRS.Services.Storage.NullPhotoStorageService>();
+            builder.Services.AddScoped<CRS.Services.Storage.IDocumentStorageService, CRS.Services.Storage.NullDocumentStorageService>();
+        }
     }
-}
 
 void ConfigureDatabases(WebApplicationBuilder builder) {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??

@@ -316,14 +316,6 @@ namespace CRS.Data {
                 entity.Property(e => e.Email).HasMaxLength(256);
             });
 
-            // SupportTicket
-            builder.Entity<CRS.Models.SupportTicket>(entity => {
-                entity.ToTable("SupportTickets");
-                entity.HasIndex(e => e.TenantId);
-                entity.Property(e => e.Title).HasMaxLength(256);
-                entity.Property(e => e.Status).HasMaxLength(64);
-            });
-
             // Phase 2: ElementOption consolidated configuration
             builder.Entity<ElementOption>(entity => {
                 entity.ToTable("ElementOptions");
@@ -343,7 +335,233 @@ namespace CRS.Data {
                     .HasDatabaseName("IX_TenantElementOrder_Tenant_Type_Order");
                 entity.Property(e => e.CustomName).HasMaxLength(200);
             });
-        }
+
+            // Document entity configuration
+            builder.Entity<Document>(entity => {
+                entity.ToTable("Documents");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_Document_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId })
+                    .HasFilter("[DateDeleted] IS NULL")
+                    .HasDatabaseName("IX_Document_Tenant_Study_NotDeleted");
+                entity.HasIndex(e => new { e.TenantId, e.CommunityId })
+                    .HasFilter("[DateDeleted] IS NULL")
+                    .HasDatabaseName("IX_Document_Tenant_Community_NotDeleted");
+                entity.HasIndex(e => new { e.TenantId, e.Type, e.IsPublic })
+                    .HasDatabaseName("IX_Document_Tenant_Type_Public");
+            });
+
+            // EmailLog entity configuration
+            builder.Entity<EmailLog>(entity => {
+                entity.ToTable("EmailLogs");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_EmailLog_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.ToEmail, e.SentAt })
+                    .HasDatabaseName("IX_EmailLog_Tenant_Email_Sent");
+                entity.HasIndex(e => new { e.TenantId, e.Status, e.SentAt })
+                    .HasDatabaseName("IX_EmailLog_Tenant_Status_Sent");
+                entity.HasIndex(e => e.ExternalMessageId)
+                    .HasDatabaseName("IX_EmailLog_ExternalMessageId");
+            });
+
+            // Notification entity configuration (updated model)
+            builder.Entity<Notification>(entity => {
+                entity.ToTable("Notifications");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_Notification_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.UserId, e.IsRead })
+                    .HasDatabaseName("IX_Notification_Tenant_User_Read");
+                entity.HasIndex(e => new { e.TenantId, e.UserId, e.DateCreated })
+                    .HasDatabaseName("IX_Notification_Tenant_User_Created");
+                entity.HasOne(n => n.User)
+                    .WithMany()
+                    .HasForeignKey(n => n.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // CalendarEvent entity configuration (schema fix - now tenant-scoped)
+            builder.Entity<CalendarEvent>(entity => {
+                entity.ToTable("CalendarEvents");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_CalendarEvent_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.Start, e.End })
+                    .HasDatabaseName("IX_CalendarEvent_Tenant_DateRange");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId })
+                    .HasFilter("[ReserveStudyId] IS NOT NULL")
+                    .HasDatabaseName("IX_CalendarEvent_Tenant_Study");
+                entity.HasIndex(e => new { e.TenantId, e.EventType })
+                    .HasDatabaseName("IX_CalendarEvent_Tenant_Type");
+                entity.HasOne(e => e.ReserveStudy)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReserveStudyId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ServiceContact entity configuration (schema fix - now tenant-scoped)
+            builder.Entity<ServiceContact>(entity => {
+                entity.ToTable("ServiceContacts");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_ServiceContact_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.ContactType, e.IsActive })
+                    .HasDatabaseName("IX_ServiceContact_Tenant_Type_Active");
+                entity.HasIndex(e => new { e.TenantId, e.CompanyName })
+                    .HasFilter("[DateDeleted] IS NULL")
+                    .HasDatabaseName("IX_ServiceContact_Tenant_Company_NotDeleted");
+            });
+
+            // SupportTicket entity configuration (schema fix - enhanced)
+            builder.Entity<SupportTicket>(entity => {
+                entity.ToTable("SupportTickets");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_SupportTicket_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.Status, e.Priority })
+                    .HasDatabaseName("IX_SupportTicket_Tenant_Status_Priority");
+                entity.HasIndex(e => new { e.TenantId, e.AssignedToUserId, e.Status })
+                    .HasFilter("[AssignedToUserId] IS NOT NULL")
+                    .HasDatabaseName("IX_SupportTicket_Tenant_Assigned_Status");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId })
+                    .HasFilter("[ReserveStudyId] IS NOT NULL")
+                    .HasDatabaseName("IX_SupportTicket_Tenant_Study");
+                entity.HasOne(t => t.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(t => t.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(t => t.AssignedToUser)
+                    .WithMany()
+                    .HasForeignKey(t => t.AssignedToUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(t => t.ReserveStudy)
+                    .WithMany()
+                    .HasForeignKey(t => t.ReserveStudyId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // SiteVisitPhoto entity configuration (medium priority)
+            builder.Entity<SiteVisitPhoto>(entity => {
+                entity.ToTable("SiteVisitPhotos");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_SiteVisitPhoto_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId, e.SortOrder })
+                    .HasDatabaseName("IX_SiteVisitPhoto_Tenant_Study_Order");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId, e.Category })
+                    .HasDatabaseName("IX_SiteVisitPhoto_Tenant_Study_Category");
+                entity.HasIndex(e => new { e.TenantId, e.ElementId, e.ElementType })
+                    .HasFilter("[ElementId] IS NOT NULL")
+                    .HasDatabaseName("IX_SiteVisitPhoto_Tenant_Element");
+                entity.HasOne(p => p.ReserveStudy)
+                    .WithMany()
+                    .HasForeignKey(p => p.ReserveStudyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(p => p.TakenBy)
+                    .WithMany()
+                    .HasForeignKey(p => p.TakenByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // StudyNote entity configuration (medium priority)
+            builder.Entity<StudyNote>(entity => {
+                entity.ToTable("StudyNotes");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_StudyNote_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId, e.Visibility })
+                    .HasDatabaseName("IX_StudyNote_Tenant_Study_Visibility");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId, e.IsPinned })
+                    .HasDatabaseName("IX_StudyNote_Tenant_Study_Pinned");
+                entity.HasIndex(e => new { e.TenantId, e.AuthorUserId })
+                    .HasDatabaseName("IX_StudyNote_Tenant_Author");
+                entity.HasOne(n => n.ReserveStudy)
+                    .WithMany()
+                    .HasForeignKey(n => n.ReserveStudyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(n => n.Author)
+                    .WithMany()
+                    .HasForeignKey(n => n.AuthorUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(n => n.ResolvedBy)
+                    .WithMany()
+                    .HasForeignKey(n => n.ResolvedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                entity.HasOne(n => n.ParentNote)
+                    .WithMany(n => n.Replies)
+                    .HasForeignKey(n => n.ParentNoteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // GeneratedReport entity configuration (medium priority)
+            builder.Entity<GeneratedReport>(entity => {
+                entity.ToTable("GeneratedReports");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_GeneratedReport_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId, e.Type })
+                    .HasDatabaseName("IX_GeneratedReport_Tenant_Study_Type");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId, e.Status })
+                    .HasDatabaseName("IX_GeneratedReport_Tenant_Study_Status");
+                entity.HasIndex(e => new { e.TenantId, e.IsPublishedToClient, e.PublishedAt })
+                    .HasDatabaseName("IX_GeneratedReport_Tenant_Published");
+                entity.HasOne(r => r.ReserveStudy)
+                    .WithMany()
+                    .HasForeignKey(r => r.ReserveStudyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(r => r.GeneratedBy)
+                    .WithMany()
+                    .HasForeignKey(r => r.GeneratedByUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(r => r.PublishedBy)
+                    .WithMany()
+                    .HasForeignKey(r => r.PublishedByUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(r => r.ReviewedBy)
+                    .WithMany()
+                    .HasForeignKey(r => r.ReviewedByUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(r => r.SupersedesReport)
+                            .WithMany()
+                            .HasForeignKey(r => r.SupersedesReportId)
+                            .OnDelete(DeleteBehavior.NoAction);
+                    });
+
+                    // ProposalAcceptance entity configuration (click-wrap agreements)
+                    builder.Entity<ProposalAcceptance>(entity => {
+                        entity.ToTable("ProposalAcceptances");
+                        entity.HasIndex(e => e.TenantId)
+                            .HasDatabaseName("IX_ProposalAcceptance_Tenant");
+                        entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId })
+                            .HasDatabaseName("IX_ProposalAcceptance_Tenant_Study");
+                        entity.HasIndex(e => new { e.TenantId, e.AcceptedByUserId, e.AcceptedAt })
+                            .HasDatabaseName("IX_ProposalAcceptance_Tenant_User_Date");
+                        entity.HasIndex(e => new { e.TenantId, e.IsValid })
+                            .HasDatabaseName("IX_ProposalAcceptance_Tenant_Valid");
+                        entity.HasOne(a => a.ReserveStudy)
+                            .WithMany()
+                            .HasForeignKey(a => a.ReserveStudyId)
+                            .OnDelete(DeleteBehavior.Cascade);
+                        entity.HasOne(a => a.Proposal)
+                            .WithMany()
+                            .HasForeignKey(a => a.ProposalId)
+                            .OnDelete(DeleteBehavior.NoAction);
+                        entity.HasOne(a => a.AcceptedByUser)
+                            .WithMany()
+                            .HasForeignKey(a => a.AcceptedByUserId)
+                            .OnDelete(DeleteBehavior.NoAction);
+                        entity.HasOne(a => a.AcceptanceTermsTemplate)
+                            .WithMany(t => t.Acceptances)
+                            .HasForeignKey(a => a.AcceptanceTermsTemplateId)
+                            .OnDelete(DeleteBehavior.NoAction);
+                    });
+
+                    // AcceptanceTermsTemplate entity configuration
+                    builder.Entity<AcceptanceTermsTemplate>(entity => {
+                        entity.ToTable("AcceptanceTermsTemplates");
+                        entity.HasIndex(e => e.TenantId)
+                            .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant");
+                        entity.HasIndex(e => new { e.TenantId, e.Type, e.IsDefault })
+                            .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Type_Default");
+                        entity.HasIndex(e => new { e.TenantId, e.Version })
+                            .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Version");
+                        entity.HasIndex(e => new { e.TenantId, e.IsActive, e.EffectiveDate })
+                            .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Active_Effective");
+                    });
+                }
 
         // Apply owned type configurations
         private void ApplyOwnedConfigurations(ModelBuilder builder) {
@@ -479,6 +697,19 @@ namespace CRS.Data {
         
         // Tenant-specific element ordering
         public DbSet<TenantElementOrder> TenantElementOrders { get; set; }
+        
+        // High Priority Schema Enhancements
+        public DbSet<Document> Documents { get; set; }
+        public DbSet<EmailLog> EmailLogs { get; set; }
+        
+        // Medium Priority Schema Enhancements
+        public DbSet<SiteVisitPhoto> SiteVisitPhotos { get; set; }
+        public DbSet<StudyNote> StudyNotes { get; set; }
+        public DbSet<GeneratedReport> GeneratedReports { get; set; }
+        
+        // Click-Wrap Agreements (formerly E-Signatures)
+        public DbSet<ProposalAcceptance> ProposalAcceptances { get; set; }
+        public DbSet<AcceptanceTermsTemplate> AcceptanceTermsTemplates { get; set; }
         #endregion
 
         #region Seed Data

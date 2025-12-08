@@ -1,0 +1,220 @@
+﻿@using CRS.Models
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Email" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Email Details</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <!-- Status Banner -->
+            <MudPaper Elevation="0" Class="pa-3" Style="@GetStatusBannerStyle()">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@GetStatusIcon()" Style="color: white;" />
+                    <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: 600;">
+                        @GetStatusDisplayName(EmailLog.Status)
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Basic Info -->
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">TO</MudText>
+                    <MudText Typo="Typo.body1">@EmailLog.ToEmail</MudText>
+                </MudItem>
+                
+                @if (!string.IsNullOrEmpty(EmailLog.CcEmails))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">CC</MudText>
+                        <MudText Typo="Typo.body2">@EmailLog.CcEmails</MudText>
+                    </MudItem>
+                }
+                
+                @if (!string.IsNullOrEmpty(EmailLog.BccEmails))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">BCC</MudText>
+                        <MudText Typo="Typo.body2">@EmailLog.BccEmails</MudText>
+                    </MudItem>
+                }
+                
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">SUBJECT</MudText>
+                    <MudText Typo="Typo.body1" Style="font-weight: 500;">@EmailLog.Subject</MudText>
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider />
+
+            <!-- Timeline -->
+            <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Delivery Timeline</MudText>
+            <MudTimeline TimelinePosition="TimelinePosition.Start">
+                @if (EmailLog.QueuedAt.HasValue)
+                {
+                    <MudTimelineItem Color="Color.Default" Size="Size.Small">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Queued</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@EmailLog.QueuedAt.Value.ToString("MMM dd, yyyy h:mm tt")</MudText>
+                        </MudStack>
+                    </MudTimelineItem>
+                }
+                @if (EmailLog.SentAt.HasValue)
+                {
+                    <MudTimelineItem Color="Color.Primary" Size="Size.Small">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Sent</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@EmailLog.SentAt.Value.ToString("MMM dd, yyyy h:mm tt")</MudText>
+                        </MudStack>
+                    </MudTimelineItem>
+                }
+                @if (EmailLog.DeliveredAt.HasValue)
+                {
+                    <MudTimelineItem Color="Color.Success" Size="Size.Small">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Delivered</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@EmailLog.DeliveredAt.Value.ToString("MMM dd, yyyy h:mm tt")</MudText>
+                        </MudStack>
+                    </MudTimelineItem>
+                }
+                @if (EmailLog.OpenedAt.HasValue)
+                {
+                    <MudTimelineItem Color="Color.Success" Size="Size.Small">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Opened</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@EmailLog.OpenedAt.Value.ToString("MMM dd, yyyy h:mm tt")</MudText>
+                        </MudStack>
+                    </MudTimelineItem>
+                }
+                @if (EmailLog.ClickedAt.HasValue)
+                {
+                    <MudTimelineItem Color="Color.Success" Size="Size.Small">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Link Clicked</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@EmailLog.ClickedAt.Value.ToString("MMM dd, yyyy h:mm tt")</MudText>
+                        </MudStack>
+                    </MudTimelineItem>
+                }
+                @if (EmailLog.BouncedAt.HasValue)
+                {
+                    <MudTimelineItem Color="Color.Warning" Size="Size.Small">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Bounced</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@EmailLog.BouncedAt.Value.ToString("MMM dd, yyyy h:mm tt")</MudText>
+                        </MudStack>
+                    </MudTimelineItem>
+                }
+                @if (EmailLog.FailedAt.HasValue)
+                {
+                    <MudTimelineItem Color="Color.Error" Size="Size.Small">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Failed</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@EmailLog.FailedAt.Value.ToString("MMM dd, yyyy h:mm tt")</MudText>
+                        </MudStack>
+                    </MudTimelineItem>
+                }
+            </MudTimeline>
+
+            @if (!string.IsNullOrEmpty(EmailLog.ErrorMessage))
+            {
+                <MudDivider />
+                <MudAlert Severity="Severity.Error" Dense="true">
+                    <MudText Typo="Typo.caption" Style="font-weight: 600;">Error Message</MudText>
+                    <MudText Typo="Typo.body2">@EmailLog.ErrorMessage</MudText>
+                </MudAlert>
+            }
+
+            <MudDivider />
+
+            <!-- Technical Details -->
+            <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Technical Details</MudText>
+            <MudGrid Spacing="2">
+                @if (!string.IsNullOrEmpty(EmailLog.TemplateType))
+                {
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Style="color: #666;">Template</MudText>
+                        <MudText Typo="Typo.body2">@EmailLog.TemplateType</MudText>
+                    </MudItem>
+                }
+                @if (!string.IsNullOrEmpty(EmailLog.EmailProvider))
+                {
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Style="color: #666;">Provider</MudText>
+                        <MudText Typo="Typo.body2">@EmailLog.EmailProvider</MudText>
+                    </MudItem>
+                }
+                @if (!string.IsNullOrEmpty(EmailLog.ExternalMessageId))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Style="color: #666;">External Message ID</MudText>
+                        <MudText Typo="Typo.caption" Style="font-family: monospace; word-break: break-all;">@EmailLog.ExternalMessageId</MudText>
+                    </MudItem>
+                }
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Style="color: #666;">Retry Count</MudText>
+                    <MudText Typo="Typo.body2">@EmailLog.RetryCount / @EmailLog.MaxRetries</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Style="color: #666;">Internal ID</MudText>
+                    <MudText Typo="Typo.caption" Style="font-family: monospace;">@EmailLog.Id.ToString().Substring(0, 8)...</MudText>
+                </MudItem>
+            </MudGrid>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public EmailLog EmailLog { get; set; } = null!;
+
+    private void Close() => MudDialog.Close();
+
+    private string GetStatusBannerStyle() => EmailLog.Status switch
+    {
+        EmailStatus.Delivered or EmailStatus.Opened or EmailStatus.Clicked => 
+            "background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px;",
+        EmailStatus.Failed or EmailStatus.SpamComplaint => 
+            "background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 8px;",
+        EmailStatus.Bounced or EmailStatus.Unsubscribed => 
+            "background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 8px;",
+        EmailStatus.Sending or EmailStatus.Sent => 
+            "background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 8px;",
+        _ => 
+            "background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); border-radius: 8px;"
+    };
+
+    private string GetStatusIcon() => EmailLog.Status switch
+    {
+        EmailStatus.Delivered or EmailStatus.Opened or EmailStatus.Clicked => Icons.Material.Filled.CheckCircle,
+        EmailStatus.Failed or EmailStatus.SpamComplaint => Icons.Material.Filled.Error,
+        EmailStatus.Bounced => Icons.Material.Filled.ErrorOutline,
+        EmailStatus.Unsubscribed => Icons.Material.Filled.Unsubscribe,
+        EmailStatus.Sending or EmailStatus.Sent => Icons.Material.Filled.Send,
+        EmailStatus.Queued => Icons.Material.Filled.Schedule,
+        _ => Icons.Material.Filled.Email
+    };
+
+    private string GetStatusDisplayName(EmailStatus status) => status switch
+    {
+        EmailStatus.Queued => "Queued for Delivery",
+        EmailStatus.Sending => "Sending...",
+        EmailStatus.Sent => "Sent to Provider",
+        EmailStatus.Delivered => "Delivered Successfully",
+        EmailStatus.Opened => "Opened by Recipient",
+        EmailStatus.Clicked => "Link Clicked",
+        EmailStatus.Bounced => "Bounced",
+        EmailStatus.Failed => "Delivery Failed",
+        EmailStatus.Unsubscribed => "Recipient Unsubscribed",
+        EmailStatus.SpamComplaint => "Marked as Spam",
+        _ => status.ToString()
+    };
+}

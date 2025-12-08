@@ -1,0 +1,474 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+@using CRS.Services
+@using CRS.Services.Storage
+
+@inject IGeneratedReportService ReportService
+@inject IDocumentStorageService DocumentStorage
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<MudPaper Elevation="0" Class="pa-4">
+    <MudStack Spacing="3">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" Style="vertical-align: middle;" />
+                Generated Reports
+            </MudText>
+            <AuthorizeView Policy="RequireTenantStaff">
+                <Authorized>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenGenerateDialog">
+                        Generate Report
+                    </MudButton>
+                </Authorized>
+            </AuthorizeView>
+        </MudStack>
+
+        <!-- Stats Row -->
+        @if (reports.Any())
+        {
+            <MudStack Row="true" Spacing="3">
+                <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">
+                    @reports.Count Total
+                </MudChip>
+                <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">
+                    @reports.Count(r => r.Status == ReportStatus.Published) Published
+                </MudChip>
+                <MudChip T="string" Color="Color.Warning" Variant="Variant.Outlined">
+                    @reports.Count(r => r.Status == ReportStatus.Draft) Drafts
+                </MudChip>
+            </MudStack>
+        }
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (!reports.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.FileCopy" Style="font-size: 48px; color: #999;" />
+                    <MudText Typo="Typo.body1">No reports generated yet</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        Generate your first report when the study is ready.
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
+        else
+        {
+            <!-- Reports List -->
+            <MudStack Spacing="2">
+                @foreach (var report in reports.OrderByDescending(r => r.GeneratedAt))
+                {
+                    <MudCard Elevation="1" Style="@GetReportStyle(report)">
+                        <MudCardContent Class="pa-3">
+                            <MudStack Spacing="2">
+                                <!-- Header Row -->
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@GetReportIcon(report.Type)" Color="Color.Primary" />
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                                                @GetReportTypeDisplayName(report.Type)
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Version @report.Version
+                                            </MudText>
+                                        </MudStack>
+                                    </MudStack>
+                                    
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(report.Status)" Variant="Variant.Filled">
+                                            @GetStatusDisplayName(report.Status)
+                                        </MudChip>
+                                        
+                                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
+                                            <MudMenuItem Icon="@Icons.Material.Filled.Download"
+                                                         OnClick="@(() => DownloadReport(report))">
+                                                Download
+                                            </MudMenuItem>
+                                            @if (!string.IsNullOrEmpty(report.StorageUrl))
+                                            {
+                                                <MudMenuItem Icon="@Icons.Material.Filled.OpenInNew"
+                                                             OnClick="@(() => ViewReport(report))">
+                                                    View
+                                                </MudMenuItem>
+                                            }
+                                            <AuthorizeView Policy="RequireTenantStaff">
+                                                <Authorized>
+                                                    @if (report.Status == ReportStatus.Draft)
+                                                    {
+                                                        <MudMenuItem Icon="@Icons.Material.Filled.Send"
+                                                                     OnClick="@(() => SubmitForReview(report))">
+                                                            Submit for Review
+                                                        </MudMenuItem>
+                                                    }
+                                                    @if (report.Status == ReportStatus.Approved)
+                                                    {
+                                                        <MudMenuItem Icon="@Icons.Material.Filled.Publish"
+                                                                     OnClick="@(() => PublishReport(report))">
+                                                            Publish
+                                                        </MudMenuItem>
+                                                    }
+                                                    @if (report.Status == ReportStatus.Published)
+                                                    {
+                                                        <MudMenuItem Icon="@Icons.Material.Filled.Email"
+                                                                     OnClick="@(() => SendToClient(report))">
+                                                            Send to Client
+                                                        </MudMenuItem>
+                                                    }
+                                                    <MudDivider />
+                                                    <MudMenuItem Icon="@Icons.Material.Filled.Delete"
+                                                                 OnClick="@(() => DeleteReport(report))"
+                                                                 IconColor="Color.Error">
+                                                        Delete
+                                                    </MudMenuItem>
+                                                </Authorized>
+                                            </AuthorizeView>
+                                        </MudMenu>
+                                    </MudStack>
+                                </MudStack>
+
+                                <!-- Details Row -->
+                                <MudGrid Spacing="2">
+                                    <MudItem xs="12" sm="4">
+                                        <MudText Typo="Typo.caption" Style="color: #666;">Generated</MudText>
+                                        <MudText Typo="Typo.body2">
+                                            @report.GeneratedAt.ToString("MMM dd, yyyy h:mm tt")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="4">
+                                        <MudText Typo="Typo.caption" Style="color: #666;">Generated By</MudText>
+                                        <MudText Typo="Typo.body2">
+                                            @(report.GeneratedBy?.FullName ?? "System")
+                                        </MudText>
+                                    </MudItem>
+                                    @if (report.DownloadCount > 0)
+                                    {
+                                        <MudItem xs="12" sm="4">
+                                            <MudText Typo="Typo.caption" Style="color: #666;">Downloads</MudText>
+                                            <MudText Typo="Typo.body2">
+                                                @report.DownloadCount times
+                                            </MudText>
+                                        </MudItem>
+                                    }
+                                </MudGrid>
+
+                                <!-- Published Info -->
+                                @if (report.Status == ReportStatus.Published && report.PublishedAt.HasValue)
+                                {
+                                    <MudAlert Severity="Severity.Success" Dense="true" Variant="Variant.Text" Class="mt-2">
+                                        Published on @report.PublishedAt.Value.ToString("MMM dd, yyyy")
+                                        @if (report.SentToClientAt.HasValue)
+                                        {
+                                            <span> • Sent to @report.SentToEmail on @report.SentToClientAt.Value.ToString("MMM dd")</span>
+                                        }
+                                    </MudAlert>
+                                }
+
+                                <!-- Review Info -->
+                                @if (report.ReviewedAt.HasValue && report.ReviewedBy != null)
+                                {
+                                    <MudText Typo="Typo.caption" Style="color: #666;">
+                                        Reviewed by @report.ReviewedBy.FullName on @report.ReviewedAt.Value.ToString("MMM dd, yyyy")
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                }
+            </MudStack>
+        }
+    </MudStack>
+</MudPaper>
+
+<!-- Generate Report Dialog -->
+<MudDialog @bind-Visible="showGenerateDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.AddChart" Class="mr-2" />
+            Generate Report
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudSelect T="ReportType" @bind-Value="newReportType" Label="Report Type" Variant="Variant.Outlined" Required="true">
+                @foreach (ReportType type in Enum.GetValues<ReportType>())
+                {
+                    <MudSelectItem T="ReportType" Value="@type">@GetReportTypeDisplayName(type)</MudSelectItem>
+                }
+            </MudSelect>
+            
+            <MudTextField @bind-Value="newReportNotes" 
+                          Label="Notes (optional)" 
+                          Variant="Variant.Outlined"
+                          Lines="3" />
+            
+            <MudAlert Severity="Severity.Info" Variant="Variant.Text">
+                The report will be generated as a draft. You can review and publish it after generation.
+            </MudAlert>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseGenerateDialog">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GenerateReport">
+            Generate
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    private List<GeneratedReport> reports = new();
+    private bool isLoading = true;
+
+    // Dialog state
+    private bool showGenerateDialog = false;
+    private ReportType newReportType = ReportType.Draft;
+    private string newReportNotes = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReports();
+    }
+
+    private async Task LoadReports()
+    {
+        try
+        {
+            isLoading = true;
+            var result = await ReportService.GetByReserveStudyAsync(ReserveStudyId);
+            reports = result.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading reports: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenGenerateDialog()
+    {
+        newReportType = ReportType.Draft;
+        newReportNotes = "";
+        showGenerateDialog = true;
+    }
+
+    private void CloseGenerateDialog()
+    {
+        showGenerateDialog = false;
+    }
+
+    private async Task GenerateReport()
+    {
+        try
+        {
+            await UserState.InitializeAsync();
+            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+
+            // Determine next version
+            var existingOfType = reports.Where(r => r.Type == newReportType);
+            var maxVersion = existingOfType.Any() ? existingOfType.Max(r => int.TryParse(r.Version, out var v) ? v : 0) : 0;
+            var nextVersion = (maxVersion + 1).ToString();
+
+            var report = new GeneratedReport
+            {
+                ReserveStudyId = ReserveStudyId,
+                Type = newReportType,
+                Status = ReportStatus.Draft,
+                Version = nextVersion,
+                GeneratedByUserId = userId,
+                GeneratedAt = DateTime.UtcNow,
+                Notes = newReportNotes
+            };
+
+            await ReportService.CreateAsync(report);
+            Snackbar.Add("Report generated successfully", Severity.Success);
+            
+            CloseGenerateDialog();
+            await LoadReports();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error generating report: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SubmitForReview(GeneratedReport report)
+    {
+        try
+        {
+            await ReportService.SubmitForReviewAsync(report.Id);
+            report.Status = ReportStatus.PendingReview;
+            Snackbar.Add("Report submitted for review", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task PublishReport(GeneratedReport report)
+    {
+        try
+        {
+            await UserState.InitializeAsync();
+            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+            await ReportService.PublishAsync(report.Id, userId);
+            report.Status = ReportStatus.Published;
+            report.PublishedAt = DateTime.UtcNow;
+            Snackbar.Add("Report published successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SendToClient(GeneratedReport report)
+    {
+        // TODO: Open email dialog to send report to client
+        Snackbar.Add("Email functionality coming soon", Severity.Info);
+    }
+
+    private void DownloadReport(GeneratedReport report)
+    {
+        if (string.IsNullOrEmpty(report.StorageUrl))
+        {
+            Snackbar.Add("Report file not available for download", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var url = DocumentStorage.GetSasUrl(report.StorageUrl, TimeSpan.FromHours(1));
+            NavigationManager.NavigateTo(url, forceLoad: true);
+            
+            // Increment download count
+            _ = ReportService.RecordDownloadAsync(report.Id);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error downloading report: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ViewReport(GeneratedReport report)
+    {
+        if (string.IsNullOrEmpty(report.StorageUrl))
+        {
+            Snackbar.Add("Report file not available", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var url = DocumentStorage.GetSasUrl(report.StorageUrl, TimeSpan.FromHours(1));
+            NavigationManager.NavigateTo(url, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error viewing report: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteReport(GeneratedReport report)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete Report",
+            $"Are you sure you want to delete this {GetReportTypeDisplayName(report.Type)} (v{report.Version})?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await ReportService.DeleteAsync(report.Id);
+                reports.Remove(report);
+                Snackbar.Add("Report deleted", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private string GetReportStyle(GeneratedReport report)
+    {
+        return report.Status switch
+        {
+            ReportStatus.Published => "border-left: 4px solid #66BB6A; border-radius: 8px;",
+            ReportStatus.Approved => "border-left: 4px solid #42A5F5; border-radius: 8px;",
+            ReportStatus.PendingReview or ReportStatus.InReview => "border-left: 4px solid #FFA726; border-radius: 8px;",
+            ReportStatus.RevisionRequired => "border-left: 4px solid #EF5350; border-radius: 8px;",
+            _ => "border-radius: 8px;"
+        };
+    }
+
+    private string GetReportIcon(ReportType type) => type switch
+    {
+        ReportType.Draft => Icons.Material.Filled.EditNote,
+        ReportType.Final => Icons.Material.Filled.CheckCircle,
+        ReportType.ExecutiveSummary => Icons.Material.Filled.Summarize,
+        ReportType.FundingPlan => Icons.Material.Filled.AccountBalance,
+        ReportType.ComponentInventory => Icons.Material.Filled.Inventory,
+        ReportType.FullReport => Icons.Material.Filled.Book,
+        ReportType.UpdateReport => Icons.Material.Filled.Update,
+        ReportType.Addendum => Icons.Material.Filled.Attachment,
+        ReportType.CorrectionNotice => Icons.Material.Filled.Warning,
+        _ => Icons.Material.Filled.Description
+    };
+
+    private Color GetStatusColor(ReportStatus status) => status switch
+    {
+        ReportStatus.Published => Color.Success,
+        ReportStatus.Approved => Color.Info,
+        ReportStatus.PendingReview or ReportStatus.InReview => Color.Warning,
+        ReportStatus.RevisionRequired => Color.Error,
+        ReportStatus.Superseded or ReportStatus.Archived => Color.Default,
+        _ => Color.Default
+    };
+
+    private string GetReportTypeDisplayName(ReportType type) => type switch
+    {
+        ReportType.Draft => "Draft Report",
+        ReportType.Final => "Final Report",
+        ReportType.ExecutiveSummary => "Executive Summary",
+        ReportType.FundingPlan => "Funding Plan",
+        ReportType.ComponentInventory => "Component Inventory",
+        ReportType.FullReport => "Full Report",
+        ReportType.UpdateReport => "Update Report",
+        ReportType.Addendum => "Addendum",
+        ReportType.CorrectionNotice => "Correction Notice",
+        _ => type.ToString()
+    };
+
+    private string GetStatusDisplayName(ReportStatus status) => status switch
+    {
+        ReportStatus.Draft => "Draft",
+        ReportStatus.PendingReview => "Pending Review",
+        ReportStatus.InReview => "In Review",
+        ReportStatus.RevisionRequired => "Revision Required",
+        ReportStatus.Approved => "Approved",
+        ReportStatus.Published => "Published",
+        ReportStatus.Superseded => "Superseded",
+        ReportStatus.Archived => "Archived",
+        _ => status.ToString()
+    };
+}

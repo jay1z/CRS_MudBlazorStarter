@@ -1,0 +1,410 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+@using CRS.Services.Storage
+@using CRS.Services.Tenant
+@using CRS.Services
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject ISiteVisitPhotoService PhotoService
+@inject IPhotoStorageService PhotoStorage
+@inject ITenantContext TenantContext
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Upload Site Visit Photos</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (isUploading)
+        {
+            <MudStack Spacing="3" Class="pa-4">
+                <MudText Typo="Typo.body1" Align="Align.Center">
+                    Uploading @currentUploadIndex of @selectedPhotos.Count photos...
+                </MudText>
+                <MudProgressLinear Color="Color.Primary" Value="@uploadProgress" Max="100" />
+                <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #666;">
+                    @currentFileName
+                </MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <!-- File Input - Using native InputFile like TenantSettings -->
+                <MudPaper Elevation="0" Class="pa-6" Style="border: 2px dashed #6A3D9A; border-radius: 12px; background: #F3E8FF; text-align: center;">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="color: #6A3D9A; font-size: 56px;" />
+                        <MudText Typo="Typo.h6" Class="fw-bold">Upload Photos</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;" Align="Align.Center">
+                            Choose photos to upload
+                        </MudText>
+                        
+                        <InputFile @ref="fileInput"
+                                   OnChange="HandleFilesSelected" 
+                                   accept=".jpg,.jpeg,.png,.webp"
+                                   multiple
+                                   style="display: none;" />
+                        
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   OnClick="TriggerFileInput"
+                                   StartIcon="@Icons.Material.Filled.UploadFile"
+                                   Disabled="@isReadingFiles">
+                            @if (isReadingFiles)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Reading files...</span>
+                            }
+                            else
+                            {
+                                <span>@(selectedPhotos.Any() ? "Add More Photos" : "Choose Photos")</span>
+                            }
+                        </MudButton>
+
+                        <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                Supports JPG, PNG, WebP
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                Max 10MB per file • Up to 20 photos
+                            </MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+
+                @if (selectedPhotos.Any())
+                {
+                    <MudDivider />
+                    
+                    <!-- Selected Files Preview -->
+                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                        Selected Photos (@selectedPhotos.Count)
+                    </MudText>
+
+                    <MudGrid Spacing="2">
+                        @foreach (var (photo, index) in selectedPhotos.Select((p, i) => (p, i)))
+                        {
+                            <MudItem xs="6" sm="4" md="3">
+                                <MudCard Elevation="1" Style="border-radius: 8px; position: relative;">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => RemovePhoto(index))"
+                                                   Style="position: absolute; top: 4px; right: 4px; z-index: 1; background: white;" />
+                                    
+                                    <div style="aspect-ratio: 4/3; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" Style="font-size: 32px; color: #ccc;" />
+                                    </div>
+                                    
+                                    <MudCardContent Class="pa-2">
+                                        <MudText Typo="Typo.caption" Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            @photo.FileName
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Style="color: #999;">
+                                            @FormatFileSize(photo.FileSize)
+                                        </MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+
+                    <MudDivider />
+
+                    <!-- Common Settings -->
+                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                        Photo Settings (apply to all)
+                    </MudText>
+
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="PhotoCategory" 
+                                       @bind-Value="commonCategory" 
+                                       Label="Category"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense">
+                                @foreach (PhotoCategory cat in Enum.GetValues<PhotoCategory>())
+                                {
+                                    <MudSelectItem T="PhotoCategory" Value="@cat">
+                                        @GetCategoryDisplayName(cat)
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="ElementCondition" 
+                                       @bind-Value="commonCondition" 
+                                       Label="Condition"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense">
+                                @foreach (ElementCondition cond in Enum.GetValues<ElementCondition>())
+                                {
+                                    <MudSelectItem T="ElementCondition" Value="@cond">
+                                        @GetConditionDisplayName(cond)
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudCheckBox T="bool" @bind-Value="includeInReport" Label="Include in report" />
+                        </MudItem>
+                    </MudGrid>
+                }
+
+                @if (validationErrors.Any())
+                {
+                    <MudAlert Severity="Severity.Warning">
+                        <MudText Typo="Typo.body2">Some files could not be added:</MudText>
+                        <ul style="margin: 8px 0 0 16px; padding: 0;">
+                            @foreach (var error in validationErrors)
+                            {
+                                <li><MudText Typo="Typo.caption">@error</MudText></li>
+                            }
+                        </ul>
+                    </MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@(isUploading || isReadingFiles)">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="UploadPhotos"
+                   Disabled="@(!selectedPhotos.Any() || isUploading || isReadingFiles)"
+                   StartIcon="@Icons.Material.Filled.CloudUpload">
+            Upload @selectedPhotos.Count Photo(s)
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    // Reference to the InputFile element - same pattern as TenantSettings
+    private InputFile? fileInput;
+
+    // Store photo data with bytes already read
+    private List<PhotoData> selectedPhotos = new();
+    private List<string> validationErrors = new();
+    private bool isUploading = false;
+    private bool isReadingFiles = false;
+    private int currentUploadIndex = 0;
+    private double uploadProgress = 0;
+    private string currentFileName = "";
+
+    private PhotoCategory commonCategory = PhotoCategory.General;
+    private ElementCondition commonCondition = ElementCondition.NotAssessed;
+    private bool includeInReport = true;
+
+    private const long MaxFileSize = 10 * 1024 * 1024; // 10MB per photo
+
+    // Data class to store file bytes
+    private class PhotoData
+    {
+        public string FileName { get; set; } = "";
+        public string ContentType { get; set; } = "";
+        public long FileSize { get; set; }
+        public byte[] Bytes { get; set; } = Array.Empty<byte>();
+    }
+
+    private async Task TriggerFileInput()
+    {
+        if (fileInput?.Element != null)
+        {
+            await JS.InvokeVoidAsync("clickElement", fileInput.Element);
+        }
+    }
+
+    private async Task HandleFilesSelected(InputFileChangeEventArgs e)
+    {
+        validationErrors.Clear();
+        isReadingFiles = true;
+
+        try
+        {
+            foreach (var file in e.GetMultipleFiles(20))
+            {
+                // Validate file
+                if (file.Size > MaxFileSize)
+                {
+                    validationErrors.Add($"{file.Name}: File too large (max 10MB)");
+                    continue;
+                }
+
+                var ext = Path.GetExtension(file.Name).ToLowerInvariant();
+                if (ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".webp")
+                {
+                    validationErrors.Add($"{file.Name}: Invalid format");
+                    continue;
+                }
+
+                // Check for duplicates
+                if (selectedPhotos.Any(p => p.FileName == file.Name && p.FileSize == file.Size))
+                {
+                    continue;
+                }
+
+                // Check max count
+                if (selectedPhotos.Count >= 20)
+                {
+                    validationErrors.Add("Maximum 20 photos allowed");
+                    break;
+                }
+
+                try
+                {
+                    // Read file bytes immediately - critical for Blazor Server
+                    await using var stream = file.OpenReadStream(MaxFileSize);
+                    using var memoryStream = new MemoryStream();
+                    await stream.CopyToAsync(memoryStream);
+
+                    selectedPhotos.Add(new PhotoData
+                    {
+                        FileName = file.Name,
+                        ContentType = file.ContentType,
+                        FileSize = file.Size,
+                        Bytes = memoryStream.ToArray()
+                    });
+                }
+                catch (Exception ex)
+                {
+                    validationErrors.Add($"{file.Name}: Error reading file - {ex.Message}");
+                }
+            }
+        }
+        finally
+        {
+            isReadingFiles = false;
+        }
+    }
+
+    private void RemovePhoto(int index)
+    {
+        if (index >= 0 && index < selectedPhotos.Count)
+        {
+            selectedPhotos.RemoveAt(index);
+        }
+    }
+
+    private async Task UploadPhotos()
+    {
+        if (!selectedPhotos.Any() || !TenantContext.TenantId.HasValue) return;
+
+        await UserState.InitializeAsync();
+        var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+
+        isUploading = true;
+        currentUploadIndex = 0;
+        var successCount = 0;
+
+        try
+        {
+            foreach (var photo in selectedPhotos)
+            {
+                currentUploadIndex++;
+                currentFileName = photo.FileName;
+                uploadProgress = (double)(currentUploadIndex - 1) / selectedPhotos.Count * 100;
+                StateHasChanged();
+
+                try
+                {
+                    // Upload to blob storage using cached bytes
+                    var uploadResult = await PhotoStorage.UploadPhotoFromBytesAsync(
+                        TenantContext.TenantId.Value,
+                        ReserveStudyId,
+                        photo.FileName,
+                        photo.ContentType,
+                        photo.Bytes);
+
+                    // Create photo record
+                    var siteVisitPhoto = new SiteVisitPhoto
+                    {
+                        ReserveStudyId = ReserveStudyId,
+                        StorageUrl = uploadResult.StorageUrl,
+                        ThumbnailUrl = uploadResult.ThumbnailUrl,
+                        ContentType = uploadResult.ContentType,
+                        FileSizeBytes = uploadResult.FileSizeBytes,
+                        Category = commonCategory,
+                        Condition = commonCondition,
+                        IncludeInReport = includeInReport,
+                        PhotoTakenAt = DateTime.UtcNow,
+                        TakenByUserId = userId
+                    };
+
+                    await PhotoService.CreateAsync(siteVisitPhoto);
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Failed to upload {photo.FileName}: {ex.Message}", Severity.Error);
+                }
+            }
+
+            uploadProgress = 100;
+            
+            if (successCount > 0)
+            {
+                Snackbar.Add($"Successfully uploaded {successCount} photo(s)", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(successCount));
+            }
+            else
+            {
+                Snackbar.Add("No photos were uploaded", Severity.Warning);
+            }
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024):F1} MB";
+    }
+
+    private string GetCategoryDisplayName(PhotoCategory category) => category switch
+    {
+        PhotoCategory.General => "General",
+        PhotoCategory.Exterior => "Exterior",
+        PhotoCategory.Interior => "Interior",
+        PhotoCategory.Roof => "Roof",
+        PhotoCategory.Foundation => "Foundation",
+        PhotoCategory.Mechanical => "Mechanical",
+        PhotoCategory.Electrical => "Electrical",
+        PhotoCategory.Plumbing => "Plumbing",
+        PhotoCategory.CommonArea => "Common Area",
+        PhotoCategory.Amenity => "Amenity",
+        PhotoCategory.Damage => "Damage",
+        PhotoCategory.BeforeAfter => "Before/After",
+        _ => category.ToString()
+    };
+
+    private string GetConditionDisplayName(ElementCondition condition) => condition switch
+    {
+        ElementCondition.NotAssessed => "Not Assessed",
+        ElementCondition.Excellent => "Excellent",
+        ElementCondition.Good => "Good",
+        ElementCondition.Fair => "Fair",
+        ElementCondition.Poor => "Poor",
+        ElementCondition.Critical => "Critical",
+        ElementCondition.NeedsReplacement => "Needs Replacement",
+        _ => condition.ToString()
+    };
+}

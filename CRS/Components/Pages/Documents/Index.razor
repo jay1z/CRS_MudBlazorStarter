@@ -1,0 +1,553 @@
+﻿@page "/Documents"
+@attribute [Authorize]
+
+@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+@using CRS.Services.Storage
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject IDocumentService DocumentService
+@inject IDocumentStorageService DocumentStorage
+@inject ITenantContext TenantContext
+@inject UserStateService UserState
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Documents - @(TenantContext.TenantName ?? "ALX Reserve Cloud")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header Section -->
+    <MudPaper Elevation="0" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 12px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" Style="vertical-align: middle;" />
+                    @(isStaff ? "Document Library" : "Shared Documents")
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    @(isStaff ? "Manage and share documents for your reserve studies" : "Documents shared with you by your reserve study specialist")
+                </MudText>
+            </MudStack>
+            <AuthorizeView Policy="RequireTenantStaff">
+                <Authorized>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Surface" 
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.CloudUpload"
+                               OnClick="OpenUploadDialog"
+                               Style="color: #3b82f6; font-weight: 600;">
+                        Upload Document
+                    </MudButton>
+                </Authorized>
+            </AuthorizeView>
+        </MudStack>
+    </MudPaper>
+
+    @if (isLoading)
+    {
+        <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <div class="pa-8 text-center">
+                <MudText Typo="Typo.h6" Style="color: #666;">Loading documents...</MudText>
+            </div>
+        </MudPaper>
+    }
+    else
+    {
+        <!-- Stats Cards -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #EBF5FF; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Description" Style="color: #3b82f6; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@documents.Count</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">@(isStaff ? "Total Documents" : "Available Documents")</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            @if (isStaff)
+            {
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="2" Style="border-radius: 12px;">
+                        <MudCardContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                                <div style="width: 48px; height: 48px; background: #E8F5E9; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Public" Style="color: #28a745; font-size: 28px;" />
+                                </div>
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.h4" Style="font-weight: 600;">@documents.Count(d => d.IsPublic)</MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;">Shared with Clients</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #FFF5E6; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Assessment" Style="color: #FF8C00; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@documents.Count(d => d.Type == DocumentType.Report)</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">Reports</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <div style="width: 48px; height: 48px; background: #F3E8FF; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Storage" Style="color: #6A3D9A; font-size: 28px;" />
+                            </div>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@FormatFileSize(documents.Sum(d => d.FileSizeBytes))</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">Total Size</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Search and Filter -->
+        <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius: 12px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
+                <MudTextField @bind-Value="searchString" 
+                              Placeholder="Search by filename or description..." 
+                              Adornment="Adornment.Start" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" 
+                              Immediate="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Style="flex: 1; min-width: 250px; max-width: 400px;" />
+                <MudSelect T="DocumentType?" 
+                           @bind-Value="typeFilter" 
+                           Label="Document Type" 
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Style="min-width: 180px;">
+                    <MudSelectItem T="DocumentType?" Value="@((DocumentType?)null)">All Types</MudSelectItem>
+                    @foreach (DocumentType type in Enum.GetValues<DocumentType>())
+                    {
+                        <MudSelectItem T="DocumentType?" Value="@type">@GetTypeDisplayName(type)</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (!string.IsNullOrEmpty(searchString) || typeFilter != null)
+                {
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Secondary" 
+                               StartIcon="@Icons.Material.Filled.Clear"
+                               OnClick="ClearFilters">
+                        Clear
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Documents Table -->
+        <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
+            @if (!documents.Any())
+            {
+                <div class="pa-8 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.FolderOff" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+                    <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">
+                        @(isStaff ? "No documents yet" : "No shared documents")
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999; margin-bottom: 16px;">
+                        @if (isStaff)
+                        {
+                            <text>Upload documents to share with your team and clients</text>
+                        }
+                        else
+                        {
+                            <text>Documents shared by your specialist will appear here</text>
+                        }
+                    </MudText>
+                    <AuthorizeView Policy="RequireTenantStaff">
+                        <Authorized>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       StartIcon="@Icons.Material.Filled.CloudUpload"
+                                       OnClick="OpenUploadDialog">
+                                Upload First Document
+                            </MudButton>
+                        </Authorized>
+                    </AuthorizeView>
+                </div>
+            }
+            else if (!FilteredDocuments.Any())
+            {
+                <div class="pa-8 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.SearchOff" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+                    <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No matching documents</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999;">
+                        Try adjusting your search or filter criteria
+                    </MudText>
+                </div>
+            }
+            else
+            {
+                <MudTable Items="@FilteredDocuments"
+                          Hover="true"
+                          Elevation="0"
+                          Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="Document" SortBy="@(x => x.FileName)">Name</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;">Type</MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="Document" SortBy="@(x => x.FileSizeBytes)">Size</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;">Study / Community</MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="Document" SortBy="@(x => x.DateCreated)">Uploaded</MudTableSortLabel></MudTh>
+                        @if (isStaff)
+                        {
+                            <MudTh Style="font-weight: 600;">Visibility</MudTh>
+                        }
+                        <MudTh Style="font-weight: 600; text-align: right;">Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="doc">
+                        <MudTd DataLabel="Name">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@GetFileIcon(doc.ContentType)" Color="Color.Primary" />
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500;">@doc.FileName</MudText>
+                                    @if (!string.IsNullOrEmpty(doc.Description))
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: #999;">@TruncateText(doc.Description, 50)</MudText>
+                                    }
+                                </MudStack>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Type">
+                            <MudChip T="string" Size="Size.Small" Color="@GetTypeColor(doc.Type)" Variant="Variant.Outlined">
+                                @GetTypeDisplayName(doc.Type)
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Size">
+                            <MudText Typo="Typo.body2">@FormatFileSize(doc.FileSizeBytes)</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Study">
+                            @if (doc.ReserveStudy != null)
+                            {
+                                <MudLink Href="@($"/ReserveStudies/{doc.ReserveStudyId}/Details")" Typo="Typo.body2">
+                                    @doc.ReserveStudy.Community?.Name
+                                </MudLink>
+                            }
+                            else if (doc.Community != null)
+                            {
+                                <MudLink Href="@($"/Communities/{doc.CommunityId}")" Typo="Typo.body2">
+                                    @doc.Community.Name
+                                </MudLink>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Style="color: #999;">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Uploaded">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@doc.DateCreated?.ToString("MMM dd, yyyy")</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #999;">@doc.UploadedBy?.FullName</MudText>
+                            </MudStack>
+                        </MudTd>
+                        @if (isStaff)
+                        {
+                            <MudTd DataLabel="Visibility">
+                                @if (doc.IsPublic)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                                        <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" Class="mr-1" />
+                                        Public
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="mr-1" />
+                                        Internal
+                                    </MudChip>
+                                }
+                            </MudTd>
+                        }
+                        <MudTd DataLabel="Actions" Style="text-align: right;">
+                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" 
+                                     Size="Size.Small" 
+                                     Dense="true"
+                                     AnchorOrigin="Origin.BottomRight"
+                                     TransformOrigin="Origin.TopRight">
+                                <MudMenuItem Icon="@Icons.Material.Filled.Download" 
+                                             OnClick="@(() => DownloadDocument(doc))">
+                                    Download
+                                </MudMenuItem>
+                                <AuthorizeView Policy="RequireTenantStaff" Context="staffAuth">
+                                    <Authorized>
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" 
+                                                     OnClick="@(() => EditDocument(doc))">
+                                            Edit Details
+                                        </MudMenuItem>
+                                        <MudMenuItem Icon="@(doc.IsPublic ? Icons.Material.Filled.LockOpen : Icons.Material.Filled.Lock)" 
+                                                     OnClick="@(() => ToggleVisibility(doc))">
+                                            @(doc.IsPublic ? "Make Internal" : "Share with Client")
+                                        </MudMenuItem>
+                                        <MudDivider />
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" 
+                                                     OnClick="@(() => DeleteDocument(doc))"
+                                                     IconColor="Color.Error">
+                                            Delete
+                                        </MudMenuItem>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </MudMenu>
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+                    </PagerContent>
+                </MudTable>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+private List<Document> documents = new();
+private bool isLoading = true;
+private string searchString = "";
+private DocumentType? typeFilter;
+    
+// User context for visibility filtering
+private bool isStaff = false;
+
+private IEnumerable<Document> FilteredDocuments
+{
+    get
+    {
+        var filtered = documents.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            var search = searchString.Trim().ToLower();
+            filtered = filtered.Where(d =>
+                d.FileName.ToLower().Contains(search) ||
+                (d.Description?.ToLower().Contains(search) ?? false) ||
+                (d.OriginalFileName?.ToLower().Contains(search) ?? false));
+        }
+
+        if (typeFilter.HasValue)
+        {
+            filtered = filtered.Where(d => d.Type == typeFilter.Value);
+        }
+
+        return filtered.OrderByDescending(d => d.DateCreated);
+    }
+}
+
+protected override async Task OnInitializedAsync()
+{
+    await DetermineUserRole();
+    await LoadDocuments();
+}
+    
+private async Task DetermineUserRole()
+{
+    try
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+            
+        // Check if user is staff (TenantOwner, TenantSpecialist, PlatformAdmin)
+        isStaff = user.IsInRole("TenantOwner") || 
+                  user.IsInRole("TenantSpecialist") || 
+                  user.IsInRole("TenantViewer") ||
+                  user.IsInRole("PlatformAdmin") ||
+                  user.IsInRole("Admin");
+    }
+    catch
+    {
+        isStaff = false;
+    }
+}
+
+private async Task LoadDocuments()
+{
+    try
+    {
+        isLoading = true;
+            
+        if (isStaff)
+        {
+            // Staff can see all documents
+            var recent = await DocumentService.GetRecentAsync(500);
+            documents = recent.ToList();
+        }
+        else
+        {
+            // Non-staff (HOA users) can only see public documents
+            var publicDocs = await DocumentService.GetPublicDocumentsAsync();
+            documents = publicDocs.ToList();
+        }
+    }
+    catch (Exception ex)
+    {
+        Snackbar.Add($"Error loading documents: {ex.Message}", Severity.Error);
+    }
+    finally
+    {
+        isLoading = false;
+    }
+}
+
+    private async Task OpenUploadDialog()
+    {
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<DocumentUploadDialog>("Upload Document", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadDocuments();
+        }
+    }
+
+    private async Task EditDocument(Document doc)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Document", doc }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<DocumentEditDialog>("Edit Document", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadDocuments();
+        }
+    }
+
+    private async Task ToggleVisibility(Document doc)
+    {
+        try
+        {
+            await DocumentService.SetPublicAsync(doc.Id, !doc.IsPublic);
+            doc.IsPublic = !doc.IsPublic;
+            Snackbar.Add(doc.IsPublic ? "Document shared with client" : "Document set to internal only", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating document: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteDocument(Document doc)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Delete Document",
+            $"Are you sure you want to delete '{doc.FileName}'? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            try
+            {
+                await DocumentService.DeleteAsync(doc.Id);
+                documents.Remove(doc);
+                Snackbar.Add("Document deleted", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting document: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void DownloadDocument(Document doc)
+    {
+        var url = DocumentStorage.GetSasUrl(doc.StorageUrl, TimeSpan.FromHours(1));
+        NavigationManager.NavigateTo(url, forceLoad: true);
+    }
+
+    private void ClearFilters()
+    {
+        searchString = "";
+        typeFilter = null;
+    }
+
+    private string GetTypeDisplayName(DocumentType type) => type switch
+    {
+        DocumentType.Other => "Other",
+        DocumentType.Report => "Report",
+        DocumentType.Invoice => "Invoice",
+        DocumentType.Photo => "Photo",
+        DocumentType.Contract => "Contract",
+        DocumentType.FinancialStatement => "Financial Statement",
+        DocumentType.ProposalDocument => "Proposal",
+        DocumentType.SiteVisitNotes => "Site Visit Notes",
+        DocumentType.Insurance => "Insurance",
+        DocumentType.Warranty => "Warranty",
+        DocumentType.MaintenanceRecord => "Maintenance Record",
+        _ => type.ToString()
+    };
+
+    private Color GetTypeColor(DocumentType type) => type switch
+    {
+        DocumentType.Report => Color.Primary,
+        DocumentType.Invoice => Color.Warning,
+        DocumentType.Contract => Color.Secondary,
+        DocumentType.FinancialStatement => Color.Info,
+        DocumentType.ProposalDocument => Color.Success,
+        _ => Color.Default
+    };
+
+    private string GetFileIcon(string? contentType) => contentType?.ToLower() switch
+    {
+        "application/pdf" => Icons.Material.Filled.PictureAsPdf,
+        "application/msword" or "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => Icons.Material.Filled.Description,
+        "application/vnd.ms-excel" or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => Icons.Material.Filled.TableChart,
+        var ct when ct?.StartsWith("image/") == true => Icons.Material.Filled.Image,
+        _ => Icons.Material.Filled.InsertDriveFile
+    };
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024):F1} MB";
+        return $"{bytes / (1024.0 * 1024 * 1024):F2} GB";
+    }
+
+    private string TruncateText(string text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+            return text;
+        return text.Substring(0, maxLength) + "...";
+    }
+}

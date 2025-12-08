@@ -105,6 +105,7 @@ namespace CRS.Migrations
                     LastServiced = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     ZOrder = table.Column<int>(type: "int", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -113,65 +114,6 @@ namespace CRS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_BuildingElements", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "CalendarEvents",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Color = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    SpecialistUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Start = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    End = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsAllDay = table.Column<bool>(type: "bit", nullable: false),
-                    IsRecurring = table.Column<bool>(type: "bit", nullable: false),
-                    IsCancelled = table.Column<bool>(type: "bit", nullable: false),
-                    IsPrivate = table.Column<bool>(type: "bit", nullable: false),
-                    IsPublic = table.Column<bool>(type: "bit", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    IsLocked = table.Column<bool>(type: "bit", nullable: false),
-                    IsEditable = table.Column<bool>(type: "bit", nullable: false),
-                    IsVisible = table.Column<bool>(type: "bit", nullable: false),
-                    IsHidden = table.Column<bool>(type: "bit", nullable: false),
-                    IsBusy = table.Column<bool>(type: "bit", nullable: false),
-                    IsFree = table.Column<bool>(type: "bit", nullable: false),
-                    IsTentative = table.Column<bool>(type: "bit", nullable: false),
-                    IsConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    IsAccepted = table.Column<bool>(type: "bit", nullable: false),
-                    IsDeclined = table.Column<bool>(type: "bit", nullable: false),
-                    IsInvited = table.Column<bool>(type: "bit", nullable: false),
-                    IsAttending = table.Column<bool>(type: "bit", nullable: false),
-                    IsNotAttending = table.Column<bool>(type: "bit", nullable: false),
-                    IsMaybeAttending = table.Column<bool>(type: "bit", nullable: false),
-                    IsResponded = table.Column<bool>(type: "bit", nullable: false),
-                    IsNotResponded = table.Column<bool>(type: "bit", nullable: false),
-                    IsRead = table.Column<bool>(type: "bit", nullable: false),
-                    IsFlagged = table.Column<bool>(type: "bit", nullable: false),
-                    IsPinned = table.Column<bool>(type: "bit", nullable: false),
-                    IsArchived = table.Column<bool>(type: "bit", nullable: false),
-                    IsMarked = table.Column<bool>(type: "bit", nullable: false),
-                    IsStarred = table.Column<bool>(type: "bit", nullable: false),
-                    IsLiked = table.Column<bool>(type: "bit", nullable: false),
-                    IsShared = table.Column<bool>(type: "bit", nullable: false),
-                    IsPublished = table.Column<bool>(type: "bit", nullable: false),
-                    IsSubscribed = table.Column<bool>(type: "bit", nullable: false),
-                    IsBlocked = table.Column<bool>(type: "bit", nullable: false),
-                    IsMuted = table.Column<bool>(type: "bit", nullable: false),
-                    IsReported = table.Column<bool>(type: "bit", nullable: false),
-                    IsIgnored = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CalendarEvents", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -184,6 +126,7 @@ namespace CRS.Migrations
                     LastServiced = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     ZOrder = table.Column<int>(type: "int", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -280,24 +223,6 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Notifications",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Type = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Notifications", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Roles",
                 columns: table => new
                 {
@@ -315,12 +240,16 @@ namespace CRS.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CompanyName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Extension = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    FirstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    CompanyName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Extension = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    ContactType = table.Column<int>(type: "int", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -349,28 +278,6 @@ namespace CRS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_StripeEventLogs", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SupportTickets",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TenantId = table.Column<int>(type: "int", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
-                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ResolvedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SupportTickets", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -778,6 +685,39 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Notifications",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    ReadAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EntityType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    EntityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ActionUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Category = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Notifications_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Profiles",
                 columns: table => new
                 {
@@ -889,6 +829,33 @@ namespace CRS.Migrations
                         column: x => x.DemoTenantId,
                         principalTable: "Tenants",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TenantElementOrders",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ElementType = table.Column<int>(type: "int", nullable: false),
+                    ElementId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ZOrder = table.Column<int>(type: "int", nullable: false),
+                    IsHidden = table.Column<bool>(type: "bit", nullable: false),
+                    CustomName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenantElementOrders", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TenantElementOrders_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1017,6 +984,157 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CalendarEvents",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Color = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SpecialistUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Start = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    End = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsAllDay = table.Column<bool>(type: "bit", nullable: false),
+                    IsRecurring = table.Column<bool>(type: "bit", nullable: false),
+                    IsCancelled = table.Column<bool>(type: "bit", nullable: false),
+                    IsPrivate = table.Column<bool>(type: "bit", nullable: false),
+                    IsPublic = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    IsLocked = table.Column<bool>(type: "bit", nullable: false),
+                    IsEditable = table.Column<bool>(type: "bit", nullable: false),
+                    IsVisible = table.Column<bool>(type: "bit", nullable: false),
+                    IsHidden = table.Column<bool>(type: "bit", nullable: false),
+                    IsBusy = table.Column<bool>(type: "bit", nullable: false),
+                    IsFree = table.Column<bool>(type: "bit", nullable: false),
+                    IsTentative = table.Column<bool>(type: "bit", nullable: false),
+                    IsConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    IsAccepted = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeclined = table.Column<bool>(type: "bit", nullable: false),
+                    IsInvited = table.Column<bool>(type: "bit", nullable: false),
+                    IsAttending = table.Column<bool>(type: "bit", nullable: false),
+                    IsNotAttending = table.Column<bool>(type: "bit", nullable: false),
+                    IsMaybeAttending = table.Column<bool>(type: "bit", nullable: false),
+                    IsResponded = table.Column<bool>(type: "bit", nullable: false),
+                    IsNotResponded = table.Column<bool>(type: "bit", nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    IsFlagged = table.Column<bool>(type: "bit", nullable: false),
+                    IsPinned = table.Column<bool>(type: "bit", nullable: false),
+                    IsArchived = table.Column<bool>(type: "bit", nullable: false),
+                    IsMarked = table.Column<bool>(type: "bit", nullable: false),
+                    IsStarred = table.Column<bool>(type: "bit", nullable: false),
+                    IsLiked = table.Column<bool>(type: "bit", nullable: false),
+                    IsShared = table.Column<bool>(type: "bit", nullable: false),
+                    IsPublished = table.Column<bool>(type: "bit", nullable: false),
+                    IsSubscribed = table.Column<bool>(type: "bit", nullable: false),
+                    IsBlocked = table.Column<bool>(type: "bit", nullable: false),
+                    IsMuted = table.Column<bool>(type: "bit", nullable: false),
+                    IsReported = table.Column<bool>(type: "bit", nullable: false),
+                    IsIgnored = table.Column<bool>(type: "bit", nullable: false),
+                    EventType = table.Column<int>(type: "int", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CalendarEvents", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CalendarEvents_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Documents",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    FileName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    OriginalFileName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    StorageUrl = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false),
+                    ContentType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    UploadedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsPublic = table.Column<bool>(type: "bit", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Documents", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Documents_AspNetUsers_UploadedByUserId",
+                        column: x => x.UploadedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Documents_Communities_CommunityId",
+                        column: x => x.CommunityId,
+                        principalTable: "Communities",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Documents_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EmailLogs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ToEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    CcEmails = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
+                    BccEmails = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
+                    Subject = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    TemplateType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    QueuedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SentAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeliveredAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    OpenedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ClickedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    BouncedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FailedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ErrorMessage = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    RetryCount = table.Column<int>(type: "int", nullable: false),
+                    MaxRetries = table.Column<int>(type: "int", nullable: false),
+                    ExternalMessageId = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    EmailProvider = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EmailLogs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_EmailLogs_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "FinancialInfos",
                 columns: table => new
                 {
@@ -1043,6 +1161,73 @@ namespace CRS.Migrations
                     table.PrimaryKey("PK_FinancialInfos", x => x.Id);
                     table.ForeignKey(
                         name: "FK_FinancialInfos_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "GeneratedReports",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    Version = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    StorageUrl = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false),
+                    ContentType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
+                    PageCount = table.Column<int>(type: "int", nullable: false),
+                    GeneratedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    GeneratedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TemplateUsed = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    OutputFormat = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    IsPublishedToClient = table.Column<bool>(type: "bit", nullable: false),
+                    PublishedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PublishedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SentToClientAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SentToEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    ReviewedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReviewedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    InternalNotes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    SupersedesReportId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DownloadCount = table.Column<int>(type: "int", nullable: false),
+                    LastDownloadedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GeneratedReports", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_GeneratedReports_AspNetUsers_GeneratedByUserId",
+                        column: x => x.GeneratedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_GeneratedReports_AspNetUsers_PublishedByUserId",
+                        column: x => x.PublishedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_GeneratedReports_AspNetUsers_ReviewedByUserId",
+                        column: x => x.ReviewedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_GeneratedReports_GeneratedReports_SupersedesReportId",
+                        column: x => x.SupersedesReportId,
+                        principalTable: "GeneratedReports",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_GeneratedReports_ReserveStudies_ReserveStudyId",
                         column: x => x.ReserveStudyId,
                         principalTable: "ReserveStudies",
                         principalColumn: "Id",
@@ -1249,6 +1434,104 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SiteVisitPhotos",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ElementId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ElementType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    StorageUrl = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false),
+                    ThumbnailUrl = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: true),
+                    ContentType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
+                    Caption = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Condition = table.Column<int>(type: "int", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    PhotoTakenAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Latitude = table.Column<double>(type: "float", nullable: true),
+                    Longitude = table.Column<double>(type: "float", nullable: true),
+                    TakenByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    IncludeInReport = table.Column<bool>(type: "bit", nullable: false),
+                    IsPrimary = table.Column<bool>(type: "bit", nullable: false),
+                    Category = table.Column<int>(type: "int", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SiteVisitPhotos", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SiteVisitPhotos_AspNetUsers_TakenByUserId",
+                        column: x => x.TakenByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_SiteVisitPhotos_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "StudyNotes",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AuthorUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Visibility = table.Column<int>(type: "int", nullable: false),
+                    IsPinned = table.Column<bool>(type: "bit", nullable: false),
+                    IsResolved = table.Column<bool>(type: "bit", nullable: false),
+                    ResolvedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ResolvedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ParentNoteId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    RelatedToStatus = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    MentionedUserIds = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudyNotes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StudyNotes_AspNetUsers_AuthorUserId",
+                        column: x => x.AuthorUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StudyNotes_AspNetUsers_ResolvedByUserId",
+                        column: x => x.ResolvedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_StudyNotes_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_StudyNotes_StudyNotes_ParentNoteId",
+                        column: x => x.ParentNoteId,
+                        principalTable: "StudyNotes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "StudyRequests",
                 columns: table => new
                 {
@@ -1272,6 +1555,50 @@ namespace CRS.Migrations
                         principalTable: "ReserveStudies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SupportTickets",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    Category = table.Column<int>(type: "int", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    AssignedToUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ResolvedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ClosedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Resolution = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SupportTickets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SupportTickets_AspNetUsers_AssignedToUserId",
+                        column: x => x.AssignedToUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_SupportTickets_AspNetUsers_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_SupportTickets_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -1368,6 +1695,42 @@ namespace CRS.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_BuildingElement_Tenant_Active",
+                table: "BuildingElements",
+                columns: new[] { "TenantId", "IsActive" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CalendarEvent_Tenant",
+                table: "CalendarEvents",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CalendarEvent_Tenant_DateRange",
+                table: "CalendarEvents",
+                columns: new[] { "TenantId", "Start", "End" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CalendarEvent_Tenant_Study",
+                table: "CalendarEvents",
+                columns: new[] { "TenantId", "ReserveStudyId" },
+                filter: "[ReserveStudyId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CalendarEvent_Tenant_Type",
+                table: "CalendarEvents",
+                columns: new[] { "TenantId", "EventType" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CalendarEvents_ReserveStudyId",
+                table: "CalendarEvents",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommonElement_Tenant_Active",
+                table: "CommonElements",
+                columns: new[] { "TenantId", "IsActive" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Communities_MailingAddressId",
                 table: "Communities",
                 column: "MailingAddressId");
@@ -1429,9 +1792,71 @@ namespace CRS.Migrations
                 column: "DemoTenantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Document_Tenant",
+                table: "Documents",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Document_Tenant_Community_NotDeleted",
+                table: "Documents",
+                columns: new[] { "TenantId", "CommunityId" },
+                filter: "[DateDeleted] IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Document_Tenant_Study_NotDeleted",
+                table: "Documents",
+                columns: new[] { "TenantId", "ReserveStudyId" },
+                filter: "[DateDeleted] IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Document_Tenant_Type_Public",
+                table: "Documents",
+                columns: new[] { "TenantId", "Type", "IsPublic" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Documents_CommunityId",
+                table: "Documents",
+                column: "CommunityId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Documents_ReserveStudyId",
+                table: "Documents",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Documents_UploadedByUserId",
+                table: "Documents",
+                column: "UploadedByUserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ElementOption_Type_Active_Order",
                 table: "ElementOptions",
                 columns: new[] { "OptionType", "IsActive", "ZOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmailLog_ExternalMessageId",
+                table: "EmailLogs",
+                column: "ExternalMessageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmailLog_Tenant",
+                table: "EmailLogs",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmailLog_Tenant_Email_Sent",
+                table: "EmailLogs",
+                columns: new[] { "TenantId", "ToEmail", "SentAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmailLog_Tenant_Status_Sent",
+                table: "EmailLogs",
+                columns: new[] { "TenantId", "Status", "SentAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmailLogs_ReserveStudyId",
+                table: "EmailLogs",
+                column: "ReserveStudyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_FinancialInfo_Tenant_Study_NotDeleted",
@@ -1449,6 +1874,71 @@ namespace CRS.Migrations
                 name: "IX_FinancialInfos_TenantId",
                 table: "FinancialInfos",
                 column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GeneratedReport_Tenant",
+                table: "GeneratedReports",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GeneratedReport_Tenant_Published",
+                table: "GeneratedReports",
+                columns: new[] { "TenantId", "IsPublishedToClient", "PublishedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GeneratedReport_Tenant_Study_Status",
+                table: "GeneratedReports",
+                columns: new[] { "TenantId", "ReserveStudyId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GeneratedReport_Tenant_Study_Type",
+                table: "GeneratedReports",
+                columns: new[] { "TenantId", "ReserveStudyId", "Type" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GeneratedReports_GeneratedByUserId",
+                table: "GeneratedReports",
+                column: "GeneratedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GeneratedReports_PublishedByUserId",
+                table: "GeneratedReports",
+                column: "PublishedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GeneratedReports_ReserveStudyId",
+                table: "GeneratedReports",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GeneratedReports_ReviewedByUserId",
+                table: "GeneratedReports",
+                column: "ReviewedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GeneratedReports_SupersedesReportId",
+                table: "GeneratedReports",
+                column: "SupersedesReportId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notification_Tenant",
+                table: "Notifications",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notification_Tenant_User_Created",
+                table: "Notifications",
+                columns: new[] { "TenantId", "UserId", "DateCreated" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notification_Tenant_User_Read",
+                table: "Notifications",
+                columns: new[] { "TenantId", "UserId", "IsRead" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_UserId",
+                table: "Notifications",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Profiles_ApplicationUserId",
@@ -1625,9 +2115,96 @@ namespace CRS.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_ServiceContact_Tenant",
+                table: "ServiceContacts",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ServiceContact_Tenant_Company_NotDeleted",
+                table: "ServiceContacts",
+                columns: new[] { "TenantId", "CompanyName" },
+                filter: "[DateDeleted] IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ServiceContact_Tenant_Type_Active",
+                table: "ServiceContacts",
+                columns: new[] { "TenantId", "ContactType", "IsActive" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Settings_ApplicationUserId",
                 table: "Settings",
                 column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SiteVisitPhoto_Tenant",
+                table: "SiteVisitPhotos",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SiteVisitPhoto_Tenant_Element",
+                table: "SiteVisitPhotos",
+                columns: new[] { "TenantId", "ElementId", "ElementType" },
+                filter: "[ElementId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SiteVisitPhoto_Tenant_Study_Category",
+                table: "SiteVisitPhotos",
+                columns: new[] { "TenantId", "ReserveStudyId", "Category" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SiteVisitPhoto_Tenant_Study_Order",
+                table: "SiteVisitPhotos",
+                columns: new[] { "TenantId", "ReserveStudyId", "SortOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SiteVisitPhotos_ReserveStudyId",
+                table: "SiteVisitPhotos",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SiteVisitPhotos_TakenByUserId",
+                table: "SiteVisitPhotos",
+                column: "TakenByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyNote_Tenant",
+                table: "StudyNotes",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyNote_Tenant_Author",
+                table: "StudyNotes",
+                columns: new[] { "TenantId", "AuthorUserId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyNote_Tenant_Study_Pinned",
+                table: "StudyNotes",
+                columns: new[] { "TenantId", "ReserveStudyId", "IsPinned" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyNote_Tenant_Study_Visibility",
+                table: "StudyNotes",
+                columns: new[] { "TenantId", "ReserveStudyId", "Visibility" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyNotes_AuthorUserId",
+                table: "StudyNotes",
+                column: "AuthorUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyNotes_ParentNoteId",
+                table: "StudyNotes",
+                column: "ParentNoteId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyNotes_ReserveStudyId",
+                table: "StudyNotes",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StudyNotes_ResolvedByUserId",
+                table: "StudyNotes",
+                column: "ResolvedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyRequests_CommunityId",
@@ -1670,9 +2247,52 @@ namespace CRS.Migrations
                 columns: new[] { "TenantId", "ToStatus", "ChangedAt" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_SupportTickets_TenantId",
+                name: "IX_SupportTicket_Tenant",
                 table: "SupportTickets",
                 column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SupportTicket_Tenant_Assigned_Status",
+                table: "SupportTickets",
+                columns: new[] { "TenantId", "AssignedToUserId", "Status" },
+                filter: "[AssignedToUserId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SupportTicket_Tenant_Status_Priority",
+                table: "SupportTickets",
+                columns: new[] { "TenantId", "Status", "Priority" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SupportTicket_Tenant_Study",
+                table: "SupportTickets",
+                columns: new[] { "TenantId", "ReserveStudyId" },
+                filter: "[ReserveStudyId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SupportTickets_AssignedToUserId",
+                table: "SupportTickets",
+                column: "AssignedToUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SupportTickets_CreatedByUserId",
+                table: "SupportTickets",
+                column: "CreatedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SupportTickets_ReserveStudyId",
+                table: "SupportTickets",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TenantElementOrder_Tenant_Type_Element",
+                table: "TenantElementOrders",
+                columns: new[] { "TenantId", "ElementType", "ElementId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TenantElementOrder_Tenant_Type_Order",
+                table: "TenantElementOrders",
+                columns: new[] { "TenantId", "ElementType", "ZOrder" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_TenantHomepages_TenantId",
@@ -1753,7 +2373,16 @@ namespace CRS.Migrations
                 name: "DemoSessions");
 
             migrationBuilder.DropTable(
+                name: "Documents");
+
+            migrationBuilder.DropTable(
+                name: "EmailLogs");
+
+            migrationBuilder.DropTable(
                 name: "FinancialInfos");
+
+            migrationBuilder.DropTable(
+                name: "GeneratedReports");
 
             migrationBuilder.DropTable(
                 name: "KanbanTasks");
@@ -1783,7 +2412,13 @@ namespace CRS.Migrations
                 name: "Settings");
 
             migrationBuilder.DropTable(
+                name: "SiteVisitPhotos");
+
+            migrationBuilder.DropTable(
                 name: "StripeEventLogs");
+
+            migrationBuilder.DropTable(
+                name: "StudyNotes");
 
             migrationBuilder.DropTable(
                 name: "StudyStatusHistories");
@@ -1793,6 +2428,9 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "SystemSettings");
+
+            migrationBuilder.DropTable(
+                name: "TenantElementOrders");
 
             migrationBuilder.DropTable(
                 name: "TenantHomepages");

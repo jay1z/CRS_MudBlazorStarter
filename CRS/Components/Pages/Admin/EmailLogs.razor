@@ -1,0 +1,371 @@
+﻿@page "/Admin/EmailLogs"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+
+@inject IEmailLogService EmailLogService
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Email History - @(TenantContext.TenantName ?? "ALX Reserve Cloud")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header Section -->
+    <MudPaper Elevation="0" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-radius: 12px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Email" Class="mr-2" Style="vertical-align: middle;" />
+                    Email History
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    Track and monitor all system-sent emails
+                </MudText>
+            </MudStack>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Surface" 
+                       Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="LoadData"
+                       Style="color: #8b5cf6; font-weight: 600;">
+                Refresh
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (isLoading)
+    {
+        <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <div class="pa-8 text-center">
+                <MudText Typo="Typo.h6" Style="color: #666;">Loading email history...</MudText>
+            </div>
+        </MudPaper>
+    }
+    else
+    {
+        <!-- Stats Cards -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="6" sm="4" md="2">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent Class="pa-3">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Large" />
+                            <MudText Typo="Typo.h5" Style="font-weight: 600;">@stats.TotalSent</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">Total Sent</MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent Class="pa-3">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                            <MudText Typo="Typo.h5" Style="font-weight: 600;">@stats.Delivered</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">Delivered</MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent Class="pa-3">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Large" />
+                            <MudText Typo="Typo.h5" Style="font-weight: 600;">@stats.Opened</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">Opened</MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent Class="pa-3">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Warning" Size="Size.Large" />
+                            <MudText Typo="Typo.h5" Style="font-weight: 600;">@stats.Bounced</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">Bounced</MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent Class="pa-3">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
+                            <MudText Typo="Typo.h5" Style="font-weight: 600;">@stats.Failed</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">Failed</MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudCard Elevation="2" Style="border-radius: 12px;">
+                    <MudCardContent Class="pa-3">
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Default" Size="Size.Large" />
+                            <MudText Typo="Typo.h5" Style="font-weight: 600;">@stats.Pending</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">Pending</MudText>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Search and Filter -->
+        <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius: 12px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Wrap="Wrap.Wrap">
+                <MudTextField @bind-Value="searchString" 
+                              Placeholder="Search by email or subject..." 
+                              Adornment="Adornment.Start" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" 
+                              Immediate="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Style="flex: 1; min-width: 250px; max-width: 400px;" />
+                <MudSelect T="EmailStatus?" 
+                           @bind-Value="statusFilter" 
+                           Label="Status" 
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Style="min-width: 150px;">
+                    <MudSelectItem T="EmailStatus?" Value="@((EmailStatus?)null)">All Statuses</MudSelectItem>
+                    @foreach (EmailStatus status in Enum.GetValues<EmailStatus>())
+                    {
+                        <MudSelectItem T="EmailStatus?" Value="@status">@GetStatusDisplayName(status)</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (!string.IsNullOrEmpty(searchString) || statusFilter != null)
+                {
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Secondary" 
+                               StartIcon="@Icons.Material.Filled.Clear"
+                               OnClick="ClearFilters">
+                        Clear
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Email Logs Table -->
+        <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
+            @if (!emailLogs.Any())
+            {
+                <div class="pa-8 text-center">
+                    <MudIcon Icon="@Icons.Material.Outlined.Email" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+                    <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No email logs yet</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999;">
+                        Email logs will appear here once the system sends emails
+                    </MudText>
+                </div>
+            }
+            else if (!FilteredLogs.Any())
+            {
+                <div class="pa-8 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.SearchOff" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
+                    <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No matching emails</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #999;">
+                        Try adjusting your search or filter criteria
+                    </MudText>
+                </div>
+            }
+            else
+            {
+                <MudTable Items="@FilteredLogs"
+                          Hover="true"
+                          Elevation="0"
+                          Breakpoint="Breakpoint.Sm"
+                          Dense="true">
+                    <HeaderContent>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="EmailLog" SortBy="@(x => x.SentAt ?? x.QueuedAt)">Date</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;">Recipient</MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="EmailLog" SortBy="@(x => x.Subject)">Subject</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;">Template</MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="EmailLog" SortBy="@(x => x.Status)">Status</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600; text-align: right;">Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="log">
+                        <MudTd DataLabel="Date">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@((log.SentAt ?? log.QueuedAt)?.ToString("MMM dd, yyyy"))</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #999;">@((log.SentAt ?? log.QueuedAt)?.ToString("h:mm tt"))</MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Recipient">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@log.ToEmail</MudText>
+                                @if (!string.IsNullOrEmpty(log.CcEmails))
+                                {
+                                    <MudText Typo="Typo.caption" Style="color: #999;">CC: @TruncateText(log.CcEmails, 30)</MudText>
+                                }
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Subject">
+                            <MudText Typo="Typo.body2">@TruncateText(log.Subject, 50)</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Template">
+                            @if (!string.IsNullOrEmpty(log.TemplateType))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                    @log.TemplateType
+                                </MudChip>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Style="color: #999;">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(log.Status)" Variant="Variant.Filled">
+                                @GetStatusDisplayName(log.Status)
+                            </MudChip>
+                            @if (log.Status == EmailStatus.Failed && log.RetryCount > 0)
+                            {
+                                <MudText Typo="Typo.caption" Style="color: #999; display: block;">
+                                    Retries: @log.RetryCount/@log.MaxRetries
+                                </MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Actions" Style="text-align: right;">
+                            <MudIconButton Icon="@Icons.Material.Filled.Info" 
+                                           Size="Size.Small"
+                                           Color="Color.Primary"
+                                           OnClick="@(() => ShowDetails(log))"
+                                           Title="View Details" />
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager PageSizeOptions="new int[] { 25, 50, 100 }" />
+                    </PagerContent>
+                </MudTable>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private List<EmailLog> emailLogs = new();
+    private EmailStats stats = new(0, 0, 0, 0, 0, 0);
+    private bool isLoading = true;
+    private string searchString = "";
+    private EmailStatus? statusFilter;
+
+    private IEnumerable<EmailLog> FilteredLogs
+    {
+        get
+        {
+            var filtered = emailLogs.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                var search = searchString.Trim().ToLower();
+                filtered = filtered.Where(l =>
+                    l.ToEmail.ToLower().Contains(search) ||
+                    l.Subject.ToLower().Contains(search) ||
+                    (l.CcEmails?.ToLower().Contains(search) ?? false) ||
+                    (l.TemplateType?.ToLower().Contains(search) ?? false));
+            }
+
+            if (statusFilter.HasValue)
+            {
+                filtered = filtered.Where(l => l.Status == statusFilter.Value);
+            }
+
+            return filtered.OrderByDescending(l => l.SentAt ?? l.QueuedAt);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            
+            var logsTask = EmailLogService.GetRecentAsync(500);
+            var statsTask = EmailLogService.GetStatsAsync(DateTime.UtcNow.AddDays(-30));
+            
+            await Task.WhenAll(logsTask, statsTask);
+            
+            emailLogs = logsTask.Result.ToList();
+            stats = statsTask.Result;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading email logs: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ShowDetails(EmailLog log)
+    {
+        var parameters = new DialogParameters
+        {
+            { "EmailLog", log }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<EmailLogDetailDialog>("Email Details", parameters, options);
+    }
+
+    private void ClearFilters()
+    {
+        searchString = "";
+        statusFilter = null;
+    }
+
+    private string GetStatusDisplayName(EmailStatus status) => status switch
+    {
+        EmailStatus.Queued => "Queued",
+        EmailStatus.Sending => "Sending",
+        EmailStatus.Sent => "Sent",
+        EmailStatus.Delivered => "Delivered",
+        EmailStatus.Opened => "Opened",
+        EmailStatus.Clicked => "Clicked",
+        EmailStatus.Bounced => "Bounced",
+        EmailStatus.Failed => "Failed",
+        EmailStatus.Unsubscribed => "Unsubscribed",
+        EmailStatus.SpamComplaint => "Spam",
+        _ => status.ToString()
+    };
+
+    private Color GetStatusColor(EmailStatus status) => status switch
+    {
+        EmailStatus.Queued => Color.Default,
+        EmailStatus.Sending => Color.Info,
+        EmailStatus.Sent => Color.Primary,
+        EmailStatus.Delivered => Color.Success,
+        EmailStatus.Opened => Color.Success,
+        EmailStatus.Clicked => Color.Success,
+        EmailStatus.Bounced => Color.Warning,
+        EmailStatus.Failed => Color.Error,
+        EmailStatus.Unsubscribed => Color.Warning,
+        EmailStatus.SpamComplaint => Color.Error,
+        _ => Color.Default
+    };
+
+    private string TruncateText(string text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+            return text;
+        return text.Substring(0, maxLength) + "...";
+    }
+}

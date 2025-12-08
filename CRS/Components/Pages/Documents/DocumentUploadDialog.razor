@@ -1,0 +1,344 @@
+﻿@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+@using CRS.Services.Storage
+@using CRS.Services.Tenant
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject IDocumentService DocumentService
+@inject IDocumentStorageService DocumentStorage
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Upload Document</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (isUploading)
+        {
+            <MudStack Spacing="3" Class="pa-4">
+                <MudText Typo="Typo.body1" Align="Align.Center">
+                    Uploading document...
+                </MudText>
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <!-- File Input - Using native InputFile like TenantSettings logo upload -->
+                <MudPaper Elevation="0" Class="pa-6" Style="border: 2px dashed #3b82f6; border-radius: 12px; background: #EBF5FF; text-align: center;">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        @if (fileBytes != null && !string.IsNullOrEmpty(originalFileName))
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="font-size: 56px; color: #28a745;" />
+                            <MudText Typo="Typo.h6" Class="fw-bold">@originalFileName</MudText>
+                            <MudText Typo="Typo.body2" Style="color: #666;">
+                                @FormatFileSize(fileSize)
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Style="color: #3b82f6; font-size: 56px;" />
+                            <MudText Typo="Typo.h6" Class="fw-bold">Upload Document</MudText>
+                            <MudText Typo="Typo.body2" Style="color: #666;" Align="Align.Center">
+                                Choose a file to upload
+                            </MudText>
+                        }
+                        
+                        <InputFile @ref="fileInput"
+                                   OnChange="HandleFileUpload" 
+                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt" 
+                                   style="display: none;" />
+                        
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   OnClick="TriggerFileInput"
+                                   StartIcon="@Icons.Material.Filled.UploadFile">
+                            @(fileBytes != null ? "Choose Different File" : "Choose File")
+                        </MudButton>
+
+                        <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                Accepted formats: PDF, Word, Excel, Images, Text
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                Maximum file size: 50MB
+                            </MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+
+                @if (fileBytes != null)
+                {
+                    <MudDivider />
+
+                    <!-- Document Details -->
+                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                        Document Details
+                    </MudText>
+
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="fileName" 
+                                          Label="Display Name" 
+                                          Variant="Variant.Outlined"
+                                          HelperText="Name shown in the document list"
+                                          Required="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="DocumentType" 
+                                       @bind-Value="documentType" 
+                                       Label="Document Type"
+                                       Variant="Variant.Outlined"
+                                       Required="true">
+                                @foreach (DocumentType type in Enum.GetValues<DocumentType>())
+                                {
+                                    <MudSelectItem T="DocumentType" Value="@type">
+                                        @GetTypeDisplayName(type)
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="Guid?" 
+                                       @bind-Value="selectedStudyId" 
+                                       Label="Link to Reserve Study (optional)"
+                                       Variant="Variant.Outlined"
+                                       Clearable="true">
+                                @foreach (var study in reserveStudies)
+                                {
+                                    <MudSelectItem T="Guid?" Value="@study.Id">
+                                        @study.Community?.Name
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="description" 
+                                          Label="Description (optional)" 
+                                          Variant="Variant.Outlined"
+                                          Lines="3" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudCheckBox T="bool" @bind-Value="isPublic" 
+                                         Label="Share with client (visible to HOA users)" 
+                                         Color="Color.Success" />
+                        </MudItem>
+                    </MudGrid>
+                }
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@isUploading">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="UploadDocument"
+                   Disabled="@(fileBytes == null || string.IsNullOrWhiteSpace(fileName) || isUploading)"
+                   StartIcon="@Icons.Material.Filled.CloudUpload">
+            Upload
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+[CascadingParameter]
+private IMudDialogInstance MudDialog { get; set; } = null!;
+
+// Reference to the InputFile element - same pattern as TenantSettings
+private InputFile? fileInput;
+
+private byte[]? fileBytes;
+private string fileName = "";
+private string originalFileName = "";
+private string contentType = "";
+private long fileSize;
+private string description = "";
+private DocumentType documentType = DocumentType.Other;
+private Guid? selectedStudyId;
+private bool isPublic = false;
+private bool isUploading = false;
+private string? errorMessage;
+
+private List<ReserveStudy> reserveStudies = new();
+private const long MaxFileSize = 50 * 1024 * 1024; // 50MB
+
+protected override async Task OnInitializedAsync()
+{
+    await LoadReserveStudies();
+}
+
+private async Task LoadReserveStudies()
+{
+    try
+    {
+        await using var context = await DbFactory.CreateDbContextAsync();
+        reserveStudies = await context.ReserveStudies
+            .AsNoTracking()
+            .Include(rs => rs.Community)
+            .OrderByDescending(rs => rs.DateCreated)
+            .Take(100)
+            .ToListAsync();
+    }
+    catch (Exception ex)
+    {
+        Snackbar.Add($"Error loading studies: {ex.Message}", Severity.Warning);
+    }
+}
+
+private async Task TriggerFileInput()
+{
+    if (fileInput?.Element != null)
+    {
+        // Use JavaScript interop to click the hidden input - same as TenantSettings
+        await JS.InvokeVoidAsync("clickElement", fileInput.Element);
+    }
+}
+
+private async Task HandleFileUpload(InputFileChangeEventArgs e)
+{
+    errorMessage = null;
+    var file = e.File;
+
+    if (file.Size > MaxFileSize)
+    {
+        Snackbar.Add($"File too large. Maximum size is {FormatFileSize(MaxFileSize)}", Severity.Warning);
+        return;
+    }
+
+    try
+    {
+        // Read file bytes immediately - same pattern as TenantSettings logo upload
+        await using var stream = file.OpenReadStream(MaxFileSize);
+        using var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream);
+        fileBytes = memoryStream.ToArray();
+            
+        // Store metadata
+        originalFileName = file.Name;
+        contentType = file.ContentType;
+        fileSize = file.Size;
+            
+        // Auto-fill filename without extension
+        fileName = Path.GetFileNameWithoutExtension(file.Name);
+            
+        // Try to auto-detect document type
+        documentType = DetectDocumentType(file.Name, file.ContentType);
+    }
+    catch (Exception ex)
+    {
+        Snackbar.Add($"Error reading file: {ex.Message}", Severity.Error);
+        fileBytes = null;
+    }
+}
+
+private DocumentType DetectDocumentType(string fileName, string contentType)
+{
+    var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        
+    return extension switch
+    {
+        ".pdf" when fileName.ToLower().Contains("report") => DocumentType.Report,
+        ".pdf" when fileName.ToLower().Contains("invoice") => DocumentType.Invoice,
+        ".pdf" when fileName.ToLower().Contains("proposal") => DocumentType.ProposalDocument,
+        ".pdf" when fileName.ToLower().Contains("contract") => DocumentType.Contract,
+        ".jpg" or ".jpeg" or ".png" => DocumentType.Photo,
+        ".xls" or ".xlsx" => DocumentType.FinancialStatement,
+        _ => DocumentType.Other
+    };
+}
+
+private async Task UploadDocument()
+{
+    if (fileBytes == null || string.IsNullOrWhiteSpace(fileName) || !TenantContext.TenantId.HasValue)
+        return;
+
+    isUploading = true;
+    errorMessage = null;
+
+    try
+    {
+        await UserState.InitializeAsync();
+        var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+
+        // Upload to blob storage using the dedicated document storage service
+        var uploadResult = await DocumentStorage.UploadAsync(
+            TenantContext.TenantId.Value,
+            selectedStudyId,
+            originalFileName,
+            contentType,
+            fileBytes);
+
+        // Create document record
+        var document = new Document
+        {
+            FileName = fileName,
+            OriginalFileName = originalFileName,
+            StorageUrl = uploadResult.StorageUrl,
+            ContentType = contentType,
+            FileSizeBytes = uploadResult.FileSizeBytes,
+            Type = documentType,
+            Description = description,
+            IsPublic = isPublic,
+            ReserveStudyId = selectedStudyId,
+            UploadedByUserId = userId
+        };
+
+        await DocumentService.CreateAsync(document);
+
+        Snackbar.Add("Document uploaded successfully", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(document));
+    }
+    catch (Exception ex)
+    {
+        errorMessage = $"Upload failed: {ex.Message}";
+        Snackbar.Add(errorMessage, Severity.Error);
+    }
+    finally
+    {
+        isUploading = false;
+    }
+}
+
+private void Cancel() => MudDialog.Cancel();
+
+    private string GetTypeDisplayName(DocumentType type) => type switch
+    {
+        DocumentType.Other => "Other",
+        DocumentType.Report => "Report",
+        DocumentType.Invoice => "Invoice",
+        DocumentType.Photo => "Photo",
+        DocumentType.Contract => "Contract",
+        DocumentType.FinancialStatement => "Financial Statement",
+        DocumentType.ProposalDocument => "Proposal",
+        DocumentType.SiteVisitNotes => "Site Visit Notes",
+        DocumentType.Insurance => "Insurance",
+        DocumentType.Warranty => "Warranty",
+        DocumentType.MaintenanceRecord => "Maintenance Record",
+        _ => type.ToString()
+    };
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024):F1} MB";
+    }
+}

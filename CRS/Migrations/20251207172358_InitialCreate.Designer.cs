@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251207011553_InitialCreate")]
+    [Migration("20251207172358_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -423,10 +423,16 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ZOrder")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "IsActive")
+                        .HasDatabaseName("IX_BuildingElement_Tenant_Active");
 
                     b.ToTable("BuildingElements");
                 });
@@ -457,6 +463,9 @@ namespace CRS.Migrations
 
                     b.Property<DateTime?>("End")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsAccepted")
                         .HasColumnType("bit");
@@ -569,6 +578,9 @@ namespace CRS.Migrations
                     b.Property<string>("Location")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -581,12 +593,30 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("Start")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("CalendarEvents");
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_CalendarEvent_Tenant");
+
+                    b.HasIndex("TenantId", "EventType")
+                        .HasDatabaseName("IX_CalendarEvent_Tenant_Type");
+
+                    b.HasIndex("TenantId", "ReserveStudyId")
+                        .HasDatabaseName("IX_CalendarEvent_Tenant_Study")
+                        .HasFilter("[ReserveStudyId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "Start", "End")
+                        .HasDatabaseName("IX_CalendarEvent_Tenant_DateRange");
+
+                    b.ToTable("CalendarEvents", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.CommonElement", b =>
@@ -623,10 +653,16 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ZOrder")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "IsActive")
+                        .HasDatabaseName("IX_CommonElement_Tenant_Active");
 
                     b.ToTable("CommonElements");
                 });
@@ -953,6 +989,95 @@ namespace CRS.Migrations
                     b.ToTable("DemoSessions");
                 });
 
+            modelBuilder.Entity("CRS.Models.Document", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CommunityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OriginalFileName")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("StorageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_Document_Tenant");
+
+                    b.HasIndex("UploadedByUserId");
+
+                    b.HasIndex("TenantId", "CommunityId")
+                        .HasDatabaseName("IX_Document_Tenant_Community_NotDeleted")
+                        .HasFilter("[DateDeleted] IS NULL");
+
+                    b.HasIndex("TenantId", "ReserveStudyId")
+                        .HasDatabaseName("IX_Document_Tenant_Study_NotDeleted")
+                        .HasFilter("[DateDeleted] IS NULL");
+
+                    b.HasIndex("TenantId", "Type", "IsPublic")
+                        .HasDatabaseName("IX_Document_Tenant_Type_Public");
+
+                    b.ToTable("Documents", (string)null);
+                });
+
             modelBuilder.Entity("CRS.Models.ElementOption", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1005,6 +1130,116 @@ namespace CRS.Migrations
                         .HasDatabaseName("IX_ElementOption_Type_Active_Order");
 
                     b.ToTable("ElementOptions", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.EmailLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BccEmails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime?>("BouncedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CcEmails")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime?>("ClickedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmailProvider")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ExternalMessageId")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("FailedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxRetries")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("OpenedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("QueuedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TemplateType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ToEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalMessageId")
+                        .HasDatabaseName("IX_EmailLog_ExternalMessageId");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_EmailLog_Tenant");
+
+                    b.HasIndex("TenantId", "Status", "SentAt")
+                        .HasDatabaseName("IX_EmailLog_Tenant_Status_Sent");
+
+                    b.HasIndex("TenantId", "ToEmail", "SentAt")
+                        .HasDatabaseName("IX_EmailLog_Tenant_Email_Sent");
+
+                    b.ToTable("EmailLogs", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.FinancialInfo", b =>
@@ -1079,6 +1314,143 @@ namespace CRS.Migrations
                         .HasFilter("[DateDeleted] IS NULL");
 
                     b.ToTable("FinancialInfos");
+                });
+
+            modelBuilder.Entity("CRS.Models.GeneratedReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DownloadCount")
+                        .HasColumnType("int");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("GeneratedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("InternalNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("IsPublishedToClient")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastDownloadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("OutputFormat")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("PageCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("PublishedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("SentToClientAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SentToEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StorageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<Guid?>("SupersedesReportId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TemplateUsed")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneratedByUserId");
+
+                    b.HasIndex("PublishedByUserId");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("SupersedesReportId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_GeneratedReport_Tenant");
+
+                    b.HasIndex("TenantId", "IsPublishedToClient", "PublishedAt")
+                        .HasDatabaseName("IX_GeneratedReport_Tenant_Published");
+
+                    b.HasIndex("TenantId", "ReserveStudyId", "Status")
+                        .HasDatabaseName("IX_GeneratedReport_Tenant_Study_Status");
+
+                    b.HasIndex("TenantId", "ReserveStudyId", "Type")
+                        .HasDatabaseName("IX_GeneratedReport_Tenant_Study_Type");
+
+                    b.ToTable("GeneratedReports", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.KanbanTask", b =>
@@ -1177,6 +1549,14 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ActionUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
 
@@ -1186,9 +1566,25 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EntityType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -1196,16 +1592,33 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.ToTable("Notifications");
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_Notification_Tenant");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("TenantId", "UserId", "DateCreated")
+                        .HasDatabaseName("IX_Notification_Tenant_User_Created");
+
+                    b.HasIndex("TenantId", "UserId", "IsRead")
+                        .HasDatabaseName("IX_Notification_Tenant_User_Read");
+
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.Profile", b =>
@@ -1773,7 +2186,11 @@ namespace CRS.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CompanyName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ContactType")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -1785,19 +2202,31 @@ namespace CRS.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Extension")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("FirstName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<string>("LastName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Phone")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -1805,9 +2234,22 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.ToTable("ServiceContacts");
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_ServiceContact_Tenant");
+
+                    b.HasIndex("TenantId", "CompanyName")
+                        .HasDatabaseName("IX_ServiceContact_Tenant_Company_NotDeleted")
+                        .HasFilter("[DateDeleted] IS NULL");
+
+                    b.HasIndex("TenantId", "ContactType", "IsActive")
+                        .HasDatabaseName("IX_ServiceContact_Tenant_Type_Active");
+
+                    b.ToTable("ServiceContacts", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.Settings", b =>
@@ -1861,17 +2303,224 @@ namespace CRS.Migrations
                     b.ToTable("Settings");
                 });
 
+            modelBuilder.Entity("CRS.Models.SiteVisitPhoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Caption")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Condition")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ElementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ElementType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IncludeInReport")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("PhotoTakenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StorageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<Guid>("TakenByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("TakenByUserId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_SiteVisitPhoto_Tenant");
+
+                    b.HasIndex("TenantId", "ElementId", "ElementType")
+                        .HasDatabaseName("IX_SiteVisitPhoto_Tenant_Element")
+                        .HasFilter("[ElementId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "ReserveStudyId", "Category")
+                        .HasDatabaseName("IX_SiteVisitPhoto_Tenant_Study_Category");
+
+                    b.HasIndex("TenantId", "ReserveStudyId", "SortOrder")
+                        .HasDatabaseName("IX_SiteVisitPhoto_Tenant_Study_Order");
+
+                    b.ToTable("SiteVisitPhotos", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.StudyNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MentionedUserIds")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("ParentNoteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RelatedToStatus")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Visibility")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("ParentNoteId");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("ResolvedByUserId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_StudyNote_Tenant");
+
+                    b.HasIndex("TenantId", "AuthorUserId")
+                        .HasDatabaseName("IX_StudyNote_Tenant_Author");
+
+                    b.HasIndex("TenantId", "ReserveStudyId", "IsPinned")
+                        .HasDatabaseName("IX_StudyNote_Tenant_Study_Pinned");
+
+                    b.HasIndex("TenantId", "ReserveStudyId", "Visibility")
+                        .HasDatabaseName("IX_StudyNote_Tenant_Study_Visibility");
+
+                    b.ToTable("StudyNotes", (string)null);
+                });
+
             modelBuilder.Entity("CRS.Models.SupportTicket", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("AssignedToUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
@@ -1886,6 +2535,16 @@ namespace CRS.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("datetime2");
 
@@ -1895,10 +2554,8 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -1910,7 +2567,25 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("AssignedToUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_SupportTicket_Tenant");
+
+                    b.HasIndex("TenantId", "ReserveStudyId")
+                        .HasDatabaseName("IX_SupportTicket_Tenant_Study")
+                        .HasFilter("[ReserveStudyId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "AssignedToUserId", "Status")
+                        .HasDatabaseName("IX_SupportTicket_Tenant_Assigned_Status")
+                        .HasFilter("[AssignedToUserId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "Status", "Priority")
+                        .HasDatabaseName("IX_SupportTicket_Tenant_Status_Priority");
 
                     b.ToTable("SupportTickets", (string)null);
                 });
@@ -2213,6 +2888,58 @@ namespace CRS.Migrations
                         .IsUnique();
 
                     b.ToTable("Tenants", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.TenantElementOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CustomName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ElementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ElementType")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ZOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ElementType", "ElementId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_TenantElementOrder_Tenant_Type_Element");
+
+                    b.HasIndex("TenantId", "ElementType", "ZOrder")
+                        .HasDatabaseName("IX_TenantElementOrder_Tenant_Type_Order");
+
+                    b.ToTable("TenantElementOrders", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.TenantHomepage", b =>
@@ -2522,6 +3249,16 @@ namespace CRS.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CRS.Models.CalendarEvent", b =>
+                {
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ReserveStudy");
+                });
+
             modelBuilder.Entity("CRS.Models.Community", b =>
                 {
                     b.HasOne("CRS.Models.Address", "MailingAddress")
@@ -2588,6 +3325,38 @@ namespace CRS.Migrations
                     b.Navigation("DemoTenant");
                 });
 
+            modelBuilder.Entity("CRS.Models.Document", b =>
+                {
+                    b.HasOne("CRS.Models.Community", "Community")
+                        .WithMany()
+                        .HasForeignKey("CommunityId");
+
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId");
+
+                    b.HasOne("CRS.Data.ApplicationUser", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("UploadedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+
+                    b.Navigation("ReserveStudy");
+
+                    b.Navigation("UploadedBy");
+                });
+
+            modelBuilder.Entity("CRS.Models.EmailLog", b =>
+                {
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId");
+
+                    b.Navigation("ReserveStudy");
+                });
+
             modelBuilder.Entity("CRS.Models.FinancialInfo", b =>
                 {
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
@@ -2597,6 +3366,57 @@ namespace CRS.Migrations
                         .IsRequired();
 
                     b.Navigation("ReserveStudy");
+                });
+
+            modelBuilder.Entity("CRS.Models.GeneratedReport", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "GeneratedBy")
+                        .WithMany()
+                        .HasForeignKey("GeneratedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Data.ApplicationUser", "PublishedBy")
+                        .WithMany()
+                        .HasForeignKey("PublishedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Data.ApplicationUser", "ReviewedBy")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("CRS.Models.GeneratedReport", "SupersedesReport")
+                        .WithMany()
+                        .HasForeignKey("SupersedesReportId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("GeneratedBy");
+
+                    b.Navigation("PublishedBy");
+
+                    b.Navigation("ReserveStudy");
+
+                    b.Navigation("ReviewedBy");
+
+                    b.Navigation("SupersedesReport");
+                });
+
+            modelBuilder.Entity("CRS.Models.Notification", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CRS.Models.Profile", b =>
@@ -2821,6 +3641,93 @@ namespace CRS.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CRS.Models.SiteVisitPhoto", b =>
+                {
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Data.ApplicationUser", "TakenBy")
+                        .WithMany()
+                        .HasForeignKey("TakenByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ReserveStudy");
+
+                    b.Navigation("TakenBy");
+                });
+
+            modelBuilder.Entity("CRS.Models.StudyNote", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Models.StudyNote", "ParentNote")
+                        .WithMany("Replies")
+                        .HasForeignKey("ParentNoteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Data.ApplicationUser", "ResolvedBy")
+                        .WithMany()
+                        .HasForeignKey("ResolvedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Author");
+
+                    b.Navigation("ParentNote");
+
+                    b.Navigation("ReserveStudy");
+
+                    b.Navigation("ResolvedBy");
+                });
+
+            modelBuilder.Entity("CRS.Models.SupportTicket", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "AssignedToUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedToUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("CRS.Data.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("AssignedToUser");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("ReserveStudy");
+                });
+
+            modelBuilder.Entity("CRS.Models.TenantElementOrder", b =>
+                {
+                    b.HasOne("CRS.Models.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("CRS.Models.Workflow.StudyRequest", b =>
                 {
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
@@ -2922,6 +3829,11 @@ namespace CRS.Migrations
             modelBuilder.Entity("CRS.Models.Security.Role", b =>
                 {
                     b.Navigation("Assignments");
+                });
+
+            modelBuilder.Entity("CRS.Models.StudyNote", b =>
+                {
+                    b.Navigation("Replies");
                 });
 #pragma warning restore 612, 618
         }

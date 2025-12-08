@@ -33,6 +33,7 @@
 @inject IMailer _mailer
 @inject IDispatcher _dispatcher
 @inject IDialogService DialogService
+@inject IProposalAcceptanceService AcceptanceService
 
 <PageTitle>Reserve Study Details</PageTitle>
 
@@ -832,7 +833,45 @@
                                 <MudText Typo="Typo.body1" Class="mt-4">No service contacts available.</MudText>
                             }
                         </MudTabPanel>
-                    </MudTabs>
+                        <!-- Site Visit Photos Tab -->
+                            <MudTabPanel Text="Site Photos" Icon="@Icons.Material.Filled.PhotoCamera">
+                                <SiteVisitPhotoGallery ReserveStudyId="@Id" CanEdit="@canEditPhotos" />
+                            </MudTabPanel>
+                            <!-- Study Notes Tab -->
+                            <MudTabPanel Text="Notes" Icon="@Icons.Material.Filled.Notes">
+                                <CRS.Components.Shared.StudyNotes.StudyNotesPanel ReserveStudyId="@Id" />
+                            </MudTabPanel>
+                            <!-- Generated Reports Tab -->
+                                <MudTabPanel Text="Reports" Icon="@Icons.Material.Filled.Description">
+                                    <CRS.Components.Shared.GeneratedReports.GeneratedReportsPanel ReserveStudyId="@Id" />
+                                </MudTabPanel>
+                                <!-- Proposal Acceptance Tab -->
+                                <MudTabPanel Text="Acceptance" Icon="@Icons.Material.Filled.Verified">
+                                    <MudStack Spacing="4">
+                                        <CRS.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel 
+                                            @ref="acceptancePanel" 
+                                            ReserveStudyId="@Id" />
+                                    
+                                        @if (reserveStudy?.Status >= ReserveStudy.WorkflowStatus.ProposalSent && 
+                                             reserveStudy?.Status < ReserveStudy.WorkflowStatus.ProposalAccepted &&
+                                             !hasValidAcceptance)
+                                        {
+                                            <AuthorizeView Policy="RequireHOAUser">
+                                                <Authorized>
+                                                    <MudButton Variant="Variant.Filled"
+                                                               Color="Color.Success"
+                                                               Size="Size.Large"
+                                                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                                                               OnClick="OpenAcceptProposalDialog"
+                                                               FullWidth="true">
+                                                        Accept Proposal
+                                                    </MudButton>
+                                                </Authorized>
+                                            </AuthorizeView>
+                                        }
+                                    </MudStack>
+                                </MudTabPanel>
+                            </MudTabs>
                 </MudItem>
             </MudGrid>
         </MudContainer>
@@ -849,8 +888,11 @@ private bool isContactsLoading = false;
 private bool elementsLoaded = false;
 private bool serviceContactsLoaded = false;
 private bool canEdit = false;
+private bool canEditPhotos = false;
 private List<IReserveStudyElement> elementsWithServiceContact = new();
 private int activeTabIndex = 0;
+private CRS.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel? acceptancePanel;
+private bool hasValidAcceptance = false;
 
     private List<StudyStatus> allowedNextStudy = new();
     private StudyStatus? selectedNextStudy;
@@ -905,6 +947,46 @@ private int activeTabIndex = 0;
         await LoadInitialData();
         InitializeTimelineItems();
         await LoadAllowedTransitions();
+        await CheckAcceptanceStatus();
+    }
+
+    private async Task CheckAcceptanceStatus() {
+        try {
+            hasValidAcceptance = await AcceptanceService.HasValidAcceptanceAsync(Id);
+        } catch {
+            hasValidAcceptance = false;
+        }
+    }
+
+    private async Task OpenAcceptProposalDialog() {
+        if (reserveStudy == null) return;
+
+        var parameters = new DialogParameters {
+            ["ReserveStudy"] = reserveStudy,
+            ["ProposalId"] = reserveStudy.Proposal?.Id
+        };
+
+        var options = new DialogOptions {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        var dialog = await DialogService.ShowAsync<CRS.Components.Shared.ProposalAcceptance.ProposalAcceptanceDialog>(
+            "Accept Proposal", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled) {
+            hasValidAcceptance = true;
+            await acceptancePanel?.RefreshAsync()!;
+            
+            // Advance workflow to ProposalAccepted if applicable
+            if (allowedNextStudy.Contains(StudyStatus.Accepted)) {
+                await ApplyTransition(StudyStatus.Accepted);
+            }
+            
+            Snackbar.Add("Proposal accepted successfully!", Severity.Success);
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
@@ -1042,6 +1124,9 @@ private int activeTabIndex = 0;
             if (reserveStudy != null) {
                 canEdit = ReserveStudyService.CanUpdateReserveStudy(reserveStudy) && 
                           UserState.CurrentUser?.Id == reserveStudy.ApplicationUserId;
+                
+                // Photos can be edited by staff (specialists, owners, admins) only
+                canEditPhotos = isStaff;
             }
         } catch (Exception ex) {
             Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
