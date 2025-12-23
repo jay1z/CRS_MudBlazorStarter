@@ -25,13 +25,17 @@ public class EmailLogService : IEmailLogService
 
     public async Task<EmailLog> LogEmailAsync(EmailLog emailLog, CancellationToken ct = default)
     {
-        if (!_tenantContext.TenantId.HasValue)
-            throw new InvalidOperationException("Tenant context required");
+        // Use tenant from context if available and not already set on the log
+        // TenantId of 0 indicates a platform-level email (no specific tenant)
+        if (emailLog.TenantId == 0 && _tenantContext.TenantId.HasValue)
+        {
+            emailLog.TenantId = _tenantContext.TenantId.Value;
+        }
 
-        emailLog.TenantId = _tenantContext.TenantId.Value;
         emailLog.DateCreated = DateTime.UtcNow;
         emailLog.QueuedAt = DateTime.UtcNow;
-        emailLog.Status = EmailStatus.Queued;
+        if (emailLog.Status == EmailStatus.Queued || emailLog.Status == 0)
+            emailLog.Status = EmailStatus.Queued;
 
         await using var context = await _dbFactory.CreateDbContextAsync(ct);
         context.EmailLogs.Add(emailLog);

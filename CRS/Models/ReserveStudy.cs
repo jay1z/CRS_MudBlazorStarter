@@ -12,6 +12,15 @@ namespace CRS.Models {
         public Guid? SpecialistUserId { get; set; }
         public ApplicationUser? Specialist { get; set; }
 
+        /// <summary>
+        /// The HOA user/customer who requested or owns this study.
+        /// For HOA users creating their own requests, this equals ApplicationUserId.
+        /// For staff creating on behalf of HOA, this is the HOA user's ID.
+        /// </summary>
+        [ForeignKey("RequestedByUser")]
+        public Guid? RequestedByUserId { get; set; }
+        public ApplicationUser? RequestedByUser { get; set; }
+
         [ForeignKey("Community")]
         public Guid? CommunityId { get; set; }
         public Community? Community { get; set; }

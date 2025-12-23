@@ -43,13 +43,27 @@ namespace CRS.Services {
             // SECURITY: Force tenant ID assignment - never trust client input
             reserveStudy.TenantId = tenantId;
 
+            _logger.LogInformation("CreateReserveStudyAsync: CommunityId={CommunityId}, Community is {CommunityState}", 
+                reserveStudy.CommunityId, 
+                reserveStudy.Community == null ? "null" : $"not null (Id={reserveStudy.Community.Id})");
+
             // SECURITY: Validate existing community belongs to current tenant
             if (reserveStudy.CommunityId != Guid.Empty) {
                 var existingCommunity = await context.Communities
+                    .IgnoreQueryFilters() // Bypass tenant filter since we validate tenant below
                     .AsNoTracking()
                     .FirstOrDefaultAsync(c => c.Id == reserveStudy.CommunityId);
 
+                _logger.LogInformation("CreateReserveStudyAsync: Looking for community {CommunityId}, found={Found}", 
+                    reserveStudy.CommunityId, existingCommunity != null);
+
                 if (existingCommunity == null) {
+                    // Community not found - this shouldn't happen if it was just saved
+                    // Check if CommunityId is a valid GUID that was set but community wasn't actually saved
+                    _logger.LogWarning("CreateReserveStudyAsync: Community {CommunityId} not found in database. Community object is {State}", 
+                        reserveStudy.CommunityId, 
+                        reserveStudy.Community == null ? "null" : "available");
+                    
                     // Defensive: if a Community object is provided, create it instead of failing
                     if (reserveStudy.Community != null) {
                         // Ensure tenant and ids
@@ -603,7 +617,7 @@ namespace CRS.Services {
         }
 
         /// <summary>
-        /// Gets reserve studies owned by a user
+        /// Gets reserve studies owned by a user (as creator OR as the requested customer)
         /// </summary>
         public async Task<List<ReserveStudy>> GetOwnedReserveStudiesAsync(Guid userId) {
             if (userId == Guid.Empty) {
@@ -617,7 +631,8 @@ namespace CRS.Services {
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.User)
-                .Where(rs => rs.IsActive && rs.ApplicationUserId == userId)
+                .Include(rs => rs.RequestedByUser)
+                .Where(rs => rs.IsActive && (rs.ApplicationUserId == userId || rs.RequestedByUserId == userId))
                 .OrderBy(rs => rs.Community.Name)
                 .AsSplitQuery()
                 .ToListAsync();
@@ -785,3 +800,4 @@ namespace CRS.Services {
         #endregion
     }
 }
+

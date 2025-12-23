@@ -2,15 +2,20 @@
 
 @using CRS.Data
 @using CRS.Models
+@using CRS.Models.Security
 @using CRS.Services
 @using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
 @inherits OwningComponentBase
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserStateService UserState
 @inject ITenantContext TenantContext
+@inject ITenantUserRoleService RoleService
+@inject UserManager<ApplicationUser> UserManager
 @inject ISnackbar Snackbar
+@inject ILogger<Step1Create> Logger
 
 <MudForm Model="Model" @ref="form">
     <MudGrid>
@@ -22,6 +27,63 @@
                 <MudLink Href="#" Class="link-primary fw-bold">Help Page</MudLink>.
             </MudText>
         </MudItem>
+
+        @* HOA User Selector - Only shown to staff, auto-populated for HOA users *@
+        @if (_isStaff)
+        {
+            <MudItem xs="12">
+                <MudText Typo="Typo.h6" Class="mb-2">Customer (HOA User)</MudText>
+                <MudText Typo="Typo.body2" Class="text-muted mb-2">
+                    Select the HOA user this study is being created for.
+                </MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudAutocomplete T="ApplicationUser" 
+                                 Label="Select HOA User" 
+                                 @bind-Value="_selectedHoaUser"
+                                 SearchFunc="SearchHoaUsers"
+                                 ToStringFunc="@(u => u == null ? "" : $"{u.FirstName} {u.LastName} ({u.Email})")"
+                                 ShowProgressIndicator="true"
+                                 Required="false"
+                                 Clearable="true"
+                                 AdornmentIcon="@Icons.Material.Filled.Person"
+                                 Variant="Variant.Outlined"
+                                 Dense="true">
+                    <ItemTemplate Context="user">
+                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                            <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                @(user.FirstName?.Substring(0, 1).ToUpper() ?? "?")
+                            </MudAvatar>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">@user.FirstName @user.LastName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Default">@user.Email</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </ItemTemplate>
+                    <NoItemsTemplate>
+                        <MudText Typo="Typo.body2" Color="Color.Default" Class="pa-2">No HOA users found</MudText>
+                    </NoItemsTemplate>
+                </MudAutocomplete>
+                <MudText Typo="Typo.caption" Color="Color.Default" Class="mt-1">
+                    Leave empty if this is an internal study without a customer.
+                </MudText>
+            </MudItem>
+            
+            <MudItem xs="12">
+                <MudDivider Class="my-2" />
+            </MudItem>
+        }
+        else if (_isHoaUser)
+        {
+            <MudItem xs="12">
+                <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined" Class="mb-2">
+                    <MudText Typo="Typo.body2">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
+                        This study will be created for your account: <strong>@UserState.CurrentUser?.Email</strong>
+                    </MudText>
+                </MudAlert>
+            </MudItem>
+        }
 
         <!-- Community Selection Type -->
         <MudItem xs="12">
@@ -195,6 +257,12 @@
     // Address objects bound to the form
     private Address physicalAddress = new Address();
     private Address mailingAddress = new Address();
+    
+    // HOA user selection
+    private ApplicationUser? _selectedHoaUser;
+    private bool _isStaff;
+    private bool _isHoaUser;
+    private List<ApplicationUser> _hoaUsers = new();
 
     private List<string> States = new() {
         "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
@@ -205,9 +273,69 @@
     };
 
     protected override async Task OnInitializedAsync() {
+        // Check user roles first
+        await RoleService.InitializeAsync();
+        _isStaff = RoleService.IsTenantOwner || RoleService.IsTenantSpecialist || RoleService.IsPlatformAdmin;
+        _isHoaUser = RoleService.IsHOAUser;
+        
+        // Auto-set RequestedByUserId for HOA users
+        if (_isHoaUser && UserState.CurrentUser != null) {
+            Model.RequestedByUserId = UserState.CurrentUser.Id;
+        }
+        
+        // Load HOA users for staff
+        if (_isStaff) {
+            await LoadHoaUsers();
+        }
+        
         await LoadUserCommunities();
         InitializeAddresses();
     }
+    
+    private async Task LoadHoaUsers() {
+        if (!TenantContext.TenantId.HasValue) return;
+        
+        var tenantId = TenantContext.TenantId.Value;
+        
+        try {
+            // Use UserManager to get users in HOA roles (same approach as HOAUsers.razor)
+            var hoaUsers = await UserManager.GetUsersInRoleAsync("HOAUser");
+            var hoaAuditors = await UserManager.GetUsersInRoleAsync("HOAAuditor");
+            
+            // Combine and filter by tenant
+            _hoaUsers = hoaUsers.Concat(hoaAuditors)
+                .Where(u => u.TenantId == tenantId)
+                .DistinctBy(u => u.Id)
+                .OrderBy(u => u.LastName)
+                .ThenBy(u => u.FirstName)
+                .ToList();
+                
+            Logger.LogInformation("LoadHoaUsers: Found {Count} HOA users for tenant {TenantId}", _hoaUsers.Count, tenantId);
+        }
+        catch (Exception ex) {
+            Logger.LogError(ex, "LoadHoaUsers: Error loading HOA users");
+            _hoaUsers = new List<ApplicationUser>();
+        }
+    }
+    
+    private async Task<IEnumerable<ApplicationUser>> SearchHoaUsers(string searchText, CancellationToken ct) {
+        if (string.IsNullOrWhiteSpace(searchText)) {
+            return _hoaUsers.Take(10);
+        }
+        
+        var lowerSearch = searchText.ToLower();
+        return _hoaUsers
+            .Where(u => 
+                (u.FirstName?.ToLower().Contains(lowerSearch) ?? false) ||
+                (u.LastName?.ToLower().Contains(lowerSearch) ?? false) ||
+                (u.Email?.ToLower().Contains(lowerSearch) ?? false))
+            .Take(10);
+    }
+    
+    /// <summary>
+    /// Gets the selected HOA user for the study.
+    /// </summary>
+    public ApplicationUser? GetSelectedHoaUser() => _selectedHoaUser;
 
     private void InitializeAddresses() {
         // Initialize physical address from model or create new
@@ -300,7 +428,7 @@
     }
 
     public bool IsNewCommunity() {
-        return !useExistingCommunity && Model.Community.Id == Guid.Empty;
+        return !useExistingCommunity && Model?.Community != null && Model.Community.Id == Guid.Empty;
     }
 
     public async Task<bool> ValidateAsync() {
@@ -310,8 +438,21 @@
             return false;
         }
         
+        if (Model?.Community == null) {
+            Snackbar.Add("Community data is missing.", Severity.Error);
+            await StepValidated.InvokeAsync(false);
+            return false;
+        }
+        
         await form.Validate();
         bool valid = form.IsValid;
+
+        // Sync HOA user selection to model
+        if (_isStaff && _selectedHoaUser != null) {
+            Model.RequestedByUserId = _selectedHoaUser.Id;
+        } else if (_isHoaUser && UserState.CurrentUser != null) {
+            Model.RequestedByUserId = UserState.CurrentUser.Id;
+        }
 
         // Sync addresses to model before saving
         if (!useExistingCommunity) {
@@ -334,17 +475,29 @@
     }
 
     public async Task<bool> SaveNewCommunityIfNeededAsync() {
+        Logger.LogInformation("SaveNewCommunityIfNeededAsync: Starting. Model.Community is {State}, Model.CommunityId={CommunityId}", 
+            Model?.Community == null ? "null" : "not null", 
+            Model?.CommunityId);
+        
+        // If community is already null (already processed) or CommunityId is already set, consider it saved
+        if (Model?.Community == null) {
+            Logger.LogInformation("SaveNewCommunityIfNeededAsync: Community is null, returning true");
+            return true;
+        }
+        
+        // If CommunityId is already set and valid, the community was already saved
+        if (Model.CommunityId != Guid.Empty) {
+            Logger.LogInformation("SaveNewCommunityIfNeededAsync: CommunityId already set to {CommunityId}, returning true", Model.CommunityId);
+            return true;
+        }
+        
         if (!IsNewCommunity()) {
+            Logger.LogInformation("SaveNewCommunityIfNeededAsync: Not a new community, returning true");
             return true;
         }
 
-        if (Model?.Community == null) {
-            Snackbar.Add("Community data is missing.", Severity.Error);
-            return false;
-        }
-
         try {
-            using var context = await DbFactory.CreateDbContextAsync();
+            await using var context = await DbFactory.CreateDbContextAsync();
             
             if (TenantContext.TenantId.HasValue) {
                 Model.Community.TenantId = TenantContext.TenantId.Value;
@@ -353,6 +506,9 @@
             if (Model.Community.Id == Guid.Empty) {
                 Model.Community.Id = Guid.CreateVersion7();
             }
+            
+            Logger.LogInformation("SaveNewCommunityIfNeededAsync: About to save community with Id={CommunityId}, Name={Name}, TenantId={TenantId}", 
+                Model.Community.Id, Model.Community.Name, Model.Community.TenantId);
 
             // Ensure physical address has an ID and set the FK
             if (Model.Community.PhysicalAddress != null) {
@@ -372,13 +528,30 @@
 
             context.Communities.Add(Model.Community);
             await context.SaveChangesAsync();
+            
+            Logger.LogInformation("SaveNewCommunityIfNeededAsync: Community saved successfully with Id={CommunityId}", Model.Community.Id);
+            
+            // IMPORTANT: Set the CommunityId on the Model to ensure it's available for the reserve study
+            Model.CommunityId = Model.Community.Id;
+            
+            Logger.LogInformation("SaveNewCommunityIfNeededAsync: Set Model.CommunityId={CommunityId}", Model.CommunityId);
+            
+            // Detach to prevent tracking issues later
             context.Entry(Model.Community).State = EntityState.Detached;
+            if (Model.Community.PhysicalAddress != null) {
+                context.Entry(Model.Community.PhysicalAddress).State = EntityState.Detached;
+            }
+            if (Model.Community.MailingAddress != null) {
+                context.Entry(Model.Community.MailingAddress).State = EntityState.Detached;
+            }
 
             return true;
         }
         catch (Exception ex) {
+            Logger.LogError(ex, "SaveNewCommunityIfNeededAsync: Error saving community");
             Snackbar.Add($"Error saving community: {ex.Message}", Severity.Error);
             return false;
         }
     }
 }
+

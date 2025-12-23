@@ -1,0 +1,442 @@
+﻿@page "/support/tickets"
+@attribute [Authorize]
+@using CRS.Models
+@using CRS.Services.Tickets
+@using CRS.Services.Tenant
+@using System.Security.Claims
+@inject ITicketService TicketService
+@inject ITenantUserRoleService RoleService
+@inject ITenantContext TenantContext
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Support Tickets - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6 mb-16">
+    <!-- Header -->
+    <MudPaper Elevation="0" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 12px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Support" Class="mr-2" Style="vertical-align: middle;" />
+                    Support Tickets
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    @if (_isStaff)
+                    {
+                        <text>Manage support requests</text>
+                    }
+                    else
+                    {
+                        <text>View and manage your support requests</text>
+                    }
+                </MudText>
+            </MudStack>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       Style="background: white; color: #6A3D9A;"
+                       OnClick="OpenCreateDialog">
+                New Ticket
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (_loading)
+    {
+        <MudPaper Class="pa-8" Elevation="2" Style="border-radius: 12px;">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.body1">Loading tickets...</MudText>
+            </MudStack>
+        </MudPaper>
+    }
+    else if (!TenantContext?.TenantId.HasValue ?? true)
+    {
+        <MudPaper Class="pa-8" Elevation="2" Style="border-radius: 12px;">
+            <MudAlert Severity="Severity.Warning">
+                <MudText Typo="Typo.body1">Please sign in to a tenant to view support tickets.</MudText>
+            </MudAlert>
+        </MudPaper>
+    }
+    else
+    {
+        @* Staff get tabs: My Tickets / All Tickets *@
+        @if (_isStaff)
+        {
+            <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Class="mb-4">
+                <MudTabPanel Text="@GetMyTicketsTabText()" Icon="@Icons.Material.Filled.Person" BadgeColor="Color.Primary">
+                    @RenderFiltersAndTable(true)
+                </MudTabPanel>
+                <MudTabPanel Text="@GetAllTicketsTabText()" Icon="@Icons.Material.Filled.People" BadgeColor="Color.Info">
+                    @RenderFiltersAndTable(false)
+                </MudTabPanel>
+            </MudTabs>
+        }
+        else
+        {
+            @RenderFiltersAndTable(false)
+        }
+    }
+</MudContainer>
+
+@* Render filters and table - pass whether to filter by current user *@
+@code {
+    private RenderFragment RenderFiltersAndTable(bool myTicketsOnly) => __builder =>
+    {
+        var ticketsToShow = myTicketsOnly 
+            ? _tickets.Where(t => t.AssignedToUserId == _currentUserId).ToList()
+            : _tickets;
+        
+        <MudPaper Class="pa-4 mb-4" Elevation="2" Style="border-radius: 12px;">
+            <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                <MudSelect T="TicketStatus?" Label="Status" @bind-Value="_filterStatus" Clearable="true" Style="min-width: 160px;">
+                    @foreach (var status in Enum.GetValues<TicketStatus>())
+                    {
+                        <MudSelectItem T="TicketStatus?" Value="@status">@GetStatusDisplay(status)</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="TicketPriority?" Label="Priority" @bind-Value="_filterPriority" Clearable="true" Style="min-width: 140px;">
+                    @foreach (var priority in Enum.GetValues<TicketPriority>())
+                    {
+                        <MudSelectItem T="TicketPriority?" Value="@priority">@priority</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="TicketCategory?" Label="Category" @bind-Value="_filterCategory" Clearable="true" Style="min-width: 160px;">
+                    @foreach (var category in Enum.GetValues<TicketCategory>())
+                    {
+                        <MudSelectItem T="TicketCategory?" Value="@category">@GetCategoryDisplay(category)</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudCheckBox T="bool" @bind-Value="_includeClosed" Label="Include Closed" Color="Color.Primary" />
+                <MudSpacer />
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadTickets" StartIcon="@Icons.Material.Filled.Refresh">
+                    Refresh
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+            @if (!ticketsToShow.Any())
+            {
+                <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="py-8">
+                    <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Default" />
+                    <MudText Typo="Typo.h6" Color="Color.Default">
+                        @(myTicketsOnly ? "No tickets assigned to you" : "No tickets found")
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Default">
+                        @(myTicketsOnly ? "Check the 'All Tickets' tab to pick up unassigned tickets." : "Create a new ticket to get help from our support team.")
+                    </MudText>
+                </MudStack>
+            }
+            else
+            {
+                <MudTable Items="ticketsToShow" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" 
+                          RowClassFunc="@((ticket, _) => GetTicketRowClass(ticket))"
+                          OnRowClick="@((TableRowClickEventArgs<SupportTicket> args) => ViewTicket(args.Item.Id))">
+                    <HeaderContent>
+                        <MudTh>Title</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Priority</MudTh>
+                        <MudTh>Category</MudTh>
+                        <MudTh>Created</MudTh>
+                        @if (_isStaff)
+                        {
+                            <MudTh>Assigned To</MudTh>
+                        }
+                    </HeaderContent>
+                    <RowTemplate Context="ticket">
+                        <MudTd DataLabel="Title">
+                            <MudStack Spacing="0">
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    <MudText Typo="Typo.body1" Style="font-weight: 500;">@ticket.Title</MudText>
+                                    @if (_isStaff && ticket.AssignedToUserId == _currentUserId)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Style="height: 18px; font-size: 10px;">
+                                            Yours
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Default">@TruncateDescription(ticket.Description)</MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(ticket.Status)" Style="@GetStatusStyle(ticket.Status)">
+                                @GetStatusDisplay(ticket.Status)
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Priority">
+                            <MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(ticket.Priority)">
+                                @ticket.Priority
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Category">@GetCategoryDisplay(ticket.Category)</MudTd>
+                        <MudTd DataLabel="Created">@ticket.CreatedAt.ToString("MMM d, yyyy")</MudTd>
+                        @if (_isStaff)
+                        {
+                            <MudTd DataLabel="Assigned To">
+                                @if (ticket.AssignedToUserId == null)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Unassigned</MudChip>
+                                }
+                                else if (ticket.AssignedToUserId == _currentUserId)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Primary" Style="font-weight: 500;">You</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2">@(ticket.AssignedToUser?.Email ?? "Unknown")</MudText>
+                                }
+                            </MudTd>
+                        }
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    };
+}
+
+<!-- Create Ticket Dialog -->
+<MudDialog @bind-Visible="_showCreateDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+            Create Support Ticket
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_newTicket.Title" Label="Title" Required="true" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_newTicket.Description" Label="Description" Required="true" Lines="5" Variant="Variant.Outlined" />
+            <MudStack Row="true" Spacing="3">
+                <MudSelect T="TicketPriority" @bind-Value="_newTicket.Priority" Label="Priority" Variant="Variant.Outlined">
+                    @foreach (var priority in Enum.GetValues<TicketPriority>())
+                    {
+                        <MudSelectItem T="TicketPriority" Value="@priority">@priority</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="TicketCategory" @bind-Value="_newTicket.Category" Label="Category" Variant="Variant.Outlined">
+                    @foreach (var category in Enum.GetValues<TicketCategory>())
+                    {
+                        <MudSelectItem T="TicketCategory" Value="@category">@GetCategoryDisplay(category)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateTicket" Disabled="_creating">
+            @if (_creating)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Create Ticket
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool _loading = true;
+    private bool _isStaff = false;
+    private bool _isHOAUser = false;
+    private bool _isTenantOwner = false;
+    private Guid _currentUserId;
+    private List<SupportTicket> _tickets = new();
+    private int _activeTabIndex = 0;
+    
+    // Filters
+    private TicketStatus? _filterStatus;
+    private TicketPriority? _filterPriority;
+    private TicketCategory? _filterCategory;
+    private bool _includeClosed = false;
+
+    // Create dialog
+    private bool _showCreateDialog = false;
+    private bool _creating = false;
+    private NewTicketModel _newTicket = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RoleService.InitializeAsync();
+        _isStaff = RoleService.IsTenantOwner || RoleService.IsTenantSpecialist ||
+                   RoleService.IsPlatformAdmin || RoleService.IsPlatformSupport;
+        _isHOAUser = RoleService.IsHOAUser;
+        _isTenantOwner = RoleService.IsTenantOwner;
+        
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(userIdClaim, out var userId))
+            _currentUserId = userId;
+            
+        await LoadTickets();
+    }
+
+    private async Task LoadTickets()
+    {
+        _loading = true;
+        try
+        {
+            var filter = new TicketFilter
+            {
+                Status = _filterStatus,
+                Priority = _filterPriority,
+                Category = _filterCategory,
+                IncludeClosed = _includeClosed,
+                PageSize = 100,
+                // HOA users can only see their own tickets
+                CreatedByUserId = _isHOAUser ? _currentUserId : null
+            };
+            var tickets = await TicketService.GetAllTicketsAsync(filter);
+            _tickets = tickets.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load tickets: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ViewTicket(Guid ticketId)
+    {
+        Nav.NavigateTo($"/support/tickets/{ticketId}");
+    }
+
+    private void OpenCreateDialog()
+    {
+        _newTicket = new NewTicketModel();
+        _showCreateDialog = true;
+    }
+
+    private void CloseCreateDialog()
+    {
+        _showCreateDialog = false;
+    }
+
+    private async Task CreateTicket()
+    {
+        if (string.IsNullOrWhiteSpace(_newTicket.Title))
+        {
+            Snackbar.Add("Title is required", Severity.Warning);
+            return;
+        }
+
+        _creating = true;
+        try
+        {
+            var ticket = new SupportTicket
+            {
+                Title = _newTicket.Title,
+                Description = _newTicket.Description ?? string.Empty,
+                Priority = _newTicket.Priority,
+                Category = _newTicket.Category
+            };
+
+            await TicketService.CreateTicketAsync(ticket, _currentUserId, default);
+            Snackbar.Add("Ticket created successfully", Severity.Success);
+            _showCreateDialog = false;
+            await LoadTickets();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create ticket: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _creating = false;
+        }
+    }
+
+    private string GetMyTicketsTabText()
+    {
+        var count = _tickets.Count(t => t.AssignedToUserId == _currentUserId);
+        return $"My Tickets ({count})";
+    }
+
+    private string GetAllTicketsTabText()
+    {
+        return $"All Tickets ({_tickets.Count})";
+    }
+
+    private string GetTicketRowClass(SupportTicket ticket)
+    {
+        var classes = "cursor-pointer";
+        if (_isStaff && ticket.AssignedToUserId == _currentUserId)
+            classes += " mud-theme-primary-lighten";
+        if (ticket.AssignedToUserId == null && _isStaff)
+            classes += " mud-warning-text";
+        return classes;
+    }
+
+    private static string TruncateDescription(string description)
+    {
+        if (string.IsNullOrEmpty(description)) return "";
+        return description.Length > 80 ? description[..77] + "..." : description;
+    }
+
+    private static string GetStatusDisplay(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => "Open",
+        TicketStatus.InProgress => "In Progress",
+        TicketStatus.WaitingOnCustomer => "Waiting on Customer",
+        TicketStatus.WaitingOnThirdParty => "Waiting on Third Party",
+        TicketStatus.Resolved => "Resolved",
+        TicketStatus.Closed => "Closed",
+        TicketStatus.Cancelled => "Cancelled",
+        _ => status.ToString()
+    };
+
+    private static Color GetStatusColor(TicketStatus status) => status switch
+    {
+        TicketStatus.Open => Color.Info,
+        TicketStatus.InProgress => Color.Primary,
+        TicketStatus.WaitingOnCustomer => Color.Warning,
+        TicketStatus.WaitingOnThirdParty => Color.Warning,
+        TicketStatus.Resolved => Color.Success,
+        TicketStatus.Closed => Color.Default,
+        TicketStatus.Cancelled => Color.Default,
+        _ => Color.Default
+    };
+
+    private static string GetStatusStyle(TicketStatus status) => status switch
+    {
+        TicketStatus.Closed or TicketStatus.Cancelled => "opacity: 0.6;",
+        _ => ""
+    };
+
+    private static Color GetPriorityColor(TicketPriority priority) => priority switch
+    {
+        TicketPriority.Low => Color.Default,
+        TicketPriority.Medium => Color.Info,
+        TicketPriority.High => Color.Warning,
+        TicketPriority.Urgent => Color.Error,
+        TicketPriority.Critical => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string GetCategoryDisplay(TicketCategory category) => category switch
+    {
+        TicketCategory.General => "General",
+        TicketCategory.Technical => "Technical",
+        TicketCategory.Billing => "Billing",
+        TicketCategory.FeatureRequest => "Feature Request",
+        TicketCategory.Bug => "Bug Report",
+        TicketCategory.Training => "Training",
+        TicketCategory.DataRequest => "Data Request",
+        TicketCategory.AccountAccess => "Account Access",
+        _ => category.ToString()
+    };
+
+    private class NewTicketModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public TicketPriority Priority { get; set; } = TicketPriority.Medium;
+        public TicketCategory Category { get; set; } = TicketCategory.General;
+    }
+}

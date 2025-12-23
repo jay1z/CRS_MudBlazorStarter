@@ -8,8 +8,10 @@
 @using CRS.Models
 @using CRS.Services
 @using CRS.Services.Interfaces
+@using CRS.Services.Tenant
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @implements IAsyncDisposable
 @inject ILogger<Create> Logger
 @inject UserStateService UserState
@@ -17,6 +19,8 @@
 @inject ISnackbar Snackbar
 @inject IReserveStudyService ReserveStudyService
 @inject IReserveStudyWorkflowService WorkflowService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
 
 <PageTitle>Create Reserve Study</PageTitle>
 
@@ -207,11 +211,73 @@
 
         isSubmitting = true;
         try {
-            // IMPORTANT: Save new community first if needed
-            if (step1 != null && !await step1.SaveNewCommunityIfNeededAsync()) {
-                Snackbar.Add("Failed to save community. Please try again.", Severity.Error);
-                return;
+            Logger.LogInformation("SubmitForm: Starting. Model.CommunityId={CommunityId}, Model.Community is {State}, isExistingCommunity={IsExisting}",
+                Model?.CommunityId, 
+                Model?.Community == null ? "null" : $"not null (Id={Model.Community.Id})",
+                isExistingCommunity);
+            
+            // Handle new community save - use nullable-aware checks
+            bool needsCommunitySave = Model != null 
+                && (Model.CommunityId == null || Model.CommunityId == Guid.Empty)
+                && Model.Community != null 
+                && !isExistingCommunity;
+            
+            Logger.LogInformation("SubmitForm: needsCommunitySave={NeedsSave}, Community.Id={CommunityObjId}",
+                needsCommunitySave, Model?.Community?.Id);
+            
+            if (needsCommunitySave) {
+                Logger.LogInformation("SubmitForm: ENTERING community save block");
+                
+                await using var db = await DbFactory.CreateDbContextAsync();
+                
+                if (TenantContext.TenantId.HasValue) {
+                    Model!.Community!.TenantId = TenantContext.TenantId.Value;
+                }
+                
+                // Only generate a new ID if the community doesn't have one yet
+                if (Model!.Community!.Id == Guid.Empty) {
+                    Model.Community.Id = Guid.CreateVersion7();
+                }
+                
+                // Ensure physical address has an ID
+                if (Model.Community.PhysicalAddress != null) {
+                    if (Model.Community.PhysicalAddress.Id == Guid.Empty) {
+                        Model.Community.PhysicalAddress.Id = Guid.CreateVersion7();
+                    }
+                    Model.Community.PhysicalAddressId = Model.Community.PhysicalAddress.Id;
+                }
+                
+                // Ensure mailing address has an ID if provided
+                if (Model.Community.MailingAddress != null) {
+                    if (Model.Community.MailingAddress.Id == Guid.Empty) {
+                        Model.Community.MailingAddress.Id = Guid.CreateVersion7();
+                    }
+                    Model.Community.MailingAddressId = Model.Community.MailingAddress.Id;
+                }
+                
+                // Check if community already exists in DB (might have been created elsewhere)
+                var existsInDb = await db.Communities.AnyAsync(c => c.Id == Model.Community.Id);
+                if (!existsInDb) {
+                    db.Communities.Add(Model.Community);
+                    await db.SaveChangesAsync();
+                    Logger.LogInformation("SubmitForm: Community saved to database with Id={CommunityId}", Model.Community.Id);
+                } else {
+                    Logger.LogInformation("SubmitForm: Community already exists in database with Id={CommunityId}", Model.Community.Id);
+                }
+                
+                Model.CommunityId = Model.Community.Id;
+                
+                Logger.LogInformation("SubmitForm: Set Model.CommunityId={CommunityId}", Model.CommunityId);
+            } else {
+                // If we have a community object with an ID but CommunityId is not set, copy it
+                if (Model != null && Model.Community != null && Model.Community.Id != Guid.Empty && (Model.CommunityId == null || Model.CommunityId == Guid.Empty)) {
+                    Model.CommunityId = Model.Community.Id;
+                    Logger.LogInformation("SubmitForm: Copied Community.Id to CommunityId={CommunityId}", Model.CommunityId);
+                }
             }
+            
+            Logger.LogInformation("SubmitForm: After community handling. Model.CommunityId={CommunityId}, Model.Community is {State}",
+                Model?.CommunityId, Model?.Community == null ? "null" : $"not null (Id={Model.Community.Id})");
 
             // Log the current state of elements before submission
             Logger.LogInformation("SubmitForm: step3 is {Null}, BuildingElements: {Building}, CommonElements: {Common}", 
@@ -225,6 +291,9 @@
             }
 
             PrepareModelForSubmission();
+            
+            Logger.LogInformation("SubmitForm: After PrepareModelForSubmission. Model.CommunityId={CommunityId}, Model.Community is {State}",
+                Model?.CommunityId, Model?.Community == null ? "null" : "not null");
 
             // Use workflow service so the StudyRequest is created and state machine is initialized
             var created = await WorkflowService.CreateReserveStudyRequestAsync(Model!);
@@ -243,18 +312,18 @@
     }
 
     private void PrepareModelForSubmission() {
-        if (isExistingCommunity && Model?.Community?.Id != null && Model.Community.Id != Guid.Empty) {
-            // For existing community, just set the reference without trying to attach
+        if (Model == null) return;
+        
+        // Ensure CommunityId is set from the Community object if not already set
+        if ((Model.CommunityId == null || Model.CommunityId == Guid.Empty) && Model.Community != null && Model.Community.Id != Guid.Empty) {
             Model.CommunityId = Model.Community.Id;
-            // Detach the Community from the Model to prevent tracking conflicts
+            Logger.LogInformation("PrepareModelForSubmission: Copied Community.Id to CommunityId={CommunityId}", Model.CommunityId);
+        }
+        
+        // Now null out the Community object to prevent tracking conflicts (CommunityId is set)
+        if (Model.CommunityId != null && Model.CommunityId != Guid.Empty) {
             Model.Community = null;
-        } else if (Model?.Community != null) {
-            // For new community that was just saved, set the CommunityId reference
-            if (Model.Community.Id != Guid.Empty) {
-                Model.CommunityId = Model.Community.Id;
-                // Detach the Community to prevent duplicate tracking
-                Model.Community = null;
-            }
+            Logger.LogInformation("PrepareModelForSubmission: Set Model.Community to null, CommunityId={CommunityId}", Model.CommunityId);
         }
     }
 

@@ -8,11 +8,6 @@
 @inject NavigationManager NavigationManager
 
 <MudNavMenu>
-    <MudDivider Class="my-2" />
-    <MudText Typo="Typo.h6" Class="px-4">Navigation</MudText>
-    <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Links shown based on your access</MudText>
-    <MudDivider Class="my-2" />
-
     <!-- Tenant links: require tenant viewer/staff/owner policies as appropriate -->
     <AuthorizeView Policy="RequireTenantViewer">
         <Authorized>
@@ -22,6 +17,7 @@
             <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business">Communities</MudNavLink>
             <MudNavLink Href="/Documents" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Folder">Documents</MudNavLink>
             <MudNavLink Href="/Compliance" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.FactCheck">Compliance</MudNavLink>
+            <MudNavLink Href="/support/tickets" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
         </Authorized>
     </AuthorizeView>
 
@@ -69,7 +65,7 @@
             <MudNavLink Href="/ReserveStudies/Request" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.RequestQuote">Request Reserve Study</MudNavLink>
             <MudNavLink Href="/Documents" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Folder">Documents</MudNavLink>
             <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Download Final Report</MudNavLink>
-            <MudNavLink Href="/Support" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
+            <MudNavLink Href="/support/tickets" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
         </Authorized>
     </AuthorizeView>
 
@@ -78,7 +74,6 @@
         <Authorized>
             <MudDivider Class="my-2" />
             <MudText Typo="Typo.h6" Class="px-4">Platform Administration</MudText>
-            <MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Global tools</MudText>
             <MudDivider Class="my-2" />
 
             <MudNavGroup Title="Platform" Expanded="true">
@@ -100,7 +95,7 @@
 
             <MudDivider />
             <MudNavGroup Title="Support" Expanded="false">
-                <MudNavLink Href="/Admin/Support/Tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Support Tickets</MudNavLink>
+                <MudNavLink Href="/admin/tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">All Support Tickets</MudNavLink>
             </MudNavGroup>
 
             <MudDivider />
@@ -123,7 +118,7 @@
             <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
             <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business">Communities</MudNavLink>
             <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Reserve Studies</MudNavLink>
-            <MudNavLink Href="/Admin/Support/Tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Support Tickets</MudNavLink>
+            <MudNavLink Href="/admin/tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Support Tickets</MudNavLink>
             <MudNavLink Href="/Admin/Billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing (read-only)</MudNavLink>
         </Authorized>
     </AuthorizeView>

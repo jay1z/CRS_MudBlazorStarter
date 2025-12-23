@@ -436,6 +436,25 @@ namespace CRS.Data {
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
+            // TicketComment entity configuration
+            builder.Entity<TicketComment>(entity => {
+                entity.ToTable("TicketComments");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_TicketComment_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.TicketId, e.PostedAt })
+                    .HasDatabaseName("IX_TicketComment_Tenant_Ticket_Posted");
+                entity.HasIndex(e => new { e.TenantId, e.TicketId, e.Visibility })
+                    .HasDatabaseName("IX_TicketComment_Tenant_Ticket_Visibility");
+                entity.HasOne(c => c.Ticket)
+                    .WithMany()
+                    .HasForeignKey(c => c.TicketId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(c => c.Author)
+                    .WithMany()
+                    .HasForeignKey(c => c.AuthorUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
             // SiteVisitPhoto entity configuration (medium priority)
             builder.Entity<SiteVisitPhoto>(entity => {
                 entity.ToTable("SiteVisitPhotos");
@@ -688,6 +707,7 @@ namespace CRS.Data {
         // New tenant-scoped entities
         public DbSet<CRS.Models.CustomerAccount> CustomerAccounts { get; set; }
         public DbSet<CRS.Models.SupportTicket> SupportTickets { get; set; }
+        public DbSet<CRS.Models.TicketComment> TicketComments { get; set; }
         
         // System-wide settings
         public DbSet<CRS.Models.SystemSettings> SystemSettings { get; set; }

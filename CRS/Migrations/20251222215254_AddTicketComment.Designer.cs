@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251207172358_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251222215254_AddTicketComment")]
+    partial class AddTicketComment
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -115,6 +115,98 @@ namespace CRS.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.AcceptanceTermsTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AcceptButtonText")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CheckboxText")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("EffectiveDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("PreviousVersionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TermsText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("VersionNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant");
+
+                    b.HasIndex("TenantId", "Version")
+                        .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Version");
+
+                    b.HasIndex("TenantId", "IsActive", "EffectiveDate")
+                        .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Active_Effective");
+
+                    b.HasIndex("TenantId", "Type", "IsDefault")
+                        .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Type_Default");
+
+                    b.ToTable("AcceptanceTermsTemplates", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.AccessToken", b =>
@@ -1788,6 +1880,118 @@ namespace CRS.Migrations
                     b.ToTable("Proposals");
                 });
 
+            modelBuilder.Entity("CRS.Models.ProposalAcceptance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AcceptanceTermsTemplateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("AcceptedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AcceptorEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("AcceptorOrganization")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("AcceptorTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("CheckboxConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsValid")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("ProposalId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RevocationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TermsContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("TermsVersion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TypedSignature")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcceptanceTermsTemplateId");
+
+                    b.HasIndex("AcceptedByUserId");
+
+                    b.HasIndex("ProposalId");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_ProposalAcceptance_Tenant");
+
+                    b.HasIndex("TenantId", "IsValid")
+                        .HasDatabaseName("IX_ProposalAcceptance_Tenant_Valid");
+
+                    b.HasIndex("TenantId", "ReserveStudyId")
+                        .HasDatabaseName("IX_ProposalAcceptance_Tenant_Study");
+
+                    b.HasIndex("TenantId", "AcceptedByUserId", "AcceptedAt")
+                        .HasDatabaseName("IX_ProposalAcceptance_Tenant_User_Date");
+
+                    b.ToTable("ProposalAcceptances", (string)null);
+                });
+
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2996,6 +3200,73 @@ namespace CRS.Migrations
                     b.ToTable("TenantHomepages", (string)null);
                 });
 
+            modelBuilder.Entity("CRS.Models.TicketComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsEdited")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFromStaff")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("PostedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Visibility")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_TicketComment_Tenant");
+
+                    b.HasIndex("TicketId");
+
+                    b.HasIndex("TenantId", "TicketId", "PostedAt")
+                        .HasDatabaseName("IX_TicketComment_Tenant_Ticket_Posted");
+
+                    b.HasIndex("TenantId", "TicketId", "Visibility")
+                        .HasDatabaseName("IX_TicketComment_Tenant_Ticket_Visibility");
+
+                    b.ToTable("TicketComments", (string)null);
+                });
+
             modelBuilder.Entity("CRS.Models.Workflow.StudyRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3450,6 +3721,39 @@ namespace CRS.Migrations
                     b.Navigation("ReserveStudy");
                 });
 
+            modelBuilder.Entity("CRS.Models.ProposalAcceptance", b =>
+                {
+                    b.HasOne("CRS.Models.AcceptanceTermsTemplate", "AcceptanceTermsTemplate")
+                        .WithMany("Acceptances")
+                        .HasForeignKey("AcceptanceTermsTemplateId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("CRS.Data.ApplicationUser", "AcceptedByUser")
+                        .WithMany()
+                        .HasForeignKey("AcceptedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Models.Proposal", "Proposal")
+                        .WithMany()
+                        .HasForeignKey("ProposalId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AcceptanceTermsTemplate");
+
+                    b.Navigation("AcceptedByUser");
+
+                    b.Navigation("Proposal");
+
+                    b.Navigation("ReserveStudy");
+                });
+
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", "User")
@@ -3728,6 +4032,25 @@ namespace CRS.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("CRS.Models.TicketComment", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Models.SupportTicket", "Ticket")
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Ticket");
+                });
+
             modelBuilder.Entity("CRS.Models.Workflow.StudyRequest", b =>
                 {
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
@@ -3799,6 +4122,11 @@ namespace CRS.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CRS.Models.AcceptanceTermsTemplate", b =>
+                {
+                    b.Navigation("Acceptances");
                 });
 
             modelBuilder.Entity("CRS.Models.BuildingElement", b =>

@@ -596,17 +596,23 @@
                     
                     try
                     {
-                        // Get TenantOwner and TenantSpecialist role IDs
-                        var specialistRoleNames = new[] { "TenantSpecialist", "TenantOwner" };
-                        var specialistRoleIds = await db.Set<CRS.Models.Security.Role>()
-                            .Where(r => specialistRoleNames.Contains(r.Name))
-                            .Select(r => r.Id)
-                            .ToListAsync();
+                        // Get TenantOwner and TenantSpecialist role IDs from the custom Roles table
+                        var ownerRole = await db.Roles2
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(r => r.Name == "TenantOwner");
+                        var specialistRole = await db.Roles2
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(r => r.Name == "TenantSpecialist");
                         
-                        // Count specialists using the role IDs
+                        var specialistRoleIds = new List<Guid>();
+                        if (ownerRole != null) specialistRoleIds.Add(ownerRole.Id);
+                        if (specialistRole != null) specialistRoleIds.Add(specialistRole.Id);
+                        
+                        // Count team members (owners + specialists) for this tenant
                         if (specialistRoleIds.Any())
                         {
-                            specialistsUsed = await db.Set<CRS.Models.Security.UserRoleAssignment>()
+                            specialistsUsed = await db.UserRoleAssignments
+                                .AsNoTracking()
                                 .Where(a => a.TenantId == _tenant.Id && specialistRoleIds.Contains(a.RoleId))
                                 .Select(a => a.UserId)
                                 .Distinct()
@@ -614,11 +620,11 @@
                         }
                         
                         // Check if owner exists
-                        var ownerRoleId = specialistRoleIds.FirstOrDefault();
-                        if (ownerRoleId != Guid.Empty)
+                        if (ownerRole != null)
                         {
-                            ownerExists = await db.Set<CRS.Models.Security.UserRoleAssignment>()
-                                .AnyAsync(a => a.TenantId == _tenant.Id && a.RoleId == ownerRoleId);
+                            ownerExists = await db.UserRoleAssignments
+                                .AsNoTracking()
+                                .AnyAsync(a => a.TenantId == _tenant.Id && a.RoleId == ownerRole.Id);
                         }
                     }
                     catch (Exception ex)
@@ -811,3 +817,4 @@
         overflow: hidden;
     }
 </style>
+

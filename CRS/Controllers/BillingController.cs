@@ -36,8 +36,23 @@ namespace CRS.Controllers {
             var tenant = await _db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, ct);
             if (tenant == null) return NotFound();
             var communitiesUsed = await _db.Communities.CountAsync(c => c.TenantId == tenantId, ct);
-            var specialistsUsed = await _db.UserRoleAssignments.Include(a => a.Role)
-                .CountAsync(a => a.TenantId == tenantId && (a.Role.Name == "TenantSpecialist" || a.Role.Name == "TenantOwner"), ct);
+            
+            // Get role IDs for team members (TenantOwner and TenantSpecialist)
+            var teamRoleIds = await _db.Roles2
+                .AsNoTracking()
+                .Where(r => r.Name == "TenantOwner" || r.Name == "TenantSpecialist")
+                .Select(r => r.Id)
+                .ToListAsync(ct);
+            
+            // Count distinct users with team member roles
+            var specialistsUsed = teamRoleIds.Any() 
+                ? await _db.UserRoleAssignments
+                    .AsNoTracking()
+                    .Where(a => a.TenantId == tenantId && teamRoleIds.Contains(a.RoleId))
+                    .Select(a => a.UserId)
+                    .Distinct()
+                    .CountAsync(ct)
+                : 0;
 
             string? interval = null;
             if (!string.IsNullOrWhiteSpace(tenant.StripeSubscriptionId)) {
