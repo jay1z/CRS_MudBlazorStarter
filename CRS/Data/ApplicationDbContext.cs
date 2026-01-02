@@ -97,12 +97,12 @@ namespace CRS.Data {
                 .HasDatabaseName("IX_ReserveStudy_Tenant_Specialist_Active");
             
             builder.Entity<ReserveStudy>()
-                .HasIndex(rs => new { rs.TenantId, rs.Status, rs.IsActive })
+                .HasIndex(rs => new { rs.TenantId, rs.IsComplete, rs.IsActive })
                 .HasDatabaseName("IX_ReserveStudy_Tenant_Status_Active");
             
             builder.Entity<ReserveStudy>()
                 .HasIndex(rs => new { rs.TenantId, rs.IsActive, rs.DateCreated })
-                .IncludeProperties(rs => new { rs.CommunityId, rs.ApplicationUserId, rs.SpecialistUserId, rs.Status })
+                .IncludeProperties(rs => new { rs.CommunityId, rs.ApplicationUserId, rs.SpecialistUserId, rs.IsComplete })
                 .HasDatabaseName("IX_ReserveStudy_Tenant_Active_Created_Covering");
 
             // Community composite indexes

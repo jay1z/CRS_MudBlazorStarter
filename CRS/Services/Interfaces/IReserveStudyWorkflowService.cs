@@ -14,10 +14,6 @@ namespace CRS.Services.Interfaces {
         Task<bool> ReviewFinancialInfoAsync(Guid financialInfoId, string reviewedBy);
         Task<bool> CompleteReserveStudyAsync(Guid reserveStudyId);
 
-        // UI helpers (legacy)
-        Task<string[]> GetAllowedLegacyTransitionsAsync(Guid reserveStudyId);
-        Task<bool> TryTransitionLegacyAsync(Guid reserveStudyId, ReserveStudy.WorkflowStatus targetStatus, string? actor = null);
-
         // UI helpers (native StudyStatus)
         Task<StudyStatus[]> GetAllowedStudyTransitionsAsync(Guid reserveStudyId);
         Task<bool> TryTransitionStudyAsync(Guid reserveStudyId, StudyStatus targetStatus, string? actor = null);

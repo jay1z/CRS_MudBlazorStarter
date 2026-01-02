@@ -126,6 +126,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Register workflow engine + notifications (new)
     builder.Services.AddScoped<CRS.Services.Workflow.INotificationService, CRS.Services.Workflow.NotificationService>();
     builder.Services.AddScoped<IStudyWorkflowService, CRS.Services.Workflow.StudyWorkflowService>();
+    builder.Services.AddScoped<CRS.Services.Workflow.IWorkflowActionService, CRS.Services.Workflow.WorkflowActionService>();
     builder.Services.Configure<CRS.Services.Workflow.WorkflowOptions>(builder.Configuration.GetSection("Workflow"));
 
     // SaaS Refactor: register tenant services
@@ -140,7 +141,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // builder.Services.AddSingleton<ITenantDatabaseResolver, DefaultTenantDatabaseResolver>();
     // builder.Services.AddScoped<ITenantDbContextFactory, TenantDbContextFactory>();
     // builder.Services.AddScoped<ITenantMigrationService, TenantMigrationService>();
-    // builder.Services.AddSingleton<ITenantProvisioningQueue, InMemoryTenantProvisioningQueue>();
+    // builder.Services.AddSingleton<ITenantProvisioningQueue, InMemoryTenantProvisioningQueue>
     // builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
     // builder.Services.AddHostedService<CRS.Workers.TenantProvisioningWorker>();
 
@@ -525,8 +526,8 @@ async Task ConfigurePipeline(WebApplication app) {
         // Example workflow transition + notification trigger
         app.MapGet("/dev/workflow/example", async (IStudyWorkflowService engine) => {
             var req = new StudyRequest { TenantId =1, CommunityId = Guid.CreateVersion7() };
-            var ok = await engine.TryTransitionAsync(req, StudyStatus.PendingDetails, "dev");
-            return Results.Json(new { ok, from = StudyStatus.NewRequest.ToString(), to = StudyStatus.PendingDetails.ToString(), stateChangedAt = req.StateChangedAt });
+            var ok = await engine.TryTransitionAsync(req, StudyStatus.ProposalCreated, "dev");
+            return Results.Json(new { ok, from = StudyStatus.RequestCreated.ToString(), to = StudyStatus.ProposalCreated.ToString(), stateChangedAt = req.StateChangedAt });
         }).WithDisplayName("Dev: Workflow example");
 
         // Tenant preview endpoint only in Development

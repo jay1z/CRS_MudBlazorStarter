@@ -31,14 +31,16 @@ namespace CRS.Services.Tenant {
             if (!_tenant.TenantId.HasValue) return result;
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
             var tid = _tenant.TenantId.Value;
-            // Example statuses - adapt to real model
+            // Get reserve studies and group by status
             var query = db.ReserveStudies
                 .Include(r => r.Community)
+                .Include(r => r.StudyRequest)
                 .Where(r => r.Community != null && r.Community.TenantId == tid);
             if (specialistFiltered && userId.HasValue) {
                 query = query.Where(r => r.SpecialistUserId == userId.Value);
             }
-            var grouped = await query.GroupBy(r => r.Status).Select(g => new { Status = g.Key.ToString(), Count = g.Count() }).ToListAsync(ct);
+            var studies = await query.ToListAsync(ct);
+            var grouped = studies.GroupBy(r => r.CurrentStatus).Select(g => new { Status = g.Key.ToString(), Count = g.Count() });
             result.AddRange(grouped.Select(g => new PipelineStageVm { Stage = g.Status, Count = g.Count }));
             return result;
         }
@@ -50,6 +52,7 @@ namespace CRS.Services.Tenant {
             var tid = _tenant.TenantId.Value;
             var studies = await db.ReserveStudies
                 .Include(r => r.Community)
+                .Include(r => r.StudyRequest)
                 .Where(r => r.Community != null && r.Community.TenantId == tid && r.SpecialistUserId == userId.Value && !r.IsComplete)
                 .OrderByDescending(r => r.DateCreated)
                 .Take(25)
@@ -58,7 +61,7 @@ namespace CRS.Services.Tenant {
                 Id = s.Id,
                 Title = s.Community?.Name ?? s.Id.ToString(),
                 Property = s.Community?.Name ?? string.Empty,
-                Status = s.Status.ToString(),
+                Status = s.CurrentStatus.ToString(),
                 DueDate = s.DateCreated?.AddDays(30)
             }));
             return items;

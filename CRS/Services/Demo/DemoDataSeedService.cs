@@ -126,7 +126,6 @@ namespace CRS.Services.Demo
                 AnnualInterestRate = 2.0m,
                 StudyType = "Full Update",
                 PreparedBy = "Demo Account",
-                Status = ReserveStudy.WorkflowStatus.RequestCreated,
                 Notes = "This is a sample reserve study created for demonstration purposes. All data is fictional.",
                 DateCreated = DateTime.UtcNow,
                 IsDemo = true

@@ -30,6 +30,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IReserveStudyService ReserveStudyService
 @inject IReserveStudyWorkflowService WorkflowService
+@inject IWorkflowActionService WorkflowActionService
 @inject IMailer _mailer
 @inject IDispatcher _dispatcher
 @inject IDialogService DialogService
@@ -235,7 +236,7 @@
                                         Current Status
                                     </MudText>
                                     <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">
-                                        @FormatStatusTitle(GetCurrentLegacyStatus())
+                                        @FormatStatusTitle(GetCurrentStatus())
                                     </MudText>
                                 </div>
                             </MudStack>
@@ -373,6 +374,12 @@
                         </Authorized>
                     </AuthorizeView>
 
+                    <!-- Admin Workflow Panel -->
+                    <CRS.Components.Custom.AdminWorkflowPanel 
+                        StudyId="@Id"
+                        CurrentStatus="@GetCurrentStatus()"
+                        StatusHistory="@statusHistory"
+                        OnActionCompleted="@ReloadAfterChange" />
 
                     @if (reserveStudy.DateCreated.HasValue && (DateTime.Now - reserveStudy.DateCreated.Value).TotalDays > 30 && !reserveStudy.IsComplete) {
                         <MudAlert Severity="Severity.Warning" Elevation="2" Class="mb-4" Style="border-radius: 12px;">
@@ -413,7 +420,7 @@
                                                         CURRENT STATUS
                                                     </MudText>
                                                     <MudText Typo="Typo.h4" Style="color: white; font-weight: 700;">
-                                                        @FormatStatusTitle(GetCurrentLegacyStatus())
+                                                        @FormatStatusTitle(GetCurrentStatus())
                                                     </MudText>
                                                 </div>
                                             </MudStack>
@@ -466,75 +473,155 @@
 
                                     <!-- Action Buttons -->
                                     @{
-                                        var nextStatus = GetNextStatus();
-                                        if (nextStatus != null) {
-                                            var engineNext = StatusMapper.ToStudyStatus(nextStatus.Value);
-                                            var canAdvance = allowedNextStudy.Contains(engineNext);
+                                        var currentStatus = GetCurrentStatus();
+                                        
+                                        <MudStack Row="true" Spacing="2" Class="mb-4" Style="flex-wrap: wrap;">
+                                            @* Show Send Proposal only when we can actually transition to ProposalSent *@
+                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalSent)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Primary" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.Send" 
+                                                                   OnClick="@(() => SendProposalAsync(Id))">
+                                                            Send Proposal
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
                                             
-                                            <MudStack Row="true" Spacing="2" Class="mb-4">
-                                                @if (nextStatus == ReserveStudy.WorkflowStatus.ProposalSent) {
-                                                    <AuthorizeView Policy="RequireTenantStaff">
-                                                        <Authorized>
-                                                            <MudButton Variant="Variant.Filled" 
-                                                                       Color="Color.Primary" 
-                                                                       Size="Size.Large"
-                                                                       StartIcon="@Icons.Material.Filled.Send" 
-                                                                       OnClick="@(() => SendProposalAsync(Id))">
-                                                                Send Proposal
-                                                            </MudButton>
-                                                        </Authorized>
-                                                    </AuthorizeView>
-                                                } else if (nextStatus == ReserveStudy.WorkflowStatus.FinancialInfoRequested) {
-                                                    <AuthorizeView Policy="RequireTenantStaff">
-                                                        <Authorized>
-                                                            <MudButton Variant="Variant.Filled" 
-                                                                       Color="Color.Primary" 
-                                                                       Size="Size.Large"
-                                                                       StartIcon="@Icons.Material.Filled.Description" 
-                                                                       OnClick="@(() => RequestFinancialInfoAsync(Id))">
-                                                                Request Financial Info
-                                                            </MudButton>
-                                                        </Authorized>
-                                                    </AuthorizeView>
-                                                } else if (nextStatus == ReserveStudy.WorkflowStatus.SiteVisitScheduled && allowedNextStudy.Contains(StudyStatus.Scheduled)) {
-                                                    <AuthorizeView Policy="RequireTenantStaff">
-                                                        <Authorized>
-                                                            <MudButton Variant="Variant.Filled" 
-                                                                       Color="Color.Primary" 
-                                                                       Size="Size.Large"
-                                                                       StartIcon="@Icons.Material.Filled.Event" 
-                                                                       OnClick="@(() => ApplyTransition(StudyStatus.Scheduled))">
-                                                                Schedule Site Visit
-                                                            </MudButton>
-                                                        </Authorized>
-                                                    </AuthorizeView>
-                                                } else if (nextStatus == ReserveStudy.WorkflowStatus.ReportComplete) {
-                                                    <AuthorizeView Policy="RequireTenantOwner">
-                                                        <Authorized>
-                                                            <MudButton Variant="Variant.Filled" 
-                                                                       Color="Color.Success" 
-                                                                       Size="Size.Large"
-                                                                       StartIcon="@Icons.Material.Filled.CheckCircle" 
-                                                                       OnClick="@(() => CompleteReserveStudyAsync(Id))">
-                                                                Mark as Complete
-                                                            </MudButton>
-                                                        </Authorized>
-                                                    </AuthorizeView>
-                                                } else if (canAdvance) {
-                                                    <AuthorizeView Policy="RequireTenantStaff">
-                                                        <Authorized>
-                                                            <MudButton Variant="Variant.Filled" 
-                                                                       Color="Color.Primary" 
-                                                                       Size="Size.Large"
-                                                                       StartIcon="@Icons.Material.Filled.ArrowForward" 
-                                                                       OnClick="@(() => ApplyTransition(engineNext))">
-                                                                Advance to @FormatStatusTitle(nextStatus.Value)
-                                                            </MudButton>
-                                                        </Authorized>
-                                                    </AuthorizeView>
-                                                }
-                                            </MudStack>
-                                        }
+                                            @* Proposal workflow steps *@
+                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalReviewed)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Primary" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.RateReview" 
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.ProposalReviewed))">
+                                                            Submit for Review
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                            
+                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalApproved)) {
+                                                <AuthorizeView Policy="RequireTenantOwner">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Success" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.ProposalApproved))">
+                                                            Approve Proposal
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                            
+                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalUpdated)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Outlined" 
+                                                                   Color="Color.Warning" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.Edit" 
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.ProposalUpdated))">
+                                                            Request Changes
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                            
+                                            @* Data collection steps *@
+                                            @if (allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested) || 
+                                                 allowedNextStudy.Contains(StudyStatus.ServiceContactsRequested)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Primary" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.Description" 
+                                                                   OnClick="@(() => RequestFinancialInfoAsync(Id))">
+                                                            Request Financial Info
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                            
+                                            @* Site visit *@
+                                            @if (allowedNextStudy.Contains(StudyStatus.SiteVisitScheduled) || 
+                                                 allowedNextStudy.Contains(StudyStatus.SiteVisit)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Primary" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.Event" 
+                                                                   OnClick="@(() => ApplyTransition(allowedNextStudy.Contains(StudyStatus.SiteVisit) ? StudyStatus.SiteVisit : StudyStatus.SiteVisitScheduled))">
+                                                            Schedule Site Visit
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                            
+                                            @* Complete study *@
+                                            @if (allowedNextStudy.Contains(StudyStatus.RequestCompleted)) {
+                                                <AuthorizeView Policy="RequireTenantOwner">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Success" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
+                                                                   OnClick="@(() => CompleteReserveStudyAsync(Id))">
+                                                            Mark as Complete
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                            
+                                            @* Generic advance for other transitions *@
+                                            @foreach (var nextAllowed in allowedNextStudy.Where(s => 
+                                                s != StudyStatus.RequestCancelled &&
+                                                s != StudyStatus.ProposalSent &&
+                                                s != StudyStatus.ProposalReviewed &&
+                                                s != StudyStatus.ProposalApproved &&
+                                                s != StudyStatus.ProposalUpdated &&
+                                                s != StudyStatus.ProposalAccepted &&
+                                                s != StudyStatus.FinancialInfoRequested &&
+                                                s != StudyStatus.ServiceContactsRequested &&
+                                                s != StudyStatus.SiteVisit &&
+                                                s != StudyStatus.SiteVisitScheduled &&
+                                                s != StudyStatus.RequestCompleted)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Outlined" 
+                                                                   Color="Color.Primary" 
+                                                                   Size="Size.Medium"
+                                                                   StartIcon="@Icons.Material.Filled.ArrowForward" 
+                                                                   OnClick="@(() => ApplyTransition(nextAllowed))">
+                                                            @FormatStatusTitle(nextAllowed)
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                            
+                                            @* HOA User: Accept Proposal button *@
+                                            @if (currentStatus == StudyStatus.ProposalSent && !hasValidAcceptance) {
+                                                <AuthorizeView Policy="RequireHOAUser">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Success" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
+                                                                   OnClick="OpenAcceptProposalDialog">
+                                                            Accept Proposal
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                        </MudStack>
                                     }
 
 
@@ -839,8 +926,8 @@
                                             @ref="acceptancePanel" 
                                             ReserveStudyId="@Id" />
                                     
-                                        @if (reserveStudy?.Status >= ReserveStudy.WorkflowStatus.ProposalSent && 
-                                             reserveStudy?.Status < ReserveStudy.WorkflowStatus.ProposalAccepted &&
+                                        @if (reserveStudy?.CurrentStatus >= StudyStatus.ProposalSent && 
+                                             reserveStudy?.CurrentStatus < StudyStatus.ProposalAccepted &&
                                              !hasValidAcceptance)
                                         {
                                             <AuthorizeView Policy="RequireHOAUser">
@@ -888,46 +975,59 @@ private bool hasValidAcceptance = false;
     // Timeline items data
     private readonly List<TimelineItemInfo> timelineItems = new();
 
-    // Curated engine status order to match tests, then mapped to legacy UI statuses
-    private static readonly StudyStatus[] EngineTimelineOrder = new[] {
-        StudyStatus.NewRequest,
-        StudyStatus.PendingDetails,
-        StudyStatus.ReadyForReview,
-        StudyStatus.NeedsInfo,
-        StudyStatus.Approved,
-        StudyStatus.Assigned,
-        StudyStatus.ProposalPendingESign,
-        StudyStatus.Accepted,
-        StudyStatus.Rejected,
-        StudyStatus.Scheduled,
-        StudyStatus.InProgress,
-        StudyStatus.UnderReview,
-        StudyStatus.ReportDrafted,
-        StudyStatus.ApprovedReport,
-        StudyStatus.Complete,
-        StudyStatus.Archived
+    // Complete workflow status order matching the 32-stage workflow
+    private static readonly StudyStatus[] WorkflowStatusOrder = new[] {
+        StudyStatus.RequestCreated,
+        StudyStatus.ProposalCreated,
+        StudyStatus.ProposalReviewed,
+        StudyStatus.ProposalUpdated,
+        StudyStatus.ProposalApproved,
+        StudyStatus.ProposalSent,
+        StudyStatus.ProposalAccepted,
+        StudyStatus.ServiceContactsRequested,
+        StudyStatus.FinancialInfoRequested,
+        StudyStatus.FinancialInfoCreated,
+        StudyStatus.FinancialInfoSubmitted,
+        StudyStatus.FinancialInfoReviewed,
+        StudyStatus.FinancialInfoReceived,
+        StudyStatus.SiteVisit,
+        StudyStatus.SiteVisitScheduled,
+        StudyStatus.SiteVisitCompleted,
+        StudyStatus.SiteVisitDataEntered,
+        StudyStatus.FundingPlanReady,
+        StudyStatus.FundingPlanInProcess,
+        StudyStatus.FundingPlanComplete,
+        StudyStatus.NarrativeReady,
+        StudyStatus.NarrativeInProcess,
+        StudyStatus.NarrativeComplete,
+        StudyStatus.NarrativePrintReady,
+        StudyStatus.NarrativePackaged,
+        StudyStatus.NarrativeSent,
+        StudyStatus.ReportReady,
+        StudyStatus.ReportInProcess,
+        StudyStatus.ReportComplete,
+        StudyStatus.RequestCompleted,
+        StudyStatus.RequestCancelled,
+        StudyStatus.RequestArchived
     };
 
-    // Display order for timeline (includes key milestones and user-action steps)
-    private static readonly ReserveStudy.WorkflowStatus[] DisplayLegacyOrder = new[] {
-        ReserveStudy.WorkflowStatus.RequestCreated,
-        ReserveStudy.WorkflowStatus.ProposalCreated, // Specialist Assigned
-        ReserveStudy.WorkflowStatus.ProposalSent,
-        ReserveStudy.WorkflowStatus.ProposalAccepted,
-        ReserveStudy.WorkflowStatus.FinancialInfoRequested,
-        ReserveStudy.WorkflowStatus.FinancialInfoSubmitted,
-        ReserveStudy.WorkflowStatus.SiteVisitScheduled,
-        ReserveStudy.WorkflowStatus.SiteVisitCompleted,
-        ReserveStudy.WorkflowStatus.ReportComplete,
-        ReserveStudy.WorkflowStatus.FundingPlanReady,
-        ReserveStudy.WorkflowStatus.RequestCompleted
+    // Key milestones shown to users (subset of full workflow)
+    private static readonly StudyStatus[] KeyMilestones = new[] {
+        StudyStatus.RequestCreated,
+        StudyStatus.ProposalApproved,
+        StudyStatus.ProposalSent,
+        StudyStatus.ProposalAccepted,
+        StudyStatus.FinancialInfoSubmitted,
+        StudyStatus.SiteVisitCompleted,
+        StudyStatus.ReportComplete,
+        StudyStatus.RequestCompleted
     };
 
-    // Rank map used to compute completed/current/pending independent of enum numeric values
-    private static readonly Dictionary<ReserveStudy.WorkflowStatus, int> RankByStatus =
-    DisplayLegacyOrder
-    .Select((s, idx) => new { s, idx })
-    .ToDictionary(x => x.s, x => x.idx);
+    // Rank map for status ordering
+    private static readonly Dictionary<StudyStatus, int> StatusRank =
+        WorkflowStatusOrder
+        .Select((s, idx) => new { s, idx })
+        .ToDictionary(x => x.s, x => x.idx);
 
     protected override async Task OnInitializedAsync() {
         await LoadInitialData();
@@ -964,13 +1064,20 @@ private bool hasValidAcceptance = false;
 
         if (!result.Canceled) {
             hasValidAcceptance = true;
-            await acceptancePanel?.RefreshAsync()!;
-            
+    
             // Advance workflow to ProposalAccepted if applicable
-            if (allowedNextStudy.Contains(StudyStatus.Accepted)) {
-                await ApplyTransition(StudyStatus.Accepted);
+            if (allowedNextStudy.Contains(StudyStatus.ProposalAccepted)) {
+                await ApplyTransition(StudyStatus.ProposalAccepted);
+            } else {
+                // Still reload the page to show updated acceptance status
+                await ReloadAfterChange();
             }
-            
+    
+            // Refresh acceptance panel only if it has been rendered
+            if (acceptancePanel != null) {
+                await acceptancePanel.RefreshAsync();
+            }
+    
             Snackbar.Add("Proposal accepted successfully!", Severity.Success);
         }
     }
@@ -989,44 +1096,43 @@ private bool hasValidAcceptance = false;
     private void InitializeTimelineItems() {
         timelineItems.Clear();
 
-        // Map history entries (StudyStatus) to legacy ReserveStudy.WorkflowStatus for date/actor
-        var historyByLegacy = statusHistory
-            .Select(h => new { Legacy = StatusMapper.ToLegacy(h.ToStatus), h.ChangedAt, h.ChangedBy })
-            .GroupBy(x => x.Legacy)
+        // Map history entries by status for date/actor
+        var historyByStatus = statusHistory
+            .GroupBy(h => h.ToStatus)
             .ToDictionary(g => g.Key, g => new { First = g.OrderBy(x => x.ChangedAt).First(), Last = g.OrderBy(x => x.ChangedAt).Last() });
 
-        // Build curated legacy order from engine order, de-duplicated while preserving order
-        var legacyOrder = new List<ReserveStudy.WorkflowStatus>();
-        var seen = new HashSet<ReserveStudy.WorkflowStatus>();
-        foreach (var st in EngineTimelineOrder) {
-            var legacy = StatusMapper.ToLegacy(st);
-            if (seen.Add(legacy)) legacyOrder.Add(legacy);
+        // Build status order from timeline order, de-duplicated while preserving order
+        var statusOrder = new List<StudyStatus>();
+        var seen = new HashSet<StudyStatus>();
+        foreach (var st in WorkflowStatusOrder) {
+            if (seen.Add(st)) statusOrder.Add(st);
         }
 
         // Reduce to milestone-only in the order we want
-        var milestonesToShow = DisplayLegacyOrder.Where(m => legacyOrder.Contains(m)).ToList();
+        var milestonesToShow = KeyMilestones.Where(m => statusOrder.Contains(m)).ToList();
 
         // If cancelled/archived occurred, append as terminal markers
-        if (legacyOrder.Contains(ReserveStudy.WorkflowStatus.RequestCancelled))
-            milestonesToShow.Add(ReserveStudy.WorkflowStatus.RequestCancelled);
-        if (legacyOrder.Contains(ReserveStudy.WorkflowStatus.RequestArchived))
-            milestonesToShow.Add(ReserveStudy.WorkflowStatus.RequestArchived);
+        if (statusOrder.Contains(StudyStatus.RequestCancelled))
+            milestonesToShow.Add(StudyStatus.RequestCancelled);
+        if (statusOrder.Contains(StudyStatus.RequestArchived))
+            milestonesToShow.Add(StudyStatus.RequestArchived);
 
         foreach (var status in milestonesToShow) {
             // Prevent duplicates defensively
             if (timelineItems.Any(t => t.Status == status))
                 continue;
 
-            var hasHist = historyByLegacy.TryGetValue(status, out var hist);
+            var hasHist = historyByStatus.TryGetValue(status, out var hist);
             // Choose earliest for "start" type, latest for decision/delivery type
-            var useLast = status == ReserveStudy.WorkflowStatus.ProposalSent
-                || status == ReserveStudy.WorkflowStatus.ProposalAccepted
-                || status == ReserveStudy.WorkflowStatus.FinancialInfoRequested
-                || status == ReserveStudy.WorkflowStatus.SiteVisitScheduled
-                || status == ReserveStudy.WorkflowStatus.ReportComplete
-                || status == ReserveStudy.WorkflowStatus.FundingPlanComplete
-                || status == ReserveStudy.WorkflowStatus.RequestArchived
-                || status == ReserveStudy.WorkflowStatus.RequestCancelled;
+            var useLast = status == StudyStatus.ProposalSent
+                || status == StudyStatus.ProposalAccepted
+                || status == StudyStatus.FinancialInfoRequested
+                || status == StudyStatus.SiteVisitScheduled
+                || status == StudyStatus.ReportComplete
+                || status == StudyStatus.FundingPlanComplete
+                || status == StudyStatus.NarrativeSent
+                || status == StudyStatus.RequestArchived
+                || status == StudyStatus.RequestCancelled;
             DateTime? date = hasHist ? (useLast ? hist!.Last.ChangedAt.LocalDateTime : hist!.First.ChangedAt.LocalDateTime) : GetFallbackDate(status);
             var actor = hasHist ? (useLast ? hist!.Last.ChangedBy : hist!.First.ChangedBy) : null;
 
@@ -1040,24 +1146,24 @@ private bool hasValidAcceptance = false;
         }
     }
 
-    private DateTime? GetFallbackDate(ReserveStudy.WorkflowStatus status) {
+    private DateTime? GetFallbackDate(StudyStatus status) {
         // Fallback dates for key milestones only
-        if (status == ReserveStudy.WorkflowStatus.RequestCreated) return reserveStudy?.DateCreated;
-        if (status == ReserveStudy.WorkflowStatus.ProposalCreated || status == ReserveStudy.WorkflowStatus.ProposalSent) return reserveStudy?.Proposal?.DateSent;
-        if (status == ReserveStudy.WorkflowStatus.ProposalApproved || status == ReserveStudy.WorkflowStatus.ProposalAccepted) return reserveStudy?.Proposal?.DateApproved;
-        if (status == ReserveStudy.WorkflowStatus.FinancialInfoRequested) return reserveStudy?.FinancialInfo?.DateCreated;
-        if (status == ReserveStudy.WorkflowStatus.FinancialInfoSubmitted) return reserveStudy?.FinancialInfo?.DateSubmitted;
-        if (status == ReserveStudy.WorkflowStatus.FinancialInfoReviewed) return reserveStudy?.FinancialInfo?.DateReviewed;
-        if (status == ReserveStudy.WorkflowStatus.SiteVisitCompleted) return reserveStudy?.DateModified;
-        if (status == ReserveStudy.WorkflowStatus.ReportComplete) return reserveStudy?.DateModified;
-        if (status == ReserveStudy.WorkflowStatus.FundingPlanReady) return reserveStudy?.DateModified;
-        if (status == ReserveStudy.WorkflowStatus.RequestArchived) return reserveStudy?.DateModified;
-        if (status == ReserveStudy.WorkflowStatus.RequestCancelled) return reserveStudy?.DateModified;
+        if (status == StudyStatus.RequestCreated) return reserveStudy?.DateCreated;
+        if (status == StudyStatus.ProposalCreated || status == StudyStatus.ProposalSent) return reserveStudy?.Proposal?.DateSent;
+        if (status == StudyStatus.ProposalApproved || status == StudyStatus.ProposalAccepted) return reserveStudy?.Proposal?.DateApproved;
+        if (status == StudyStatus.FinancialInfoRequested) return reserveStudy?.FinancialInfo?.DateCreated;
+        if (status == StudyStatus.FinancialInfoSubmitted) return reserveStudy?.FinancialInfo?.DateSubmitted;
+        if (status == StudyStatus.FinancialInfoReviewed) return reserveStudy?.FinancialInfo?.DateReviewed;
+        if (status == StudyStatus.SiteVisitCompleted) return reserveStudy?.DateModified;
+        if (status == StudyStatus.ReportComplete) return reserveStudy?.DateModified;
+        if (status == StudyStatus.FundingPlanReady) return reserveStudy?.DateModified;
+        if (status == StudyStatus.RequestArchived) return reserveStudy?.DateModified;
+        if (status == StudyStatus.RequestCancelled) return reserveStudy?.DateModified;
         return null;
     }
 
-    private static string FormatStatusTitle(ReserveStudy.WorkflowStatus status) {
-        var name = Enum.GetName(typeof(ReserveStudy.WorkflowStatus), status) ?? status.ToString();
+    private static string FormatStatusTitle(StudyStatus status) {
+        var name = Enum.GetName(typeof(StudyStatus), status) ?? status.ToString();
         // Insert spaces before capital letters and between letter-number boundaries
         var withSpaces = System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z])([A-Z])", " $1");
         withSpaces = System.Text.RegularExpressions.Regex.Replace(withSpaces, "([A-Za-z])(\\d)", "$1 $2");
@@ -1374,7 +1480,7 @@ private bool hasValidAcceptance = false;
         } else {
             // If proposal already exists, try to transition to ProposalPendingESign
             try {
-                await ApplyTransition(StudyStatus.ProposalPendingESign);
+                await ApplyTransition(StudyStatus.ProposalSent);
             } catch (Exception ex) {
                 Snackbar.Add($"Error: {ex.Message}", Severity.Error);
             }
@@ -1404,7 +1510,7 @@ private bool hasValidAcceptance = false;
                     Snackbar.Add("Failed to submit financial information", Severity.Error);
                 }
             } else {
-                await ApplyTransition(StudyStatus.UnderReview);
+                await ApplyTransition(StudyStatus.FinancialInfoSubmitted);
             }
         } catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
@@ -1437,6 +1543,7 @@ private bool hasValidAcceptance = false;
         await LoadInitialData();
         InitializeTimelineItems();
         await LoadAllowedTransitions();
+        StateHasChanged();
     }
 
     // Aggregate all element types safely
@@ -1449,7 +1556,7 @@ private bool hasValidAcceptance = false;
 
     // Class to hold timeline item information
     private class TimelineItemInfo {
-        public ReserveStudy.WorkflowStatus Status { get; set; }
+        public StudyStatus Status { get; set; }
         public DateTime? DateValue { get; set; }
         public string? Title { get; set; }
         public string? Actor { get; set; }
@@ -1507,8 +1614,8 @@ private bool hasValidAcceptance = false;
                 await context.SaveChangesAsync();
 
                 // Transition to Assigned status if allowed
-                if (allowedNextStudy.Contains(StudyStatus.Assigned)) {
-                    await ApplyTransition(StudyStatus.Assigned);
+                if (allowedNextStudy.Contains(StudyStatus.ProposalCreated)) {
+                    await ApplyTransition(StudyStatus.ProposalCreated);
                 }
 
                 Snackbar.Add($"Specialist {specialist.FullName} assigned successfully!", Severity.Success);
@@ -1521,81 +1628,74 @@ private bool hasValidAcceptance = false;
 
     // Workflow helper methods
     private bool NeedsApproval() {
-        var currentStatus = GetCurrentEngineStatus();
-        return currentStatus == StudyStatus.ReadyForReview || 
-               currentStatus == StudyStatus.PendingDetails ||
-               currentStatus == StudyStatus.NewRequest;
+        var currentStatus = GetCurrentStatus();
+        // Only RequestCreated needs initial approval
+        return currentStatus == StudyStatus.RequestCreated;
     }
 
     private bool CanAssignSpecialist() {
-        var currentStatus = GetCurrentEngineStatus();
-        return currentStatus == StudyStatus.Approved && reserveStudy?.SpecialistUserId == null;
-    }
-
-    private StudyStatus GetCurrentEngineStatus() {
-        return reserveStudy?.StudyRequest?.CurrentStatus ?? StudyStatus.NewRequest;
+        var currentStatus = GetCurrentStatus();
+        // After approval (ProposalCreated or later) and no specialist assigned yet
+        return (currentStatus == StudyStatus.ProposalCreated || 
+                currentStatus == StudyStatus.ProposalReviewed ||
+                currentStatus == StudyStatus.ProposalUpdated ||
+                currentStatus == StudyStatus.ProposalApproved) && 
+               reserveStudy?.SpecialistUserId == null;
     }
 
     private async Task ApproveRequestAsync() {
-        var success = await ExecuteActionAsync(
-            async () => await WorkflowService.TryTransitionStudyAsync(Id, StudyStatus.Approved),
-            "Request approved successfully! You can now assign a specialist.",
-            "Failed to approve request"
-        );
-
-        if (success) await ReloadAfterChange();
+        var result = await WorkflowActionService.AdvanceAsync(Id, "Request approved");
+        if (result.Success) {
+            Snackbar.Add("Request approved successfully! You can now assign a specialist.", Severity.Success);
+            await ReloadAfterChange();
+        } else {
+            Snackbar.Add($"Failed to approve request: {result.Message}", Severity.Error);
+        }
     }
 
     private async Task RequestMoreInfoAsync() {
-        var success = await ExecuteActionAsync(
-            async () => await WorkflowService.TryTransitionStudyAsync(Id, StudyStatus.NeedsInfo),
-            "Request returned for more information.",
-            "Failed to request more info"
-        );
-
-        if (success) await ReloadAfterChange();
+        var result = await WorkflowActionService.RequestChangesAsync(Id, "More information needed");
+        if (result.Success) {
+            Snackbar.Add("Request returned for more information.", Severity.Info);
+            await ReloadAfterChange();
+        } else {
+            Snackbar.Add($"Failed to request more info: {result.Message}", Severity.Error);
+        }
     }
 
-    // Helper methods for status display
-    private ReserveStudy.WorkflowStatus GetCurrentLegacyStatus() {
+    private StudyStatus GetCurrentStatus() {
         var currentEngine = reserveStudy?.StudyRequest?.CurrentStatus;
-        return currentEngine.HasValue ? StatusMapper.ToLegacy(currentEngine.Value) : reserveStudy?.Status ?? ReserveStudy.WorkflowStatus.RequestCreated;
+        return currentEngine ?? reserveStudy?.CurrentStatus ?? StudyStatus.RequestCreated;
     }
 
-    private ReserveStudy.WorkflowStatus? GetNextStatus() {
-        var currentLegacy = GetCurrentLegacyStatus();
-        var currentRank = RankByStatus.TryGetValue(currentLegacy, out var rnk) ? rnk : -1;
-        var next = DisplayLegacyOrder.FirstOrDefault(s => (RankByStatus.TryGetValue(s, out var rr) ? rr : int.MaxValue) > currentRank);
-        return EqualityComparer<ReserveStudy.WorkflowStatus>.Default.Equals(next, default) ? null : next;
+    private StudyStatus? GetNextStatus() {
+        var currentStatus = GetCurrentStatus();
+        var currentRank = StatusRank.TryGetValue(currentStatus, out var rnk) ? rnk : -1;
+        var next = KeyMilestones.FirstOrDefault(s => (StatusRank.TryGetValue(s, out var rr) ? rr : int.MaxValue) > currentRank);
+        return EqualityComparer<StudyStatus>.Default.Equals(next, default) ? null : next;
     }
 
     private int GetProgressPercentage() {
-        var currentLegacy = GetCurrentLegacyStatus();
-        var currentRank = RankByStatus.TryGetValue(currentLegacy, out var rnk) ? rnk : 0;
-        var totalSteps = DisplayLegacyOrder.Length;
-        return (int)Math.Round((double)(currentRank + 1) / totalSteps * 100);
+        var currentStatus = GetCurrentStatus();
+        var currentRank = StatusRank.TryGetValue(currentStatus, out var rnk) ? rnk : 0;
+        // Use completed statuses count (excluding cancelled/archived which are at the end)
+        var totalSteps = WorkflowStatusOrder.Length - 2; // Exclude RequestCancelled and RequestArchived
+        return Math.Min(100, (int)Math.Round((double)(currentRank + 1) / totalSteps * 100));
     }
 
     private List<MilestoneInfo> GetKeyMilestones() {
         var milestones = new List<MilestoneInfo>();
-        var currentLegacy = GetCurrentLegacyStatus();
-        var currentRank = RankByStatus.TryGetValue(currentLegacy, out var cr) ? cr : -1;
+        var currentStatus = GetCurrentStatus();
+        var currentRank = StatusRank.TryGetValue(currentStatus, out var cr) ? cr : -1;
 
-        // Define key milestones to show (not all steps)
-        var keyStatuses = new[] {
-            ReserveStudy.WorkflowStatus.RequestCreated,
-            ReserveStudy.WorkflowStatus.ProposalSent,
-            ReserveStudy.WorkflowStatus.ProposalAccepted,
-            ReserveStudy.WorkflowStatus.FinancialInfoSubmitted,
-            ReserveStudy.WorkflowStatus.SiteVisitCompleted,
-            ReserveStudy.WorkflowStatus.ReportComplete,
-            ReserveStudy.WorkflowStatus.RequestCompleted
-        };
-
-        foreach (var status in keyStatuses) {
-            var itemRank = RankByStatus.TryGetValue(status, out var ir) ? ir : int.MaxValue;
-            var isCompleted = currentRank > itemRank;
-            var isCurrent = currentRank == itemRank;
+        foreach (var status in KeyMilestones) {
+            var itemRank = StatusRank.TryGetValue(status, out var ir) ? ir : int.MaxValue;
+            
+            // A milestone is completed if current rank is greater than OR EQUAL to its rank
+            var isCompleted = currentRank >= itemRank && itemRank != int.MaxValue;
+            var isCurrent = currentRank == itemRank || 
+                            // If current status is between milestones, highlight the next upcoming one
+                            (!isCompleted && milestones.All(m => m.IsCompleted || m.IsCurrent));
             
             // Get date from timeline items or fallback
             var timelineItem = timelineItems.FirstOrDefault(t => t.Status == status);
@@ -1605,7 +1705,7 @@ private bool hasValidAcceptance = false;
                 Title = FormatStatusTitle(status),
                 Date = timelineItem?.DateValue ?? GetFallbackDate(status),
                 IsCompleted = isCompleted,
-                IsCurrent = isCurrent
+                IsCurrent = isCurrent && !isCompleted
             });
         }
 
@@ -1617,12 +1717,12 @@ private bool hasValidAcceptance = false;
         if (nextStatus == null) return null;
 
         return nextStatus.Value switch {
-            ReserveStudy.WorkflowStatus.ProposalCreated => new NextActionInfo {
+            StudyStatus.ProposalCreated => new NextActionInfo {
                 ActionText = "Assign Specialist",
                 ActorText = "Awaiting internal assignment",
                 ActorIcon = Icons.Material.Filled.AssignmentInd
             },
-            ReserveStudy.WorkflowStatus.ProposalSent => new NextActionInfo {
+            StudyStatus.ProposalSent => new NextActionInfo {
                 ActionText = "Send Proposal",
                 ActorText = reserveStudy?.Specialist != null 
                     ? $"Action required by {reserveStudy.Specialist.FullName}" 
@@ -1631,45 +1731,45 @@ private bool hasValidAcceptance = false;
                     ? Icons.Material.Filled.Person 
                     : Icons.Material.Filled.HourglassEmpty
             },
-            ReserveStudy.WorkflowStatus.ProposalAccepted => new NextActionInfo {
+            StudyStatus.ProposalAccepted => new NextActionInfo {
                 ActionText = "Accept Proposal",
                 ActorText = $"Action required by {reserveStudy?.Contact?.FullName ?? "client"}",
                 ActorIcon = Icons.Material.Filled.Business
             },
-            ReserveStudy.WorkflowStatus.FinancialInfoRequested => new NextActionInfo {
+            StudyStatus.FinancialInfoRequested => new NextActionInfo {
                 ActionText = "Request Financial Information",
                 ActorText = reserveStudy?.Specialist != null 
                     ? $"Action required by {reserveStudy.Specialist.FullName}" 
                     : "Awaiting specialist assignment",
                 ActorIcon = Icons.Material.Filled.Person
             },
-            ReserveStudy.WorkflowStatus.FinancialInfoSubmitted => new NextActionInfo {
+            StudyStatus.FinancialInfoSubmitted => new NextActionInfo {
                 ActionText = "Submit Financial Information",
                 ActorText = $"Action required by {reserveStudy?.Contact?.FullName ?? "client"}",
                 ActorIcon = Icons.Material.Filled.Business
             },
-            ReserveStudy.WorkflowStatus.SiteVisitScheduled => new NextActionInfo {
+            StudyStatus.SiteVisitScheduled => new NextActionInfo {
                 ActionText = "Schedule Site Visit",
                 ActorText = reserveStudy?.Specialist != null 
                     ? $"Action required by {reserveStudy.Specialist.FullName}" 
                     : "Awaiting specialist assignment",
                 ActorIcon = Icons.Material.Filled.Person
             },
-            ReserveStudy.WorkflowStatus.SiteVisitCompleted => new NextActionInfo {
+            StudyStatus.SiteVisitCompleted => new NextActionInfo {
                 ActionText = "Complete Site Visit",
                 ActorText = reserveStudy?.Specialist != null 
                     ? $"Action required by {reserveStudy.Specialist.FullName}" 
                     : "Awaiting specialist assignment",
                 ActorIcon = Icons.Material.Filled.Person
             },
-            ReserveStudy.WorkflowStatus.ReportComplete => new NextActionInfo {
+            StudyStatus.ReportComplete => new NextActionInfo {
                 ActionText = "Finalize Report",
                 ActorText = reserveStudy?.Specialist != null 
                     ? $"Action required by {reserveStudy.Specialist.FullName}" 
                     : "Awaiting specialist assignment",
                 ActorIcon = Icons.Material.Filled.Person
             },
-            ReserveStudy.WorkflowStatus.RequestCompleted => new NextActionInfo {
+            StudyStatus.RequestCompleted => new NextActionInfo {
                 ActionText = "Mark Study as Complete",
                 ActorText = "Action required by tenant owner",
                 ActorIcon = Icons.Material.Filled.AdminPanelSettings
@@ -1683,46 +1783,46 @@ private bool hasValidAcceptance = false;
     }
 
     private string GetCurrentStepDescription() {
-        var currentStatus = GetCurrentLegacyStatus();
+        var currentStatus = GetCurrentStatus();
         
         return currentStatus switch {
-            ReserveStudy.WorkflowStatus.RequestCreated => 
+            StudyStatus.RequestCreated => 
                 "Your reserve study request has been received and is being reviewed by our team. We'll assign a qualified specialist to your project shortly.",
             
-            ReserveStudy.WorkflowStatus.ProposalCreated => 
+            StudyStatus.ProposalCreated => 
                 "A reserve specialist has been assigned to your project. They are preparing a detailed proposal that outlines the scope of work and estimated costs for your reserve study.",
             
-            ReserveStudy.WorkflowStatus.ProposalSent => 
+            StudyStatus.ProposalSent => 
                 "We've sent you a proposal outlining the scope and cost of your reserve study. Please review the proposal and let us know if you have any questions or if you'd like to proceed.",
             
-            ReserveStudy.WorkflowStatus.ProposalAccepted => 
+            StudyStatus.ProposalAccepted => 
                 "Thank you for accepting the proposal! Your specialist will now request the financial information needed to begin the comprehensive analysis of your reserve fund.",
             
-            ReserveStudy.WorkflowStatus.FinancialInfoRequested => 
+            StudyStatus.FinancialInfoRequested => 
                 "We've requested financial information about your reserve fund, including current balance, annual contributions, and projected expenses. This data is essential for conducting an accurate reserve study.",
             
-            ReserveStudy.WorkflowStatus.FinancialInfoSubmitted => 
+            StudyStatus.FinancialInfoSubmitted => 
                 "Thank you for providing your financial information. Our specialist is now reviewing this data and preparing for the site visit to assess your property's physical components.",
             
-            ReserveStudy.WorkflowStatus.SiteVisitScheduled => 
+            StudyStatus.SiteVisitScheduled => 
                 "Your site visit has been scheduled. During this visit, our specialist will conduct a thorough inspection of your property's common elements and major components to assess their condition and remaining useful life.",
             
-            ReserveStudy.WorkflowStatus.SiteVisitCompleted => 
+            StudyStatus.SiteVisitCompleted => 
                 "The site visit has been completed. Our specialist is now analyzing the collected data, including component conditions, life expectancy, and replacement costs, to prepare your comprehensive reserve study report.",
             
-            ReserveStudy.WorkflowStatus.ReportComplete => 
+            StudyStatus.ReportComplete => 
                 "Your reserve study report has been completed and is ready for review. The report includes a detailed analysis of your property's components, funding plan, and recommendations for maintaining adequate reserves.",
             
-            ReserveStudy.WorkflowStatus.FundingPlanReady => 
+            StudyStatus.FundingPlanReady => 
                 "Your funding plan is ready. This plan provides a roadmap for maintaining adequate reserve funds and scheduling future capital improvements based on the reserve study findings.",
             
-            ReserveStudy.WorkflowStatus.RequestCompleted => 
+            StudyStatus.RequestCompleted => 
                 "Your reserve study has been successfully completed. All deliverables have been provided, including the comprehensive report and funding plan. You can now use this information for budgeting and planning purposes.",
             
-            ReserveStudy.WorkflowStatus.RequestCancelled => 
+            StudyStatus.RequestCancelled => 
                 "This reserve study request has been cancelled. If you have any questions or would like to restart the process, please contact our team.",
             
-            ReserveStudy.WorkflowStatus.RequestArchived => 
+            StudyStatus.RequestArchived => 
                 "This reserve study request has been archived. The project has been completed and stored for your records.",
             
             _ => "Your reserve study is in progress. We'll keep you updated as we move through each phase of the process."
@@ -1734,42 +1834,48 @@ private bool hasValidAcceptance = false;
         if (nextStatus == null) return string.Empty;
         
         return nextStatus.Value switch {
-            ReserveStudy.WorkflowStatus.ProposalCreated => 
+            StudyStatus.ProposalCreated => 
                 "Our team will review your request details and assign a qualified reserve specialist who has experience with properties similar to yours. You'll be notified once a specialist is assigned.",
             
-            ReserveStudy.WorkflowStatus.ProposalSent => 
+            StudyStatus.ProposalSent => 
                 "Your assigned specialist will prepare a detailed proposal that outlines the scope of work, timeline, and costs for your reserve study. You'll receive the proposal via email and can review it in your dashboard.",
             
-            ReserveStudy.WorkflowStatus.ProposalAccepted => 
+            StudyStatus.ProposalAccepted => 
                 "Please review the proposal we've sent you. It includes details about the reserve study process, what will be inspected, and the deliverables you'll receive. You can accept the proposal through your dashboard or via the email link.",
             
-            ReserveStudy.WorkflowStatus.FinancialInfoRequested => 
+            StudyStatus.FinancialInfoRequested => 
                 "Your specialist will send a request for financial information about your reserve fund. This helps us understand your current funding situation and create an accurate funding plan.",
             
-            ReserveStudy.WorkflowStatus.FinancialInfoSubmitted => 
+            StudyStatus.FinancialInfoSubmitted => 
                 "Please provide information about your reserve fund, including current balance, annual contributions, and any projected expenses. You can submit this information through your dashboard or via the email form.",
             
-            ReserveStudy.WorkflowStatus.SiteVisitScheduled => 
+            StudyStatus.SiteVisitScheduled => 
                 "Your specialist will contact you to schedule a convenient time for the site visit. During this visit, they'll inspect your property's common elements, building components, and other major assets.",
             
-            ReserveStudy.WorkflowStatus.SiteVisitCompleted => 
+            StudyStatus.SiteVisitCompleted => 
                 "The specialist will conduct a thorough on-site inspection of your property. They'll assess the condition of all major components, take measurements and photos, and gather data needed for the reserve analysis.",
             
-            ReserveStudy.WorkflowStatus.ReportComplete => 
+            StudyStatus.ReportComplete => 
                 "Your specialist will analyze all collected data and prepare a comprehensive reserve study report. This includes component inventory, condition assessments, life expectancy calculations, and a 30-year funding plan.",
             
-            ReserveStudy.WorkflowStatus.FundingPlanReady => 
+            StudyStatus.FundingPlanReady => 
                 "The funding plan will be finalized based on the reserve study findings. This plan will show recommended annual contributions and a schedule for major repairs and replacements over the next 30 years.",
             
-            ReserveStudy.WorkflowStatus.RequestCompleted => 
+            StudyStatus.RequestCompleted => 
                 "The final step is to mark the study as complete once all deliverables have been provided and reviewed. This will close out the project and archive it for your records.",
+            
+            StudyStatus.RequestCancelled => 
+                "This reserve study request has been cancelled. If you have any questions or would like to restart the process, please contact our team.",
+            
+            StudyStatus.RequestArchived => 
+                "This reserve study request has been archived. The project has been completed and stored for your records.",
             
             _ => "We'll notify you when the next action is required. You can check back here anytime for updates on your reserve study progress."
         };
     }
 
     private class MilestoneInfo {
-        public ReserveStudy.WorkflowStatus Status { get; set; }
+        public StudyStatus Status { get; set; }
         public string Title { get; set; } = string.Empty;
         public DateTime? Date { get; set; }
         public bool IsCompleted { get; set; }

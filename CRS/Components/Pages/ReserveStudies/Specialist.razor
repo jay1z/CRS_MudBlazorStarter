@@ -1,9 +1,11 @@
-﻿@page "/ReserveStudies/Specialist"
+@page "/ReserveStudies/Specialist"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @using CRS.Models
+@using CRS.Models.Workflow
 @using CRS.Services
 @using CRS.Services.Interfaces
+@using CRS.Services.Workflow
 @inject IReserveStudyService ReserveStudyService
 @inject UserStateService UserState
 @inject NavigationManager NavigationManager
@@ -64,7 +66,7 @@ Manage HOA Users
                     <MudTd>@context.Community?.Name</MudTd>
                     <MudTd>@context.Contact?.FullName</MudTd>
                     <MudTd>
-                        <MudChip T="string" Color="@GetStatusColor(context.Status)" Variant="Variant.Outlined" Size="Size.Small">@FormatStatus(context.Status)</MudChip>
+                        <MudChip T="string" Color="@GetStatusColor(context.CurrentStatus)" Variant="Variant.Outlined" Size="Size.Small">@FormatStatus(context.CurrentStatus)</MudChip>
                     </MudTd>
                     <MudTd>@context.DateCreated?.ToLocalTime().ToString("g")</MudTd>
                     <MudTd align="right">
@@ -87,7 +89,7 @@ Manage HOA Users
     (i.Community?.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
     || (i.Contact?.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
     || (i.PropertyManager?.FullName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
-    || (FormatStatus(i.Status).Contains(search, StringComparison.OrdinalIgnoreCase))
+    || (FormatStatus(i.CurrentStatus).Contains(search, StringComparison.OrdinalIgnoreCase))
     || (i.Community?.PhysicalAddress?.Street?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
     || (i.Community?.PhysicalAddress?.City?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
     || (i.Community?.PhysicalAddress?.State?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
@@ -108,23 +110,23 @@ Manage HOA Users
 
     private void NavigateToDetails(Guid id) => NavigationManager.NavigateTo($"/ReserveStudies/{id}/Details");
 
-    private static string FormatStatus(ReserveStudy.WorkflowStatus status) {
-        var name = Enum.GetName(typeof(ReserveStudy.WorkflowStatus), status) ?? status.ToString();
+    private static string FormatStatus(StudyStatus status) {
+        var name = Enum.GetName(typeof(StudyStatus), status) ?? status.ToString();
         var withSpaces = System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z])([A-Z])", " $1");
         withSpaces = System.Text.RegularExpressions.Regex.Replace(withSpaces, "([A-Za-z])(\\d)", "$1 $2");
         return withSpaces.Trim();
     }
 
-    private static Color GetStatusColor(ReserveStudy.WorkflowStatus status) => status switch {
-        ReserveStudy.WorkflowStatus.RequestCancelled => Color.Error,
-        ReserveStudy.WorkflowStatus.RequestArchived => Color.Default,
-        ReserveStudy.WorkflowStatus.RequestCompleted => Color.Success,
-        ReserveStudy.WorkflowStatus.FinancialInfoRequested => Color.Warning,
-        ReserveStudy.WorkflowStatus.FinancialInfoSubmitted => Color.Info,
-        ReserveStudy.WorkflowStatus.FinancialInfoReviewed => Color.Info,
-        ReserveStudy.WorkflowStatus.ProposalApproved => Color.Success,
-        ReserveStudy.WorkflowStatus.ProposalCreated => Color.Primary,
-        ReserveStudy.WorkflowStatus.ProposalSent => Color.Primary,
+    private static Color GetStatusColor(StudyStatus status) => status switch {
+        StudyStatus.RequestCancelled => Color.Error,
+        StudyStatus.RequestArchived => Color.Default,
+        StudyStatus.RequestCompleted => Color.Success,
+        StudyStatus.FinancialInfoRequested => Color.Warning,
+        StudyStatus.FinancialInfoSubmitted => Color.Info,
+        StudyStatus.ReportReady => Color.Info,
+        StudyStatus.ProposalApproved => Color.Success,
+        StudyStatus.ProposalCreated => Color.Primary,
+        StudyStatus.ProposalSent => Color.Primary,
         _ => Color.Secondary
     };
 }

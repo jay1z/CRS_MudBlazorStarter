@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 using CRS.Models.Workflow;
@@ -25,5 +25,25 @@ namespace CRS.Services.Interfaces {
         /// <param name="to">The desired target state.</param>
         /// <returns>True if transition is allowed; otherwise false.</returns>
         bool IsTransitionAllowed(StudyStatus from, StudyStatus to);
+
+        /// <summary>
+        /// Checks if an admin override transition is allowed.
+        /// </summary>
+        bool IsAdminTransitionAllowed(StudyStatus from, StudyStatus to);
+
+        /// <summary>
+        /// Gets all statuses that can be transitioned to from the current status.
+        /// </summary>
+        StudyStatus[] GetAllowedTransitions(StudyStatus from);
+
+        /// <summary>
+        /// Gets all possible statuses for admin skip/rollback operations.
+        /// </summary>
+        StudyStatus[] GetAllStatuses();
+
+        /// <summary>
+        /// Forces a transition regardless of allowed transitions (admin only).
+        /// </summary>
+        Task<bool> ForceTransitionAsync(StudyRequest request, StudyStatus newStatus, string? actor = null);
     }
 }

@@ -3,9 +3,11 @@
 
 @using CRS.Components.Pages.ReserveStudy.Dialogs
 @using CRS.Data
+@using CRS.Models.Workflow
 @using CRS.Services
 @using CRS.Services.Interfaces
 @using CRS.Services.Tenant
+@using CRS.Services.Workflow
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
@@ -93,7 +95,7 @@
                                 <MudIcon Icon="@Icons.Material.Filled.Pending" Style="color: #FF8C00; font-size: 28px;" />
                             </div>
                             <MudStack Spacing="0">
-                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetStatusCount(ReserveStudy.WorkflowStatus.RequestCreated)</MudText>
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetStatusCount(StudyStatus.RequestCreated)</MudText>
                                 <MudText Typo="Typo.body2" Style="color: #666;">New Requests</MudText>
                             </MudStack>
                         </MudStack>
@@ -123,7 +125,7 @@
                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #28a745; font-size: 28px;" />
                             </div>
                             <MudStack Spacing="0">
-                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetStatusCount(ReserveStudy.WorkflowStatus.RequestCompleted)</MudText>
+                                <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetStatusCount(StudyStatus.RequestCompleted)</MudText>
                                 <MudText Typo="Typo.body2" Style="color: #666;">Completed</MudText>
                             </MudStack>
                         </MudStack>
@@ -143,18 +145,18 @@
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Style="flex: 1; min-width: 250px; max-width: 400px;" />
-                <MudSelect T="ReserveStudy.WorkflowStatus?" 
+                <MudSelect T="StudyStatus?" 
                            @bind-Value="statusFilter" 
                            Label="Filter by Status" 
                            Variant="Variant.Outlined"
                            Margin="Margin.Dense"
                            Style="min-width: 200px;">
-                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)null)">All Statuses</MudSelectItem>
-                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.RequestCreated)">New Request</MudSelectItem>
-                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.ProposalCreated)">Proposal Created</MudSelectItem>
-                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.ProposalSent)">Proposal Sent</MudSelectItem>
-                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.ProposalAccepted)">Proposal Accepted</MudSelectItem>
-                    <MudSelectItem T="ReserveStudy.WorkflowStatus?" Value="@((ReserveStudy.WorkflowStatus?)ReserveStudy.WorkflowStatus.RequestCompleted)">Completed</MudSelectItem>
+                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)null)">All Statuses</MudSelectItem>
+                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.RequestCreated)">New Request</MudSelectItem>
+                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.ProposalCreated)">Proposal Created</MudSelectItem>
+                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.ProposalSent)">Proposal Sent</MudSelectItem>
+                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.ProposalAccepted)">Proposal Accepted</MudSelectItem>
+                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.RequestCompleted)">Completed</MudSelectItem>
                 </MudSelect>
                 @if (!string.IsNullOrEmpty(searchString) || statusFilter != null)
                 {
@@ -205,7 +207,7 @@
                           Breakpoint="Breakpoint.Sm">
                     <HeaderContent>
                         <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Community?.Name)">Community</MudTableSortLabel></MudTh>
-                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Status)">Status</MudTableSortLabel></MudTh>
+                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.CurrentStatus)">Status</MudTableSortLabel></MudTh>
                         <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact?.FullName)">Contact</MudTableSortLabel></MudTh>
                         <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Specialist?.FullName)">Specialist</MudTableSortLabel></MudTh>
                         <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.DateCreated)">Created</MudTableSortLabel></MudTh>
@@ -226,9 +228,9 @@
                         <MudTd DataLabel="Status">
                             <MudChip T="string" 
                                      Size="Size.Small" 
-                                     Color="@GetStatusColor(study.Status)"
+                                     Color="@GetStatusColor(study.CurrentStatus)"
                                      Variant="Variant.Filled">
-                                @GetStatusDisplayName(study.Status)
+                                @GetStatusDisplayName(study.CurrentStatus)
                             </MudChip>
                         </MudTd>
                         <MudTd DataLabel="Contact">
@@ -297,7 +299,7 @@
     private List<ReserveStudy> reserveStudies = new();
     private bool isLoading = true;
     private string searchString = "";
-    private ReserveStudy.WorkflowStatus? statusFilter;
+    private StudyStatus? statusFilter;
 
     protected override async Task OnParametersSetAsync() {
         await LoadData();
@@ -371,7 +373,7 @@
 
             // Apply status filter
             if (statusFilter.HasValue) {
-                filtered = filtered.Where(study => study.Status == statusFilter.Value);
+                filtered = filtered.Where(study => study.CurrentStatus == statusFilter.Value);
             }
 
             return filtered;
@@ -383,42 +385,90 @@
         statusFilter = null;
     }
 
-    private int GetStatusCount(ReserveStudy.WorkflowStatus status) {
-        return reserveStudies?.Count(s => s.Status == status) ?? 0;
+    private int GetStatusCount(StudyStatus status) {
+        return reserveStudies?.Count(s => s.CurrentStatus == status) ?? 0;
     }
 
     private int GetInProgressCount() {
         return reserveStudies?.Count(s => 
-            s.Status != ReserveStudy.WorkflowStatus.RequestCreated && 
-            s.Status != ReserveStudy.WorkflowStatus.RequestCompleted &&
-            s.Status != ReserveStudy.WorkflowStatus.RequestCancelled &&
-            s.Status != ReserveStudy.WorkflowStatus.RequestArchived) ?? 0;
+            s.CurrentStatus != StudyStatus.RequestCreated && 
+            s.CurrentStatus != StudyStatus.RequestCompleted &&
+            s.CurrentStatus != StudyStatus.RequestCancelled &&
+            s.CurrentStatus != StudyStatus.RequestArchived) ?? 0;
     }
 
-    private Color GetStatusColor(ReserveStudy.WorkflowStatus status) {
+    private Color GetStatusColor(StudyStatus status) {
         return status switch {
-            ReserveStudy.WorkflowStatus.RequestCreated => Color.Warning,
-            ReserveStudy.WorkflowStatus.ProposalCreated => Color.Info,
-            ReserveStudy.WorkflowStatus.ProposalReviewed => Color.Info,
-            ReserveStudy.WorkflowStatus.ProposalSent => Color.Primary,
-            ReserveStudy.WorkflowStatus.ProposalAccepted => Color.Success,
-            ReserveStudy.WorkflowStatus.RequestCompleted => Color.Success,
-            ReserveStudy.WorkflowStatus.RequestCancelled => Color.Error,
-            ReserveStudy.WorkflowStatus.RequestArchived => Color.Default,
+            StudyStatus.RequestCreated => Color.Warning,
+            StudyStatus.ProposalCreated => Color.Info,
+            StudyStatus.ProposalReviewed => Color.Info,
+            StudyStatus.ProposalUpdated => Color.Info,
+            StudyStatus.ProposalApproved => Color.Info,
+            StudyStatus.ProposalSent => Color.Primary,
+            StudyStatus.ProposalAccepted => Color.Success,
+            StudyStatus.ServiceContactsRequested => Color.Tertiary,
+            StudyStatus.FinancialInfoRequested => Color.Tertiary,
+            StudyStatus.FinancialInfoCreated => Color.Tertiary,
+            StudyStatus.FinancialInfoSubmitted => Color.Tertiary,
+            StudyStatus.FinancialInfoReviewed => Color.Tertiary,
+            StudyStatus.FinancialInfoReceived => Color.Tertiary,
+            StudyStatus.SiteVisit => Color.Primary,
+            StudyStatus.SiteVisitScheduled => Color.Primary,
+            StudyStatus.SiteVisitCompleted => Color.Primary,
+            StudyStatus.SiteVisitDataEntered => Color.Primary,
+            StudyStatus.FundingPlanReady => Color.Secondary,
+            StudyStatus.FundingPlanInProcess => Color.Secondary,
+            StudyStatus.FundingPlanComplete => Color.Secondary,
+            StudyStatus.NarrativeReady => Color.Secondary,
+            StudyStatus.NarrativeInProcess => Color.Secondary,
+            StudyStatus.NarrativeComplete => Color.Secondary,
+            StudyStatus.NarrativePrintReady => Color.Secondary,
+            StudyStatus.NarrativePackaged => Color.Secondary,
+            StudyStatus.NarrativeSent => Color.Secondary,
+            StudyStatus.ReportReady => Color.Secondary,
+            StudyStatus.ReportInProcess => Color.Secondary,
+            StudyStatus.ReportComplete => Color.Success,
+            StudyStatus.RequestCompleted => Color.Success,
+            StudyStatus.RequestCancelled => Color.Error,
+            StudyStatus.RequestArchived => Color.Default,
             _ => Color.Secondary
         };
     }
 
-    private string GetStatusDisplayName(ReserveStudy.WorkflowStatus status) {
+    private string GetStatusDisplayName(StudyStatus status) {
         return status switch {
-            ReserveStudy.WorkflowStatus.RequestCreated => "New Request",
-            ReserveStudy.WorkflowStatus.ProposalCreated => "Proposal Created",
-            ReserveStudy.WorkflowStatus.ProposalReviewed => "Under Review",
-            ReserveStudy.WorkflowStatus.ProposalSent => "Proposal Sent",
-            ReserveStudy.WorkflowStatus.ProposalAccepted => "Accepted",
-            ReserveStudy.WorkflowStatus.RequestCompleted => "Completed",
-            ReserveStudy.WorkflowStatus.RequestCancelled => "Cancelled",
-            ReserveStudy.WorkflowStatus.RequestArchived => "Archived",
+            StudyStatus.RequestCreated => "New Request",
+            StudyStatus.ProposalCreated => "Proposal Created",
+            StudyStatus.ProposalReviewed => "Under Review",
+            StudyStatus.ProposalUpdated => "Proposal Updated",
+            StudyStatus.ProposalApproved => "Proposal Approved",
+            StudyStatus.ProposalSent => "Proposal Sent",
+            StudyStatus.ProposalAccepted => "Accepted",
+            StudyStatus.ServiceContactsRequested => "Contacts Requested",
+            StudyStatus.FinancialInfoRequested => "Financial Info Requested",
+            StudyStatus.FinancialInfoCreated => "Financial Info Started",
+            StudyStatus.FinancialInfoSubmitted => "Financial Info Submitted",
+            StudyStatus.FinancialInfoReviewed => "Financial Info Reviewed",
+            StudyStatus.FinancialInfoReceived => "Financial Info Received",
+            StudyStatus.SiteVisit => "Site Visit",
+            StudyStatus.SiteVisitScheduled => "Site Visit Scheduled",
+            StudyStatus.SiteVisitCompleted => "Site Visit Completed",
+            StudyStatus.SiteVisitDataEntered => "Site Data Entered",
+            StudyStatus.FundingPlanReady => "Funding Plan Ready",
+            StudyStatus.FundingPlanInProcess => "Funding Plan In Progress",
+            StudyStatus.FundingPlanComplete => "Funding Plan Complete",
+            StudyStatus.NarrativeReady => "Narrative Ready",
+            StudyStatus.NarrativeInProcess => "Writing Narrative",
+            StudyStatus.NarrativeComplete => "Narrative Complete",
+            StudyStatus.NarrativePrintReady => "Print Ready",
+            StudyStatus.NarrativePackaged => "Report Packaged",
+            StudyStatus.NarrativeSent => "Report Sent",
+            StudyStatus.ReportReady => "Report Ready",
+            StudyStatus.ReportInProcess => "Finalizing Report",
+            StudyStatus.ReportComplete => "Report Complete",
+            StudyStatus.RequestCompleted => "Completed",
+            StudyStatus.RequestCancelled => "Cancelled",
+            StudyStatus.RequestArchived => "Archived",
             _ => status.ToString()
         };
     }

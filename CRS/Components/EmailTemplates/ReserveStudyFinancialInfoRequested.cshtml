@@ -1,0 +1,211 @@
+﻿@using CRS.Models.Emails
+@model ReserveStudyEmail
+
+@{
+    var baseUrl = string.IsNullOrEmpty(Model.BaseUrl) ? "" : Model.BaseUrl;
+    var detailsUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/Details";
+    var financialInfoUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/FinancialInfo";
+    var communityName = Model.ReserveStudy?.Community?.Name ?? "Your Community";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Financial Information Requested - @communityName</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%;">
+                    
+                    <!-- Header with Gradient -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 16px 16px 0 0; padding: 40px; text-align: center;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; line-height: 64px;">
+                                            <span style="font-size: 32px;">💰</span>
+                                        </div>
+                                        <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Financial Information Needed</h1>
+                                        <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 16px;">@communityName</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Welcome Message -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 32px 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Hello,
+                            </p>
+                            <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                To continue with your reserve study, we need some financial information about your community's reserve fund. This information helps us create an accurate and useful reserve study for your association.
+                            </p>
+                            <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Please click the button below to provide the requested information.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- What We Need Section -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; padding: 24px; border: 1px solid #bfdbfe;">
+                                <h2 style="margin: 0 0 16px 0; color: #1e40af; font-size: 18px; font-weight: 600;">Information We'll Need</h2>
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td style="padding: 8px 0;">
+                                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                                <tr>
+                                                    <td style="width: 24px; vertical-align: top;">
+                                                        <span style="color: #3b82f6;">✓</span>
+                                                    </td>
+                                                    <td style="padding-left: 8px;">
+                                                        <span style="color: #1e40af; font-size: 14px;">Current reserve fund balance</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0;">
+                                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                                <tr>
+                                                    <td style="width: 24px; vertical-align: top;">
+                                                        <span style="color: #3b82f6;">✓</span>
+                                                    </td>
+                                                    <td style="padding-left: 8px;">
+                                                        <span style="color: #1e40af; font-size: 14px;">Annual contribution to reserves</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0;">
+                                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                                <tr>
+                                                    <td style="width: 24px; vertical-align: top;">
+                                                        <span style="color: #3b82f6;">✓</span>
+                                                    </td>
+                                                    <td style="padding-left: 8px;">
+                                                        <span style="color: #1e40af; font-size: 14px;">Projected annual expenses</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0;">
+                                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                                <tr>
+                                                    <td style="width: 24px; vertical-align: top;">
+                                                        <span style="color: #3b82f6;">✓</span>
+                                                    </td>
+                                                    <td style="padding-left: 8px;">
+                                                        <span style="color: #1e40af; font-size: 14px;">Fiscal year start month</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Primary Action Button -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                                <tr>
+                                    <td style="border-radius: 8px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+                                        <a href="@detailsUrl" target="_blank" style="display: inline-block; padding: 16px 32px; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">Provide Financial Information →</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Why This Matters -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">Why This Matters</h2>
+                            <p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                Your financial data helps us:
+                            </p>
+                            <ul style="margin: 0; padding-left: 20px; color: #6b7280; font-size: 14px; line-height: 1.8;">
+                                <li>Assess your community's current funding level</li>
+                                <li>Create accurate projections for future reserve needs</li>
+                                <li>Develop a sustainable funding plan</li>
+                                <li>Ensure compliance with state reserve requirements</li>
+                            </ul>
+                        </td>
+                    </tr>
+
+                    <!-- Study Information -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">Study Information</h2>
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <span style="color: #6b7280; font-size: 14px;">Community</span>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                        <span style="color: #374151; font-size: 14px; font-weight: 500;">@communityName</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <span style="color: #6b7280; font-size: 14px;">Request ID</span>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                        <code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 13px; color: #374151;">@(Model.ReserveStudy?.Id.ToString().Substring(0, 8))...</code>
+                                    </td>
+                                </tr>
+                                @if (Model.ReserveStudy?.Specialist != null) {
+                                    <tr>
+                                        <td style="padding: 12px 0;">
+                                            <span style="color: #6b7280; font-size: 14px;">Your Specialist</span>
+                                        </td>
+                                        <td style="padding: 12px 0; text-align: right;">
+                                            <span style="color: #374151; font-size: 14px; font-weight: 500;">@Model.ReserveStudy.Specialist.FullName</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; border-radius: 0 0 16px 16px; padding: 24px 40px; border: 1px solid #e5e7eb; border-top: none;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">
+                                            Need help? Reply to this email or contact your specialist directly.
+                                        </p>
+                                        <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                                            © @DateTime.Now.Year ALX Reserve Cloud. All rights reserved.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

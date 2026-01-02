@@ -1,4 +1,4 @@
-﻿@page "/ReserveStudies/{Id:guid}/Edit"
+@page "/ReserveStudies/{Id:guid}/Edit"
 @attribute [Authorize]
 
 @using System.Security.Claims
@@ -7,9 +7,11 @@
 @using CRS.Components.Pages.ReserveStudyPages.Steps
 @using CRS.Data
 @using CRS.Models
+@using CRS.Models.Workflow
 @using CRS.Services
 @using CRS.Services.Interfaces
 @using CRS.Services.Tenant
+@using CRS.Services.Workflow
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -283,7 +285,7 @@
                 .FirstOrDefaultAsync(rs => rs.Id == Id && rs.IsActive && rs.TenantId == TenantContext.TenantId!.Value);
 
             if (Model != null) {
-                Logger.LogInformation("LoadReserveStudy: Loaded reserve study {StudyId} with status {Status}", Id, Model.Status);
+                Logger.LogInformation("LoadReserveStudy: Loaded reserve study {StudyId} with status {Status}", Id, Model.CurrentStatus);
                 Logger.LogInformation("LoadReserveStudy: BuildingElements count: {Count}", Model.ReserveStudyBuildingElements?.Count ?? 0);
                 Logger.LogInformation("LoadReserveStudy: CommonElements count: {Count}", Model.ReserveStudyCommonElements?.Count ?? 0);
                 Logger.LogInformation("LoadReserveStudy: AdditionalElements count: {Count}", Model.ReserveStudyAdditionalElements?.Count ?? 0);
@@ -403,13 +405,13 @@
     private string GetStatusDisplay() {
         if (Model == null) return "Unknown";
 
-        return Model.Status switch {
-            ReserveStudy.WorkflowStatus.RequestCreated => "Draft",
-            ReserveStudy.WorkflowStatus.ProposalCreated => "Proposal Created",
-            ReserveStudy.WorkflowStatus.ProposalReviewed => "Under Review",
-            ReserveStudy.WorkflowStatus.ProposalSent => "Awaiting Response",
-            ReserveStudy.WorkflowStatus.ProposalAccepted => "Proposal Accepted",
-            _ => Model.Status.ToString()
+        return Model.CurrentStatus switch {
+            StudyStatus.RequestCreated => "Draft",
+            StudyStatus.ProposalCreated => "Proposal Created",
+            StudyStatus.ProposalReviewed => "Under Review",
+            StudyStatus.ProposalSent => "Awaiting Response",
+            StudyStatus.ProposalAccepted => "Proposal Accepted",
+            _ => Model.CurrentStatus.ToString()
         };
     }
 }

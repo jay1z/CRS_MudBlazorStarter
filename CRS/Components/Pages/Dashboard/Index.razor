@@ -3,7 +3,9 @@
 @using MudBlazor
 @using CRS.Services.Interfaces
 @using CRS.Services.Tenant
+@using CRS.Services.Workflow
 @using CRS.Models
+@using CRS.Models.Workflow
 @using CRS.Components.AppHome.ViewModels
 @using CRS.Data
 @using Microsoft.EntityFrameworkCore
@@ -796,7 +798,7 @@ private async Task LoadPipelineDataAsync(int tenantId)
                          rs.Community.TenantId == tenantId && 
                          rs.IsActive && 
                          !rs.IsComplete &&
-                         (int)rs.Status <= 5); // RequestCreated through ProposalSent
+                         (int)rs.CurrentStatus <= 5); // RequestCreated through ProposalSent
         
     // Enrollment = mid-stage statuses (ProposalAccepted through SiteVisitDataEntered)
     PipelineEnrollment = await context.ReserveStudies
@@ -805,7 +807,7 @@ private async Task LoadPipelineDataAsync(int tenantId)
                          rs.Community.TenantId == tenantId && 
                          rs.IsActive && 
                          !rs.IsComplete &&
-                         (int)rs.Status >= 6 && (int)rs.Status <= 16);
+                         (int)rs.CurrentStatus >= 6 && (int)rs.CurrentStatus <= 16);
         
     // Complete = final stage (completed studies)
     PipelineComplete = await context.ReserveStudies
@@ -885,6 +887,7 @@ private async Task LoadPipelineDataAsync(int tenantId)
                 .AsNoTracking()
                 .Include(rs => rs.Community)
                     .ThenInclude(c => c.PhysicalAddress)
+                .Include(rs => rs.StudyRequest)
                 .Where(rs => rs.ApplicationUserId == currentUserId.Value && 
                             rs.IsActive &&
                             rs.TenantId == TenantContext.TenantId.Value)
@@ -919,15 +922,25 @@ private async Task LoadPipelineDataAsync(int tenantId)
         
         if (study.IsComplete) return "Complete";
         
-        return study.Status switch
+        return study.CurrentStatus switch
         {
-            ReserveStudy.WorkflowStatus.RequestCreated => "Draft",
-            ReserveStudy.WorkflowStatus.ProposalCreated => "Under Review",
-            ReserveStudy.WorkflowStatus.ProposalSent => "Proposal Sent",
-            ReserveStudy.WorkflowStatus.ProposalAccepted => "In Progress",
-            ReserveStudy.WorkflowStatus.SiteVisitScheduled => "Visit Scheduled",
-            ReserveStudy.WorkflowStatus.SiteVisitCompleted => "Visit Complete",
-            ReserveStudy.WorkflowStatus.ReportComplete => "Report Ready",
+            StudyStatus.RequestCreated => "New Request",
+            StudyStatus.ProposalCreated => "Proposal Created",
+            StudyStatus.ProposalReviewed => "Under Review",
+            StudyStatus.ProposalUpdated => "Proposal Updated",
+            StudyStatus.ProposalApproved => "Proposal Approved",
+            StudyStatus.ProposalSent => "Proposal Sent",
+            StudyStatus.ProposalAccepted => "Accepted",
+            StudyStatus.ServiceContactsRequested => "Contacts Requested",
+            StudyStatus.FinancialInfoRequested => "Financial Info Requested",
+            StudyStatus.FinancialInfoSubmitted => "Financial Info Submitted",
+            StudyStatus.SiteVisit => "Site Visit",
+            StudyStatus.SiteVisitScheduled => "Visit Scheduled",
+            StudyStatus.SiteVisitCompleted => "Visit Complete",
+            StudyStatus.ReportComplete => "Report Ready",
+            StudyStatus.RequestCompleted => "Complete",
+            StudyStatus.RequestCancelled => "Cancelled",
+            StudyStatus.RequestArchived => "Archived",
             _ => "In Progress"
         };
     }
@@ -938,15 +951,25 @@ private async Task LoadPipelineDataAsync(int tenantId)
         
         if (study.IsComplete) return Color.Success;
         
-        return study.Status switch
+        return study.CurrentStatus switch
         {
-            ReserveStudy.WorkflowStatus.RequestCreated => Color.Info,
-            ReserveStudy.WorkflowStatus.ProposalCreated => Color.Warning,
-            ReserveStudy.WorkflowStatus.ProposalSent => Color.Warning,
-            ReserveStudy.WorkflowStatus.ProposalAccepted => Color.Primary,
-            ReserveStudy.WorkflowStatus.SiteVisitScheduled => Color.Primary,
-            ReserveStudy.WorkflowStatus.SiteVisitCompleted => Color.Primary,
-            ReserveStudy.WorkflowStatus.ReportComplete => Color.Success,
+            StudyStatus.RequestCreated => Color.Warning,
+            StudyStatus.ProposalCreated => Color.Info,
+            StudyStatus.ProposalReviewed => Color.Info,
+            StudyStatus.ProposalUpdated => Color.Info,
+            StudyStatus.ProposalApproved => Color.Info,
+            StudyStatus.ProposalSent => Color.Primary,
+            StudyStatus.ProposalAccepted => Color.Success,
+            StudyStatus.ServiceContactsRequested => Color.Tertiary,
+            StudyStatus.FinancialInfoRequested => Color.Tertiary,
+            StudyStatus.FinancialInfoSubmitted => Color.Tertiary,
+            StudyStatus.SiteVisit => Color.Primary,
+            StudyStatus.SiteVisitScheduled => Color.Primary,
+            StudyStatus.SiteVisitCompleted => Color.Primary,
+            StudyStatus.ReportComplete => Color.Success,
+            StudyStatus.RequestCompleted => Color.Success,
+            StudyStatus.RequestCancelled => Color.Error,
+            StudyStatus.RequestArchived => Color.Default,
             _ => Color.Primary
         };
     }

@@ -37,7 +37,7 @@
                 </CardHeaderContent>
                 <CardHeaderActions>
                     <MudTooltip Text="Return to Study Details">
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudy/{studyId}/Details")" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudies/{studyId}/Details")" />
                     </MudTooltip>
                 </CardHeaderActions>
             </MudCardHeader>
@@ -165,7 +165,7 @@
                                    Variant="Variant.Outlined"
                                    Color="Color.Primary"
                                    Class="mr-2"
-                                   OnClick="@(() => Navigation.NavigateTo($"/ReserveStudy/{studyId}/Details"))">
+                                   OnClick="@(() => Navigation.NavigateTo($"/ReserveStudies/{studyId}/Details"))">
                             Cancel
                         </MudButton>
                         <MudButton ButtonType="ButtonType.Submit"
@@ -243,7 +243,7 @@
             var result = await WorkflowService.SendProposalAsync(studyId, proposalEntity);
             if (result) {
                 Snackbar.Add("Proposal sent successfully", Severity.Success);
-                Navigation.NavigateTo($"/ReserveStudy/{studyId}/Details");
+                Navigation.NavigateTo($"/ReserveStudies/{studyId}/Details");
             } else {
                 Snackbar.Add("Failed to send proposal", Severity.Error);
             }

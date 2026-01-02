@@ -45,6 +45,9 @@ namespace CRS.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("EmailNotificationsEnabled")
+                        .HasColumnType("bit");
+
                     b.Property<string>("FirstName")
                         .HasColumnType("nvarchar(max)");
 
@@ -98,6 +101,9 @@ namespace CRS.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("WorkflowNotificationsEnabled")
+                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -2073,9 +2079,6 @@ namespace CRS.Migrations
                     b.Property<Guid?>("SpecialistUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
                     b.Property<DateTime?>("StudyDate")
                         .HasColumnType("datetime2");
 
@@ -2107,13 +2110,13 @@ namespace CRS.Migrations
                     b.HasIndex("TenantId", "IsActive", "DateCreated")
                         .HasDatabaseName("IX_ReserveStudy_Tenant_Active_Created_Covering");
 
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "IsActive", "DateCreated"), new[] { "CommunityId", "ApplicationUserId", "SpecialistUserId", "Status" });
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "IsActive", "DateCreated"), new[] { "CommunityId", "ApplicationUserId", "SpecialistUserId", "IsComplete" });
+
+                    b.HasIndex("TenantId", "IsComplete", "IsActive")
+                        .HasDatabaseName("IX_ReserveStudy_Tenant_Status_Active");
 
                     b.HasIndex("TenantId", "SpecialistUserId", "IsActive")
                         .HasDatabaseName("IX_ReserveStudy_Tenant_Specialist_Active");
-
-                    b.HasIndex("TenantId", "Status", "IsActive")
-                        .HasDatabaseName("IX_ReserveStudy_Tenant_Status_Active");
 
                     b.ToTable("ReserveStudies");
                 });
@@ -3281,6 +3284,9 @@ namespace CRS.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<int>("CurrentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PreviousStatus")
                         .HasColumnType("int");
 
                     b.Property<byte[]>("RowVersion")

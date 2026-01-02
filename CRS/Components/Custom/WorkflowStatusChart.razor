@@ -1,4 +1,5 @@
-﻿@using CRS.Models
+@using CRS.Models
+@using CRS.Models.Workflow
 @using MudBlazor
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
@@ -86,35 +87,36 @@
 
         var today = DateTime.Now;
         var startDate = ReserveStudy.DateCreated.Value;
+        var currentStatus = ReserveStudy.CurrentStatus;
 
         void AddWorkflowStatusData(string name, DateTime start, DateTime end) {
             data.Add(new { x = name, y = new[] { new DateTimeOffset(start).ToUnixTimeMilliseconds(), new DateTimeOffset(end).ToUnixTimeMilliseconds() }, fillColor = GetColorByWorkflowStatus(name) });
         }
 
-        AddWorkflowStatusData("Request Created", startDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalCreated ? ReserveStudy.DateModified ?? today : today);
+        AddWorkflowStatusData("Request Created", startDate, currentStatus >= StudyStatus.ProposalCreated ? ReserveStudy.DateModified ?? today : today);
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalCreated) {
+        if (currentStatus >= StudyStatus.ProposalCreated) {
             var proposalDate = ReserveStudy.Proposal?.DateCreated ?? ReserveStudy.DateModified ?? startDate.AddDays(7);
-            AddWorkflowStatusData("Proposal Phase", proposalDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalAccepted ? ReserveStudy.Proposal?.DateApproved ?? today : today);
+            AddWorkflowStatusData("Proposal Phase", proposalDate, currentStatus >= StudyStatus.ProposalAccepted ? ReserveStudy.Proposal?.DateApproved ?? today : today);
         }
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ProposalAccepted) {
-            var financialInfoDate = ReserveStudy.Status >= ReserveStudy.WorkflowStatus.FinancialInfoRequested ? ReserveStudy.FinancialInfo?.DateCreated ?? ReserveStudy.Proposal?.DateApproved?.AddDays(3) ?? startDate.AddDays(14) : startDate.AddDays(14);
-            AddWorkflowStatusData("Financial Information", financialInfoDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.FinancialInfoReviewed ? ReserveStudy.FinancialInfo?.DateReviewed ?? today : today);
+        if (currentStatus >= StudyStatus.ProposalAccepted) {
+            var financialInfoDate = currentStatus >= StudyStatus.FinancialInfoRequested ? ReserveStudy.FinancialInfo?.DateCreated ?? ReserveStudy.Proposal?.DateApproved?.AddDays(3) ?? startDate.AddDays(14) : startDate.AddDays(14);
+            AddWorkflowStatusData("Financial Information", financialInfoDate, currentStatus >= StudyStatus.FinancialInfoSubmitted ? ReserveStudy.FinancialInfo?.DateReviewed ?? today : today);
         }
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.FinancialInfoReviewed) {
+        if (currentStatus >= StudyStatus.FinancialInfoSubmitted) {
             var siteVisitDate = ReserveStudy.FinancialInfo?.DateReviewed?.AddDays(7) ?? startDate.AddDays(21);
-            AddWorkflowStatusData("Site Visit", siteVisitDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.SiteVisitDataEntered ? siteVisitDate.AddDays(3) : today);
+            AddWorkflowStatusData("Site Visit", siteVisitDate, currentStatus >= StudyStatus.SiteVisitCompleted ? siteVisitDate.AddDays(3) : today);
         }
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.SiteVisitDataEntered) {
+        if (currentStatus >= StudyStatus.SiteVisitCompleted) {
             var reportDate = startDate.AddDays(28);
-            AddWorkflowStatusData("Report Preparation", reportDate, ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ReportComplete ? reportDate.AddDays(14) : today);
+            AddWorkflowStatusData("Report Preparation", reportDate, currentStatus >= StudyStatus.ReportComplete ? reportDate.AddDays(14) : today);
         }
 
-        if (ReserveStudy.Status >= ReserveStudy.WorkflowStatus.ReportComplete) {
-            var completionDate = ReserveStudy.Status == ReserveStudy.WorkflowStatus.RequestCompleted ? ReserveStudy.DateModified ?? startDate.AddDays(45) : startDate.AddDays(45);
+        if (currentStatus >= StudyStatus.ReportComplete) {
+            var completionDate = currentStatus == StudyStatus.RequestCompleted ? ReserveStudy.DateModified ?? startDate.AddDays(45) : startDate.AddDays(45);
             AddWorkflowStatusData("Study Completion", completionDate.AddDays(-5), completionDate);
         }
 

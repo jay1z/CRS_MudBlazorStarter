@@ -1,4 +1,4 @@
-using Coravel.Mailer.Mail.Interfaces;
+﻿using Coravel.Mailer.Mail.Interfaces;
 using CRS.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -17,13 +17,22 @@ public class IdentityEmailSender : IEmailSender<ApplicationUser>
     }
 
     public async Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink)
-        => await SendAsync(email, "Confirm your email", $"Please confirm your account by <a href='{confirmationLink}'>clicking here</a>.");
+    {
+        var html = EmailTemplateBuilder.CreateConfirmationEmail(confirmationLink);
+        await SendAsync(email, "Confirm Your Email - ALX Reserve Cloud", html);
+    }
 
     public async Task SendPasswordResetLinkAsync(ApplicationUser user, string email, string resetLink)
-        => await SendAsync(email, "Reset your password", $"Please reset your password by <a href='{resetLink}'>clicking here</a>.");
+    {
+        var html = EmailTemplateBuilder.CreatePasswordResetEmail(resetLink);
+        await SendAsync(email, "Reset Your Password - ALX Reserve Cloud", html);
+    }
 
     public async Task SendPasswordResetCodeAsync(ApplicationUser user, string email, string resetCode)
-        => await SendAsync(email, "Reset your password", $"Please reset your password using the following code: {resetCode}");
+    {
+        var html = EmailTemplateBuilder.CreatePasswordResetCodeEmail(resetCode);
+        await SendAsync(email, "Your Password Reset Code - ALX Reserve Cloud", html);
+    }
 
     private async Task SendAsync(string to, string subject, string html)
     {

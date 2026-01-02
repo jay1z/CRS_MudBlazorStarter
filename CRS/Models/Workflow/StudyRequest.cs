@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +25,7 @@ namespace CRS.Models.Workflow {
         public Guid CommunityId { get; set; }
 
         /// <summary>Current status in the workflow.</summary>
-        public StudyStatus CurrentStatus { get; set; } = StudyStatus.NewRequest;
+        public StudyStatus CurrentStatus { get; set; } = StudyStatus.RequestCreated;
 
         /// <summary>When the request was created.</summary>
         [DataType(DataType.DateTime)]
@@ -46,6 +46,9 @@ namespace CRS.Models.Workflow {
         /// <summary>Optional notes attached to the status change.</summary>
         [MaxLength(1024)]
         public string? StatusNotes { get; set; }
+
+        /// <summary>Previous status (stored for cancellation reversal).</summary>
+        public StudyStatus? PreviousStatus { get; set; }
 
         /// <summary>Concurrency token.</summary>
         [Timestamp]

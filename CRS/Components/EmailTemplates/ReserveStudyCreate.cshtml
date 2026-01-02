@@ -1,103 +1,225 @@
 ﻿@using CRS.Models.Emails
 @model ReserveStudyEmail
 
-<html>
+@{
+    var baseUrl = string.IsNullOrEmpty(Model.BaseUrl) ? "" : Model.BaseUrl;
+    var detailsUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/Details";
+    var communityName = Model.ReserveStudy?.Community?.Name ?? "Your Community";
+    var elementsWithServiceNeeded = Model.ReserveStudy?.ReserveStudyElements?.Where(e => e.NeedsService).ToList() ?? new List<CRS.Models.IReserveStudyElement>();
+}
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reserve Study Details</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Reserve Study Details - @communityName</title>
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #2c3e50; margin-bottom: 20px;">Reserve Study Details</h1>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%;">
+                    
+                    <!-- Header with Gradient -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px 16px 0 0; padding: 40px; text-align: center;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; line-height: 64px;">
+                                            <span style="font-size: 32px;">🏢</span>
+                                        </div>
+                                        <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">@communityName</h1>
+                                        <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 16px;">Reserve Study Details</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-        <!-- View Online Button -->
-        <div style="text-align: center; margin-bottom: 20px;">
-            <p style="margin-top: 15px; text-align: center;">
-                <a href="@(string.IsNullOrEmpty(Model.BaseUrl) ? "/" : Model.BaseUrl)/ReserveStudies/@(Model.ReserveStudy?.Id)/Details" style="display: inline-block; padding: 8px 15px; background-color: #f8f9fa; color: #3498db; text-decoration: none; border: 1px solid #3498db; border-radius: 4px; font-weight: bold;">Access your Reserve Study online</a>
-            </p>
-        </div>
+                    <!-- Primary Action Button -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 32px 40px 24px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                                <tr>
+                                    <td style="border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                        <a href="@detailsUrl" target="_blank" style="display: inline-block; padding: 16px 32px; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">View Reserve Study Online →</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-        <div style="margin-bottom: 20px;">
-            <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Community:</span> @(Model.ReserveStudy?.Community?.Name ?? "Community")</div>
-            <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Request ID:</span> @(Model.ReserveStudy?.Id ?? Guid.Empty)</div>
-            <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Date Created:</span> @(Model.ReserveStudy?.DateCreated?.ToString("MM/dd/yyyy") ?? "N/A")</div>
-            @if (Model.ReserveStudy?.DateApproved != null) {
-                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Date Approved:</span> @(Model.ReserveStudy?.DateApproved?.ToString("MM/dd/yyyy") ?? "N/A")</div>
-            }
-            @if (Model.ReserveStudy?.DateModified != null) {
-                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Last Modified:</span> @(Model.ReserveStudy?.DateModified?.ToString("MM/dd/yyyy") ?? "N/A")</div>
-            }
-            <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Status:</span> @(Model.ReserveStudy?.IsComplete == true ? "Complete" : "In Progress")</div>
-        </div>
-
-        <!-- Point of Contact Information -->
-        @if (Model.ReserveStudy?.PointOfContact != null) {
-            <div style="margin-bottom: 20px;">
-                <h3 style="color: #2c3e50; margin-top: 15px;">Point of Contact</h3>
-                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Name:</span> @(Model.ReserveStudy?.PointOfContact?.FullName ?? "N/A")</div>
-                @if (!string.IsNullOrEmpty(Model.ReserveStudy?.PointOfContact?.Email)) {
-                    <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Email:</span> <a href="mailto:@Model.ReserveStudy.PointOfContact.Email" style="color: #3498db; text-decoration: underline;">@Model.ReserveStudy.PointOfContact.Email</a></div>
-                }
-                @if (!string.IsNullOrEmpty(Model.ReserveStudy?.PointOfContact?.Phone)) {
-                    <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Phone:</span> @Model.ReserveStudy.PointOfContact.Phone</div>
-                }
-            </div>
-        }
-
-        <!-- Specialist Information -->
-        @if (Model.ReserveStudy?.Specialist != null) {
-            <div style="margin-bottom: 20px;">
-                <h3 style="color: #2c3e50; margin-top: 15px;">Assigned Specialist</h3>
-                <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Name:</span> @(Model.ReserveStudy?.Specialist?.FullName ?? "N/A")</div>
-                @if (!string.IsNullOrEmpty(Model.ReserveStudy?.Specialist?.Email)) {
-                    <div style="margin-bottom: 10px;"><span style="font-weight: bold;">Email:</span> <a href="mailto:@Model.ReserveStudy.Specialist.Email" style="color: #3498db; text-decoration: underline;">@Model.ReserveStudy.Specialist.Email</a></div>
-                }
-            </div>
-        }
-
-        @if (!string.IsNullOrEmpty(Model.AdditionalMessage)) {
-            <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #3498db; margin: 20px 0;">@Model.AdditionalMessage</div>
-        }
-
-        @{
-            var elementsWithServiceNeeded = Model.ReserveStudy.ReserveStudyElements
-            .Where(e => e.NeedsService)
-            .ToList();
-
-            if (elementsWithServiceNeeded.Any()) {
-                <h3 style="color: #2c3e50; margin-top: 15px;">Elements Needing Service:</h3>
-                <ul style="padding-left: 20px;">
-                    @foreach (var element in elementsWithServiceNeeded) {
-                        <li style="margin-bottom: 8px;">
-                            <strong>@element.Name</strong>
-                            @if (element.ServiceContact != null) {
-                                <span> - Contact: @element.ServiceContact.CompanyName (@element.ServiceContact.FullName)</span>
-                                if (!string.IsNullOrEmpty(element.ServiceContact.Email)) {
-                                    <span> - <a href="mailto:@element.ServiceContact.Email" style="color: #3498db; text-decoration: underline;">@element.ServiceContact.Email</a></span>
+                    <!-- Study Information -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">Study Information</h2>
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <span style="color: #6b7280; font-size: 14px;">Request ID</span>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                        <code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 13px; color: #374151;">@(Model.ReserveStudy?.Id.ToString().Substring(0, 8))...</code>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <span style="color: #6b7280; font-size: 14px;">Date Created</span>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                        <span style="color: #374151; font-size: 14px; font-weight: 500;">@(Model.ReserveStudy?.DateCreated?.ToString("MMMM d, yyyy") ?? "N/A")</span>
+                                    </td>
+                                </tr>
+                                @if (Model.ReserveStudy?.DateApproved != null) {
+                                    <tr>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                            <span style="color: #6b7280; font-size: 14px;">Date Approved</span>
+                                        </td>
+                                        <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                            <span style="color: #374151; font-size: 14px; font-weight: 500;">@Model.ReserveStudy.DateApproved?.ToString("MMMM d, yyyy")</span>
+                                        </td>
+                                    </tr>
                                 }
-                            }
-                        </li>
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <span style="color: #6b7280; font-size: 14px;">Status</span>
+                                    </td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
+                                        @if (Model.ReserveStudy?.IsComplete == true) {
+                                            <span style="display: inline-block; background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 600;">Complete</span>
+                                        } else {
+                                            <span style="display: inline-block; background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 600;">In Progress</span>
+                                        }
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Point of Contact -->
+                    @if (Model.ReserveStudy?.PointOfContact != null) {
+                        <tr>
+                            <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                                <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">Point of Contact</h2>
+                                <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%); border-radius: 12px; padding: 20px;">
+                                    <p style="margin: 0 0 8px 0; font-weight: 600; color: #374151;">@(Model.ReserveStudy.PointOfContact?.FullName ?? "N/A")</p>
+                                    @if (!string.IsNullOrEmpty(Model.ReserveStudy.PointOfContact?.Email)) {
+                                        <p style="margin: 0 0 4px 0; font-size: 14px; color: #6b7280;">📧 <a href="mailto:@Model.ReserveStudy.PointOfContact.Email" style="color: #667eea; text-decoration: none;">@Model.ReserveStudy.PointOfContact.Email</a></p>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.ReserveStudy.PointOfContact?.Phone)) {
+                                        <p style="margin: 0; font-size: 14px; color: #6b7280;">📞 @Model.ReserveStudy.PointOfContact.Phone</p>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
                     }
-                </ul>
-            }
-        }
 
-        <!-- Summary Counts -->
-        <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
-            <h3 style="color: #2c3e50; margin-top: 0;">Summary</h3>
-            <div style="margin-bottom: 5px;"><span style="font-weight: bold;">Building Elements:</span> @(Model.ReserveStudy?.ReserveStudyBuildingElements?.Count ?? 0)</div>
-            <div style="margin-bottom: 5px;"><span style="font-weight: bold;">Common Elements:</span> @(Model.ReserveStudy?.ReserveStudyCommonElements?.Count ?? 0)</div>
-            <div style="margin-bottom: 5px;"><span style="font-weight: bold;">Additional Elements:</span> @(Model.ReserveStudy?.ReserveStudyAdditionalElements?.Count ?? 0)</div>
-            <div style="margin-bottom: 5px;"><span style="font-weight: bold;">Elements Needing Service:</span> @elementsWithServiceNeeded.Count</div>
-        </div>
+                    <!-- Assigned Specialist -->
+                    @if (Model.ReserveStudy?.Specialist != null) {
+                        <tr>
+                            <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                                <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600; border-bottom: 2px solid #10b981; padding-bottom: 8px;">Assigned Specialist</h2>
+                                <div style="background: #d1fae5; border-radius: 12px; padding: 20px;">
+                                    <p style="margin: 0 0 8px 0; font-weight: 600; color: #065f46;">@(Model.ReserveStudy.Specialist?.FullName ?? "N/A")</p>
+                                    @if (!string.IsNullOrEmpty(Model.ReserveStudy.Specialist?.Email)) {
+                                        <p style="margin: 0; font-size: 14px; color: #065f46;">📧 <a href="mailto:@Model.ReserveStudy.Specialist.Email" style="color: #059669; text-decoration: none;">@Model.ReserveStudy.Specialist.Email</a></p>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
 
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-            <p style="color: #555;">Please contact us if you have any questions or need further information.</p>
-            <p style="margin-top: 15px; text-align: center;">
-                <a href="@(string.IsNullOrEmpty(Model.BaseUrl) ? "/" : Model.BaseUrl)/ReserveStudies/@(Model.ReserveStudy?.Id)/Details" style="display: inline-block; padding: 8px 15px; background-color: #f8f9fa; color: #3498db; text-decoration: none; border: 1px solid #3498db; border-radius: 4px; font-weight: bold;">Access your Reserve Study online</a>
-            </p>
-            <p style="color: #777; font-size: 12px; margin-top: 15px; text-align: center;">This email was generated on @DateTime.Now.ToString("MMMM d, yyyy") at @DateTime.Now.ToString("h:mm tt")</p>
-        </div>
-    </div>
+                    <!-- Additional Message -->
+                    @if (!string.IsNullOrEmpty(Model.AdditionalMessage)) {
+                        <tr>
+                            <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                                <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-left: 4px solid #667eea; border-radius: 0 8px 8px 0; padding: 20px;">
+                                    <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.6;">@Model.AdditionalMessage</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                    <!-- Summary Stats -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">Summary</h2>
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td width="25%" style="padding: 16px; text-align: center; background: #f9fafb; border-radius: 8px 0 0 8px;">
+                                        <div style="font-size: 28px; font-weight: 700; color: #667eea;">@(Model.ReserveStudy?.ReserveStudyBuildingElements?.Count ?? 0)</div>
+                                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Building</div>
+                                    </td>
+                                    <td width="25%" style="padding: 16px; text-align: center; background: #f9fafb; border-left: 1px solid #e5e7eb;">
+                                        <div style="font-size: 28px; font-weight: 700, color: #667eea;">@(Model.ReserveStudy?.ReserveStudyCommonElements?.Count ?? 0)</div>
+                                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Common</div>
+                                    </td>
+                                    <td width="25%" style="padding: 16px; text-align: center; background: #f9fafb; border-left: 1px solid #e5e7eb;">
+                                        <div style="font-size: 28px; font-weight: 700, color: #667eea;">@(Model.ReserveStudy?.ReserveStudyAdditionalElements?.Count ?? 0)</div>
+                                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Additional</div>
+                                    </td>
+                                    <td width="25%" style="padding: 16px; text-align: center; background: #fef3c7; border-radius: 0 8px 8px 0; border-left: 1px solid #e5e7eb;">
+                                        <div style="font-size: 28px; font-weight: 700; color: #d97706;">@elementsWithServiceNeeded.Count</div>
+                                        <div style="font-size: 12px; color: #92400e; margin-top: 4px;">Need Service</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Elements Needing Service -->
+                    @if (elementsWithServiceNeeded.Any()) {
+                        <tr>
+                            <td style="background-color: #ffffff; padding: 0 40px 32px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                                <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600; border-bottom: 2px solid #f59e0b; padding-bottom: 8px;">Elements Needing Service</h2>
+                                @foreach (var element in elementsWithServiceNeeded) {
+                                    <div style="background: #fffbeb; border-radius: 8px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #f59e0b;">
+                                        <p style="margin: 0 0 8px 0; font-weight: 600; color: #374151;">@element.Name</p>
+                                        @if (element.ServiceContact != null) {
+                                            <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                                                Contact: @element.ServiceContact.CompanyName 
+                                                @if (!string.IsNullOrEmpty(element.ServiceContact.FullName)) {
+                                                    <span>(@element.ServiceContact.FullName)</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(element.ServiceContact.Email)) {
+                                                    <span> - <a href="mailto:@element.ServiceContact.Email" style="color: #667eea;">@element.ServiceContact.Email</a></span>
+                                                }
+                                            </p>
+                                        }
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+
+                    <!-- Footer CTA -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 24px 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; text-align: center;">Questions? Contact your specialist or reach out to our support team.</p>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                                <tr>
+                                    <td style="border-radius: 8px; border: 2px solid #667eea;">
+                                        <a href="@detailsUrl" target="_blank" style="display: inline-block; padding: 12px 24px; font-size: 14px; font-weight: 600; color: #667eea; text-decoration: none; border-radius: 6px;">View Full Details</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 24px 40px; border-radius: 0 0 16px 16px; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
+                            <p style="margin: 0 0 8px 0; color: #9ca3af; font-size: 12px;">This email was generated on @DateTime.Now.ToString("MMMM d, yyyy") at @DateTime.Now.ToString("h:mm tt")</p>
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px;">© @DateTime.UtcNow.Year ALX Reserve Cloud. All rights reserved.</p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

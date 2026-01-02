@@ -15,6 +15,10 @@ namespace CRS.Data {
         // Demo Mode: Mark demo users
         public bool IsDemo { get; set; } = false;
 
+        // Notification Preferences (global opt-out)
+        public bool EmailNotificationsEnabled { get; set; } = true;
+        public bool WorkflowNotificationsEnabled { get; set; } = true;
+
         public string FullName {
             get {
                 return $"{FirstName} {LastName}";

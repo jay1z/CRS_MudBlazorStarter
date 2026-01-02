@@ -1,0 +1,54 @@
+﻿@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Title</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.body1">@Message</MudText>
+            
+            @if (RequireReason)
+            {
+                <MudTextField @bind-Value="Reason"
+                              Label="Reason"
+                              Variant="Variant.Outlined"
+                              Lines="3"
+                              Required="true"
+                              RequiredError="Reason is required"
+                              Placeholder="Enter reason for this action..." />
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="@ConfirmButtonColor" 
+                   Variant="Variant.Filled" 
+                   OnClick="Confirm"
+                   Disabled="@(RequireReason && string.IsNullOrWhiteSpace(Reason))">
+            @ConfirmButtonText
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public string Title { get; set; } = "Confirm Action";
+    [Parameter] public string Message { get; set; } = "Are you sure you want to perform this action?";
+    [Parameter] public bool RequireReason { get; set; } = false;
+    [Parameter] public string ConfirmButtonText { get; set; } = "Confirm";
+    [Parameter] public Color ConfirmButtonColor { get; set; } = Color.Primary;
+
+    private string Reason { get; set; } = string.Empty;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Confirm()
+    {
+        if (RequireReason)
+            MudDialog.Close(DialogResult.Ok(Reason));
+        else
+            MudDialog.Close(DialogResult.Ok(true));
+    }
+}

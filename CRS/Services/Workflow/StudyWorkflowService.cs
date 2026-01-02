@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -8,28 +8,192 @@ using CRS.Services.Interfaces;
 namespace CRS.Services.Workflow {
     /// <summary>
     /// Pure state-machine service to manage StudyRequest transitions.
+    /// Implements the 32-stage workflow.
     /// </summary>
     public class StudyWorkflowService : IStudyWorkflowService {
         private readonly INotificationService _notification;
 
-        // Allowed transitions graph
+        // Allowed transitions graph matching the 32-stage workflow
         private static readonly Dictionary<StudyStatus, HashSet<StudyStatus>> _allowed = new() {
-            [StudyStatus.NewRequest] = new() { StudyStatus.PendingDetails },
-            [StudyStatus.PendingDetails] = new() { StudyStatus.ReadyForReview },
-            [StudyStatus.ReadyForReview] = new() { StudyStatus.Approved, StudyStatus.NeedsInfo },
-            [StudyStatus.NeedsInfo] = new() { StudyStatus.ReadyForReview },
-            [StudyStatus.Approved] = new() { StudyStatus.Assigned },
-            [StudyStatus.Assigned] = new() { StudyStatus.ProposalPendingESign },
-            [StudyStatus.ProposalPendingESign] = new() { StudyStatus.Accepted, StudyStatus.Rejected },
-            [StudyStatus.Accepted] = new() { StudyStatus.Scheduled },
-            [StudyStatus.Rejected] = new() { },
-            [StudyStatus.Scheduled] = new() { StudyStatus.InProgress },
-            [StudyStatus.InProgress] = new() { StudyStatus.UnderReview },
-            [StudyStatus.UnderReview] = new() { StudyStatus.ReportDrafted, StudyStatus.InProgress },
-            [StudyStatus.ReportDrafted] = new() { StudyStatus.ApprovedReport },
-            [StudyStatus.ApprovedReport] = new() { StudyStatus.Complete },
-            [StudyStatus.Complete] = new() { StudyStatus.Archived },
-            [StudyStatus.Archived] = new() { }
+            // ═══════════════════════════════════════════════════════════════
+            // REQUEST PHASE
+            // ═══════════════════════════════════════════════════════════════
+            [StudyStatus.RequestCreated] = new() { 
+                StudyStatus.ProposalCreated,
+                StudyStatus.RequestCancelled 
+            },
+
+            // ═══════════════════════════════════════════════════════════════
+            // PROPOSAL PHASE
+            // ═══════════════════════════════════════════════════════════════
+            [StudyStatus.ProposalCreated] = new() { 
+                StudyStatus.ProposalReviewed,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.ProposalReviewed] = new() { 
+                StudyStatus.ProposalUpdated, 
+                StudyStatus.ProposalApproved,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.ProposalUpdated] = new() { 
+                StudyStatus.ProposalReviewed, 
+                StudyStatus.ProposalApproved,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.ProposalApproved] = new() { 
+                StudyStatus.ProposalSent,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.ProposalSent] = new() { 
+                StudyStatus.ProposalAccepted, 
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.ProposalAccepted] = new() { 
+                StudyStatus.ServiceContactsRequested,
+                StudyStatus.FinancialInfoRequested,
+                StudyStatus.RequestCancelled 
+            },
+
+            // ═══════════════════════════════════════════════════════════════
+            // DATA COLLECTION PHASE
+            // ═══════════════════════════════════════════════════════════════
+            [StudyStatus.ServiceContactsRequested] = new() { 
+                StudyStatus.FinancialInfoRequested,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.FinancialInfoRequested] = new() { 
+                StudyStatus.FinancialInfoCreated,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.FinancialInfoCreated] = new() { 
+                StudyStatus.FinancialInfoSubmitted,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.FinancialInfoSubmitted] = new() { 
+                StudyStatus.FinancialInfoReviewed,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.FinancialInfoReviewed] = new() { 
+                StudyStatus.FinancialInfoReceived,
+                StudyStatus.FinancialInfoRequested, // Request more info
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.FinancialInfoReceived] = new() { 
+                StudyStatus.SiteVisit,
+                StudyStatus.RequestCancelled 
+            },
+
+            // ═══════════════════════════════════════════════════════════════
+            // SITE VISIT PHASE
+            // ═══════════════════════════════════════════════════════════════
+            [StudyStatus.SiteVisit] = new() { 
+                StudyStatus.SiteVisitScheduled,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.SiteVisitScheduled] = new() { 
+                StudyStatus.SiteVisitCompleted,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.SiteVisitCompleted] = new() { 
+                StudyStatus.SiteVisitDataEntered,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.SiteVisitDataEntered] = new() { 
+                StudyStatus.FundingPlanReady,
+                StudyStatus.RequestCancelled 
+            },
+
+            // ═══════════════════════════════════════════════════════════════
+            // FUNDING PLAN PHASE
+            // ═══════════════════════════════════════════════════════════════
+            [StudyStatus.FundingPlanReady] = new() { 
+                StudyStatus.FundingPlanInProcess,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.FundingPlanInProcess] = new() { 
+                StudyStatus.FundingPlanComplete,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.FundingPlanComplete] = new() { 
+                StudyStatus.NarrativeReady,
+                StudyStatus.RequestCancelled 
+            },
+
+            // ═══════════════════════════════════════════════════════════════
+            // NARRATIVE/REPORT PHASE
+            // ═══════════════════════════════════════════════════════════════
+            [StudyStatus.NarrativeReady] = new() { 
+                StudyStatus.NarrativeInProcess,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.NarrativeInProcess] = new() { 
+                StudyStatus.NarrativeComplete,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.NarrativeComplete] = new() { 
+                StudyStatus.NarrativePrintReady,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.NarrativePrintReady] = new() { 
+                StudyStatus.NarrativePackaged,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.NarrativePackaged] = new() { 
+                StudyStatus.NarrativeSent,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.NarrativeSent] = new() { 
+                StudyStatus.ReportReady,
+                StudyStatus.RequestCancelled 
+            },
+
+            // ═══════════════════════════════════════════════════════════════
+            // FINAL REPORT PHASE
+            // ═══════════════════════════════════════════════════════════════
+            [StudyStatus.ReportReady] = new() { 
+                StudyStatus.ReportInProcess,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.ReportInProcess] = new() { 
+                StudyStatus.ReportComplete,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.ReportComplete] = new() { 
+                StudyStatus.RequestCompleted 
+            },
+
+            // ═══════════════════════════════════════════════════════════════
+            // COMPLETION
+            // ═══════════════════════════════════════════════════════════════
+            [StudyStatus.RequestCompleted] = new() { 
+                StudyStatus.RequestArchived 
+            },
+            
+            [StudyStatus.RequestCancelled] = new() { },  // Terminal state
+            
+            [StudyStatus.RequestArchived] = new() { }    // Terminal state
         };
 
         public StudyWorkflowService(INotificationService notification) {
@@ -40,11 +204,53 @@ namespace CRS.Services.Workflow {
             return _allowed.TryGetValue(from, out var set) && set.Contains(to);
         }
 
+        /// <summary>
+        /// Checks if a transition is allowed for admin override (any transition except to same status).
+        /// </summary>
+        public bool IsAdminTransitionAllowed(StudyStatus from, StudyStatus to) {
+            // Admins can transition to any status except the same one
+            return from != to;
+        }
+
+        /// <summary>
+        /// Gets all statuses that can be transitioned to from the current status.
+        /// </summary>
+        public StudyStatus[] GetAllowedTransitions(StudyStatus from) {
+            return _allowed.TryGetValue(from, out var set) ? set.ToArray() : Array.Empty<StudyStatus>();
+        }
+
+        /// <summary>
+        /// Gets all possible statuses for admin skip/rollback operations.
+        /// </summary>
+        public StudyStatus[] GetAllStatuses() {
+            return Enum.GetValues<StudyStatus>();
+        }
+
         public async Task<bool> TryTransitionAsync(StudyRequest request, StudyStatus newStatus, string? actor = null) {
             if (request == null) throw new ArgumentNullException(nameof(request));
             var old = request.CurrentStatus;
             if (!IsTransitionAllowed(old, newStatus)) return false;
 
+            request.PreviousStatus = old;
+            request.CurrentStatus = newStatus;
+            request.UpdatedAt = DateTimeOffset.UtcNow;
+            request.StateChangedAt = request.UpdatedAt;
+            request.StatusChangedBy = actor;
+
+            await _notification.OnStateChangedAsync(request, old, newStatus);
+            return true;
+        }
+
+        /// <summary>
+        /// Forces a transition regardless of allowed transitions (admin only).
+        /// </summary>
+        public async Task<bool> ForceTransitionAsync(StudyRequest request, StudyStatus newStatus, string? actor = null) {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+            var old = request.CurrentStatus;
+            
+            if (!IsAdminTransitionAllowed(old, newStatus)) return false;
+
+            request.PreviousStatus = old;
             request.CurrentStatus = newStatus;
             request.UpdatedAt = DateTimeOffset.UtcNow;
             request.StateChangedAt = request.UpdatedAt;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -97,13 +97,12 @@ namespace CRS.Services {
             // Enforce transition -> ProposalSent => ProposalPendingESign
             var sr = await EnsureStudyRequestAsync(db, study);
             var from = sr.CurrentStatus;
-            var desired = StudyStatus.ProposalPendingESign; // mapped from legacy ProposalSent
+            var desired = StudyStatus.ProposalSent; // mapped from legacy ProposalSent
             var ok = await _engine.TryTransitionAsync(sr, desired, GetActor());
             if (!ok) return false;
 
             // Map back to legacy and persist
-            study.Status = StatusMapper.ToLegacy(desired);
-            study.DateModified = DateTime.UtcNow;
+                        study.DateModified = DateTime.UtcNow;
 
             // History row
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
@@ -131,12 +130,11 @@ namespace CRS.Services {
             // Enforce transition -> ProposalApproved => Approved
             var sr = await EnsureStudyRequestAsync(db, study);
             var from = sr.CurrentStatus;
-            var desired = StudyStatus.Approved;
+            var desired = StudyStatus.ProposalApproved;
             var ok = await _engine.TryTransitionAsync(sr, desired, approvedBy);
             if (!ok) return false;
 
-            study.Status = StatusMapper.ToLegacy(desired);
-            study.DateModified = DateTime.UtcNow;
+                        study.DateModified = DateTime.UtcNow;
 
             await AppendHistoryAsync(db, sr, from, desired, approvedBy);
             await db.SaveChangesAsync();
@@ -155,12 +153,11 @@ namespace CRS.Services {
             // Enforce transition -> FinancialInfoRequested => NeedsInfo
             var sr = await EnsureStudyRequestAsync(db, study);
             var from = sr.CurrentStatus;
-            var desired = StudyStatus.NeedsInfo;
+            var desired = StudyStatus.FinancialInfoRequested;
             var ok = await _engine.TryTransitionAsync(sr, desired, GetActor());
             if (!ok) return false;
 
-            study.Status = StatusMapper.ToLegacy(desired);
-            study.DateModified = DateTime.UtcNow;
+                        study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
             await db.SaveChangesAsync();
 
@@ -195,12 +192,11 @@ namespace CRS.Services {
             // Enforce transition -> FinancialInfoSubmitted => UnderReview
             var sr = await EnsureStudyRequestAsync(db, study);
             var from = sr.CurrentStatus;
-            var desired = StudyStatus.UnderReview;
+            var desired = StudyStatus.FinancialInfoSubmitted;
             var ok = await _engine.TryTransitionAsync(sr, desired, GetActor());
             if (!ok) return false;
 
-            study.Status = StatusMapper.ToLegacy(desired);
-            study.DateModified = DateTime.UtcNow;
+                        study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
             await db.SaveChangesAsync();
 
@@ -228,12 +224,11 @@ namespace CRS.Services {
             // Enforce transition -> FinancialInfoReviewed => ReportDrafted
             var sr = await EnsureStudyRequestAsync(db, study);
             var from = sr.CurrentStatus;
-            var desired = StudyStatus.ReportDrafted;
+            var desired = StudyStatus.ReportReady;
             var ok = await _engine.TryTransitionAsync(sr, desired, reviewedBy);
             if (!ok) return false;
 
-            study.Status = StatusMapper.ToLegacy(desired);
-            study.DateModified = DateTime.UtcNow;
+                        study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, desired, reviewedBy);
             await db.SaveChangesAsync();
 
@@ -250,29 +245,17 @@ namespace CRS.Services {
             // Enforce transition -> RequestCompleted => Complete
             var sr = await EnsureStudyRequestAsync(db, study);
             var from = sr.CurrentStatus;
-            var desired = StudyStatus.Complete;
+            var desired = StudyStatus.RequestCompleted;
             var ok = await _engine.TryTransitionAsync(sr, desired, GetActor());
             if (!ok) return false;
 
             study.IsComplete = true;
-            study.Status = StatusMapper.ToLegacy(desired);
-            study.DateModified = DateTime.UtcNow;
+                        study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
             await db.SaveChangesAsync();
 
             await _dispatcher.Broadcast(new ReserveStudyCompletedEvent(study));
             return true;
-        }
-
-        // Legacy helpers retained for compatibility
-        public async Task<string[]> GetAllowedLegacyTransitionsAsync(Guid reserveStudyId) {
-            var studyAllowed = await GetAllowedStudyTransitionsAsync(reserveStudyId);
-            return studyAllowed.Select(s => StatusMapper.ToLegacy(s).ToString()).ToArray();
-        }
-
-        public async Task<bool> TryTransitionLegacyAsync(Guid reserveStudyId, ReserveStudy.WorkflowStatus targetStatus, string? actor = null) {
-            var desired = StatusMapper.ToStudyStatus(targetStatus);
-            return await TryTransitionStudyAsync(reserveStudyId, desired, actor);
         }
 
         // StudyStatus helpers
@@ -295,8 +278,7 @@ namespace CRS.Services {
             if (!_engine.IsTransitionAllowed(from, targetStatus)) return false;
             var ok = await _engine.TryTransitionAsync(sr, targetStatus, actor ?? GetActor());
             if (!ok) return false;
-            study.Status = StatusMapper.ToLegacy(targetStatus);
-            study.DateModified = DateTime.UtcNow;
+                        study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, targetStatus, actor ?? GetActor());
             await db.SaveChangesAsync();
             return true;
@@ -307,7 +289,7 @@ namespace CRS.Services {
                 Id = study.Id, //1:1 key by ReserveStudy.Id
                 TenantId = study.TenantId,
                 CommunityId = study.CommunityId ?? Guid.Empty,
-                CurrentStatus = StatusMapper.ToStudyStatus(study.Status),
+                CurrentStatus = study.CurrentStatus,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow,
                 StateChangedAt = DateTimeOffset.UtcNow

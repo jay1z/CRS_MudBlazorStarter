@@ -1,4 +1,5 @@
-﻿@* A reusable timeline item component for workflow status displays *@
+@* A reusable timeline item component for workflow status displays *@
+@using CRS.Models.Workflow
 
 <MudTimelineItem TimelineAlign="TimelineAlign.Start"
                  Color="@GetItemColor()"
@@ -23,7 +24,7 @@
 
 @code {
     [Parameter]
-    public ReserveStudy.WorkflowStatus Status { get; set; }
+    public StudyStatus Status { get; set; }
 
     [Parameter]
     public DateTime? DateValue { get; set; }
@@ -48,13 +49,13 @@
     public bool IsCompleted { get; set; }
 
     private Color GetItemColor() {
-        if (Status == ReserveStudy.WorkflowStatus.RequestCancelled) {
+        if (Status == StudyStatus.RequestCancelled) {
             return Color.Error;
         }
         if (IsCurrent) return Color.Warning;
         if (IsCompleted) return Color.Success;
-        if (ReserveStudy?.Status == Status) return Color.Warning;
-        else if (ReserveStudy?.Status > Status) return Color.Success;
+        if (ReserveStudy?.CurrentStatus == Status) return Color.Warning;
+        else if (ReserveStudy?.CurrentStatus > Status) return Color.Success;
         else return Color.Default;
     }
 

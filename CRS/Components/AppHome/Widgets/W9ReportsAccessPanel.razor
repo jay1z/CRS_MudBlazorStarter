@@ -53,7 +53,7 @@
             _reports = finalStudies.Select(s => new ReportRow {
                 Property = s.Community?.Name ?? s.Id.ToString(),
                 Completed = s.DateModified ?? s.DateCreated,
-                Status = s.Status.ToString()
+                Status = s.CurrentStatus.ToString()
             }).ToList();
         }
         catch { }

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 using CRS.Data;
@@ -77,41 +77,13 @@ namespace CRS.Models {
         public bool IsApproved { get; set; }
         public bool IsComplete { get; set; }
 
-        public WorkflowStatus Status { get; set; } = WorkflowStatus.RequestCreated;
-        public enum WorkflowStatus {
-            RequestCreated = 0,
-            ProposalCreated = 1,
-            ProposalReviewed = 2,
-            ProposalUpdated = 3,
-            ProposalApproved = 4,
-            ProposalSent = 5,
-            ProposalAccepted = 6,
-            FinancialInfoRequested = 7,
-            ServiceContactsRequested = 8,
-            FinancialInfoCreated = 9,
-            FinancialInfoSubmitted = 10,
-            FinancialInfoReviewed = 11,
-            FinancialInfoReceived = 12,
-            SiteVisit = 13,
-            SiteVisitScheduled = 14,
-            SiteVisitCompleted = 15,
-            SiteVisitDataEntered = 16,
-            FundingPlanReady = 17,
-            FundingPlanInProcess = 18,
-            FundingPlanComplete = 19,
-            NarrativeReady = 20,
-            NarrativeInProcess = 21,
-            NarrativeComplete = 22,
-            NarrativePrintReady = 23,
-            NarrativePackaged = 24,
-            NarrativeSent = 25,
-            ReportReady = 26,
-            ReportInProcess = 27,
-            ReportComplete = 28,
-            RequestCompleted = 29,
-            RequestCancelled = 30,
-            RequestArchived = 31,
-        }
+        /// <summary>
+        /// Gets the current workflow status from the associated StudyRequest.
+        /// This is the single source of truth for workflow status.
+        /// </summary>
+        [NotMapped]
+        public CRS.Models.Workflow.StudyStatus CurrentStatus => 
+            StudyRequest?.CurrentStatus ?? CRS.Models.Workflow.StudyStatus.RequestCreated;
 
         [DataType(DataType.DateTime)]
         public DateTime? DateApproved { get; set; }

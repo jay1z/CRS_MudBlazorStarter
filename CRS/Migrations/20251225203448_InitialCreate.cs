@@ -105,6 +105,8 @@ namespace CRS.Migrations
                     Status = table.Column<int>(type: "int", nullable: false),
                     TenantId = table.Column<int>(type: "int", nullable: false),
                     IsDemo = table.Column<bool>(type: "bit", nullable: false),
+                    EmailNotificationsEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    WorkflowNotificationsEnabled = table.Column<bool>(type: "bit", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -955,6 +957,7 @@ namespace CRS.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     SpecialistUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RequestedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     PointOfContactType = table.Column<int>(type: "int", nullable: false),
                     ContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -962,7 +965,6 @@ namespace CRS.Migrations
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsApproved = table.Column<bool>(type: "bit", nullable: false),
                     IsComplete = table.Column<bool>(type: "bit", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
                     DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
                     TenantId = table.Column<int>(type: "int", nullable: false),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
@@ -987,6 +989,11 @@ namespace CRS.Migrations
                     table.ForeignKey(
                         name: "FK_ReserveStudies_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ReserveStudies_AspNetUsers_RequestedByUserId",
+                        column: x => x.RequestedByUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -1574,6 +1581,7 @@ namespace CRS.Migrations
                     StateChangedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     StatusChangedBy = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     StatusNotes = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
+                    PreviousStatus = table.Column<int>(type: "int", nullable: true),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true)
                 },
                 constraints: table =>
@@ -1709,6 +1717,41 @@ namespace CRS.Migrations
                         name: "FK_StudyStatusHistories_StudyRequests_RequestId",
                         column: x => x.RequestId,
                         principalTable: "StudyRequests",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TicketComments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    TicketId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AuthorUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsFromStaff = table.Column<bool>(type: "bit", nullable: false),
+                    Visibility = table.Column<int>(type: "int", nullable: false),
+                    PostedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EditedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsEdited = table.Column<bool>(type: "bit", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TicketComments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketComments_AspNetUsers_AuthorUserId",
+                        column: x => x.AuthorUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_TicketComments_SupportTickets_TicketId",
+                        column: x => x.TicketId,
+                        principalTable: "SupportTickets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -2138,6 +2181,11 @@ namespace CRS.Migrations
                 column: "PropertyManagerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudies_RequestedByUserId",
+                table: "ReserveStudies",
+                column: "RequestedByUserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_SpecialistUserId",
                 table: "ReserveStudies",
                 column: "SpecialistUserId");
@@ -2151,7 +2199,7 @@ namespace CRS.Migrations
                 name: "IX_ReserveStudy_Tenant_Active_Created_Covering",
                 table: "ReserveStudies",
                 columns: new[] { "TenantId", "IsActive", "DateCreated" })
-                .Annotation("SqlServer:Include", new[] { "CommunityId", "ApplicationUserId", "SpecialistUserId", "Status" });
+                .Annotation("SqlServer:Include", new[] { "CommunityId", "ApplicationUserId", "SpecialistUserId", "IsComplete" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudy_Tenant_Specialist_Active",
@@ -2161,7 +2209,7 @@ namespace CRS.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudy_Tenant_Status_Active",
                 table: "ReserveStudies",
-                columns: new[] { "TenantId", "Status", "IsActive" });
+                columns: new[] { "TenantId", "IsComplete", "IsActive" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudy_Tenant_User_Community",
@@ -2463,6 +2511,31 @@ namespace CRS.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_TicketComment_Tenant",
+                table: "TicketComments",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketComment_Tenant_Ticket_Posted",
+                table: "TicketComments",
+                columns: new[] { "TenantId", "TicketId", "PostedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketComment_Tenant_Ticket_Visibility",
+                table: "TicketComments",
+                columns: new[] { "TenantId", "TicketId", "Visibility" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketComments_AuthorUserId",
+                table: "TicketComments",
+                column: "AuthorUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketComments_TicketId",
+                table: "TicketComments",
+                column: "TicketId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserRoleAssignments_RoleId",
                 table: "UserRoleAssignments",
                 column: "RoleId");
@@ -2569,9 +2642,6 @@ namespace CRS.Migrations
                 name: "StudyStatusHistories");
 
             migrationBuilder.DropTable(
-                name: "SupportTickets");
-
-            migrationBuilder.DropTable(
                 name: "SystemSettings");
 
             migrationBuilder.DropTable(
@@ -2579,6 +2649,9 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "TenantHomepages");
+
+            migrationBuilder.DropTable(
+                name: "TicketComments");
 
             migrationBuilder.DropTable(
                 name: "UserRoleAssignments");
@@ -2609,6 +2682,9 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "StudyRequests");
+
+            migrationBuilder.DropTable(
+                name: "SupportTickets");
 
             migrationBuilder.DropTable(
                 name: "Roles");

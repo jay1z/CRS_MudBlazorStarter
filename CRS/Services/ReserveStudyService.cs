@@ -5,6 +5,7 @@ using CRS.Data;
 using CRS.EventsAndListeners;
 using CRS.Models;
 using CRS.Models.Emails;
+using CRS.Models.Workflow;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 using CRS.Services.Billing; // feature guard
@@ -556,7 +557,7 @@ namespace CRS.Services {
         }
 
         /// <summary>
-        /// Determines if a reserve study can be updated by checking its workflow status.
+        /// Determines if a reserve study can be updated by the HOA user.
         /// Reserve studies can only be updated before the proposal is accepted.
         /// </summary>
         public bool CanUpdateReserveStudy(ReserveStudy reserveStudy) {
@@ -566,15 +567,14 @@ namespace CRS.Services {
 
             // Cannot update if the study is complete or cancelled
             if (reserveStudy.IsComplete || 
-                reserveStudy.Status == ReserveStudy.WorkflowStatus.RequestCompleted ||
-                reserveStudy.Status == ReserveStudy.WorkflowStatus.RequestCancelled ||
-                reserveStudy.Status == ReserveStudy.WorkflowStatus.RequestArchived) {
+                reserveStudy.CurrentStatus == StudyStatus.RequestCompleted ||
+                reserveStudy.CurrentStatus == StudyStatus.RequestCancelled ||
+                reserveStudy.CurrentStatus == StudyStatus.RequestArchived) {
                 return false;
             }
 
             // HOA users can only update before the proposal is accepted
-            // Status values 0-5 are before ProposalAccepted (which is 6)
-            return (int)reserveStudy.Status < (int)ReserveStudy.WorkflowStatus.ProposalAccepted;
+            return reserveStudy.CurrentStatus < StudyStatus.ProposalAccepted;
         }
 
         /// <summary>
@@ -589,6 +589,7 @@ namespace CRS.Services {
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
                 .Include(rs => rs.User)
+                .Include(rs => rs.StudyRequest)
                 .Where(rs => rs.IsActive)
                 .OrderBy(rs => rs.Community.Name)
                 .AsSplitQuery()
@@ -610,6 +611,7 @@ namespace CRS.Services {
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
+                .Include(rs => rs.StudyRequest)
                 .Where(rs => rs.IsActive && rs.SpecialistUserId == userId)
                 .OrderBy(rs => rs.Community.Name)
                 .AsSplitQuery()
@@ -632,6 +634,7 @@ namespace CRS.Services {
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.User)
                 .Include(rs => rs.RequestedByUser)
+                .Include(rs => rs.StudyRequest)
                 .Where(rs => rs.IsActive && (rs.ApplicationUserId == userId || rs.RequestedByUserId == userId))
                 .OrderBy(rs => rs.Community.Name)
                 .AsSplitQuery()

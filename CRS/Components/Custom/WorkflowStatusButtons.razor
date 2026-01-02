@@ -1,5 +1,6 @@
-﻿@* A reusable component for workflow status buttons *@
+@* A reusable component for workflow status buttons *@
 @using CRS.Models
+@using CRS.Models.Workflow
 
 @foreach (var status in StatusList)
 {
@@ -18,7 +19,7 @@
     public List<StatusButtonInfo> StatusList { get; set; } = new();
 
     [Parameter]
-    public ReserveStudy.WorkflowStatus? CurrentStatus { get; set; }
+    public StudyStatus? CurrentStatus { get; set; }
 
     [Parameter]
     public EventCallback<StatusChangeEventArgs> OnStatusChange { get; set; }
@@ -48,27 +49,27 @@
         return Color.Default;
     }
 
-    private bool IsDisabled(ReserveStudy.WorkflowStatus status)
+    private bool IsDisabled(StudyStatus status)
     {
         // Special cases that shouldn't be disabled
-        if (status == ReserveStudy.WorkflowStatus.RequestCancelled || 
-            status == ReserveStudy.WorkflowStatus.RequestArchived)
+        if (status == StudyStatus.RequestCancelled || 
+            status == StudyStatus.RequestArchived)
             return false;
             
         // Can't go backward in workflow
         return CurrentStatus > status;
     }
 
-    // Class to hold status button information - moved from Details.razor
+    // Class to hold status button information
     public class StatusButtonInfo
     {
-        public ReserveStudy.WorkflowStatus Status { get; set; }
-        public string Text { get; set; }
+        public StudyStatus Status { get; set; }
+        public string Text { get; set; } = string.Empty;
         public bool HasCustomAction { get; set; }
         public Func<Guid, Task>? CustomAction { get; set; }
         public Color? SpecialColor { get; set; }
 
-        public StatusButtonInfo(ReserveStudy.WorkflowStatus status, string text, bool hasCustomAction, 
+        public StatusButtonInfo(StudyStatus status, string text, bool hasCustomAction, 
             Func<Guid, Task>? customAction = null, Color? specialColor = null)
         {
             Status = status;
@@ -79,10 +80,10 @@
         }
     }
 
-    // Event args for status changes - moved from Details.razor
+    // Event args for status changes
     public class StatusChangeEventArgs
     {
-        public ReserveStudy.WorkflowStatus Status { get; set; }
+        public StudyStatus Status { get; set; }
         public bool HasCustomAction { get; set; }
         public Func<Guid, Task> CustomAction { get; set; } = _ => Task.CompletedTask;
     }

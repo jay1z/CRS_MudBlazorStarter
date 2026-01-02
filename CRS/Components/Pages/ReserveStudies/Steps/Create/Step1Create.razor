@@ -40,7 +40,8 @@
             <MudItem xs="12">
                 <MudAutocomplete T="ApplicationUser" 
                                  Label="Select HOA User" 
-                                 @bind-Value="_selectedHoaUser"
+                                 Value="_selectedHoaUser"
+                                 ValueChanged="OnHoaUserChanged"
                                  SearchFunc="SearchHoaUsers"
                                  ToStringFunc="@(u => u == null ? "" : $"{u.FirstName} {u.LastName} ({u.Email})")"
                                  ShowProgressIndicator="true"
@@ -332,6 +333,19 @@
             .Take(10);
     }
     
+    private async Task OnHoaUserChanged(ApplicationUser? user) {
+        _selectedHoaUser = user;
+        
+        // Reload communities for the selected HOA user
+        await LoadUserCommunities();
+        
+        // Reset community selection when HOA user changes
+        selectedCommunity = null;
+        useExistingCommunity = false;
+        
+        StateHasChanged();
+    }
+    
     /// <summary>
     /// Gets the selected HOA user for the study.
     /// </summary>
@@ -367,24 +381,49 @@
             return;
         }
 
-        if (UserState.CurrentUser == null) {
+        using var context = await DbFactory.CreateDbContextAsync();
+        var currentTenantId = TenantContext.TenantId.Value;
+        
+        // Determine which user's communities to load
+        Guid? targetUserId = null;
+        
+        if (_isStaff && _selectedHoaUser != null) {
+            // Staff with selected HOA user: load that user's communities
+            targetUserId = _selectedHoaUser.Id;
+            Logger.LogInformation("LoadUserCommunities: Staff loading communities for HOA user {UserId}", targetUserId);
+        } else if (_isHoaUser && UserState.CurrentUser != null) {
+            // HOA user: load their own communities
+            targetUserId = UserState.CurrentUser.Id;
+            Logger.LogInformation("LoadUserCommunities: HOA user loading their own communities {UserId}", targetUserId);
+        } else if (_isStaff) {
+            // Staff without selected HOA user: load all tenant communities
+            Logger.LogInformation("LoadUserCommunities: Staff loading all tenant communities");
+            existingCommunities = await context.Communities
+                .Include(c => c.PhysicalAddress)
+                .Include(c => c.MailingAddress)
+                .AsNoTracking()
+                .Where(c => c.TenantId == currentTenantId)
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+            return;
+        } else {
             existingCommunities = new List<Community>();
             return;
         }
 
-        using var context = await DbFactory.CreateDbContextAsync();
-        var currentTenantId = TenantContext.TenantId.Value;
-        var currentUserId = UserState.CurrentUser.Id;
-        
+        // Load communities where the user is associated via reserve studies
+        // Check both ApplicationUserId (creator) and RequestedByUserId (customer)
         var userStudyCommunityIds = await context.ReserveStudies
             .AsNoTracking()
-            .Where(rs => rs.TenantId == currentTenantId && rs.ApplicationUserId == currentUserId)
+            .Where(rs => rs.TenantId == currentTenantId && 
+                        (rs.ApplicationUserId == targetUserId || rs.RequestedByUserId == targetUserId))
             .Select(rs => rs.CommunityId)
             .Distinct()
             .ToListAsync();
 
         if (!userStudyCommunityIds.Any()) {
             existingCommunities = new List<Community>();
+            Logger.LogInformation("LoadUserCommunities: No communities found for user {UserId}", targetUserId);
             return;
         }
 
@@ -395,6 +434,9 @@
             .Where(c => userStudyCommunityIds.Contains(c.Id))
             .OrderBy(c => c.Name)
             .ToListAsync();
+            
+        Logger.LogInformation("LoadUserCommunities: Found {Count} communities for user {UserId}", 
+            existingCommunities.Count, targetUserId);
     }
 
     private async Task OnCommunityTypeChanged(bool useExisting) {

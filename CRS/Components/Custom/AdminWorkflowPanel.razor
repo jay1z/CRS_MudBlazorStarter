@@ -1,0 +1,322 @@
+﻿@using CRS.Models.Workflow
+@using CRS.Services.Workflow
+
+<AuthorizeView Policy="RequirePlatformAdmin">
+    <Authorized>
+        <MudCard Elevation="3" Class="mb-4" Style="border-radius: 12px; border: 2px solid #f59e0b;">
+            <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 12px 16px;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Style="color: white;" />
+                    <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: 600;">
+                        Admin Workflow Controls
+                    </MudText>
+                </MudStack>
+            </div>
+            <MudCardContent>
+                <MudStack Spacing="3">
+                    <!-- Current Status Display -->
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2">
+                            <strong>Current Status:</strong> @CurrentStatus.ToDisplayTitle()
+                        </MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">
+                            @CurrentStatus.ToPhase()
+                        </MudChip>
+                    </MudStack>
+
+                    <MudDivider />
+
+                    <!-- Quick Actions -->
+                    <MudText Typo="Typo.caption" Style="font-weight: 600; color: #666;">QUICK ACTIONS</MudText>
+                    
+                    <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                        @if (CurrentStatus != StudyStatus.RequestCancelled)
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Error" 
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Cancel"
+                                       OnClick="OpenCancelDialog">
+                                Cancel Study
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Success" 
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Restore"
+                                       OnClick="OpenReverseCancelDialog">
+                                Reverse Cancellation
+                            </MudButton>
+                        }
+
+                        @if (CurrentStatus != StudyStatus.RequestCompleted && CurrentStatus != StudyStatus.RequestArchived)
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                       OnClick="OpenForceCompleteDialog">
+                                Force Complete
+                            </MudButton>
+                        }
+                    </MudStack>
+
+                    <MudDivider />
+
+                    <!-- Skip to Stage -->
+                    <MudText Typo="Typo.caption" Style="font-weight: 600; color: #666;">SKIP TO STAGE</MudText>
+                    
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudSelect T="StudyStatus" 
+                                   @bind-Value="SelectedSkipStatus"
+                                   Label="Target Stage"
+                                   Variant="Variant.Outlined"
+                                   Dense="true"
+                                   Style="min-width: 250px;">
+                            @foreach (var status in GetForwardStatuses())
+                            {
+                                <MudSelectItem Value="@status">
+                                    @status.ToDisplayTitle() (@status.ToPhase())
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Warning" 
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.SkipNext"
+                                   Disabled="@(SelectedSkipStatus == default || SelectedSkipStatus == CurrentStatus)"
+                                   OnClick="OpenSkipDialog">
+                            Skip
+                        </MudButton>
+                    </MudStack>
+
+                    <MudDivider />
+
+                    <!-- Move Back to Stage -->
+                    <MudText Typo="Typo.caption" Style="font-weight: 600; color: #666;">MOVE BACK</MudText>
+                    
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudSelect T="StudyStatus" 
+                                   @bind-Value="SelectedBackStatus"
+                                   Label="Target Stage"
+                                   Variant="Variant.Outlined"
+                                   Dense="true"
+                                   Style="min-width: 250px;">
+                            @foreach (var status in GetBackwardStatuses())
+                            {
+                                <MudSelectItem Value="@status">
+                                    @status.ToDisplayTitle() (@status.ToPhase())
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Secondary" 
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Undo"
+                                   Disabled="@(SelectedBackStatus == default)"
+                                   OnClick="OpenMoveBackDialog">
+                            Move Back
+                        </MudButton>
+                    </MudStack>
+
+                    <!-- Status History Toggle -->
+                    <MudDivider />
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Default" 
+                               Size="Size.Small"
+                               StartIcon="@(ShowHistory ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.History)"
+                               OnClick="@(() => ShowHistory = !ShowHistory)">
+                        @(ShowHistory ? "Hide" : "Show") Status History
+                    </MudButton>
+
+                    @if (ShowHistory && StatusHistory != null && StatusHistory.Any())
+                    {
+                        <MudPaper Elevation="0" Class="pa-3" Style="background: #f9fafb; border-radius: 8px; max-height: 300px; overflow-y: auto;">
+                            <MudTimeline TimelinePosition="TimelinePosition.Start">
+                                @foreach (var history in StatusHistory.OrderByDescending(h => h.ChangedAt).Take(20))
+                                {
+                                    <MudTimelineItem Color="Color.Primary" Size="Size.Small">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                                                @history.FromStatus.ToDisplayTitle() → @history.ToStatus.ToDisplayTitle()
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                @history.ChangedAt.LocalDateTime.ToString("MMM dd, yyyy h:mm tt")
+                                                @if (!string.IsNullOrEmpty(history.ChangedBy))
+                                                {
+                                                    <span> by @history.ChangedBy</span>
+                                                }
+                                            </MudText>
+                                            @if (!string.IsNullOrEmpty(history.Notes))
+                                            {
+                                                <MudText Typo="Typo.caption" Style="color: #999; font-style: italic;">
+                                                    "@history.Notes"
+                                                </MudText>
+                                            }
+                                        </MudStack>
+                                    </MudTimelineItem>
+                                }
+                            </MudTimeline>
+                        </MudPaper>
+                    }
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public Guid StudyId { get; set; }
+    [Parameter] public StudyStatus CurrentStatus { get; set; }
+    [Parameter] public List<StudyStatusHistory>? StatusHistory { get; set; }
+    [Parameter] public EventCallback OnActionCompleted { get; set; }
+
+    [Inject] private IWorkflowActionService WorkflowActionService { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private StudyStatus SelectedSkipStatus { get; set; }
+    private StudyStatus SelectedBackStatus { get; set; }
+    private bool ShowHistory { get; set; } = false;
+
+    private IEnumerable<StudyStatus> GetForwardStatuses()
+    {
+        return Enum.GetValues<StudyStatus>()
+            .Where(s => (int)s > (int)CurrentStatus && s != StudyStatus.RequestCancelled)
+            .OrderBy(s => (int)s);
+    }
+
+    private IEnumerable<StudyStatus> GetBackwardStatuses()
+    {
+        return Enum.GetValues<StudyStatus>()
+            .Where(s => (int)s < (int)CurrentStatus && s != StudyStatus.RequestCancelled && s != StudyStatus.RequestArchived)
+            .OrderBy(s => (int)s);
+    }
+
+    private async Task OpenCancelDialog()
+    {
+        var parameters = new DialogParameters<ConfirmActionDialog>
+        {
+            { x => x.Title, "Cancel Study" },
+            { x => x.Message, "Are you sure you want to cancel this study? A reason is required." },
+            { x => x.RequireReason, true },
+            { x => x.ConfirmButtonText, "Cancel Study" },
+            { x => x.ConfirmButtonColor, Color.Error }
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmActionDialog>("Cancel Study", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string reason)
+        {
+            var actionResult = await WorkflowActionService.CancelAsync(StudyId, reason);
+            HandleResult(actionResult, "Study cancelled");
+        }
+    }
+
+    private async Task OpenReverseCancelDialog()
+    {
+        var parameters = new DialogParameters<ConfirmActionDialog>
+        {
+            { x => x.Title, "Reverse Cancellation" },
+            { x => x.Message, "This will restore the study to its previous status. Continue?" },
+            { x => x.RequireReason, false },
+            { x => x.ConfirmButtonText, "Restore Study" },
+            { x => x.ConfirmButtonColor, Color.Success }
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmActionDialog>("Reverse Cancellation", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var actionResult = await WorkflowActionService.ReverseCancellationAsync(StudyId, default);
+            HandleResult(actionResult, "Cancellation reversed");
+        }
+    }
+
+    private async Task OpenForceCompleteDialog()
+    {
+        var parameters = new DialogParameters<ConfirmActionDialog>
+        {
+            { x => x.Title, "Force Complete Study" },
+            { x => x.Message, "This will skip all remaining stages and mark the study as complete. A reason is required." },
+            { x => x.RequireReason, true },
+            { x => x.ConfirmButtonText, "Force Complete" },
+            { x => x.ConfirmButtonColor, Color.Primary }
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmActionDialog>("Force Complete", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string reason)
+        {
+            var actionResult = await WorkflowActionService.ForceCompleteAsync(StudyId, reason);
+            HandleResult(actionResult, "Study force completed");
+        }
+    }
+
+    private async Task OpenSkipDialog()
+    {
+        if (SelectedSkipStatus == default) return;
+
+        var parameters = new DialogParameters<ConfirmActionDialog>
+        {
+            { x => x.Title, $"Skip to {SelectedSkipStatus.ToDisplayTitle()}" },
+            { x => x.Message, $"This will skip all stages between current and {SelectedSkipStatus.ToDisplayTitle()}. A reason is required." },
+            { x => x.RequireReason, true },
+            { x => x.ConfirmButtonText, "Skip Stages" },
+            { x => x.ConfirmButtonColor, Color.Warning }
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmActionDialog>("Skip Stages", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string reason)
+        {
+            var actionResult = await WorkflowActionService.SkipToStageAsync(StudyId, SelectedSkipStatus, reason);
+            HandleResult(actionResult, $"Skipped to {SelectedSkipStatus.ToDisplayTitle()}");
+        }
+    }
+
+    private async Task OpenMoveBackDialog()
+    {
+        if (SelectedBackStatus == default) return;
+
+        var parameters = new DialogParameters<ConfirmActionDialog>
+        {
+            { x => x.Title, $"Move Back to {SelectedBackStatus.ToDisplayTitle()}" },
+            { x => x.Message, $"This will revert the study to {SelectedBackStatus.ToDisplayTitle()}. A reason is required." },
+            { x => x.RequireReason, true },
+            { x => x.ConfirmButtonText, "Move Back" },
+            { x => x.ConfirmButtonColor, Color.Secondary }
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmActionDialog>("Move Back", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string reason)
+        {
+            var actionResult = await WorkflowActionService.MoveBackAsync(StudyId, SelectedBackStatus, reason);
+            HandleResult(actionResult, $"Moved back to {SelectedBackStatus.ToDisplayTitle()}");
+        }
+    }
+
+    private async void HandleResult(WorkflowActionResult result, string successMessage)
+    {
+        if (result.Success)
+        {
+            Snackbar.Add(successMessage, Severity.Success);
+            await OnActionCompleted.InvokeAsync();
+        }
+        else
+        {
+            var errorMsg = result.ValidationErrors.Any() 
+                ? string.Join(", ", result.ValidationErrors) 
+                : result.Message;
+            Snackbar.Add($"Action failed: {errorMsg}", Severity.Error);
+        }
+    }
+}

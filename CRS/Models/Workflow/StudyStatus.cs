@@ -1,88 +1,233 @@
-using System;
+﻿using System;
 
 namespace CRS.Models.Workflow {
     /// <summary>
     /// Represents the lifecycle states for a Reserve Study request from submission to archival.
+    /// Matches the 32-stage workflow document.
     /// </summary>
     public enum StudyStatus {
+        // ═══════════════════════════════════════════════════════════════
+        // REQUEST PHASE
+        // ═══════════════════════════════════════════════════════════════
+        
         /// <summary>
-        /// Initial state when a board member creates a new request.
-        /// Allowed: NewRequest -> PendingDetails
+        /// Initial request submitted by HOA/client.
+        /// Transitions: → ProposalCreated
         /// </summary>
-        NewRequest = 0,
+        RequestCreated = 0,
+
+        // ═══════════════════════════════════════════════════════════════
+        // PROPOSAL PHASE
+        // ═══════════════════════════════════════════════════════════════
+        
         /// <summary>
-        /// Waiting for all required details to be completed.
-        /// Allowed: PendingDetails -> ReadyForReview
+        /// Staff creates proposal for the study.
+        /// Transitions: → ProposalReviewed
         /// </summary>
-        PendingDetails = 1,
+        ProposalCreated = 1,
+
         /// <summary>
-        /// All elements completed and ready for tenant review.
-        /// Allowed: ReadyForReview -> Approved | NeedsInfo
+        /// Internal review of proposal.
+        /// Transitions: → ProposalUpdated | ProposalApproved
         /// </summary>
-        ReadyForReview = 2,
+        ProposalReviewed = 2,
+
         /// <summary>
-        /// Tenant requires more information from the HOA.
-        /// Allowed: NeedsInfo -> ReadyForReview (once info provided)
+        /// Proposal modified after review.
+        /// Transitions: → ProposalReviewed | ProposalApproved
         /// </summary>
-        NeedsInfo = 3,
+        ProposalUpdated = 3,
+
         /// <summary>
-        /// Tenant approved the request and can assign a specialist.
-        /// Allowed: Approved -> Assigned
+        /// Internal approval of proposal.
+        /// Transitions: → ProposalSent
         /// </summary>
-        Approved = 4,
+        ProposalApproved = 4,
+
         /// <summary>
-        /// A specialist has been assigned to the request.
-        /// Allowed: Assigned -> ProposalPendingESign
+        /// Proposal sent to client.
+        /// Transitions: → ProposalAccepted | RequestCancelled
         /// </summary>
-        Assigned = 5,
+        ProposalSent = 5,
+
         /// <summary>
-        /// Proposal has been drafted and is pending HOA e-signature.
-        /// Allowed: ProposalPendingESign -> Accepted | Rejected
+        /// Client accepts the proposal.
+        /// Transitions: → ServiceContactsRequested | FinancialInfoRequested
         /// </summary>
-        ProposalPendingESign = 6,
+        ProposalAccepted = 6,
+
+        // ═══════════════════════════════════════════════════════════════
+        // DATA COLLECTION PHASE
+        // ═══════════════════════════════════════════════════════════════
+        
         /// <summary>
-        /// HOA accepted the proposal (signed).
-        /// Allowed: Accepted -> Scheduled
+        /// Request for service contacts sent.
+        /// Transitions: → FinancialInfoRequested
         /// </summary>
-        Accepted = 7,
+        ServiceContactsRequested = 7,
+
         /// <summary>
-        /// HOA rejected the proposal (signed reject or expired).
-        /// Terminal for this branch unless re-proposed by tenant.
+        /// Request for financial data sent to client.
+        /// Transitions: → FinancialInfoCreated
         /// </summary>
-        Rejected = 8,
+        FinancialInfoRequested = 8,
+
         /// <summary>
-        /// Inspection appointment has been scheduled.
-        /// Allowed: Scheduled -> InProgress
+        /// Client starts entering financial info.
+        /// Transitions: → FinancialInfoSubmitted
         /// </summary>
-        Scheduled = 9,
+        FinancialInfoCreated = 9,
+
         /// <summary>
-        /// Inspection is currently in progress.
-        /// Allowed: InProgress -> UnderReview
+        /// Client submits financial info.
+        /// Transitions: → FinancialInfoReviewed
         /// </summary>
-        InProgress = 10,
+        FinancialInfoSubmitted = 10,
+
         /// <summary>
-        /// Data uploaded and under internal review.
-        /// Allowed: UnderReview -> ReportDrafted | InProgress
+        /// Staff reviews financial info.
+        /// Transitions: → FinancialInfoReceived | FinancialInfoRequested
         /// </summary>
-        UnderReview = 11,
+        FinancialInfoReviewed = 11,
+
         /// <summary>
-        /// Draft report created and awaiting QA.
-        /// Allowed: ReportDrafted -> ApprovedReport
+        /// Financial info accepted/complete.
+        /// Transitions: → SiteVisit
         /// </summary>
-        ReportDrafted = 12,
+        FinancialInfoReceived = 12,
+
+        // ═══════════════════════════════════════════════════════════════
+        // SITE VISIT PHASE
+        // ═══════════════════════════════════════════════════════════════
+        
         /// <summary>
-        /// Final report approved after QA.
-        /// Allowed: ApprovedReport -> Complete
+        /// Site visit phase begins.
+        /// Transitions: → SiteVisitScheduled
         /// </summary>
-        ApprovedReport = 13,
+        SiteVisit = 13,
+
         /// <summary>
-        /// Report delivered to HOA; workflow complete.
-        /// Allowed: Complete -> Archived
+        /// Site visit date scheduled.
+        /// Transitions: → SiteVisitCompleted
         /// </summary>
-        Complete = 14,
+        SiteVisitScheduled = 14,
+
         /// <summary>
-        /// Request archived. A3-year renewal reminder is scheduled.
+        /// Physical site visit completed.
+        /// Transitions: → SiteVisitDataEntered
         /// </summary>
-        Archived = 15
+        SiteVisitCompleted = 15,
+
+        /// <summary>
+        /// Site visit data entered into system.
+        /// Transitions: → FundingPlanReady
+        /// </summary>
+        SiteVisitDataEntered = 16,
+
+        // ═══════════════════════════════════════════════════════════════
+        // FUNDING PLAN PHASE
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// Ready to create funding plan.
+        /// Transitions: → FundingPlanInProcess
+        /// </summary>
+        FundingPlanReady = 17,
+
+        /// <summary>
+        /// Funding plan being developed.
+        /// Transitions: → FundingPlanComplete
+        /// </summary>
+        FundingPlanInProcess = 18,
+
+        /// <summary>
+        /// Funding plan finished.
+        /// Transitions: → NarrativeReady
+        /// </summary>
+        FundingPlanComplete = 19,
+
+        // ═══════════════════════════════════════════════════════════════
+        // NARRATIVE/REPORT PHASE
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// Ready to write narrative.
+        /// Transitions: → NarrativeInProcess
+        /// </summary>
+        NarrativeReady = 20,
+
+        /// <summary>
+        /// Narrative being written.
+        /// Transitions: → NarrativeComplete
+        /// </summary>
+        NarrativeInProcess = 21,
+
+        /// <summary>
+        /// Narrative finished.
+        /// Transitions: → NarrativePrintReady
+        /// </summary>
+        NarrativeComplete = 22,
+
+        /// <summary>
+        /// Ready for printing.
+        /// Transitions: → NarrativePackaged
+        /// </summary>
+        NarrativePrintReady = 23,
+
+        /// <summary>
+        /// Report packaged for delivery.
+        /// Transitions: → NarrativeSent
+        /// </summary>
+        NarrativePackaged = 24,
+
+        /// <summary>
+        /// Narrative sent to client.
+        /// Transitions: → ReportReady
+        /// </summary>
+        NarrativeSent = 25,
+
+        // ═══════════════════════════════════════════════════════════════
+        // FINAL REPORT PHASE
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// Final report ready.
+        /// Transitions: → ReportInProcess
+        /// </summary>
+        ReportReady = 26,
+
+        /// <summary>
+        /// Final report being finalized.
+        /// Transitions: → ReportComplete
+        /// </summary>
+        ReportInProcess = 27,
+
+        /// <summary>
+        /// Final report complete.
+        /// Transitions: → RequestCompleted
+        /// </summary>
+        ReportComplete = 28,
+
+        // ═══════════════════════════════════════════════════════════════
+        // COMPLETION
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// Study fully completed and delivered.
+        /// Transitions: → RequestArchived
+        /// </summary>
+        RequestCompleted = 29,
+
+        /// <summary>
+        /// Request was cancelled.
+        /// Terminal state.
+        /// </summary>
+        RequestCancelled = 30,
+
+        /// <summary>
+        /// Completed study archived.
+        /// Terminal state. 3-year renewal reminder scheduled.
+        /// </summary>
+        RequestArchived = 31
     }
 }
