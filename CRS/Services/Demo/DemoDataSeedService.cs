@@ -98,7 +98,7 @@ namespace CRS.Services.Demo
             };
         }
         
-        private ReserveStudy CreateSampleReserveStudy(Community property)
+        private CRS.Models.ReserveStudy CreateSampleReserveStudy(Community property)
         {
             var startingBalance = property.NumberOfUnits switch
             {
@@ -114,7 +114,7 @@ namespace CRS.Services.Demo
                 _ => 2500m
             };
             
-            return new ReserveStudy
+            return new CRS.Models.ReserveStudy
             {
                 CommunityId = property.Id,
                 Name = $"{property.Name} - Reserve Study {DateTime.Now.Year}",

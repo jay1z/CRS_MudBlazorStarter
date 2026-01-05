@@ -1,0 +1,61 @@
+﻿<MudStack Spacing="1">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@Label</MudText>
+        @if (!IsOverriding)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Default</MudChip>
+        }
+    </MudStack>
+    
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudSwitch T="bool" Value="IsOverriding" ValueChanged="OnToggleOverride"
+                   Color="Color.Primary" Size="Size.Small"
+                   Label="@(IsOverriding ? "Override" : "Use Default")"
+                   LabelPosition="LabelPosition.Start" />
+    </MudStack>
+    
+    <MudNumericField T="decimal" Value="@CurrentValue" ValueChanged="OnValueChanged"
+                     Disabled="@(!IsOverriding)"
+                     Variant="Variant.Outlined"
+                     Min="0" Format="N0"
+                     Adornment="Adornment.Start" AdornmentText="$"
+                     HelperText="@HelperText" />
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+    
+    [Parameter]
+    public decimal? OverrideValue { get; set; }
+    
+    [Parameter]
+    public decimal DefaultValue { get; set; }
+    
+    [Parameter]
+    public EventCallback<decimal?> OnOverrideValueChanged { get; set; }
+    
+    [Parameter]
+    public string? HelperText { get; set; }
+    
+    private bool IsOverriding => OverrideValue.HasValue;
+    
+    private decimal CurrentValue => OverrideValue ?? DefaultValue;
+    
+    private async Task OnToggleOverride(bool isOverriding)
+    {
+        if (isOverriding)
+        {
+            await OnOverrideValueChanged.InvokeAsync(DefaultValue);
+        }
+        else
+        {
+            await OnOverrideValueChanged.InvokeAsync(null);
+        }
+    }
+    
+    private async Task OnValueChanged(decimal value)
+    {
+        await OnOverrideValueChanged.InvokeAsync(value);
+    }
+}

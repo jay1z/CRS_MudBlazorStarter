@@ -1,0 +1,168 @@
+﻿@using CRS.Core.ReserveCalculator.Enums
+@using CRS.Models.ReserveStudyCalculator
+@using CRS.Services.ReserveCalculator
+
+<MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
+    <MudStack Spacing="3">
+        <MudText Typo="Typo.h6" Color="Color.Primary">
+            <MudIcon Icon="@Icons.Material.Filled.Tune" Class="mr-2" Style="vertical-align: middle;" />
+            Scenario Assumptions
+        </MudText>
+        
+        @if (EffectiveSettings != null)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+                Settings with a <MudChip T="string" Size="Size.Small" Color="Color.Default">Default</MudChip> badge use your tenant defaults.
+                Toggle the switch to override with scenario-specific values.
+            </MudAlert>
+        }
+        
+        <MudDivider />
+        
+        <!-- Required Fields (always editable) -->
+        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Required Fields</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudNumericField T="int" @bind-Value="Scenario.StartYear"
+                                 Label="Start Year" Variant="Variant.Outlined" Required="true"
+                                 Min="2000" Max="2100"
+                                 HelperText="First year of projection" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4">
+                <MudNumericField T="decimal" @bind-Value="Scenario.StartingBalance"
+                                 Label="Starting Balance" Variant="Variant.Outlined" Required="true"
+                                 Min="0" Format="N0"
+                                 Adornment="Adornment.Start" AdornmentText="$"
+                                 HelperText="Current reserve fund balance" />
+            </MudItem>
+        </MudGrid>
+        
+        <!-- Overridable Settings -->
+        <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mt-4">Projection & Rate Settings</MudText>
+        <MudGrid>
+            <!-- Projection Years -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridableField TValue="int"
+                                  Label="Projection Years"
+                                  OverrideValue="@Scenario.OverrideProjectionYears"
+                                  DefaultValue="@(EffectiveSettings?.ProjectionYears ?? 30)"
+                                  OnOverrideValueChanged="@(v => { Scenario.OverrideProjectionYears = v; OnSettingChanged.InvokeAsync(); })"
+                                  HelperText="Number of years to project"
+                                  Min="1" Max="100" />
+            </MudItem>
+            
+            <!-- Inflation Rate -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridablePercentField Label="Inflation Rate"
+                                         OverrideValue="@Scenario.OverrideInflationRate"
+                                         DefaultValue="@(EffectiveSettings?.InflationRate ?? 0.03m)"
+                                         OnOverrideValueChanged="@(v => { Scenario.OverrideInflationRate = v; OnSettingChanged.InvokeAsync(); })"
+                                         HelperText="Annual cost increase" />
+            </MudItem>
+            
+            <!-- Interest Rate -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridablePercentField Label="Interest Rate"
+                                         OverrideValue="@Scenario.OverrideInterestRateAnnual"
+                                         DefaultValue="@(EffectiveSettings?.InterestRateAnnual ?? 0.02m)"
+                                         OnOverrideValueChanged="@(v => { Scenario.OverrideInterestRateAnnual = v; OnSettingChanged.InvokeAsync(); })"
+                                         HelperText="Annual fund earnings" />
+            </MudItem>
+            
+            <!-- Interest Model -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridableSelectField TEnum="InterestModel"
+                                        Label="Interest Model"
+                                        OverrideValue="@Scenario.OverrideInterestModel"
+                                        DefaultValue="@(EffectiveSettings?.InterestModel ?? InterestModel.MonthlySimulation)"
+                                        OnOverrideValueChanged="@(v => { Scenario.OverrideInterestModel = v; OnSettingChanged.InvokeAsync(); })"
+                                        HelperText="How interest is calculated" />
+            </MudItem>
+        </MudGrid>
+        
+        <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mt-4">Contribution Settings</MudText>
+        <MudGrid>
+            <!-- Contribution Strategy -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridableSelectField TEnum="ContributionStrategy"
+                                        Label="Contribution Strategy"
+                                        OverrideValue="@Scenario.OverrideContributionStrategy"
+                                        DefaultValue="@(EffectiveSettings?.ContributionStrategy ?? ContributionStrategy.EscalatingPercent)"
+                                        OnOverrideValueChanged="@(v => { Scenario.OverrideContributionStrategy = v; OnSettingChanged.InvokeAsync(); })"
+                                        HelperText="How contributions are determined" />
+            </MudItem>
+            
+            <!-- Initial Annual Contribution -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridableCurrencyField Label="Initial Annual Contribution"
+                                          OverrideValue="@Scenario.OverrideInitialAnnualContribution"
+                                          DefaultValue="@(EffectiveSettings?.InitialAnnualContribution ?? 50000m)"
+                                          OnOverrideValueChanged="@(v => { Scenario.OverrideInitialAnnualContribution = v; OnSettingChanged.InvokeAsync(); })"
+                                          HelperText="Starting annual amount" />
+            </MudItem>
+            
+            <!-- Escalation Rate -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridablePercentField Label="Escalation Rate"
+                                         OverrideValue="@Scenario.OverrideContributionEscalationRate"
+                                         DefaultValue="@(EffectiveSettings?.ContributionEscalationRate ?? 0.03m)"
+                                         OnOverrideValueChanged="@(v => { Scenario.OverrideContributionEscalationRate = v; OnSettingChanged.InvokeAsync(); })"
+                                         HelperText="Annual contribution increase" />
+            </MudItem>
+            
+            <!-- Contribution Frequency -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridableSelectField TEnum="ContributionFrequency"
+                                        Label="Contribution Frequency"
+                                        OverrideValue="@Scenario.OverrideContributionFrequency"
+                                        DefaultValue="@(EffectiveSettings?.ContributionFrequency ?? ContributionFrequency.Monthly)"
+                                        OnOverrideValueChanged="@(v => { Scenario.OverrideContributionFrequency = v; OnSettingChanged.InvokeAsync(); })"
+                                        HelperText="How often contributions are made" />
+            </MudItem>
+            
+            <!-- Contribution Timing -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridableSelectField TEnum="Timing"
+                                        Label="Contribution Timing"
+                                        OverrideValue="@Scenario.OverrideContributionTiming"
+                                        DefaultValue="@(EffectiveSettings?.ContributionTiming ?? Timing.StartOfPeriod)"
+                                        OnOverrideValueChanged="@(v => { Scenario.OverrideContributionTiming = v; OnSettingChanged.InvokeAsync(); })"
+                                        HelperText="When contributions are deposited" />
+            </MudItem>
+        </MudGrid>
+        
+        <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mt-4">Calculation Settings</MudText>
+        <MudGrid>
+            <!-- Expenditure Timing -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridableSelectField TEnum="ExpenditureTiming"
+                                        Label="Expenditure Timing"
+                                        OverrideValue="@Scenario.OverrideExpenditureTiming"
+                                        DefaultValue="@(EffectiveSettings?.ExpenditureTiming ?? ExpenditureTiming.MidYear)"
+                                        OnOverrideValueChanged="@(v => { Scenario.OverrideExpenditureTiming = v; OnSettingChanged.InvokeAsync(); })"
+                                        HelperText="When expenditures are applied" />
+            </MudItem>
+            
+            <!-- Rounding Policy -->
+            <MudItem xs="12" sm="6" md="4">
+                <OverridableSelectField TEnum="RoundingPolicy"
+                                        Label="Rounding Policy"
+                                        OverrideValue="@Scenario.OverrideRoundingPolicy"
+                                        DefaultValue="@(EffectiveSettings?.RoundingPolicy ?? RoundingPolicy.PerComponentPerYear)"
+                                        OnOverrideValueChanged="@(v => { Scenario.OverrideRoundingPolicy = v; OnSettingChanged.InvokeAsync(); })"
+                                        HelperText="How values are rounded" />
+            </MudItem>
+        </MudGrid>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired]
+    public ReserveStudyScenario Scenario { get; set; } = null!;
+    
+    [Parameter]
+    public EffectiveReserveSettings? EffectiveSettings { get; set; }
+    
+    [Parameter]
+    public EventCallback OnSettingChanged { get; set; }
+}

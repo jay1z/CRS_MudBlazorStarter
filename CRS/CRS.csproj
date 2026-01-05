@@ -57,6 +57,7 @@
     <Folder Include="MultiTenancy\Database\" />
     <Folder Include="Services\Guid\" />
     <Folder Include="Services\MultiTenancy\Provisioning\" />
+    <Folder Include="Tests\ReserveStudy\" />
     <Folder Include="Workers\" />
   </ItemGroup>
 

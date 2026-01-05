@@ -1,0 +1,98 @@
+﻿@typeparam TValue where TValue : struct
+
+<MudStack Spacing="1">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@Label</MudText>
+        @if (!IsOverriding)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Default</MudChip>
+        }
+    </MudStack>
+    
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudSwitch T="bool" Value="IsOverriding" ValueChanged="OnToggleOverride"
+                   Color="Color.Primary" Size="Size.Small"
+                   Label="@(IsOverriding ? "Override" : "Use Default")"
+                   LabelPosition="LabelPosition.Start" />
+    </MudStack>
+    
+    @if (typeof(TValue) == typeof(int))
+    {
+        <MudNumericField T="int" Value="@GetIntValue()" ValueChanged="OnIntValueChanged"
+                         Disabled="@(!IsOverriding)"
+                         Variant="Variant.Outlined" 
+                         Min="@(Min.HasValue ? (int)Min.Value : int.MinValue)"
+                         Max="@(Max.HasValue ? (int)Max.Value : int.MaxValue)"
+                         HelperText="@HelperText" />
+    }
+    else if (typeof(TValue) == typeof(decimal))
+    {
+        <MudNumericField T="decimal" Value="@GetDecimalValue()" ValueChanged="OnDecimalValueChanged"
+                         Disabled="@(!IsOverriding)"
+                         Variant="Variant.Outlined"
+                         Min="@(Min ?? decimal.MinValue)"
+                         Max="@(Max ?? decimal.MaxValue)"
+                         HelperText="@HelperText" />
+    }
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+    
+    [Parameter]
+    public TValue? OverrideValue { get; set; }
+    
+    [Parameter]
+    public TValue DefaultValue { get; set; }
+    
+    [Parameter]
+    public EventCallback<TValue?> OnOverrideValueChanged { get; set; }
+    
+    [Parameter]
+    public string? HelperText { get; set; }
+    
+    [Parameter]
+    public decimal? Min { get; set; }
+    
+    [Parameter]
+    public decimal? Max { get; set; }
+    
+    private bool IsOverriding => OverrideValue.HasValue;
+    
+    private int GetIntValue() => OverrideValue.HasValue 
+        ? Convert.ToInt32(OverrideValue.Value) 
+        : Convert.ToInt32(DefaultValue);
+    
+    private decimal GetDecimalValue() => OverrideValue.HasValue 
+        ? Convert.ToDecimal(OverrideValue.Value) 
+        : Convert.ToDecimal(DefaultValue);
+    
+    private async Task OnToggleOverride(bool isOverriding)
+    {
+        if (isOverriding)
+        {
+            await OnOverrideValueChanged.InvokeAsync(DefaultValue);
+        }
+        else
+        {
+            await OnOverrideValueChanged.InvokeAsync(null);
+        }
+    }
+    
+    private async Task OnIntValueChanged(int value)
+    {
+        if (typeof(TValue) == typeof(int))
+        {
+            await OnOverrideValueChanged.InvokeAsync((TValue)(object)value);
+        }
+    }
+    
+    private async Task OnDecimalValueChanged(decimal value)
+    {
+        if (typeof(TValue) == typeof(decimal))
+        {
+            await OnOverrideValueChanged.InvokeAsync((TValue)(object)value);
+        }
+    }
+}

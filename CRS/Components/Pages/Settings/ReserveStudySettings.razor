@@ -1,0 +1,285 @@
+﻿@page "/Settings/ReserveStudy"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using CRS.Core.ReserveCalculator.Enums
+@using CRS.Data
+@using CRS.Models.ReserveStudyCalculator
+@using CRS.Services.Tenant
+@using CRS.Services.ReserveCalculator
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Reserve Study Calculator Settings</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <!-- Header Section -->
+    <MudPaper Elevation="0" Class="pa-6 mb-4" Style="background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%); border-radius: 12px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Calculate" Class="mr-2" Style="vertical-align: middle;" />
+                    Reserve Study Calculator Settings
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    Configure default calculation parameters for reserve study projections
+                </MudText>
+            </MudStack>
+            @if (_hasUnsavedChanges)
+            {
+                <MudChip T="string" Color="Color.Warning" Style="background: white; color: #FF8C00;">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-1" />
+                    Unsaved Changes
+                </MudChip>
+            }
+        </MudStack>
+    </MudPaper>
+
+    @if (_settings == null)
+    {
+        <MudPaper Class="pa-8" Elevation="2" Style="border-radius: 12px;">
+            <MudStack AlignItems="AlignItems.Center">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Typo="Typo.body1">Loading settings...</MudText>
+            </MudStack>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+            <MudStack Spacing="4">
+                <!-- Projection Settings -->
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    <MudIcon Icon="@Icons.Material.Filled.Timeline" Class="mr-2" Style="vertical-align: middle;" />
+                    Projection Settings
+                </MudText>
+                <MudDivider />
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudNumericField T="int" @bind-Value="_settings.DefaultProjectionYears"
+                                         Label="Default Projection Years" Variant="Variant.Outlined"
+                                         Min="1" Max="100" Step="1"
+                                         HelperText="Typically 30 years"
+                                         Adornment="Adornment.End" AdornmentText="years"
+                                         @oninput="MarkChanged" />
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Rate Settings -->
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" Style="vertical-align: middle;" />
+                    Rate Settings
+                </MudText>
+                <MudDivider />
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudNumericField T="decimal" Value="@(_settings.DefaultInflationRate * 100)"
+                                         ValueChanged="@(v => { _settings.DefaultInflationRate = v / 100; MarkChanged(); })"
+                                         Label="Default Inflation Rate" Variant="Variant.Outlined"
+                                         Min="0" Max="50" Step="0.1m"
+                                         HelperText="Annual cost increase"
+                                         Adornment="Adornment.End" AdornmentText="%" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudNumericField T="decimal" Value="@(_settings.DefaultInterestRateAnnual * 100)"
+                                         ValueChanged="@(v => { _settings.DefaultInterestRateAnnual = v / 100; MarkChanged(); })"
+                                         Label="Default Interest Rate" Variant="Variant.Outlined"
+                                         Min="0" Max="30" Step="0.1m"
+                                         HelperText="Annual fund earnings"
+                                         Adornment="Adornment.End" AdornmentText="%" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="InterestModel" @bind-Value="_settings.DefaultInterestModel"
+                                   Label="Interest Calculation Model" Variant="Variant.Outlined"
+                                   HelperText="How interest is calculated"
+                                   @onclick="MarkChanged">
+                            <MudSelectItem Value="InterestModel.AnnualAverageBalance">Annual Average Balance</MudSelectItem>
+                            <MudSelectItem Value="InterestModel.MonthlySimulation">Monthly Simulation</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Contribution Settings -->
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Payments" Class="mr-2" Style="vertical-align: middle;" />
+                    Contribution Settings
+                </MudText>
+                <MudDivider />
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="ContributionStrategy" @bind-Value="_settings.DefaultContributionStrategy"
+                                   Label="Contribution Strategy" Variant="Variant.Outlined"
+                                   HelperText="How contributions are determined"
+                                   @onclick="MarkChanged">
+                            <MudSelectItem Value="ContributionStrategy.FixedAnnual">Fixed Annual</MudSelectItem>
+                            <MudSelectItem Value="ContributionStrategy.EscalatingPercent">Escalating Percent</MudSelectItem>
+                            <MudSelectItem Value="ContributionStrategy.MaintainNonNegativeBalance">Maintain Non-Negative Balance</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudNumericField T="decimal" @bind-Value="_settings.DefaultInitialAnnualContribution"
+                                         Label="Initial Annual Contribution" Variant="Variant.Outlined"
+                                         Min="0" Step="1000m"
+                                         HelperText="Starting annual amount"
+                                         Adornment="Adornment.Start" AdornmentText="$"
+                                         Format="N0"
+                                         @oninput="MarkChanged" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudNumericField T="decimal" Value="@(_settings.DefaultContributionEscalationRate * 100)"
+                                         ValueChanged="@(v => { _settings.DefaultContributionEscalationRate = v / 100; MarkChanged(); })"
+                                         Label="Contribution Escalation Rate" Variant="Variant.Outlined"
+                                         Min="0" Max="50" Step="0.1m"
+                                         HelperText="Annual contribution increase"
+                                         Adornment="Adornment.End" AdornmentText="%" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="ContributionFrequency" @bind-Value="_settings.DefaultContributionFrequency"
+                                   Label="Contribution Frequency" Variant="Variant.Outlined"
+                                   HelperText="How often contributions are made"
+                                   @onclick="MarkChanged">
+                            <MudSelectItem Value="ContributionFrequency.Annual">Annual</MudSelectItem>
+                            <MudSelectItem Value="ContributionFrequency.Monthly">Monthly</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="Timing" @bind-Value="_settings.DefaultContributionTiming"
+                                   Label="Contribution Timing" Variant="Variant.Outlined"
+                                   HelperText="When contributions are deposited"
+                                   @onclick="MarkChanged">
+                            <MudSelectItem Value="Timing.StartOfPeriod">Start of Period</MudSelectItem>
+                            <MudSelectItem Value="Timing.MidPeriod">Mid Period</MudSelectItem>
+                            <MudSelectItem Value="Timing.EndOfPeriod">End of Period</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Calculation Settings -->
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" Style="vertical-align: middle;" />
+                    Calculation Settings
+                </MudText>
+                <MudDivider />
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="ExpenditureTiming" @bind-Value="_settings.DefaultExpenditureTiming"
+                                   Label="Expenditure Timing" Variant="Variant.Outlined"
+                                   HelperText="When expenditures are applied"
+                                   @onclick="MarkChanged">
+                            <MudSelectItem Value="ExpenditureTiming.StartOfYear">Start of Year</MudSelectItem>
+                            <MudSelectItem Value="ExpenditureTiming.MidYear">Mid Year</MudSelectItem>
+                            <MudSelectItem Value="ExpenditureTiming.EndOfYear">End of Year</MudSelectItem>
+                            <MudSelectItem Value="ExpenditureTiming.MonthlySpread">Monthly Spread</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudSelect T="RoundingPolicy" @bind-Value="_settings.DefaultRoundingPolicy"
+                                   Label="Rounding Policy" Variant="Variant.Outlined"
+                                   HelperText="How values are rounded"
+                                   @onclick="MarkChanged">
+                            <MudSelectItem Value="RoundingPolicy.PerComponentPerYear">Per Component Per Year</MudSelectItem>
+                            <MudSelectItem Value="RoundingPolicy.PerYearTotalsOnly">Per Year Totals Only</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Save Button -->
+                <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-6">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetToDefaults">
+                        Reset to Defaults
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveSettings"
+                               Disabled="@(!_hasUnsavedChanges || _isSaving)">
+                        @if (_isSaving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Save" Class="mr-2" />
+                            <span>Save Settings</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private TenantReserveSettings? _settings;
+    private bool _hasUnsavedChanges;
+    private bool _isSaving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        var tenantId = TenantContext.TenantId;
+        if (!tenantId.HasValue) return;
+
+        await using var context = await DbFactory.CreateDbContextAsync();
+        var service = new ReserveStudyCalculatorService(context);
+        _settings = await service.GetOrCreateTenantSettingsAsync(tenantId.Value);
+        _hasUnsavedChanges = false;
+    }
+
+    private void MarkChanged()
+    {
+        _hasUnsavedChanges = true;
+    }
+
+    private async Task SaveSettings()
+    {
+        if (_settings == null) return;
+
+        _isSaving = true;
+        try
+        {
+            await using var context = await DbFactory.CreateDbContextAsync();
+            var service = new ReserveStudyCalculatorService(context);
+            await service.UpdateTenantSettingsAsync(_settings);
+
+            _hasUnsavedChanges = false;
+            Snackbar.Add("Settings saved successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task ResetToDefaults()
+    {
+        if (_settings == null || !TenantContext.TenantId.HasValue) return;
+
+        var defaults = SettingsResolver.CreateDefaultSettings(TenantContext.TenantId.Value);
+        
+        // Preserve TenantId
+        defaults.TenantId = _settings.TenantId;
+        
+        _settings.DefaultProjectionYears = defaults.DefaultProjectionYears;
+        _settings.DefaultInflationRate = defaults.DefaultInflationRate;
+        _settings.DefaultInterestRateAnnual = defaults.DefaultInterestRateAnnual;
+        _settings.DefaultInterestModel = defaults.DefaultInterestModel;
+        _settings.DefaultContributionStrategy = defaults.DefaultContributionStrategy;
+        _settings.DefaultInitialAnnualContribution = defaults.DefaultInitialAnnualContribution;
+        _settings.DefaultContributionEscalationRate = defaults.DefaultContributionEscalationRate;
+        _settings.DefaultContributionFrequency = defaults.DefaultContributionFrequency;
+        _settings.DefaultContributionTiming = defaults.DefaultContributionTiming;
+        _settings.DefaultExpenditureTiming = defaults.DefaultExpenditureTiming;
+        _settings.DefaultRoundingPolicy = defaults.DefaultRoundingPolicy;
+
+        _hasUnsavedChanges = true;
+        Snackbar.Add("Settings reset to defaults (click Save to confirm)", Severity.Info);
+    }
+}

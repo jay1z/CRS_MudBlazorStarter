@@ -4,6 +4,7 @@ using System.Security.Claims;
 using CRS.Models;
 using CRS.Models.Security; // add
 using CRS.Models.Workflow; // add
+using CRS.Models.ReserveStudyCalculator; // Reserve Study Calculator entities
 using CRS.Services.Tenant;
 using CRS.Models.Billing; // added for StripeEventLog
 
@@ -210,6 +211,67 @@ namespace CRS.Data {
                       .HasForeignKey(a => a.TenantId)
                       .OnDelete(DeleteBehavior.NoAction)
                       .IsRequired(false);
+            });
+
+            // AcceptanceTermsTemplate entity configuration
+            builder.Entity<AcceptanceTermsTemplate>(entity => {
+                entity.ToTable("AcceptanceTermsTemplates");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.Type, e.IsDefault })
+                    .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Type_Default");
+                entity.HasIndex(e => new { e.TenantId, e.Version })
+                    .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Version");
+                entity.HasIndex(e => new { e.TenantId, e.IsActive, e.EffectiveDate })
+                    .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Active_Effective");
+            });
+
+            // Reserve Study Calculator entities
+            builder.Entity<TenantReserveSettings>(entity => {
+                entity.ToTable("TenantReserveSettings");
+                entity.HasKey(e => e.TenantId);
+                entity.HasOne(e => e.Tenant)
+                    .WithOne()
+                    .HasForeignKey<TenantReserveSettings>(e => e.TenantId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<ReserveStudyScenario>(entity => {
+                entity.ToTable("ReserveStudyScenarios");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_ReserveStudyScenario_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId })
+                    .HasDatabaseName("IX_ReserveStudyScenario_Tenant_Study");
+                entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId, e.Status })
+                    .HasFilter("[DateDeleted] IS NULL")
+                    .HasDatabaseName("IX_ReserveStudyScenario_Tenant_Study_Status");
+                entity.HasOne(e => e.ReserveStudy)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReserveStudyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<ReserveScenarioComponent>(entity => {
+                entity.ToTable("ReserveScenarioComponents");
+                entity.HasIndex(e => e.TenantId)
+                    .HasDatabaseName("IX_ReserveScenarioComponent_Tenant");
+                entity.HasIndex(e => new { e.TenantId, e.ScenarioId })
+                    .HasDatabaseName("IX_ReserveScenarioComponent_Tenant_Scenario");
+                entity.HasIndex(e => new { e.TenantId, e.ScenarioId, e.Category })
+                    .HasFilter("[DateDeleted] IS NULL")
+                    .HasDatabaseName("IX_ReserveScenarioComponent_Tenant_Scenario_Category");
+                entity.HasOne(e => e.Scenario)
+                    .WithMany(s => s.Components)
+                    .HasForeignKey(e => e.ScenarioId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.LinkedBuildingElement)
+                    .WithMany()
+                    .HasForeignKey(e => e.LinkedBuildingElementId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                entity.HasOne(e => e.LinkedCommonElement)
+                    .WithMany()
+                    .HasForeignKey(e => e.LinkedCommonElementId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
         }
 
@@ -580,6 +642,54 @@ namespace CRS.Data {
                         entity.HasIndex(e => new { e.TenantId, e.IsActive, e.EffectiveDate })
                             .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Active_Effective");
                     });
+
+                    // Reserve Study Calculator entities
+                    builder.Entity<TenantReserveSettings>(entity => {
+                        entity.ToTable("TenantReserveSettings");
+                        entity.HasKey(e => e.TenantId);
+                        entity.HasOne(e => e.Tenant)
+                            .WithOne()
+                            .HasForeignKey<TenantReserveSettings>(e => e.TenantId)
+                            .OnDelete(DeleteBehavior.Cascade);
+                    });
+
+                    builder.Entity<ReserveStudyScenario>(entity => {
+                        entity.ToTable("ReserveStudyScenarios");
+                        entity.HasIndex(e => e.TenantId)
+                            .HasDatabaseName("IX_ReserveStudyScenario_Tenant");
+                        entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId })
+                            .HasDatabaseName("IX_ReserveStudyScenario_Tenant_Study");
+                        entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId, e.Status })
+                            .HasFilter("[DateDeleted] IS NULL")
+                            .HasDatabaseName("IX_ReserveStudyScenario_Tenant_Study_Status");
+                        entity.HasOne(e => e.ReserveStudy)
+                            .WithMany()
+                            .HasForeignKey(e => e.ReserveStudyId)
+                            .OnDelete(DeleteBehavior.Cascade);
+                    });
+
+                    builder.Entity<ReserveScenarioComponent>(entity => {
+                        entity.ToTable("ReserveScenarioComponents");
+                        entity.HasIndex(e => e.TenantId)
+                            .HasDatabaseName("IX_ReserveScenarioComponent_Tenant");
+                        entity.HasIndex(e => new { e.TenantId, e.ScenarioId })
+                            .HasDatabaseName("IX_ReserveScenarioComponent_Tenant_Scenario");
+                        entity.HasIndex(e => new { e.TenantId, e.ScenarioId, e.Category })
+                            .HasFilter("[DateDeleted] IS NULL")
+                            .HasDatabaseName("IX_ReserveScenarioComponent_Tenant_Scenario_Category");
+                        entity.HasOne(e => e.Scenario)
+                            .WithMany(s => s.Components)
+                            .HasForeignKey(e => e.ScenarioId)
+                            .OnDelete(DeleteBehavior.Cascade);
+                        entity.HasOne(e => e.LinkedBuildingElement)
+                            .WithMany()
+                            .HasForeignKey(e => e.LinkedBuildingElementId)
+                            .OnDelete(DeleteBehavior.SetNull);
+                        entity.HasOne(e => e.LinkedCommonElement)
+                            .WithMany()
+                            .HasForeignKey(e => e.LinkedCommonElementId)
+                            .OnDelete(DeleteBehavior.SetNull);
+                    });
                 }
 
         // Apply owned type configurations
@@ -730,6 +840,11 @@ namespace CRS.Data {
         // Click-Wrap Agreements (formerly E-Signatures)
         public DbSet<ProposalAcceptance> ProposalAcceptances { get; set; }
         public DbSet<AcceptanceTermsTemplate> AcceptanceTermsTemplates { get; set; }
+        
+        // Reserve Study Calculator
+        public DbSet<TenantReserveSettings> TenantReserveSettings { get; set; }
+        public DbSet<ReserveStudyScenario> ReserveStudyScenarios { get; set; }
+        public DbSet<ReserveScenarioComponent> ReserveScenarioComponents { get; set; }
         #endregion
 
         #region Seed Data
