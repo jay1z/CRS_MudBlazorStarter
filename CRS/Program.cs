@@ -155,6 +155,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.Interfaces.IDocumentService, CRS.Services.DocumentService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IEmailLogService, CRS.Services.EmailLogService>();
     
+    // Proposal PDF Generation
+    builder.Services.AddScoped<CRS.Services.Interfaces.IProposalPdfService, CRS.Services.ProposalPdfService>();
+    
     // Medium Priority Schema Services
     builder.Services.AddScoped<CRS.Services.Interfaces.ISiteVisitPhotoService, CRS.Services.SiteVisitPhotoService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IStudyNoteService, CRS.Services.StudyNoteService>();
@@ -236,6 +239,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddQuickGridEntityFrameworkAdapter();
     builder.Services.AddDatabaseDeveloperPageExceptionFilter();
     builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityEmailSender>();
+    builder.Services.AddScoped<IProposalPdfService, ProposalPdfService>();
 
     // CORS for subdomains (SignalR/JS interop scenarios)
     builder.Services.AddCors(o => {

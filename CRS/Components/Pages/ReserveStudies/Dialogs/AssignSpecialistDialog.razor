@@ -2,30 +2,191 @@
 
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6">Select Specialist</MudText>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
+            </MudAvatar>
+            <div>
+                <MudText Typo="Typo.h6" Style="font-weight: 600;">Assign Specialist</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Select a reserve specialist for this study</MudText>
+            </div>
+        </MudStack>
     </TitleContent>
     <DialogContent>
-        <MudSelect T="ApplicationUser" Label="Select Specialist" @bind-Value="selectedSpecialist">
-            @foreach (var user in specialists) {
-                <MudSelectItem Value="user">@user.FullName</MudSelectItem>
+        <MudStack Spacing="3">
+            @if (specialists?.Any() == true) {
+                <!-- Search Field -->
+                <MudTextField @bind-Value="searchText"
+                              Placeholder="Search by name, email, or title..."
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined"
+                              Immediate="true"
+                              Clearable="true"
+                              Class="mb-2" />
+
+                <!-- Specialist List -->
+                <MudPaper Elevation="0" Style="max-height: 400px; overflow-y: auto;">
+                    <MudList T="ApplicationUser" @bind-SelectedValue="selectedSpecialist" SelectionMode="SelectionMode.SingleSelection">
+                        @foreach (var specialist in FilteredSpecialists) {
+                            <MudListItem Value="@specialist" 
+                                         Class="@GetListItemClass(specialist)">
+                                <ChildContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Style="width: 100%;">
+                                        <!-- Avatar -->
+                                        <MudAvatar Size="Size.Large" 
+                                                   Style="@GetAvatarStyle(specialist)">
+                                            @specialist.Initials
+                                        </MudAvatar>
+                                        
+                                        <!-- User Info -->
+                                        <MudStack Spacing="0" Style="flex: 1;">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                                                    @specialist.FullName
+                                                </MudText>
+                                                @if (specialist.Status == StatusEnum.Active) {
+                                                    <MudChip T="string" Size="Size.Small" 
+                                                             Color="Color.Success" 
+                                                             Variant="Variant.Text"
+                                                             Style="font-size: 0.7rem;">
+                                                        Active
+                                                    </MudChip>
+                                                }
+                                            </MudStack>
+                                            
+                                            @if (!string.IsNullOrEmpty(specialist.Title)) {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                    @specialist.Title
+                                                </MudText>
+                                            }
+                                            
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-1">
+                                                <MudIcon Icon="@Icons.Material.Filled.Email" 
+                                                         Size="Size.Small" 
+                                                         Style="color: #999;" />
+                                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                                    @specialist.Email
+                                                </MudText>
+                                            </MudStack>
+                                            
+                                            @if (!string.IsNullOrEmpty(specialist.CompanyName)) {
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Business" 
+                                                             Size="Size.Small" 
+                                                             Style="color: #999;" />
+                                                    <MudText Typo="Typo.caption" Style="color: #666;">
+                                                        @specialist.CompanyName
+                                                    </MudText>
+                                                </MudStack>
+                                            }
+                                        </MudStack>
+                                        
+                                        <!-- Selection Indicator -->
+                                        @if (selectedSpecialist?.Id == specialist.Id) {
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                                     Color="Color.Primary" 
+                                                     Size="Size.Medium" />
+                                        }
+                                    </MudStack>
+                                </ChildContent>
+                            </MudListItem>
+                            <MudDivider />
+                        }
+                    </MudList>
+                </MudPaper>
+
+                @if (!FilteredSpecialists.Any()) {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+                        No specialists match your search criteria.
+                    </MudAlert>
+                }
+
+                <!-- Selection Summary -->
+                @if (selectedSpecialist != null) {
+                    <MudPaper Elevation="0" Class="pa-3" Style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 8px; border: 1px solid #667eea30;">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Size="Size.Small" />
+                            <MudText Typo="Typo.body2">
+                                <strong>Selected:</strong> @selectedSpecialist.FullName
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                }
+            } else {
+                <MudAlert Severity="Severity.Warning">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">No Specialists Available</MudText>
+                        <MudText Typo="Typo.body2">
+                            There are no specialists available to assign. Please ensure specialists have been added to your organization.
+                        </MudText>
+                    </MudStack>
+                </MudAlert>
             }
-        </MudSelect>
+        </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Color="Color.Secondary">Cancel</MudButton>
-        <MudButton OnClick="Submit" Color="Color.Primary">Submit</MudButton>
+        <MudStack Row="true" Spacing="2" Class="pa-2" Style="width: 100%;" Justify="Justify.FlexEnd">
+            <MudButton OnClick="Cancel" 
+                       Variant="Variant.Text" 
+                       Color="Color.Default">
+                Cancel
+            </MudButton>
+            <MudButton OnClick="Submit" 
+                       Variant="Variant.Filled" 
+                       Color="Color.Primary"
+                       Disabled="@(selectedSpecialist == null)"
+                       StartIcon="@Icons.Material.Filled.PersonAdd">
+                Assign Specialist
+            </MudButton>
+        </MudStack>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] 
-    private IMudDialogInstance MudDialog { get; set; }
+    private IMudDialogInstance MudDialog { get; set; } = null!;
     
-    [Parameter] public List<ApplicationUser> specialists { get; set; }
-    private ApplicationUser selectedSpecialist;
+    [Parameter] 
+    public List<ApplicationUser> specialists { get; set; } = new();
+    
+    private ApplicationUser? selectedSpecialist;
+    private string searchText = string.Empty;
+
+    private IEnumerable<ApplicationUser> FilteredSpecialists {
+        get {
+            if (string.IsNullOrWhiteSpace(searchText)) {
+                return specialists.OrderBy(s => s.FullName);
+            }
+            
+            var search = searchText.ToLowerInvariant();
+            return specialists
+                .Where(s => 
+                    (s.FullName?.ToLowerInvariant().Contains(search) ?? false) ||
+                    (s.Email?.ToLowerInvariant().Contains(search) ?? false) ||
+                    (s.Title?.ToLowerInvariant().Contains(search) ?? false) ||
+                    (s.CompanyName?.ToLowerInvariant().Contains(search) ?? false))
+                .OrderBy(s => s.FullName);
+        }
+    }
+
+    private string GetListItemClass(ApplicationUser specialist) {
+        return selectedSpecialist?.Id == specialist.Id 
+            ? "specialist-item selected" 
+            : "specialist-item";
+    }
+
+    private string GetAvatarStyle(ApplicationUser specialist) {
+        if (selectedSpecialist?.Id == specialist.Id) {
+            return "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;";
+        }
+        return "background: #e0e0e0; color: #666;";
+    }
 
     private void Submit() {
-        MudDialog.Close(DialogResult.Ok(selectedSpecialist));
+        if (selectedSpecialist != null) {
+            MudDialog.Close(DialogResult.Ok(selectedSpecialist));
+        }
     }
 
     private void Cancel() {

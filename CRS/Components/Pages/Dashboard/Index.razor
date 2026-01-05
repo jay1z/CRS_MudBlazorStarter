@@ -925,6 +925,7 @@ private async Task LoadPipelineDataAsync(int tenantId)
         return study.CurrentStatus switch
         {
             StudyStatus.RequestCreated => "New Request",
+            StudyStatus.RequestApproved => "Request Approved",
             StudyStatus.ProposalCreated => "Proposal Created",
             StudyStatus.ProposalReviewed => "Under Review",
             StudyStatus.ProposalUpdated => "Proposal Updated",
@@ -933,8 +934,9 @@ private async Task LoadPipelineDataAsync(int tenantId)
             StudyStatus.ProposalAccepted => "Accepted",
             StudyStatus.ServiceContactsRequested => "Contacts Requested",
             StudyStatus.FinancialInfoRequested => "Financial Info Requested",
+            StudyStatus.FinancialInfoInProgress => "Financial Info In Progress",
             StudyStatus.FinancialInfoSubmitted => "Financial Info Submitted",
-            StudyStatus.SiteVisit => "Site Visit",
+            StudyStatus.SiteVisitPending => "Site Visit Pending",
             StudyStatus.SiteVisitScheduled => "Visit Scheduled",
             StudyStatus.SiteVisitCompleted => "Visit Complete",
             StudyStatus.ReportComplete => "Report Ready",
@@ -954,6 +956,7 @@ private async Task LoadPipelineDataAsync(int tenantId)
         return study.CurrentStatus switch
         {
             StudyStatus.RequestCreated => Color.Warning,
+            StudyStatus.RequestApproved => Color.Warning,
             StudyStatus.ProposalCreated => Color.Info,
             StudyStatus.ProposalReviewed => Color.Info,
             StudyStatus.ProposalUpdated => Color.Info,
@@ -962,8 +965,9 @@ private async Task LoadPipelineDataAsync(int tenantId)
             StudyStatus.ProposalAccepted => Color.Success,
             StudyStatus.ServiceContactsRequested => Color.Tertiary,
             StudyStatus.FinancialInfoRequested => Color.Tertiary,
+            StudyStatus.FinancialInfoInProgress => Color.Tertiary,
             StudyStatus.FinancialInfoSubmitted => Color.Tertiary,
-            StudyStatus.SiteVisit => Color.Primary,
+            StudyStatus.SiteVisitPending => Color.Primary,
             StudyStatus.SiteVisitScheduled => Color.Primary,
             StudyStatus.SiteVisitCompleted => Color.Primary,
             StudyStatus.ReportComplete => Color.Success,

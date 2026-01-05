@@ -13,6 +13,7 @@ namespace CRS.Services.Interfaces {
         Task<bool> SubmitFinancialInfoAsync(Guid reserveStudyId, FinancialInfo financialInfo);
         Task<bool> ReviewFinancialInfoAsync(Guid financialInfoId, string reviewedBy);
         Task<bool> CompleteReserveStudyAsync(Guid reserveStudyId);
+        Task<bool> ResendProposalEmailAsync(Guid reserveStudyId);
 
         // UI helpers (native StudyStatus)
         Task<StudyStatus[]> GetAllowedStudyTransitionsAsync(Guid reserveStudyId);

@@ -133,7 +133,7 @@ namespace CRS.Services.Workflow {
                     request.Id);
             }
 
-            if (newState == StudyStatus.FinancialInfoRequested || newState == StudyStatus.FinancialInfoCreated) {
+            if (newState == StudyStatus.FinancialInfoRequested || newState == StudyStatus.FinancialInfoInProgress) {
                 // After N days, send daily reminders
                 await SendReminderAsync(
                     $"Reminder: {newState.ToDisplayTitle()}", 

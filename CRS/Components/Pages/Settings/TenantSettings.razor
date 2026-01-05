@@ -80,10 +80,16 @@
                                     OnClick="@(() => activeTab = 2)">
                             Logo
                         </MudNavLink>
-                        <MudNavLink Icon="@Icons.Material.Filled.Code" 
+                        <MudNavLink Icon="@Icons.Material.Filled.PictureAsPdf" 
                                     IconColor="@(activeTab == 3 ? Color.Primary : Color.Default)"
                                     Class="@(activeTab == 3 ? "mud-nav-link-active" : "")"
                                     OnClick="@(() => activeTab = 3)">
+                            PDF Settings
+                        </MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.Code" 
+                                    IconColor="@(activeTab == 4 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 4 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 4)">
                             Advanced
                         </MudNavLink>
                     </MudNavMenu>
@@ -162,6 +168,59 @@
                                             <strong>Subdomain:</strong> Your organization's URL is <strong>@(tenant.Subdomain).alxreservecloud.com</strong>
                                         </MudText>
                                     </MudAlert>
+                                </MudItem>
+
+                                <!-- Company Contact Information -->
+                                <MudItem xs="12">
+                                    <MudDivider Class="my-2" />
+                                    <MudText Typo="Typo.h6" Class="mb-3">Contact Information</MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-3">
+                                        This information appears in emails, reports, and PDF documents.
+                                    </MudText>
+                                </MudItem>
+
+                                <MudItem xs="12" md="6">
+                                    <MudTextField @bind-Value="companyTagline" 
+                                                  Label="Company Tagline" 
+                                                  Variant="Variant.Outlined"
+                                                  HelperText="Optional tagline or slogan"
+                                                  OnBlur="MarkAsChanged" />
+                                </MudItem>
+
+                                <MudItem xs="12" md="6">
+                                    <MudTextField @bind-Value="companyPhone" 
+                                                  Label="Phone" 
+                                                  Variant="Variant.Outlined"
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.Phone"
+                                                  OnBlur="MarkAsChanged" />
+                                </MudItem>
+
+                                <MudItem xs="12" md="6">
+                                    <MudTextField @bind-Value="companyEmail" 
+                                                  Label="Email" 
+                                                  Variant="Variant.Outlined"
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.Email"
+                                                  OnBlur="MarkAsChanged" />
+                                </MudItem>
+
+                                <MudItem xs="12" md="6">
+                                    <MudTextField @bind-Value="companyWebsite" 
+                                                  Label="Website" 
+                                                  Variant="Variant.Outlined"
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.Language"
+                                                  OnBlur="MarkAsChanged" />
+                                </MudItem>
+
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="companyAddress" 
+                                                  Label="Address" 
+                                                  Variant="Variant.Outlined"
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.LocationOn"
+                                                  OnBlur="MarkAsChanged" />
                                 </MudItem>
                             </MudGrid>
                         </MudStack>
@@ -445,6 +504,336 @@
                     }
                     else if (activeTab == 3)
                     {
+                        <!-- PDF Settings -->
+                        <MudStack Spacing="4">
+                            <div>
+                                <MudText Typo="Typo.h5" Class="fw-bold mb-2">PDF Settings</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                    Customize the appearance of generated PDF documents (proposals, reports, etc.)
+                                </MudText>
+                            </div>
+
+                            <MudDivider />
+
+                            <!-- Info about shared settings -->
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.body2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                                        <strong>Company contact info</strong> is pulled from your <strong>General Settings</strong>.
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #666;">
+                                        Colors can be inherited from your theme or customized below for PDFs only.
+                                    </MudText>
+                                </MudStack>
+                            </MudAlert>
+
+                            <MudExpansionPanels Elevation="1">
+                                <!-- Color & Typography Section -->
+                                <MudExpansionPanel Text="Colors & Typography">
+                                    <MudGrid Spacing="3">
+                                        <MudItem xs="12">
+                                            <MudSwitch T="bool" @bind-Value="pdfSettings.UseThemeColors" 
+                                                       Color="Color.Primary"
+                                                       Label="Use theme colors (from Branding & Theme settings)" />
+                                        </MudItem>
+                                        
+                                        @if (!pdfSettings.UseThemeColors)
+                                        {
+                                            <MudItem xs="12" md="4">
+                                                <MudTextField @bind-Value="pdfSettings.PrimaryColor" 
+                                                              Label="Primary Color" 
+                                                              Variant="Variant.Outlined"
+                                                              HelperText="Hex color (e.g., #667eea)"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="4">
+                                                <MudTextField @bind-Value="pdfSettings.SecondaryColor" 
+                                                              Label="Secondary Color" 
+                                                              Variant="Variant.Outlined"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="4">
+                                                <MudTextField @bind-Value="pdfSettings.AccentColor" 
+                                                              Label="Accent Color" 
+                                                              Variant="Variant.Outlined"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Center">
+                                                    <MudPaper Elevation="0" Style="@($"width: 40px; height: 40px; border-radius: 8px; background: {pdfSettings.PrimaryColor};")" />
+                                                    <MudPaper Elevation="0" Style="@($"width: 40px; height: 40px; border-radius: 8px; background: {pdfSettings.SecondaryColor};")" />
+                                                    <MudPaper Elevation="0" Style="@($"width: 40px; height: 40px; border-radius: 8px; background: {pdfSettings.AccentColor};")" />
+                                                    <MudText Typo="Typo.caption" Style="color: #666;">Color Preview</MudText>
+                                                </MudStack>
+                                            </MudItem>
+                                        }
+                                        
+                                        <MudItem xs="12" md="4">
+                                            <MudNumericField T="int" @bind-Value="pdfSettings.BaseFontSize" 
+                                                             Label="Base Font Size" 
+                                                             Variant="Variant.Outlined"
+                                                             Min="8" Max="16"
+                                                             OnBlur="MarkAsChanged" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="4">
+                                            <MudNumericField T="int" @bind-Value="pdfSettings.HeaderFontSize" 
+                                                             Label="Header Font Size" 
+                                                             Variant="Variant.Outlined"
+                                                             Min="16" Max="36"
+                                                             OnBlur="MarkAsChanged" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="4">
+                                            <MudNumericField T="int" @bind-Value="pdfSettings.SectionHeaderFontSize" 
+                                                             Label="Section Header Size" 
+                                                             Variant="Variant.Outlined"
+                                                             Min="10" Max="20"
+                                                             OnBlur="MarkAsChanged" />
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudExpansionPanel>
+
+                                <!-- Header & Footer Options -->
+                                <MudExpansionPanel Text="Header & Footer">
+                                    <MudGrid Spacing="2">
+                                        <MudItem xs="12" md="6">
+                                            <MudSwitch T="bool" @bind-Value="pdfSettings.ShowLogoInHeader" 
+                                                       Color="Color.Primary"
+                                                       Label="Show Logo in Header" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="6">
+                                            <MudSwitch T="bool" @bind-Value="pdfSettings.ShowCompanyNameInHeader" 
+                                                       Color="Color.Primary"
+                                                       Label="Show Company Name in Header" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="6">
+                                            <MudSwitch T="bool" @bind-Value="pdfSettings.ShowFooter" 
+                                                       Color="Color.Primary"
+                                                       Label="Show Footer" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="6">
+                                            <MudSwitch T="bool" @bind-Value="pdfSettings.ShowPageNumbers" 
+                                                       Color="Color.Primary"
+                                                       Label="Show Page Numbers" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="6">
+                                            <MudSwitch T="bool" @bind-Value="pdfSettings.ShowGeneratedDate" 
+                                                       Color="Color.Primary"
+                                                       Label="Show Generated Date" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="6">
+                                            <MudSwitch T="bool" @bind-Value="pdfSettings.ShowContactInfoInFooter" 
+                                                       Color="Color.Primary"
+                                                       Label="Show Contact Info in Footer" />
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudTextField @bind-Value="pdfSettings.FooterText" 
+                                                          Label="Custom Footer Text" 
+                                                          Variant="Variant.Outlined"
+                                                          HelperText="Optional custom footer message"
+                                                          OnBlur="MarkAsChanged" />
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudExpansionPanel>
+
+                                <!-- Proposal-Specific Settings -->
+                                <MudExpansionPanel>
+                                    <TitleContent>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Primary" />
+                                            <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">Proposal PDF Settings</MudText>
+                                        </MudStack>
+                                    </TitleContent>
+                                    <ChildContent>
+                                        <MudGrid Spacing="3">
+                                            <MudItem xs="12" md="6">
+                                                <MudTextField @bind-Value="pdfSettings.Proposal.Title" 
+                                                              Label="Proposal Title" 
+                                                              Variant="Variant.Outlined"
+                                                              HelperText="Title shown at top of proposals"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="6">
+                                                <MudTextField @bind-Value="pdfSettings.CompanyNameOverride" 
+                                                              Label="Company Name Override (Optional)" 
+                                                              Variant="Variant.Outlined"
+                                                              HelperText="Leave blank to use organization name"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudTextField @bind-Value="pdfSettings.Proposal.ElectronicAcceptanceText" 
+                                                              Label="Electronic Acceptance Notice" 
+                                                              Variant="Variant.Outlined"
+                                                              Lines="3"
+                                                              HelperText="Custom text for the electronic acceptance section"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.subtitle2" Class="mb-2">Section Visibility</MudText>
+                                                <MudGrid Spacing="2">
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowCommunityInfo" Color="Color.Primary" Label="Community Info" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowContactInfo" Color="Color.Primary" Label="Contact Info" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowSpecialistInfo" Color="Color.Primary" Label="Specialist Info" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowScopeOfWork" Color="Color.Primary" Label="Scope of Work" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowEstimatedCost" Color="Color.Primary" Label="Estimated Cost" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowServiceLevel" Color="Color.Primary" Label="Service Level" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowDeliveryTimeframe" Color="Color.Primary" Label="Delivery Timeframe" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowPaymentTerms" Color="Color.Primary" Label="Payment Terms" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowTermsAndConditions" Color="Color.Primary" Label="Terms & Conditions" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Proposal.ShowElectronicAcceptanceNotice" Color="Color.Primary" Label="Acceptance Notice" />
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </MudItem>
+                                        </MudGrid>
+                                    </ChildContent>
+                                </MudExpansionPanel>
+
+                                <!-- Proposal Terms and Conditions -->
+                                <MudExpansionPanel Text="Proposal Terms and Conditions">
+                                    <MudStack Spacing="3">
+                                        <MudAlert Severity="Severity.Info" Dense="true">
+                                            Edit the terms and conditions that appear on your proposals. Each line is a separate term.
+                                        </MudAlert>
+                                        @for (int i = 0; i < pdfSettings.Proposal.TermsAndConditions.Count; i++)
+                                        {
+                                            var index = i;
+                                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                                <MudText Typo="Typo.body2" Style="min-width: 30px;">@(index + 1).</MudText>
+                                                <MudTextField @bind-Value="pdfSettings.Proposal.TermsAndConditions[index]" 
+                                                              Variant="Variant.Outlined"
+                                                              Margin="Margin.Dense"
+                                                              Style="flex: 1;"
+                                                              OnBlur="MarkAsChanged" />
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                               Color="Color.Error" 
+                                                               Size="Size.Small"
+                                                               OnClick="@(() => RemoveProposalTerm(index))" />
+                                            </MudStack>
+                                        }
+                                        <MudButton Variant="Variant.Outlined" 
+                                                   Color="Color.Primary" 
+                                                   StartIcon="@Icons.Material.Filled.Add"
+                                                   OnClick="AddProposalTerm">
+                                            Add Term
+                                        </MudButton>
+                                    </MudStack>
+                                </MudExpansionPanel>
+
+                                <!-- Report-Specific Settings -->
+                                <MudExpansionPanel>
+                                    <TitleContent>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Assessment" Color="Color.Success" />
+                                            <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">Final Report PDF Settings</MudText>
+                                        </MudStack>
+                                    </TitleContent>
+                                    <ChildContent>
+                                        <MudGrid Spacing="3">
+                                            <MudItem xs="12" md="6">
+                                                <MudTextField @bind-Value="pdfSettings.Report.Title" 
+                                                              Label="Report Title" 
+                                                              Variant="Variant.Outlined"
+                                                              HelperText="Title shown on the report cover"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="6">
+                                                <MudTextField @bind-Value="pdfSettings.Report.ExecutiveSummaryTitle" 
+                                                              Label="Executive Summary Title" 
+                                                              Variant="Variant.Outlined"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="6">
+                                                <MudNumericField T="int" @bind-Value="pdfSettings.Report.FundingProjectionYears" 
+                                                                 Label="Funding Projection Years" 
+                                                                 Variant="Variant.Outlined"
+                                                                 Min="10" Max="50"
+                                                                 HelperText="Number of years for funding projections"
+                                                                 OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="6">
+                                                <MudTextField @bind-Value="pdfSettings.Report.DraftWatermarkText" 
+                                                              Label="Draft Watermark Text" 
+                                                              Variant="Variant.Outlined"
+                                                              Disabled="@(!pdfSettings.Report.ShowDraftWatermark)"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudTextField @bind-Value="pdfSettings.Report.DisclaimerText" 
+                                                              Label="Disclaimer Text" 
+                                                              Variant="Variant.Outlined"
+                                                              Lines="3"
+                                                              HelperText="Legal disclaimer shown at end of report"
+                                                              OnBlur="MarkAsChanged" />
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.subtitle2" Class="mb-2">Report Sections</MudText>
+                                                <MudGrid Spacing="2">
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowCoverPage" Color="Color.Success" Label="Cover Page" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowTableOfContents" Color="Color.Success" Label="Table of Contents" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowExecutiveSummary" Color="Color.Success" Label="Executive Summary" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowComponentInventory" Color="Color.Success" Label="Component Inventory" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowFundingPlan" Color="Color.Success" Label="Funding Plan" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowGraphsAndCharts" Color="Color.Success" Label="Graphs & Charts" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowPhotos" Color="Color.Success" Label="Photos" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowAppendices" Color="Color.Success" Label="Appendices" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowDisclaimer" Color="Color.Success" Label="Disclaimer" />
+                                                    </MudItem>
+                                                    <MudItem xs="6" md="4">
+                                                        <MudSwitch T="bool" @bind-Value="pdfSettings.Report.ShowDraftWatermark" Color="Color.Warning" Label="Draft Watermark" />
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </MudItem>
+                                        </MudGrid>
+                                    </ChildContent>
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+
+                            <MudAlert Severity="Severity.Success" Dense="true" Variant="Variant.Outlined">
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                                    Changes will apply to all new PDF documents generated after saving.
+                                </MudText>
+                            </MudAlert>
+                        </MudStack>
+                    }
+                    else if (activeTab == 4)
+                    {
                         <!-- Advanced Settings -->
                         <MudStack Spacing="4">
                             <div>
@@ -565,6 +954,7 @@
 private Tenant? tenant;
 private Tenant? originalTenant; // For change tracking
 private BrandingModel branding = new();
+private PdfSettings pdfSettings = PdfSettings.Default;
 private bool useDarkMode;
 private string? selectedPreset;
 private IReadOnlyList<string> presetNames = Array.Empty<string>();
@@ -573,6 +963,13 @@ private string? jsonError;
 private bool hasUnsavedChanges = false;
 private bool isSaving = false;
 private int activeTab = 0;
+
+// Company contact info (shared across system, stored in BrandingPayload)
+private string? companyTagline;
+private string? companyPhone;
+private string? companyEmail;
+private string? companyWebsite;
+private string? companyAddress;
 
 // Reference to the InputFile element
 private InputFile? fileInput;
@@ -618,7 +1015,14 @@ protected override async Task OnInitializedAsync() {
     private void ParseBranding() {
         if (string.IsNullOrWhiteSpace(tenant?.BrandingJson)) {
             branding = new BrandingModel();
+            pdfSettings = PdfSettings.Default;
             useDarkMode = false;
+            // Reset company contact info
+            companyTagline = null;
+            companyPhone = null;
+            companyEmail = null;
+            companyWebsite = null;
+            companyAddress = null;
             return;
         }
 
@@ -633,10 +1037,57 @@ protected override async Task OnInitializedAsync() {
                 branding.DarkSecondary = payload.DarkSecondary;
                 useDarkMode = payload.UseDarkMode ?? false;
                 selectedPreset = payload.Preset;
+
+                // Load company contact info (shared)
+                companyTagline = payload.CompanyTagline;
+                companyPhone = payload.CompanyPhone;
+                companyEmail = payload.CompanyEmail;
+                companyWebsite = payload.CompanyWebsite;
+                companyAddress = payload.CompanyAddress;
+
+                // Load PDF settings
+                pdfSettings = payload.PdfSettings ?? PdfSettings.Default;
             }
+        } catch (Exception ex) {
+            jsonError = $"JSON parsing error: {ex.Message}";
+        }
+    }
+
+    private void SerializeBranding() {
+        if (tenant == null) return;
+
+        var payload = new ThemeService.BrandingPayload(
+            branding.Primary,
+            branding.Secondary,
+            branding.AppbarBackground,
+            branding.Background,
+            branding.DarkPrimary,
+            branding.DarkSecondary,
+            null, // Tertiary
+            null, // Info
+            null, // Success
+            null, // Warning
+            null, // Error
+            null, // TextPrimary
+            null, // TextSecondary
+            useDarkMode,
+            selectedPreset,
+            // Company contact info (shared)
+            companyTagline,
+            companyPhone,
+            companyEmail,
+            companyWebsite,
+            companyAddress,
+            null, // CompanyLogoUrl (use tenant logo)
+            // PDF settings
+            pdfSettings
+        );
+
+        try {
+            tenant.BrandingJson = JsonSerializer.Serialize(payload);
             jsonError = null;
         } catch (Exception ex) {
-            jsonError = $"Invalid JSON: {ex.Message}";
+            jsonError = $"Serialization error: {ex.Message}";
         }
     }
 
@@ -667,6 +1118,7 @@ protected override async Task OnInitializedAsync() {
 
     private void ResetTheme() {
         branding = new BrandingModel();
+        pdfSettings = PdfSettings.Default;
         useDarkMode = false;
         selectedPreset = null;
         if (tenant != null) tenant.BrandingJson = null;
@@ -674,35 +1126,6 @@ protected override async Task OnInitializedAsync() {
         ThemeService.SetTheme(new MudBlazor.MudTheme());
         MarkAsChanged();
         Snackbar.Add("Theme reset to default", MudBlazor.Severity.Info);
-    }
-
-    private void SerializeBranding() {
-        if (tenant == null) return;
-
-        var payload = new ThemeService.BrandingPayload(
-            branding.Primary,
-            branding.Secondary,
-            branding.AppbarBackground,
-            branding.Background,
-            branding.DarkPrimary,
-            branding.DarkSecondary,
-            null, // Tertiary
-            null, // Info
-            null, // Success
-            null, // Warning
-            null, // Error
-            null, // TextPrimary
-            null, // TextSecondary
-            useDarkMode,
-            selectedPreset
-        );
-
-        try {
-            tenant.BrandingJson = JsonSerializer.Serialize(payload);
-            jsonError = null;
-        } catch (Exception ex) {
-            jsonError = $"Serialization error: {ex.Message}";
-        }
     }
 
     private async Task SaveSettings() {
@@ -731,13 +1154,11 @@ protected override async Task OnInitializedAsync() {
             
             await db.SaveChangesAsync();
             
-            // Update context
             TenantContext.TenantName = existing.Name;
             TenantContext.BrandingJson = existing.BrandingJson;
             TenantContext.IsActive = existing.IsActive;
             ThemeService.ApplyTenantBrandingIfAvailable();
             
-            // Update original for change tracking
             originalTenant = new Tenant
             {
                 Id = tenant.Id,
@@ -771,7 +1192,7 @@ protected override async Task OnInitializedAsync() {
 
         if (confirm == true)
         {
-            await LoadTenant(); // Reload original values
+            await LoadTenant();
             Nav.NavigateTo("/Dashboard");
         }
     }
@@ -802,7 +1223,6 @@ protected override async Task OnInitializedAsync() {
     {
         if (fileInput?.Element != null)
         {
-            // Use a simple JavaScript interop to click the element
             await JS.InvokeVoidAsync("clickElement", fileInput.Element);
         }
     }
@@ -812,14 +1232,12 @@ protected override async Task OnInitializedAsync() {
 
         var file = e.File;
 
-        // Validate
         var (valid, error) = await LogoStorage.ValidateLogoAsync(file);
         if (!valid) {
             Snackbar.Add(error, MudBlazor.Severity.Warning);
             return;
         }
 
-        // Warn if large
         if (file.Size > CRS.Services.Storage.LogoUploadConfig.OptimalSizeBytes) {
             Snackbar.Add($"Large file ({file.Size / 1024}KB). Optimizing...", MudBlazor.Severity.Info);
         }
@@ -845,6 +1263,22 @@ protected override async Task OnInitializedAsync() {
             }
         } catch (Exception ex) {
             Snackbar.Add($"Error removing logo: {ex.Message}", MudBlazor.Severity.Error);
+        }
+    }
+
+    // PDF Terms management - Proposal
+    private void AddProposalTerm()
+    {
+        pdfSettings.Proposal.TermsAndConditions.Add("");
+        MarkAsChanged();
+    }
+
+    private void RemoveProposalTerm(int index)
+    {
+        if (index >= 0 && index < pdfSettings.Proposal.TermsAndConditions.Count)
+        {
+            pdfSettings.Proposal.TermsAndConditions.RemoveAt(index);
+            MarkAsChanged();
         }
     }
 

@@ -1,5 +1,5 @@
 ﻿@page "/ReserveStudies/{studyId:guid}/FinancialInfo"
-@attribute [Authorize(Policy = "RequireTenantStaff")]
+@attribute [Authorize]
 @using CRS.Models
 @using CRS.Services.Interfaces
 @using System.ComponentModel.DataAnnotations
@@ -11,62 +11,160 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<MudContainer Class="mt-6">
-    <MudCard Elevation="4">
-        <MudCardHeader>
-            <MudText Typo="Typo.h5">Reserve Study Financial Information</MudText>
-        </MudCardHeader>
-        
-        @if (isLoading)
-        {
+<PageTitle>Property Financial Information</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @if (isLoading) {
+        <MudPaper Elevation="0" Class="pa-8">
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <MudText Typo="Typo.h5" Class="mt-4">Loading Reserve Study...</MudText>
+        </MudPaper>
+    } else if (reserveStudy == null) {
+        <MudAlert Severity="Severity.Error">Reserve study not found</MudAlert>
+    } else {
+        <MudCard Elevation="3" Class="mb-6">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h4">Property Financial Information</MudText>
+                    <MudText Typo="Typo.subtitle1" Color="Color.Primary">@reserveStudy.Community?.Name</MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudTooltip Text="Return to Study Details">
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudies/{studyId}/Details")" />
+                    </MudTooltip>
+                </CardHeaderActions>
+            </MudCardHeader>
+
             <MudCardContent>
-                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-                <MudText>Loading...</MudText>
-            </MudCardContent>
-        }
-        else if (reserveStudy == null)
-        {
-            <MudCardContent>
-                <MudAlert Severity="Severity.Error">Reserve study not found</MudAlert>
-            </MudCardContent>
-        }
-        else
-        {
-            <MudCardContent>
-                <MudText Class="mb-4">
-                    Financial Information for <strong>@reserveStudy.Community?.Name</strong>
-                </MudText>
-                
                 <EditForm Model="@financialInfo" OnValidSubmit="HandleValidSubmit">
                     <DataAnnotationsValidator />
+
+                    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-info-lighten); border-radius: 8px;">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" />
+                            <MudText Typo="Typo.body1">
+                                Please complete the following Association financial information (if budgeted/available).
+                                This information helps us prepare an accurate reserve study for your community.
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+
+                    <!-- Reserve Balance Section -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-4">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Class="mr-2" Size="Size.Small" />
+                        Reserve Balance Information
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+
                     <MudGrid>
                         <MudItem xs="12" md="6">
-                            <MudNumericField Label="Current Reserve Fund Balance ($)" 
-                                       @bind-Value="financialInfo.CurrentReserveFundBalance"
-                                       Required="true"
-                                       Format="F2"
-                                       Variant="Variant.Outlined" />
+                            <MudNumericField Label="Jan 1 Reserve Balance ($)"
+                                             @bind-Value="financialInfo.JanuaryFirstReserveBalance"
+                                             Format="N2"
+                                             Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                             HelperText="Include unexpended operation funds from last year rolled in" />
                         </MudItem>
-                        
                         <MudItem xs="12" md="6">
-                            <MudNumericField Label="Annual Contribution ($)" 
-                                       @bind-Value="financialInfo.AnnualContribution"
-                                       Required="true"
-                                       Format="F2"
-                                       Variant="Variant.Outlined" />
+                            <MudNumericField Label="Expected Dec 31 Reserve Balance ($)"
+                                             @bind-Value="financialInfo.DecemberThirtyFirstReserveBalance"
+                                             Format="N2"
+                                             Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                             HelperText="After completion of all current year reserve expenditures" />
                         </MudItem>
-                        
-                        <MudItem xs="12" md="6">
-                            <MudNumericField Label="Projected Annual Expenses ($)" 
-                                       @bind-Value="financialInfo.ProjectedAnnualExpenses"
-                                       Format="F2"
-                                       Variant="Variant.Outlined" />
+                    </MudGrid>
+
+                    <!-- Budgeted Reserve Contributions -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.Savings" Class="mr-2" Size="Size.Small" />
+                        Budgeted Reserve Contributions
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+
+                    <MudGrid>
+                        <MudItem xs="12" md="4">
+                            <MudNumericField Label="Last Year ($)"
+                                             @bind-Value="financialInfo.BudgetedContributionLastYear"
+                                             Format="N2"
+                                             Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
                         </MudItem>
-                        
+                        <MudItem xs="12" md="4">
+                            <MudNumericField Label="Current Year ($)"
+                                             @bind-Value="financialInfo.BudgetedContributionCurrentYear"
+                                             Format="N2"
+                                             Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudNumericField Label="Next Year ($)"
+                                             @bind-Value="financialInfo.BudgetedContributionNextYear"
+                                             Format="N2"
+                                             Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Operating Budget -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Class="mr-2" Size="Size.Small" />
+                        Operating Budget
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+                    <MudText Typo="Typo.body2" Class="mb-3" Color="Color.Secondary">
+                        Total all monthly/annual fees assessed
+                    </MudText>
+
+                    <MudGrid>
                         <MudItem xs="12" md="6">
-                            <MudSelect T="int" Label="Fiscal Year Start Month" 
-                                      @bind-Value="financialInfo.FiscalYearStartMonth"
-                                      Variant="Variant.Outlined">
+                            <MudNumericField Label="Current Year ($)"
+                                             @bind-Value="financialInfo.OperatingBudgetCurrentYear"
+                                             Format="N2"
+                                             Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField Label="Next Year ($)"
+                                             @bind-Value="financialInfo.OperatingBudgetNextYear"
+                                             Format="N2"
+                                             Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Community Information -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationCity" Class="mr-2" Size="Size.Small" />
+                        Community Information
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+
+                    <MudGrid>
+                        <MudItem xs="12" md="4">
+                            <MudNumericField Label="Total Number of Units"
+                                             @bind-Value="financialInfo.TotalNumberOfUnits"
+                                             Variant="Variant.Outlined"
+                                             Min="1" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudDatePicker Label="Annual Meeting Date"
+                                           @bind-Date="financialInfo.AnnualMeetingDate"
+                                           Variant="Variant.Outlined"
+                                           Editable="true"
+                                           HelperText="If known" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudSelect T="int" Label="Fiscal Year Start Month"
+                                       @bind-Value="financialInfo.FiscalYearStartMonth"
+                                       Variant="Variant.Outlined">
                                 <MudSelectItem Value="1">January</MudSelectItem>
                                 <MudSelectItem Value="2">February</MudSelectItem>
                                 <MudSelectItem Value="3">March</MudSelectItem>
@@ -81,103 +179,331 @@
                                 <MudSelectItem Value="12">December</MudSelectItem>
                             </MudSelect>
                         </MudItem>
-                        
+                    </MudGrid>
+
+                    <!-- Loans and Special Assessments -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.CreditCard" Class="mr-2" Size="Size.Small" />
+                        Current Loans or Special Assessments
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+
+                    <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius: 8px;">
+                        <MudText Typo="Typo.subtitle1" Class="mb-3"><strong>Loan Information</strong></MudText>
+                        <MudGrid>
+                            <MudItem xs="12" md="4">
+                                <MudNumericField Label="Loan Amount ($)"
+                                                 @bind-Value="financialInfo.LoanAmount"
+                                                 Format="N2"
+                                                 Variant="Variant.Outlined"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudNumericField Label="Balance Remaining ($)"
+                                                 @bind-Value="financialInfo.LoanBalanceRemaining"
+                                                 Format="N2"
+                                                 Variant="Variant.Outlined"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudNumericField Label="Expected Year Complete"
+                                                 @bind-Value="financialInfo.LoanExpectedYearComplete"
+                                                 Variant="Variant.Outlined"
+                                                 Min="@DateTime.Now.Year"
+                                                 Max="@(DateTime.Now.Year + 50)" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+
+                    <MudPaper Elevation="1" Class="pa-4 mb-4" Style="border-radius: 8px;">
+                        <MudText Typo="Typo.subtitle1" Class="mb-3"><strong>Special Assessment Information</strong></MudText>
+                        <MudGrid>
+                            <MudItem xs="12" md="4">
+                                <MudNumericField Label="Assessment Amount ($)"
+                                                 @bind-Value="financialInfo.SpecialAssessmentAmount"
+                                                 Format="N2"
+                                                 Variant="Variant.Outlined"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudNumericField Label="Balance Remaining ($)"
+                                                 @bind-Value="financialInfo.SpecialAssessmentBalanceRemaining"
+                                                 Format="N2"
+                                                 Variant="Variant.Outlined"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudNumericField Label="Expected Year Complete"
+                                                 @bind-Value="financialInfo.SpecialAssessmentExpectedYearComplete"
+                                                 Variant="Variant.Outlined"
+                                                 Min="@DateTime.Now.Year"
+                                                 Max="@(DateTime.Now.Year + 50)" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+
+                    <!-- Planned Projects -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.Construction" Class="mr-2" Size="Size.Small" />
+                        Planned Projects
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+                    <MudText Typo="Typo.body2" Class="mb-3" Color="Color.Secondary">
+                        List any planned projects for current or future years (general project description, year(s) expected, quoted costs)
+                    </MudText>
+
+                    <MudGrid>
                         <MudItem xs="12">
-                            <MudTextField Label="Financial Document URLs (one per line)" 
-                                         @bind-Value="financialInfo.FinancialDocumentUrls"
-                                         Variant="Variant.Outlined"
-                                         Lines="3" />
-                        </MudItem>
-                        
-                        <MudItem xs="12">
-                            <MudTextField Label="Comments" 
-                                         @bind-Value="financialInfo.Comments"
-                                         Variant="Variant.Outlined"
-                                         Lines="3" />
-                        </MudItem>
-                        
-                        <MudItem xs="12" Class="d-flex justify-end">
-                            <MudButton Variant="Variant.Filled" 
-                                     Color="Color.Primary" 
-                                     ButtonType="ButtonType.Submit"
-                                     Disabled="isSaving">
-                                @if (isSaving)
-                                {
-                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                                    <MudText Class="ms-2">Submitting</MudText>
-                                }
-                                else
-                                {
-                                    <MudText>Submit Financial Information</MudText>
-                                }
-                            </MudButton>
+                            <MudTextField Label="Planned Projects"
+                                          @bind-Value="financialInfo.PlannedProjects"
+                                          Variant="Variant.Outlined"
+                                          Lines="4"
+                                          Placeholder="Example: Pool resurfacing - 2025 - $45,000; Parking lot repaving - 2026 - $120,000" />
                         </MudItem>
                     </MudGrid>
+
+                    <!-- Insurance and Interest -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-2" Size="Size.Small" />
+                        Insurance & Interest
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField Label="Property Insurance Deductible ($)"
+                                             @bind-Value="financialInfo.PropertyInsuranceDeductible"
+                                             Format="N2"
+                                             Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start"
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                             HelperText="Normally found in the policy declarations pages" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField Label="Interest Rate on Reserve Funds (%)"
+                                             @bind-Value="financialInfo.InterestRateOnReserveFunds"
+                                             Format="N2"
+                                             Variant="Variant.Outlined"
+                                             Adornment="Adornment.End"
+                                             AdornmentText="%"
+                                             Min="0"
+                                             Max="100"
+                                             HelperText="% of interest being earned on reserve funds (if any)" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Building Component Information -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.Roofing" Class="mr-2" Size="Size.Small" />
+                        Building Component Information
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+                    <MudText Typo="Typo.body2" Class="mb-3" Color="Color.Secondary">
+                        Please provide a list of each building showing the year the roof and siding was last replaced. 
+                        If the roofs/siding are original, please provide the build date (year only).
+                    </MudText>
+
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField Label="Building Roof/Siding Information"
+                                          @bind-Value="financialInfo.BuildingRoofSidingInfo"
+                                          Variant="Variant.Outlined"
+                                          Lines="4"
+                                          Placeholder="Example: Building A - Roof: 2018, Siding: Original (2005); Building B - Roof: Original (2010), Siding: 2020" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Label="Component Replacement Dates"
+                                          @bind-Value="financialInfo.ComponentReplacementDates"
+                                          Variant="Variant.Outlined"
+                                          Lines="3"
+                                          HelperText="Any known last replacement dates for larger primary components (fencing, entry feature, roads, etc.)"
+                                          Placeholder="Example: Fencing - 2015; Entry gates - 2019; Main road - 2012" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Siding Calculation Preference -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.Calculate" Class="mr-2" Size="Size.Small" />
+                        Siding Calculation Preference
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+                    <MudText Typo="Typo.body2" Class="mb-3" Color="Color.Secondary">
+                        Preferred method for calculating siding (if applicable)
+                    </MudText>
+
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudRadioGroup T="int?" @bind-Value="financialInfo.SidingCalculationPreference">
+                                <MudRadio T="int?" Value="1" Color="Color.Primary" Class="mb-2">
+                                    <MudText>
+                                        <strong>Option 1:</strong> Replace all at once / phased over a couple years
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">(ensure aesthetic unity, most expensive)</MudText>
+                                    </MudText>
+                                </MudRadio>
+                                <MudRadio T="int?" Value="2" Color="Color.Primary" Class="mb-2">
+                                    <MudText>
+                                        <strong>Option 2:</strong> Replace as needed from reserve in an annual allowance
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">(most cost effective)</MudText>
+                                    </MudText>
+                                </MudRadio>
+                            </MudRadioGroup>
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Additional Comments -->
+                    <MudText Typo="Typo.h6" Class="mb-3 mt-6">
+                        <MudIcon Icon="@Icons.Material.Filled.Comment" Class="mr-2" Size="Size.Small" />
+                        Additional Information
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField Label="Financial Document URLs (one per line)"
+                                          @bind-Value="financialInfo.FinancialDocumentUrls"
+                                          Variant="Variant.Outlined"
+                                          Lines="3"
+                                          HelperText="Links to budgets, financial statements, or other supporting documents" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Label="Additional Comments"
+                                          @bind-Value="financialInfo.Comments"
+                                          Variant="Variant.Outlined"
+                                          Lines="3"
+                                          Placeholder="Any other information that may be helpful for the reserve study..." />
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Acknowledgment Section -->
+                    <MudPaper Elevation="2" Class="pa-4 mt-6" Style="background-color: var(--mud-palette-background-gray); border-radius: 8px; border: 1px solid var(--mud-palette-lines-default);">
+                        <MudText Typo="Typo.h6" Class="mb-3">
+                            <MudIcon Icon="@Icons.Material.Filled.Verified" Class="mr-2" Size="Size.Small" Color="Color.Primary" />
+                            Acknowledgment
+                        </MudText>
+                        <MudDivider Class="mb-4" />
+
+                        <MudText Typo="Typo.body2" Class="mb-4">
+                            Association acknowledges it has read and understands the definition of "COMMON ELEMENTS" as set forth in the 
+                            Association's Declarations and Bylaws. Furthermore the Association acknowledges that the common elements have 
+                            been identified and agreed upon by the Board of Directors for purposes of this Reserve Study Agreement.
+                        </MudText>
+
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudCheckBox @bind-Value="financialInfo.AcknowledgementAccepted"
+                                             Label="I acknowledge and agree to the above statement"
+                                             Color="Color.Primary"
+                                             Required="true" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField Label="Association / Community Name"
+                                              Value="@financialInfo.CommunityNameOnAcknowledgment"
+                                              Variant="Variant.Outlined"
+                                              ReadOnly="true"
+                                              Disabled="true" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField Label="President / Authorized Signer Name"
+                                              @bind-Value="financialInfo.PresidentSignature"
+                                              Variant="Variant.Outlined"
+                                              Required="true" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField Label="Date"
+                                              Value="@financialInfo.AcknowledgmentSignatureDate?.ToString("MMMM dd, yyyy")"
+                                              Variant="Variant.Outlined"
+                                              ReadOnly="true"
+                                              Disabled="true" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+
+                    <!-- Submit Button -->
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-6">
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   Href="@($"/ReserveStudies/{studyId}/Details")"
+                                   StartIcon="@Icons.Material.Filled.ArrowBack">
+                            Back to Details
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   ButtonType="ButtonType.Submit"
+                                   Disabled="@(isSaving || !financialInfo.AcknowledgementAccepted)"
+                                   Size="Size.Large"
+                                   StartIcon="@Icons.Material.Filled.Send">
+                            @if (isSaving) {
+                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                <MudText Class="ms-2">Submitting...</MudText>
+                            } else {
+                                <MudText>Submit Financial Information</MudText>
+                            }
+                        </MudButton>
+                    </MudStack>
                 </EditForm>
             </MudCardContent>
-        }
-    </MudCard>
+        </MudCard>
+    }
 </MudContainer>
 
 @code {
     [Parameter]
     public Guid studyId { get; set; }
-    
+
     private bool isLoading = true;
     private bool isSaving = false;
-    
+
     private ReserveStudy? reserveStudy;
     private Models.FinancialInfo financialInfo = new();
-    
-    protected override async Task OnInitializedAsync()
-    {
+
+    protected override async Task OnInitializedAsync() {
         await LoadReserveStudy();
     }
-    
-    private async Task LoadReserveStudy()
-    {
+
+    private async Task LoadReserveStudy() {
         isLoading = true;
-        try
-        {
+        try {
             reserveStudy = await ReserveStudyService.GetReserveStudyByIdAsync(studyId);
-            if (reserveStudy != null)
-            {
-                // Pre-populate financial info if needed
+            if (reserveStudy != null) {
                 financialInfo.ReserveStudyId = studyId;
+                
+                // Pre-populate from Community data
+                financialInfo.CommunityNameOnAcknowledgment = reserveStudy.Community?.Name;
+                financialInfo.TotalNumberOfUnits = reserveStudy.Community?.NumberOfUnits;
+                financialInfo.AnnualMeetingDate = reserveStudy.Community?.AnnualMeetingDate;
+                
+                // Set signature date to today (read-only)
+                financialInfo.AcknowledgmentSignatureDate = DateTime.Today;
             }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
+        } catch (Exception ex) {
+            Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
+        } finally {
             isLoading = false;
         }
     }
-    
-    private async Task HandleValidSubmit()
-    {
+
+    private async Task HandleValidSubmit() {
+        if (!financialInfo.AcknowledgementAccepted) {
+            Snackbar.Add("Please acknowledge and accept the statement to submit.", Severity.Warning);
+            return;
+        }
+
         isSaving = true;
-        try
-        {
+        try {
             var result = await WorkflowService.SubmitFinancialInfoAsync(studyId, financialInfo);
-            if (result)
-            {
-                Snackbar.Add("Financial information submitted successfully", Severity.Success);
-                Navigation.NavigateTo($"/reservestudies/{studyId}");
+            if (result) {
+                Snackbar.Add("Financial information submitted successfully!", Severity.Success);
+                Navigation.NavigateTo($"/ReserveStudies/{studyId}/Details");
+            } else {
+                Snackbar.Add("Failed to submit financial information. Please try again.", Severity.Error);
             }
-            else
-            {
-                Snackbar.Add("Failed to submit financial information", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
+        } catch (Exception ex) {
+            Snackbar.Add($"Error submitting: {ex.Message}", Severity.Error);
+        } finally {
             isSaving = false;
         }
     }

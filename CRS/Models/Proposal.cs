@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -31,5 +31,21 @@ namespace CRS.Models {
         public bool IsApproved { get; set; }
 
         public string? Comments { get; set; }
+        
+        // Service level and delivery options
+        public string? ServiceLevel { get; set; }
+        
+        public string? DeliveryTimeframe { get; set; }
+        
+        public string? PaymentTerms { get; set; }
+        
+        // Additional service options
+        public bool IncludePrepaymentDiscount { get; set; }
+        
+        public bool IncludeDigitalDelivery { get; set; }
+        
+        public bool IncludeComponentInventory { get; set; }
+        
+        public bool IncludeFundingPlans { get; set; }
     }
 }

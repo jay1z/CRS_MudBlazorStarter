@@ -4,6 +4,7 @@ using CRS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260104084958_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1343,44 +1346,11 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool>("AcknowledgementAccepted")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("AcknowledgmentSignatureDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<decimal>("AnnualContribution")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime?>("AnnualMeetingDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("AnnualMeetingMonth")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("BudgetedContributionCurrentYear")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("BudgetedContributionLastYear")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("BudgetedContributionNextYear")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("BuildingRoofSidingInfo")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Comments")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CommunityNameOnAcknowledgment")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ComponentReplacementDates")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("CurrentReserveFundBalance")
@@ -1402,57 +1372,16 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateSubmitted")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal?>("DecemberThirtyFirstReserveBalance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("FinancialDocumentUrls")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("FiscalYearStartMonth")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("InterestRateOnReserveFunds")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
-
                     b.Property<bool>("IsComplete")
                         .HasColumnType("bit");
 
-                    b.Property<decimal?>("JanuaryFirstReserveBalance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("LoanAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("LoanBalanceRemaining")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("LoanExpectedYearComplete")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("OperatingBudgetCurrentYear")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("OperatingBudgetNextYear")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("PlannedProjects")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PresidentSignature")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<decimal?>("ProjectedAnnualExpenses")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("PropertyInsuranceDeductible")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -1468,24 +1397,7 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<int?>("SidingCalculationPreference")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("SpecialAssessmentAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("SpecialAssessmentBalanceRemaining")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("SpecialAssessmentExpectedYearComplete")
-                        .HasColumnType("int");
-
                     b.Property<int>("TenantId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("TotalNumberOfUnits")
                         .HasColumnType("int");
 
                     b.HasKey("Id");

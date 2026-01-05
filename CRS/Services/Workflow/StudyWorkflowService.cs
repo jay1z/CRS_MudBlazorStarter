@@ -13,12 +13,17 @@ namespace CRS.Services.Workflow {
     public class StudyWorkflowService : IStudyWorkflowService {
         private readonly INotificationService _notification;
 
-        // Allowed transitions graph matching the 32-stage workflow
+        // Allowed transitions graph matching the 33-stage workflow
         private static readonly Dictionary<StudyStatus, HashSet<StudyStatus>> _allowed = new() {
             // ═══════════════════════════════════════════════════════════════
             // REQUEST PHASE
             // ═══════════════════════════════════════════════════════════════
             [StudyStatus.RequestCreated] = new() { 
+                StudyStatus.RequestApproved,
+                StudyStatus.RequestCancelled 
+            },
+            
+            [StudyStatus.RequestApproved] = new() { 
                 StudyStatus.ProposalCreated,
                 StudyStatus.RequestCancelled 
             },
@@ -68,11 +73,11 @@ namespace CRS.Services.Workflow {
             },
             
             [StudyStatus.FinancialInfoRequested] = new() { 
-                StudyStatus.FinancialInfoCreated,
+                StudyStatus.FinancialInfoInProgress,
                 StudyStatus.RequestCancelled 
             },
             
-            [StudyStatus.FinancialInfoCreated] = new() { 
+            [StudyStatus.FinancialInfoInProgress] = new() { 
                 StudyStatus.FinancialInfoSubmitted,
                 StudyStatus.RequestCancelled 
             },
@@ -89,14 +94,14 @@ namespace CRS.Services.Workflow {
             },
             
             [StudyStatus.FinancialInfoReceived] = new() { 
-                StudyStatus.SiteVisit,
+                StudyStatus.SiteVisitPending,
                 StudyStatus.RequestCancelled 
             },
 
             // ═══════════════════════════════════════════════════════════════
             // SITE VISIT PHASE
             // ═══════════════════════════════════════════════════════════════
-            [StudyStatus.SiteVisit] = new() { 
+            [StudyStatus.SiteVisitPending] = new() { 
                 StudyStatus.SiteVisitScheduled,
                 StudyStatus.RequestCancelled 
             },

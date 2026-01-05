@@ -59,8 +59,8 @@
         <MudPaper Class="w-100 pa-6 d-flex flex-column flex-md-row rounded-lg" Elevation="3"> *@
 
     @* Left: Login form *@
-    <div Class="d-flex flex-column flex-md-row" Style="height: 80vh; width: 100vw;">
-        <div Class="d-flex flex-column justify-center align-center pa-6" Style="width: 100%; max-width: 600px;">
+    <div class="d-flex flex-column flex-md-row" style="height: 80vh; width: 100vw;">
+        <div class="d-flex flex-column justify-center align-center pa-6" style="width: 100%; max-width: 600px;">
             <MudGrid>
                 <MudItem md="12">
                     @if (!string.IsNullOrWhiteSpace(tenantLogoUrl)) {
@@ -147,6 +147,18 @@
             Input.TenantSlug = FixedTenantSlug;
             await LoadTenantLogoAsync();
         }
+
+        // Load test credentials from user secrets (Development only)
+        #if DEBUG
+        var testPassword = Config["TestCredentials:Password"];
+        if (!string.IsNullOrEmpty(testPassword)) {
+            Input.Password = testPassword;
+        }
+        var testEmail = Config["TestCredentials:Email"];
+        if (!string.IsNullOrEmpty(testEmail)) {
+            Input.Email = testEmail;
+        }
+        #endif
     }
 
     private async Task LoadTenantLogoAsync() {

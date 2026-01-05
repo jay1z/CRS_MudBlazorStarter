@@ -138,12 +138,25 @@ public static class StageConfiguration
             Status = StudyStatus.RequestCreated,
             DisplayName = "Request Created",
             Phase = "Request",
+            AdvancedBy = StageActor.Staff | StageActor.Admin,
+            AvailableActions = StageAction.Advance | StageAction.Cancel,
+            DefaultNextStage = StudyStatus.RequestApproved,
+            NotifyOnEnter = StageActor.Staff,
+            ActionRequiredMessage = "Review the request and approve for proposal creation.",
+            WaitingMessage = "Your request is being reviewed by our team."
+        },
+
+        [StudyStatus.RequestApproved] = new StageConfig
+        {
+            Status = StudyStatus.RequestApproved,
+            DisplayName = "Request Approved",
+            Phase = "Request",
             AdvancedBy = StageActor.Staff | StageActor.Specialist,
             AvailableActions = StageAction.Advance | StageAction.Cancel,
             DefaultNextStage = StudyStatus.ProposalCreated,
-            NotifyOnEnter = StageActor.Staff,
-            ActionRequiredMessage = "Review the request and create a proposal.",
-            WaitingMessage = "Your request is being reviewed by our team."
+            NotifyOnEnter = StageActor.Specialist,
+            ActionRequiredMessage = "Assign a specialist and begin creating the proposal.",
+            WaitingMessage = "Your request has been approved. A specialist will be assigned shortly."
         },
 
         // ═══════════════════════════════════════════════════════════════
@@ -263,17 +276,17 @@ public static class StageConfiguration
             AvailableActions = StageAction.Advance | StageAction.Cancel,
             RequiredValidations = new[] { StageValidation.FinancialInfoFormSent },
             AutoAdvance = true,
-            DefaultNextStage = StudyStatus.FinancialInfoCreated,
+            DefaultNextStage = StudyStatus.FinancialInfoInProgress,
             ParallelWith = new[] { StudyStatus.ServiceContactsRequested },
             NotifyOnEnter = StageActor.HOA,
             ActionRequiredMessage = "Financial information request sent to client.",
             WaitingMessage = "Please provide your financial information."
         },
 
-        [StudyStatus.FinancialInfoCreated] = new StageConfig
+        [StudyStatus.FinancialInfoInProgress] = new StageConfig
         {
-            Status = StudyStatus.FinancialInfoCreated,
-            DisplayName = "Financial Info Started",
+            Status = StudyStatus.FinancialInfoInProgress,
+            DisplayName = "Financial Info In Progress",
             Phase = "Data Collection",
             AdvancedBy = StageActor.HOA, // HOA submits
             AvailableActions = StageAction.Advance,
@@ -320,7 +333,7 @@ public static class StageConfiguration
             Phase = "Data Collection",
             AdvancedBy = StageActor.Staff | StageActor.Specialist,
             AvailableActions = StageAction.Advance | StageAction.Cancel,
-            DefaultNextStage = StudyStatus.SiteVisit,
+            DefaultNextStage = StudyStatus.SiteVisitPending,
             NotifyOnEnter = StageActor.Specialist,
             ActionRequiredMessage = "Financial information complete. Begin site visit phase.",
             WaitingMessage = "Financial information has been accepted."
@@ -329,10 +342,10 @@ public static class StageConfiguration
         // ═══════════════════════════════════════════════════════════════
         // SITE VISIT PHASE
         // ═══════════════════════════════════════════════════════════════
-        [StudyStatus.SiteVisit] = new StageConfig
+        [StudyStatus.SiteVisitPending] = new StageConfig
         {
-            Status = StudyStatus.SiteVisit,
-            DisplayName = "Site Visit Phase",
+            Status = StudyStatus.SiteVisitPending,
+            DisplayName = "Site Visit Pending",
             Phase = "Site Visit",
             AdvancedBy = StageActor.Specialist,
             AvailableActions = StageAction.Advance | StageAction.Cancel,

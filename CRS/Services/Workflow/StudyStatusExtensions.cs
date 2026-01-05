@@ -14,6 +14,7 @@ public static class StudyStatusExtensions
     {
         // Request Phase
         StudyStatus.RequestCreated => "Request Created",
+        StudyStatus.RequestApproved => "Request Approved",
         
         // Proposal Phase
         StudyStatus.ProposalCreated => "Proposal Created",
@@ -26,13 +27,13 @@ public static class StudyStatusExtensions
         // Data Collection Phase
         StudyStatus.ServiceContactsRequested => "Service Contacts Requested",
         StudyStatus.FinancialInfoRequested => "Financial Info Requested",
-        StudyStatus.FinancialInfoCreated => "Financial Info Started",
+        StudyStatus.FinancialInfoInProgress => "Financial Info In Progress",
         StudyStatus.FinancialInfoSubmitted => "Financial Info Submitted",
         StudyStatus.FinancialInfoReviewed => "Financial Info Reviewed",
         StudyStatus.FinancialInfoReceived => "Financial Info Complete",
         
         // Site Visit Phase
-        StudyStatus.SiteVisit => "Site Visit Phase",
+        StudyStatus.SiteVisitPending => "Site Visit Pending",
         StudyStatus.SiteVisitScheduled => "Site Visit Scheduled",
         StudyStatus.SiteVisitCompleted => "Site Visit Completed",
         StudyStatus.SiteVisitDataEntered => "Site Visit Data Entered",
@@ -71,6 +72,8 @@ public static class StudyStatusExtensions
         // Request Phase
         StudyStatus.RequestCreated => 
             "Your reserve study request has been received and is being reviewed by our team.",
+        StudyStatus.RequestApproved => 
+            "Your request has been approved. A specialist will be assigned shortly.",
         
         // Proposal Phase
         StudyStatus.ProposalCreated => 
@@ -91,8 +94,8 @@ public static class StudyStatusExtensions
             "We've requested your service contact information.",
         StudyStatus.FinancialInfoRequested => 
             "We've requested financial information about your reserve fund.",
-        StudyStatus.FinancialInfoCreated => 
-            "Financial information form has been started.",
+        StudyStatus.FinancialInfoInProgress => 
+            "Financial information form is in progress.",
         StudyStatus.FinancialInfoSubmitted => 
             "Your financial information has been submitted and is awaiting review.",
         StudyStatus.FinancialInfoReviewed => 
@@ -101,8 +104,8 @@ public static class StudyStatusExtensions
             "Financial information has been accepted. Preparing for site visit.",
         
         // Site Visit Phase
-        StudyStatus.SiteVisit => 
-            "The site visit phase has begun.",
+        StudyStatus.SiteVisitPending => 
+            "Ready to schedule your site visit.",
         StudyStatus.SiteVisitScheduled => 
             "Your site visit has been scheduled.",
         StudyStatus.SiteVisitCompleted => 
@@ -158,6 +161,8 @@ public static class StudyStatusExtensions
     {
         StudyStatus.RequestCreated => 
             "Our team will create a proposal outlining the scope and costs.",
+        StudyStatus.RequestApproved => 
+            "We'll request your service contacts and financial information.",
         StudyStatus.ProposalCreated => 
             "The proposal will be reviewed internally.",
         StudyStatus.ProposalReviewed => 
@@ -174,7 +179,7 @@ public static class StudyStatusExtensions
             "We'll request your financial information.",
         StudyStatus.FinancialInfoRequested => 
             "Please provide the requested financial information.",
-        StudyStatus.FinancialInfoCreated => 
+        StudyStatus.FinancialInfoInProgress => 
             "Please complete and submit your financial information.",
         StudyStatus.FinancialInfoSubmitted => 
             "Our team will review your financial information.",
@@ -182,7 +187,7 @@ public static class StudyStatusExtensions
             "Once approved, we'll prepare for the site visit.",
         StudyStatus.FinancialInfoReceived => 
             "We'll begin the site visit phase.",
-        StudyStatus.SiteVisit => 
+        StudyStatus.SiteVisitPending => 
             "We'll schedule your site visit.",
         StudyStatus.SiteVisitScheduled => 
             "The specialist will conduct the on-site inspection.",
@@ -225,6 +230,7 @@ public static class StudyStatusExtensions
     public static string ToNextActionText(this StudyStatus status) => status switch
     {
         StudyStatus.RequestCreated => "Create Proposal",
+        StudyStatus.RequestApproved => "Request Information",
         StudyStatus.ProposalCreated => "Review Proposal",
         StudyStatus.ProposalReviewed => "Approve Proposal",
         StudyStatus.ProposalUpdated => "Re-review Proposal",
@@ -233,11 +239,11 @@ public static class StudyStatusExtensions
         StudyStatus.ProposalAccepted => "Request Information",
         StudyStatus.ServiceContactsRequested => "Request Financial Info",
         StudyStatus.FinancialInfoRequested => "Awaiting Client Input",
-        StudyStatus.FinancialInfoCreated => "Awaiting Submission",
+        StudyStatus.FinancialInfoInProgress => "Awaiting Submission",
         StudyStatus.FinancialInfoSubmitted => "Review Financial Info",
         StudyStatus.FinancialInfoReviewed => "Accept Financial Info",
         StudyStatus.FinancialInfoReceived => "Begin Site Visit",
-        StudyStatus.SiteVisit => "Schedule Visit",
+        StudyStatus.SiteVisitPending => "Schedule Visit",
         StudyStatus.SiteVisitScheduled => "Complete Visit",
         StudyStatus.SiteVisitCompleted => "Enter Data",
         StudyStatus.SiteVisitDataEntered => "Start Funding Plan",
@@ -262,15 +268,15 @@ public static class StudyStatusExtensions
     /// </summary>
     public static string ToPhase(this StudyStatus status) => status switch
     {
-        StudyStatus.RequestCreated => "Request",
+        StudyStatus.RequestCreated or StudyStatus.RequestApproved => "Request",
         
         StudyStatus.ProposalCreated or StudyStatus.ProposalReviewed or StudyStatus.ProposalUpdated or 
         StudyStatus.ProposalApproved or StudyStatus.ProposalSent or StudyStatus.ProposalAccepted => "Proposal",
         
-        StudyStatus.ServiceContactsRequested or StudyStatus.FinancialInfoRequested or StudyStatus.FinancialInfoCreated or
+        StudyStatus.ServiceContactsRequested or StudyStatus.FinancialInfoRequested or StudyStatus.FinancialInfoInProgress or
         StudyStatus.FinancialInfoSubmitted or StudyStatus.FinancialInfoReviewed or StudyStatus.FinancialInfoReceived => "Data Collection",
         
-        StudyStatus.SiteVisit or StudyStatus.SiteVisitScheduled or 
+        StudyStatus.SiteVisitPending or StudyStatus.SiteVisitScheduled or 
         StudyStatus.SiteVisitCompleted or StudyStatus.SiteVisitDataEntered => "Site Visit",
         
         StudyStatus.FundingPlanReady or StudyStatus.FundingPlanInProcess or StudyStatus.FundingPlanComplete => "Funding Plan",

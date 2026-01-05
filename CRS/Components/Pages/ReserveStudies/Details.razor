@@ -535,8 +535,9 @@
                                             }
                                             
                                             @* Data collection steps *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested) || 
-                                                 allowedNextStudy.Contains(StudyStatus.ServiceContactsRequested)) {
+                                            @if ((allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested) || 
+                                                  allowedNextStudy.Contains(StudyStatus.ServiceContactsRequested)) &&
+                                                  currentStatus < StudyStatus.FinancialInfoRequested) {
                                                 <AuthorizeView Policy="RequireTenantStaff">
                                                     <Authorized>
                                                         <MudButton Variant="Variant.Filled" 
@@ -549,17 +550,60 @@
                                                     </Authorized>
                                                 </AuthorizeView>
                                             }
+
+                                            @* Request more financial info (after review) *@
+                                            @if (allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested) &&
+                                                 currentStatus >= StudyStatus.FinancialInfoSubmitted) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Outlined" 
+                                                                   Color="Color.Warning" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.Refresh" 
+                                                                   OnClick="@(() => RequestFinancialInfoAsync(Id))">
+                                                            Request More Info
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+
+                                            @* Accept financial info *@
+                                            @if (allowedNextStudy.Contains(StudyStatus.FinancialInfoReceived)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Success" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.FinancialInfoReceived))">
+                                                            Accept Financial Info
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+
+                                            @* HOA user button to submit financial info when requested *@
+                                            @if (currentStatus == StudyStatus.FinancialInfoRequested || 
+                                                 currentStatus == StudyStatus.FinancialInfoInProgress) {
+                                                <MudButton Variant="Variant.Filled"
+                                                           Color="Color.Success"
+                                                           Size="Size.Large"
+                                                           StartIcon="@Icons.Material.Filled.Description"
+                                                           Href="@($"/ReserveStudies/{Id}/FinancialInfo")">
+                                                    Submit Financial Information
+                                                </MudButton>
+                                            }
                                             
                                             @* Site visit *@
                                             @if (allowedNextStudy.Contains(StudyStatus.SiteVisitScheduled) || 
-                                                 allowedNextStudy.Contains(StudyStatus.SiteVisit)) {
+                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitPending)) {
                                                 <AuthorizeView Policy="RequireTenantStaff">
                                                     <Authorized>
                                                         <MudButton Variant="Variant.Filled" 
                                                                    Color="Color.Primary" 
                                                                    Size="Size.Large"
                                                                    StartIcon="@Icons.Material.Filled.Event" 
-                                                                   OnClick="@(() => ApplyTransition(allowedNextStudy.Contains(StudyStatus.SiteVisit) ? StudyStatus.SiteVisit : StudyStatus.SiteVisitScheduled))">
+                                                                   OnClick="@(() => ApplyTransition(allowedNextStudy.Contains(StudyStatus.SiteVisitPending) ? StudyStatus.SiteVisitPending : StudyStatus.SiteVisitScheduled))">
                                                             Schedule Site Visit
                                                         </MudButton>
                                                     </Authorized>
@@ -590,8 +634,9 @@
                                                 s != StudyStatus.ProposalUpdated &&
                                                 s != StudyStatus.ProposalAccepted &&
                                                 s != StudyStatus.FinancialInfoRequested &&
+                                                s != StudyStatus.FinancialInfoReceived &&
                                                 s != StudyStatus.ServiceContactsRequested &&
-                                                s != StudyStatus.SiteVisit &&
+                                                s != StudyStatus.SiteVisitPending &&
                                                 s != StudyStatus.SiteVisitScheduled &&
                                                 s != StudyStatus.RequestCompleted)) {
                                                 <AuthorizeView Policy="RequireTenantStaff">
@@ -606,7 +651,6 @@
                                                     </Authorized>
                                                 </AuthorizeView>
                                             }
-                                            
                                             @* HOA User: Accept Proposal button *@
                                             @if (currentStatus == StudyStatus.ProposalSent && !hasValidAcceptance) {
                                                 <AuthorizeView Policy="RequireHOAUser">
@@ -657,44 +701,174 @@
                                     @if (reserveStudy?.FinancialInfo != null) {
                                         <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px; border-left: 4px solid #3b82f6;">
                                             <MudCardContent>
-                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
-                                                    <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Info" Size="Size.Large" />
-                                                    <MudText Typo="Typo.h6" Style="font-weight: 600;">Financial Information</MudText>
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Info" Size="Size.Large" />
+                                                        <MudText Typo="Typo.h6" Style="font-weight: 600;">Financial Information</MudText>
+                                                    </MudStack>
+                                                    @if (reserveStudy.FinancialInfo.DateSubmitted.HasValue) {
+                                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
+                                                            Submitted @reserveStudy.FinancialInfo.DateSubmitted.Value.ToString("MMM dd, yyyy")
+                                                        </MudChip>
+                                                    }
                                                 </MudStack>
-                                                <MudGrid Spacing="3">
-                                                    <MudItem xs="12" md="6">
-                                                        <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Reserve Fund Balance</MudText>
-                                                        <MudText Typo="Typo.h6" Style="color: #3b82f6; font-weight: 700;">
-                                                            $@reserveStudy.FinancialInfo.CurrentReserveFundBalance.ToString("N2")
-                                                        </MudText>
-                                                    </MudItem>
-                                                    <MudItem xs="12" md="6">
-                                                        <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Annual Contribution</MudText>
-                                                        <MudText Typo="Typo.h6" Style="color: #3b82f6; font-weight: 700;">
-                                                            $@reserveStudy.FinancialInfo.AnnualContribution.ToString("N2")
-                                                        </MudText>
-                                                    </MudItem>
-                                                    @if (reserveStudy.FinancialInfo.ProjectedAnnualExpenses.HasValue) {
+
+                                                @* Reserve Balances *@
+                                                <MudText Typo="Typo.subtitle2" Class="mb-2 mt-3" Style="color: #666; font-weight: 600;">Reserve Balances</MudText>
+                                                <MudGrid Spacing="2">
+                                                    @if (reserveStudy.FinancialInfo.JanuaryFirstReserveBalance.HasValue) {
                                                         <MudItem xs="12" md="6">
-                                                            <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Projected Annual Expenses</MudText>
-                                                            <MudText Typo="Typo.body1">
-                                                                $@reserveStudy.FinancialInfo.ProjectedAnnualExpenses.Value.ToString("N2")
+                                                            <MudText Typo="Typo.caption" Style="color: #888;">Jan 1 Reserve Balance</MudText>
+                                                            <MudText Typo="Typo.h6" Style="color: #3b82f6; font-weight: 700;">
+                                                                $@reserveStudy.FinancialInfo.JanuaryFirstReserveBalance.Value.ToString("N2")
                                                             </MudText>
                                                         </MudItem>
                                                     }
-                                                    <MudItem xs="12" md="6">
-                                                        <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Fiscal Year Start</MudText>
-                                                        <MudText Typo="Typo.body1">
-                                                            @System.Globalization.DateTimeFormatInfo.CurrentInfo.GetMonthName(reserveStudy.FinancialInfo.FiscalYearStartMonth)
-                                                        </MudText>
-                                                    </MudItem>
-                                                    @if (!string.IsNullOrEmpty(reserveStudy.FinancialInfo.Comments)) {
-                                                        <MudItem xs="12">
-                                                            <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Comments</MudText>
-                                                            <MudText Typo="Typo.body2">@reserveStudy.FinancialInfo.Comments</MudText>
+                                                    @if (reserveStudy.FinancialInfo.DecemberThirtyFirstReserveBalance.HasValue) {
+                                                        <MudItem xs="12" md="6">
+                                                            <MudText Typo="Typo.caption" Style="color: #888;">Expected Dec 31 Balance</MudText>
+                                                            <MudText Typo="Typo.h6" Style="color: #3b82f6; font-weight: 700;">
+                                                                $@reserveStudy.FinancialInfo.DecemberThirtyFirstReserveBalance.Value.ToString("N2")
+                                                            </MudText>
                                                         </MudItem>
                                                     }
                                                 </MudGrid>
+
+                                                @* Budgeted Contributions *@
+                                                @if (reserveStudy.FinancialInfo.BudgetedContributionLastYear.HasValue || 
+                                                     reserveStudy.FinancialInfo.BudgetedContributionCurrentYear.HasValue ||
+                                                     reserveStudy.FinancialInfo.BudgetedContributionNextYear.HasValue) {
+                                                    <MudDivider Class="my-3" />
+                                                    <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: #666; font-weight: 600;">Budgeted Reserve Contributions</MudText>
+                                                    <MudGrid Spacing="2">
+                                                        @if (reserveStudy.FinancialInfo.BudgetedContributionLastYear.HasValue) {
+                                                            <MudItem xs="12" md="4">
+                                                                <MudText Typo="Typo.caption" Style="color: #888;">Last Year</MudText>
+                                                                <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                                                                    $@reserveStudy.FinancialInfo.BudgetedContributionLastYear.Value.ToString("N2")
+                                                                </MudText>
+                                                            </MudItem>
+                                                        }
+                                                        @if (reserveStudy.FinancialInfo.BudgetedContributionCurrentYear.HasValue) {
+                                                            <MudItem xs="12" md="4">
+                                                                <MudText Typo="Typo.caption" Style="color: #888;">Current Year</MudText>
+                                                                <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                                                                    $@reserveStudy.FinancialInfo.BudgetedContributionCurrentYear.Value.ToString("N2")
+                                                                </MudText>
+                                                            </MudItem>
+                                                        }
+                                                        @if (reserveStudy.FinancialInfo.BudgetedContributionNextYear.HasValue) {
+                                                            <MudItem xs="12" md="4">
+                                                                <MudText Typo="Typo.caption" Style="color: #888;">Next Year</MudText>
+                                                                <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                                                                    $@reserveStudy.FinancialInfo.BudgetedContributionNextYear.Value.ToString("N2")
+                                                                </MudText>
+                                                            </MudItem>
+                                                        }
+                                                    </MudGrid>
+                                                }
+
+                                                @* Community Details *@
+                                                <MudDivider Class="my-3" />
+                                                <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: #666; font-weight: 600;">Community Details</MudText>
+                                                <MudGrid Spacing="2">
+                                                    @if (reserveStudy.FinancialInfo.TotalNumberOfUnits.HasValue) {
+                                                        <MudItem xs="12" md="4">
+                                                            <MudText Typo="Typo.caption" Style="color: #888;">Total Units</MudText>
+                                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                                                                @reserveStudy.FinancialInfo.TotalNumberOfUnits.Value
+                                                            </MudText>
+                                                        </MudItem>
+                                                    }
+                                                    <MudItem xs="12" md="4">
+                                                        <MudText Typo="Typo.caption" Style="color: #888;">Fiscal Year Start</MudText>
+                                                        <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                                                            @System.Globalization.DateTimeFormatInfo.CurrentInfo.GetMonthName(reserveStudy.FinancialInfo.FiscalYearStartMonth)
+                                                        </MudText>
+                                                    </MudItem>
+                                                    @if (reserveStudy.FinancialInfo.AnnualMeetingDate.HasValue) {
+                                                        <MudItem xs="12" md="4">
+                                                            <MudText Typo="Typo.caption" Style="color: #888;">Annual Meeting</MudText>
+                                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                                                                @reserveStudy.FinancialInfo.AnnualMeetingDate.Value.ToString("MMM dd, yyyy")
+                                                            </MudText>
+                                                        </MudItem>
+                                                    }
+                                                </MudGrid>
+
+                                                @* Staff-only sections *@
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        @* Loans & Special Assessments *@
+                                                        @if (reserveStudy.FinancialInfo.LoanAmount.HasValue || reserveStudy.FinancialInfo.SpecialAssessmentAmount.HasValue) {
+                                                            <MudDivider Class="my-3" />
+                                                            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: #666; font-weight: 600;">Loans & Assessments</MudText>
+                                                            <MudGrid Spacing="2">
+                                                                @if (reserveStudy.FinancialInfo.LoanAmount.HasValue) {
+                                                                    <MudItem xs="12" md="6">
+                                                                        <MudPaper Elevation="1" Class="pa-3" Style="border-radius: 8px;">
+                                                                            <MudText Typo="Typo.caption" Style="color: #888;">Current Loan</MudText>
+                                                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                                                                                $@reserveStudy.FinancialInfo.LoanAmount.Value.ToString("N2")
+                                                                            </MudText>
+                                                                            @if (reserveStudy.FinancialInfo.LoanBalanceRemaining.HasValue) {
+                                                                                <MudText Typo="Typo.caption">Balance: $@reserveStudy.FinancialInfo.LoanBalanceRemaining.Value.ToString("N2")</MudText>
+                                                                            }
+                                                                        </MudPaper>
+                                                                    </MudItem>
+                                                                }
+                                                                @if (reserveStudy.FinancialInfo.SpecialAssessmentAmount.HasValue) {
+                                                                    <MudItem xs="12" md="6">
+                                                                        <MudPaper Elevation="1" Class="pa-3" Style="border-radius: 8px;">
+                                                                            <MudText Typo="Typo.caption" Style="color: #888;">Special Assessment</MudText>
+                                                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                                                                                $@reserveStudy.FinancialInfo.SpecialAssessmentAmount.Value.ToString("N2")
+                                                                            </MudText>
+                                                                            @if (reserveStudy.FinancialInfo.SpecialAssessmentBalanceRemaining.HasValue) {
+                                                                                <MudText Typo="Typo.caption">Balance: $@reserveStudy.FinancialInfo.SpecialAssessmentBalanceRemaining.Value.ToString("N2")</MudText>
+                                                                            }
+                                                                        </MudPaper>
+                                                                    </MudItem>
+                                                                }
+                                                            </MudGrid>
+                                                        }
+
+                                                        @* Planned Projects *@
+                                                        @if (!string.IsNullOrEmpty(reserveStudy.FinancialInfo.PlannedProjects)) {
+                                                            <MudDivider Class="my-3" />
+                                                            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: #666; font-weight: 600;">Planned Projects</MudText>
+                                                            <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@reserveStudy.FinancialInfo.PlannedProjects</MudText>
+                                                        }
+
+                                                        @* Building Components *@
+                                                        @if (!string.IsNullOrEmpty(reserveStudy.FinancialInfo.BuildingRoofSidingInfo)) {
+                                                            <MudDivider Class="my-3" />
+                                                            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: #666; font-weight: 600;">Building Components</MudText>
+                                                            <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@reserveStudy.FinancialInfo.BuildingRoofSidingInfo</MudText>
+                                                        }
+                                                    </Authorized>
+                                                </AuthorizeView>
+
+                                                @* Comments - visible to all *@
+                                                @if (!string.IsNullOrEmpty(reserveStudy.FinancialInfo.Comments)) {
+                                                    <MudDivider Class="my-3" />
+                                                    <MudText Typo="Typo.caption" Style="color: #888;">Additional Comments</MudText>
+                                                    <MudText Typo="Typo.body2">@reserveStudy.FinancialInfo.Comments</MudText>
+                                                }
+
+                                                @* Acknowledgment *@
+                                                @if (reserveStudy.FinancialInfo.AcknowledgementAccepted) {
+                                                    <MudDivider Class="my-3" />
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Success" Size="Size.Small" />
+                                                        <MudText Typo="Typo.body2" Style="color: #10b981;">
+                                                            Acknowledged by @(reserveStudy.FinancialInfo.PresidentSignature ?? "Authorized Signer")
+                                                            @if (reserveStudy.FinancialInfo.AcknowledgmentSignatureDate.HasValue) {
+                                                                <text> on @reserveStudy.FinancialInfo.AcknowledgmentSignatureDate.Value.ToString("MMM dd, yyyy")</text>
+                                                            }
+                                                        </MudText>
+                                                    </MudStack>
+                                                }
                                             </MudCardContent>
                                         </MudCard>
                                     }
@@ -986,11 +1160,11 @@ private bool hasValidAcceptance = false;
         StudyStatus.ProposalAccepted,
         StudyStatus.ServiceContactsRequested,
         StudyStatus.FinancialInfoRequested,
-        StudyStatus.FinancialInfoCreated,
+        StudyStatus.FinancialInfoInProgress,
         StudyStatus.FinancialInfoSubmitted,
         StudyStatus.FinancialInfoReviewed,
         StudyStatus.FinancialInfoReceived,
-        StudyStatus.SiteVisit,
+        StudyStatus.SiteVisitPending,
         StudyStatus.SiteVisitScheduled,
         StudyStatus.SiteVisitCompleted,
         StudyStatus.SiteVisitDataEntered,

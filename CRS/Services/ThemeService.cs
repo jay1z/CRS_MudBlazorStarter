@@ -147,6 +147,15 @@ public class ThemeService {
     string? TextPrimary = null,
     string? TextSecondary = null,
     bool? UseDarkMode = null,
-    string? Preset = null
+    string? Preset = null,
+    // Organization Contact Info (shared across system)
+    string? CompanyTagline = null,
+    string? CompanyPhone = null,
+    string? CompanyEmail = null,
+    string? CompanyWebsite = null,
+    string? CompanyAddress = null,
+    string? CompanyLogoUrl = null,
+    // PDF-specific settings
+    CRS.Models.PdfSettings? PdfSettings = null
     );
 }

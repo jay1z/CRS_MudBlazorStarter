@@ -78,19 +78,17 @@
 
                     <MudGrid>
                         <MudItem xs="12">
-                            <MudCheckBox T="bool" @bind-Checked="@proposal.IncludeLevel1Services"
-                                         Label="Level I: Full Service - Includes site inspection and financial analysis"
-                                         Color="Color.Primary" Class="mb-2" />
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudCheckBox T="bool" @bind-Checked="@proposal.IncludeLevel2Services"
-                                         Label="Level II: Update with Site Visit - Includes site inspection and update of previous reserve study"
-                                         Color="Color.Primary" Class="mb-2" />
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudCheckBox T="bool" @bind-Checked="@proposal.IncludeLevel3Services"
-                                         Label="Level III: Update without Site Visit - Update of previous reserve study without new inspection"
-                                         Color="Color.Primary" Class="mb-4" />
+                            <MudRadioGroup T="string" @bind-Value="@proposal.ServiceLevel">
+                                <MudRadio T="string" Value="@("Level1")" Color="Color.Primary" Class="mb-2">
+                                    Level I: Full Service - Includes site inspection and financial analysis
+                                </MudRadio>
+                                <MudRadio T="string" Value="@("Level2")" Color="Color.Primary" Class="mb-2">
+                                    Level II: Update with Site Visit - Includes site inspection and update of previous reserve study
+                                </MudRadio>
+                                <MudRadio T="string" Value="@("Level3")" Color="Color.Primary" Class="mb-2">
+                                    Level III: Update without Site Visit - Update of previous reserve study without new inspection
+                                </MudRadio>
+                            </MudRadioGroup>
                         </MudItem>
                     </MudGrid>
 
@@ -237,15 +235,22 @@
                 ProposalDate = proposal.ProposalDate.GetValueOrDefault(),
                 ProposalScope = proposal.ProposalScope,
                 EstimatedCost = proposal.EstimatedCost,
-                Comments = proposal.Comments
+                Comments = proposal.Comments,
+                ServiceLevel = proposal.ServiceLevel,
+                DeliveryTimeframe = proposal.DeliveryTimeframe,
+                PaymentTerms = proposal.PaymentTerms,
+                IncludePrepaymentDiscount = proposal.IncludePrepaymentDiscount,
+                IncludeDigitalDelivery = proposal.IncludeDigitalDelivery,
+                IncludeComponentInventory = proposal.IncludeComponentInventory,
+                IncludeFundingPlans = proposal.IncludeFundingPlans
             };
 
             var result = await WorkflowService.SendProposalAsync(studyId, proposalEntity);
             if (result) {
-                Snackbar.Add("Proposal sent successfully", Severity.Success);
+                Snackbar.Add("Proposal created successfully", Severity.Success);
                 Navigation.NavigateTo($"/ReserveStudies/{studyId}/Details");
             } else {
-                Snackbar.Add("Failed to send proposal", Severity.Error);
+                Snackbar.Add("Failed to create proposal. Please check the workflow status.", Severity.Error);
             }
         } catch (Exception ex) {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
@@ -267,10 +272,9 @@
         [Range(0.01, double.MaxValue, ErrorMessage = "Estimated cost must be greater than 0")]
         public decimal EstimatedCost { get; set; }
 
-        // Service level options
-        public bool IncludeLevel1Services { get; set; }
-        public bool IncludeLevel2Services { get; set; }
-        public bool IncludeLevel3Services { get; set; }
+        // Service level - only one can be selected
+        [Required(ErrorMessage = "Please select a service level")]
+        public string ServiceLevel { get; set; } = "Level1";
 
         // Delivery timeframe
         public string DeliveryTimeframe { get; set; } = "Standard";
