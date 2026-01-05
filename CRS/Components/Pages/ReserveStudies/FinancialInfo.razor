@@ -5,11 +5,13 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
 
 @inject IReserveStudyWorkflowService WorkflowService
 @inject IReserveStudyService ReserveStudyService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Property Financial Information</PageTitle>
 
@@ -27,6 +29,11 @@
                 <CardHeaderContent>
                     <MudText Typo="Typo.h4">Property Financial Information</MudText>
                     <MudText Typo="Typo.subtitle1" Color="Color.Primary">@reserveStudy.Community?.Name</MudText>
+                    @if (isReadOnly) {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Visibility" Class="mt-2">
+                            View Only
+                        </MudChip>
+                    }
                 </CardHeaderContent>
                 <CardHeaderActions>
                     <MudTooltip Text="Return to Study Details">
@@ -39,15 +46,17 @@
                 <EditForm Model="@financialInfo" OnValidSubmit="HandleValidSubmit">
                     <DataAnnotationsValidator />
 
-                    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-info-lighten); border-radius: 8px;">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" />
-                            <MudText Typo="Typo.body1">
-                                Please complete the following Association financial information (if budgeted/available).
-                                This information helps us prepare an accurate reserve study for your community.
-                            </MudText>
-                        </MudStack>
-                    </MudPaper>
+                    @if (!isReadOnly) {
+                        <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background-color: var(--mud-palette-info-lighten); border-radius: 8px;">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" />
+                                <MudText Typo="Typo.body1">
+                                    Please complete the following Association financial information (if budgeted/available).
+                                    This information helps us prepare an accurate reserve study for your community.
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+                    }
 
                     <!-- Reserve Balance Section -->
                     <MudText Typo="Typo.h6" Class="mb-3 mt-4">
@@ -64,7 +73,8 @@
                                              Variant="Variant.Outlined"
                                              Adornment="Adornment.Start"
                                              AdornmentIcon="@Icons.Material.Filled.AttachMoney"
-                                             HelperText="Include unexpended operation funds from last year rolled in" />
+                                             HelperText="Include unexpended operation funds from last year rolled in"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudNumericField Label="Expected Dec 31 Reserve Balance ($)"
@@ -73,7 +83,8 @@
                                              Variant="Variant.Outlined"
                                              Adornment="Adornment.Start"
                                              AdornmentIcon="@Icons.Material.Filled.AttachMoney"
-                                             HelperText="After completion of all current year reserve expenditures" />
+                                             HelperText="After completion of all current year reserve expenditures"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                     </MudGrid>
 
@@ -91,7 +102,8 @@
                                              Format="N2"
                                              Variant="Variant.Outlined"
                                              Adornment="Adornment.Start"
-                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                         <MudItem xs="12" md="4">
                             <MudNumericField Label="Current Year ($)"
@@ -99,7 +111,8 @@
                                              Format="N2"
                                              Variant="Variant.Outlined"
                                              Adornment="Adornment.Start"
-                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                         <MudItem xs="12" md="4">
                             <MudNumericField Label="Next Year ($)"
@@ -107,7 +120,8 @@
                                              Format="N2"
                                              Variant="Variant.Outlined"
                                              Adornment="Adornment.Start"
-                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                     </MudGrid>
 
@@ -128,7 +142,8 @@
                                              Format="N2"
                                              Variant="Variant.Outlined"
                                              Adornment="Adornment.Start"
-                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudNumericField Label="Next Year ($)"
@@ -136,7 +151,8 @@
                                              Format="N2"
                                              Variant="Variant.Outlined"
                                              Adornment="Adornment.Start"
-                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                                             AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                     </MudGrid>
 
@@ -152,19 +168,22 @@
                             <MudNumericField Label="Total Number of Units"
                                              @bind-Value="financialInfo.TotalNumberOfUnits"
                                              Variant="Variant.Outlined"
-                                             Min="1" />
+                                             Min="1"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                         <MudItem xs="12" md="4">
                             <MudDatePicker Label="Annual Meeting Date"
                                            @bind-Date="financialInfo.AnnualMeetingDate"
                                            Variant="Variant.Outlined"
                                            Editable="true"
-                                           HelperText="If known" />
+                                           HelperText="If known"
+                                           Disabled="@isReadOnly" />
                         </MudItem>
                         <MudItem xs="12" md="4">
                             <MudSelect T="int" Label="Fiscal Year Start Month"
                                        @bind-Value="financialInfo.FiscalYearStartMonth"
-                                       Variant="Variant.Outlined">
+                                       Variant="Variant.Outlined"
+                                       Disabled="@isReadOnly">
                                 <MudSelectItem Value="1">January</MudSelectItem>
                                 <MudSelectItem Value="2">February</MudSelectItem>
                                 <MudSelectItem Value="3">March</MudSelectItem>
@@ -197,7 +216,8 @@
                                                  Format="N2"
                                                  Variant="Variant.Outlined"
                                                  Adornment="Adornment.Start"
-                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                                 Disabled="@isReadOnly" />
                             </MudItem>
                             <MudItem xs="12" md="4">
                                 <MudNumericField Label="Balance Remaining ($)"
@@ -205,14 +225,16 @@
                                                  Format="N2"
                                                  Variant="Variant.Outlined"
                                                  Adornment="Adornment.Start"
-                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                                 Disabled="@isReadOnly" />
                             </MudItem>
                             <MudItem xs="12" md="4">
                                 <MudNumericField Label="Expected Year Complete"
                                                  @bind-Value="financialInfo.LoanExpectedYearComplete"
                                                  Variant="Variant.Outlined"
                                                  Min="@DateTime.Now.Year"
-                                                 Max="@(DateTime.Now.Year + 50)" />
+                                                 Max="@(DateTime.Now.Year + 50)"
+                                                 Disabled="@isReadOnly" />
                             </MudItem>
                         </MudGrid>
                     </MudPaper>
@@ -226,7 +248,8 @@
                                                  Format="N2"
                                                  Variant="Variant.Outlined"
                                                  Adornment="Adornment.Start"
-                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                                 Disabled="@isReadOnly" />
                             </MudItem>
                             <MudItem xs="12" md="4">
                                 <MudNumericField Label="Balance Remaining ($)"
@@ -234,14 +257,16 @@
                                                  Format="N2"
                                                  Variant="Variant.Outlined"
                                                  Adornment="Adornment.Start"
-                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                                 Disabled="@isReadOnly" />
                             </MudItem>
                             <MudItem xs="12" md="4">
                                 <MudNumericField Label="Expected Year Complete"
                                                  @bind-Value="financialInfo.SpecialAssessmentExpectedYearComplete"
                                                  Variant="Variant.Outlined"
                                                  Min="@DateTime.Now.Year"
-                                                 Max="@(DateTime.Now.Year + 50)" />
+                                                 Max="@(DateTime.Now.Year + 50)"
+                                                 Disabled="@isReadOnly" />
                             </MudItem>
                         </MudGrid>
                     </MudPaper>
@@ -262,7 +287,8 @@
                                           @bind-Value="financialInfo.PlannedProjects"
                                           Variant="Variant.Outlined"
                                           Lines="4"
-                                          Placeholder="Example: Pool resurfacing - 2025 - $45,000; Parking lot repaving - 2026 - $120,000" />
+                                          Placeholder="Example: Pool resurfacing - 2025 - $45,000; Parking lot repaving - 2026 - $120,000"
+                                          Disabled="@isReadOnly" />
                         </MudItem>
                     </MudGrid>
 
@@ -281,7 +307,8 @@
                                              Variant="Variant.Outlined"
                                              Adornment="Adornment.Start"
                                              AdornmentIcon="@Icons.Material.Filled.AttachMoney"
-                                             HelperText="Normally found in the policy declarations pages" />
+                                             HelperText="Normally found in the policy declarations pages"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudNumericField Label="Interest Rate on Reserve Funds (%)"
@@ -292,7 +319,8 @@
                                              AdornmentText="%"
                                              Min="0"
                                              Max="100"
-                                             HelperText="% of interest being earned on reserve funds (if any)" />
+                                             HelperText="% of interest being earned on reserve funds (if any)"
+                                             Disabled="@isReadOnly" />
                         </MudItem>
                     </MudGrid>
 
@@ -313,7 +341,8 @@
                                           @bind-Value="financialInfo.BuildingRoofSidingInfo"
                                           Variant="Variant.Outlined"
                                           Lines="4"
-                                          Placeholder="Example: Building A - Roof: 2018, Siding: Original (2005); Building B - Roof: Original (2010), Siding: 2020" />
+                                          Placeholder="Example: Building A - Roof: 2018, Siding: Original (2005); Building B - Roof: Original (2010), Siding: 2020"
+                                          Disabled="@isReadOnly" />
                         </MudItem>
                         <MudItem xs="12">
                             <MudTextField Label="Component Replacement Dates"
@@ -321,7 +350,8 @@
                                           Variant="Variant.Outlined"
                                           Lines="3"
                                           HelperText="Any known last replacement dates for larger primary components (fencing, entry feature, roads, etc.)"
-                                          Placeholder="Example: Fencing - 2015; Entry gates - 2019; Main road - 2012" />
+                                          Placeholder="Example: Fencing - 2015; Entry gates - 2019; Main road - 2012"
+                                          Disabled="@isReadOnly" />
                         </MudItem>
                     </MudGrid>
 
@@ -337,14 +367,14 @@
 
                     <MudGrid>
                         <MudItem xs="12">
-                            <MudRadioGroup T="int?" @bind-Value="financialInfo.SidingCalculationPreference">
-                                <MudRadio T="int?" Value="1" Color="Color.Primary" Class="mb-2">
+                            <MudRadioGroup T="int?" @bind-Value="financialInfo.SidingCalculationPreference" Disabled="@isReadOnly">
+                                <MudRadio T="int?" Value="1" Color="Color.Primary" Class="mb-2" Disabled="@isReadOnly">
                                     <MudText>
                                         <strong>Option 1:</strong> Replace all at once / phased over a couple years
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">(ensure aesthetic unity, most expensive)</MudText>
                                     </MudText>
                                 </MudRadio>
-                                <MudRadio T="int?" Value="2" Color="Color.Primary" Class="mb-2">
+                                <MudRadio T="int?" Value="2" Color="Color.Primary" Class="mb-2" Disabled="@isReadOnly">
                                     <MudText>
                                         <strong>Option 2:</strong> Replace as needed from reserve in an annual allowance
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">(most cost effective)</MudText>
@@ -367,14 +397,16 @@
                                           @bind-Value="financialInfo.FinancialDocumentUrls"
                                           Variant="Variant.Outlined"
                                           Lines="3"
-                                          HelperText="Links to budgets, financial statements, or other supporting documents" />
+                                          HelperText="Links to budgets, financial statements, or other supporting documents"
+                                          Disabled="@isReadOnly" />
                         </MudItem>
                         <MudItem xs="12">
                             <MudTextField Label="Additional Comments"
                                           @bind-Value="financialInfo.Comments"
                                           Variant="Variant.Outlined"
                                           Lines="3"
-                                          Placeholder="Any other information that may be helpful for the reserve study..." />
+                                          Placeholder="Any other information that may be helpful for the reserve study..."
+                                          Disabled="@isReadOnly" />
                         </MudItem>
                     </MudGrid>
 
@@ -397,7 +429,8 @@
                                 <MudCheckBox @bind-Value="financialInfo.AcknowledgementAccepted"
                                              Label="I acknowledge and agree to the above statement"
                                              Color="Color.Primary"
-                                             Required="true" />
+                                             Required="true"
+                                             Disabled="@isReadOnly" />
                             </MudItem>
                             <MudItem xs="12" md="6">
                                 <MudTextField Label="Association / Community Name"
@@ -410,7 +443,8 @@
                                 <MudTextField Label="President / Authorized Signer Name"
                                               @bind-Value="financialInfo.PresidentSignature"
                                               Variant="Variant.Outlined"
-                                              Required="true" />
+                                              Required="true"
+                                              Disabled="@isReadOnly" />
                             </MudItem>
                             <MudItem xs="12" md="6">
                                 <MudTextField Label="Date"
@@ -430,19 +464,21 @@
                                    StartIcon="@Icons.Material.Filled.ArrowBack">
                             Back to Details
                         </MudButton>
-                        <MudButton Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   ButtonType="ButtonType.Submit"
-                                   Disabled="@(isSaving || !financialInfo.AcknowledgementAccepted)"
-                                   Size="Size.Large"
-                                   StartIcon="@Icons.Material.Filled.Send">
-                            @if (isSaving) {
-                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                                <MudText Class="ms-2">Submitting...</MudText>
-                            } else {
-                                <MudText>Submit Financial Information</MudText>
-                            }
-                        </MudButton>
+                        @if (!isReadOnly) {
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       ButtonType="ButtonType.Submit"
+                                       Disabled="@(isSaving || !financialInfo.AcknowledgementAccepted)"
+                                       Size="Size.Large"
+                                       StartIcon="@Icons.Material.Filled.Send">
+                                @if (isSaving) {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">Submitting...</MudText>
+                                } else {
+                                    <MudText>Submit Financial Information</MudText>
+                                }
+                            </MudButton>
+                        }
                     </MudStack>
                 </EditForm>
             </MudCardContent>
@@ -456,12 +492,26 @@
 
     private bool isLoading = true;
     private bool isSaving = false;
+    private bool isReadOnly = false;
 
     private ReserveStudy? reserveStudy;
     private Models.FinancialInfo financialInfo = new();
 
     protected override async Task OnInitializedAsync() {
+        await CheckUserRole();
         await LoadReserveStudy();
+    }
+
+    private async Task CheckUserRole() {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        // Staff, Specialists, and Owners view in read-only mode
+        // Only HOA users can edit
+        isReadOnly = user.IsInRole("TenantOwner") || 
+                     user.IsInRole("TenantSpecialist") || 
+                     user.IsInRole("TenantStaff") ||
+                     user.IsInRole("Admin");
     }
 
     private async Task LoadReserveStudy() {
@@ -469,15 +519,20 @@
         try {
             reserveStudy = await ReserveStudyService.GetReserveStudyByIdAsync(studyId);
             if (reserveStudy != null) {
-                financialInfo.ReserveStudyId = studyId;
-                
-                // Pre-populate from Community data
-                financialInfo.CommunityNameOnAcknowledgment = reserveStudy.Community?.Name;
-                financialInfo.TotalNumberOfUnits = reserveStudy.Community?.NumberOfUnits;
-                financialInfo.AnnualMeetingDate = reserveStudy.Community?.AnnualMeetingDate;
-                
-                // Set signature date to today (read-only)
-                financialInfo.AcknowledgmentSignatureDate = DateTime.Today;
+                // Check if financial info already exists (editing mode)
+                if (reserveStudy.FinancialInfo != null) {
+                    // Use existing financial info for editing
+                    financialInfo = reserveStudy.FinancialInfo;
+                } else {
+                    // New submission - pre-populate from Community data
+                    financialInfo = new Models.FinancialInfo {
+                        ReserveStudyId = studyId,
+                        CommunityNameOnAcknowledgment = reserveStudy.Community?.Name,
+                        TotalNumberOfUnits = reserveStudy.Community?.NumberOfUnits,
+                        AnnualMeetingDate = reserveStudy.Community?.AnnualMeetingDate,
+                        AcknowledgmentSignatureDate = DateTime.Today
+                    };
+                }
             }
         } catch (Exception ex) {
             Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
@@ -487,6 +542,11 @@
     }
 
     private async Task HandleValidSubmit() {
+        if (isReadOnly) {
+            Snackbar.Add("You do not have permission to edit this information.", Severity.Warning);
+            return;
+        }
+
         if (!financialInfo.AcknowledgementAccepted) {
             Snackbar.Add("Please acknowledge and accept the statement to submit.", Severity.Warning);
             return;

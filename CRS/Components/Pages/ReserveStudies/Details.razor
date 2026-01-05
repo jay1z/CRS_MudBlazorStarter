@@ -594,8 +594,8 @@
                                                 </MudButton>
                                             }
                                             
-                                            @* Site visit *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.SiteVisitScheduled) || 
+                                            @* Site visit workflow *@
+                                            @if (currentStatus == StudyStatus.FinancialInfoReceived && 
                                                  allowedNextStudy.Contains(StudyStatus.SiteVisitPending)) {
                                                 <AuthorizeView Policy="RequireTenantStaff">
                                                     <Authorized>
@@ -603,8 +603,53 @@
                                                                    Color="Color.Primary" 
                                                                    Size="Size.Large"
                                                                    StartIcon="@Icons.Material.Filled.Event" 
-                                                                   OnClick="@(() => ApplyTransition(allowedNextStudy.Contains(StudyStatus.SiteVisitPending) ? StudyStatus.SiteVisitPending : StudyStatus.SiteVisitScheduled))">
-                                                            Schedule Site Visit
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitPending))">
+                                                            Begin Site Visit Process
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+
+                                            @if (currentStatus == StudyStatus.SiteVisitPending && 
+                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitScheduled)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Primary" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.CalendarMonth" 
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitScheduled))">
+                                                            Confirm Site Visit Scheduled
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+
+                                            @if (currentStatus == StudyStatus.SiteVisitScheduled && 
+                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitCompleted)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Success" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitCompleted))">
+                                                            Mark Site Visit Complete
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+
+                                            @if (currentStatus == StudyStatus.SiteVisitCompleted && 
+                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitDataEntered)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Primary" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.Storage" 
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitDataEntered))">
+                                                            Mark Data Entry Complete
                                                         </MudButton>
                                                     </Authorized>
                                                 </AuthorizeView>
@@ -638,6 +683,8 @@
                                                 s != StudyStatus.ServiceContactsRequested &&
                                                 s != StudyStatus.SiteVisitPending &&
                                                 s != StudyStatus.SiteVisitScheduled &&
+                                                s != StudyStatus.SiteVisitCompleted &&
+                                                s != StudyStatus.SiteVisitDataEntered &&
                                                 s != StudyStatus.RequestCompleted)) {
                                                 <AuthorizeView Policy="RequireTenantStaff">
                                                     <Authorized>
@@ -669,7 +716,8 @@
                                     }
 
 
-                                    @if (reserveStudy?.Proposal != null) {
+                                    @* Proposal Details - only show before financial info stage *@
+                                    @if (reserveStudy?.Proposal != null && currentStatus < StudyStatus.FinancialInfoRequested) {
                                         <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px; border-left: 4px solid #10b981;">
                                             <MudCardContent>
                                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
@@ -706,11 +754,35 @@
                                                         <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Info" Size="Size.Large" />
                                                         <MudText Typo="Typo.h6" Style="font-weight: 600;">Financial Information</MudText>
                                                     </MudStack>
-                                                    @if (reserveStudy.FinancialInfo.DateSubmitted.HasValue) {
-                                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
-                                                            Submitted @reserveStudy.FinancialInfo.DateSubmitted.Value.ToString("MMM dd, yyyy")
-                                                        </MudChip>
-                                                    }
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                        @if (reserveStudy.FinancialInfo.DateSubmitted.HasValue) {
+                                                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
+                                                                Submitted @reserveStudy.FinancialInfo.DateSubmitted.Value.ToString("MMM dd, yyyy")
+                                                            </MudChip>
+                                                        }
+                                                        @* HOA users can edit during review period *@
+                                                        <AuthorizeView Policy="RequireHOAUser">
+                                                            <Authorized>
+                                                                @if (currentStatus <= StudyStatus.FinancialInfoReviewed) {
+                                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                                                   Color="Color.Primary" 
+                                                                                   Size="Size.Small"
+                                                                                   Href="@($"/ReserveStudies/{Id}/FinancialInfo")"
+                                                                                   Title="Edit Financial Information" />
+                                                                }
+                                                            </Authorized>
+                                                        </AuthorizeView>
+                                                        @* Staff/Specialists see view-only button *@
+                                                        <AuthorizeView Policy="RequireTenantStaff">
+                                                            <Authorized>
+                                                                <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                                                               Color="Color.Default" 
+                                                                               Size="Size.Small"
+                                                                               Href="@($"/ReserveStudies/{Id}/FinancialInfo")"
+                                                                               Title="View Financial Information" />
+                                                            </Authorized>
+                                                        </AuthorizeView>
+                                                    </MudStack>
                                                 </MudStack>
 
                                                 @* Reserve Balances *@
