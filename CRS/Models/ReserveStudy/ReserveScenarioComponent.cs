@@ -100,10 +100,16 @@ public class ReserveScenarioComponent : ITenantScoped
     public string? Notes { get; set; }
 
     /// <summary>
-    /// Reference to an existing building or common element (optional link).
+    /// Reference to an existing building element (optional link).
+    /// Changed to Guid? to match BuildingElement.Id type.
     /// </summary>
-    public int? LinkedBuildingElementId { get; set; }
-    public int? LinkedCommonElementId { get; set; }
+    public Guid? LinkedBuildingElementId { get; set; }
+    
+    /// <summary>
+    /// Reference to an existing common element (optional link).
+    /// Changed to Guid? to match CommonElement.Id type.
+    /// </summary>
+    public Guid? LinkedCommonElementId { get; set; }
 
     /// <summary>
     /// When this component was created.

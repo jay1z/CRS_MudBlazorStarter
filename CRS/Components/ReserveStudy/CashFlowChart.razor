@@ -1,0 +1,235 @@
+﻿@using CRS.Core.ReserveCalculator.Models
+@implements IDisposable
+@inject IJSRuntime JSRuntime
+
+<MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
+    <MudText Typo="Typo.h6" Class="mb-3">
+        <MudIcon Icon="@Icons.Material.Filled.ShowChart" Class="mr-2" Style="vertical-align: middle;" />
+        Cash Flow Projection Chart
+    </MudText>
+    
+    @if (Result == null)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true">
+            Calculate a scenario to see the chart.
+        </MudAlert>
+    }
+    else if (_hasError)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText>Chart could not be loaded.</MudText>
+                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="RetryLoadChart">Retry</MudButton>
+            </MudStack>
+        </MudAlert>
+    }
+    else if (_isLoading)
+    {
+        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="@GetHeightStyle()">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Loading chart...</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <div id="@ChartId" style="@GetHeightStyle() width: 100%;"></div>
+    }
+</MudPaper>
+
+@code {
+    [Parameter]
+    public ReserveStudyResult? Result { get; set; }
+    
+    [Parameter]
+    public string ChartId { get; set; } = "cashflow-chart";
+    
+    [Parameter]
+    public int Height { get; set; } = 400;
+
+    private bool _chartInitialized = false;
+    private bool _isLoading = true;
+    private bool _hasError = false;
+    private bool _libraryLoaded = false;
+    private ReserveStudyResult? _lastResult;
+    private int _retryCount = 0;
+    private const int MaxRetries = 3;
+
+    private string GetHeightStyle() => $"height: {Height}px;";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TryLoadAndRenderAsync();
+        }
+        else if (_libraryLoaded && Result != null && Result.IsSuccess && !_chartInitialized && Result != _lastResult)
+        {
+            _lastResult = Result;
+            // Small delay to ensure DOM is ready
+            await Task.Delay(100);
+            await RenderChartAsync();
+        }
+    }
+
+    private async Task TryLoadAndRenderAsync()
+    {
+        try
+        {
+            // Wait for JS to be available
+            await Task.Delay(200);
+            
+            // Try to load ApexCharts
+            await JSRuntime.InvokeVoidAsync("loadApexChartsLibrary");
+            _libraryLoaded = true;
+            _isLoading = false;
+            _hasError = false;
+            StateHasChanged();
+
+            // Render chart if we have data
+            if (Result != null && Result.IsSuccess)
+            {
+                await Task.Delay(100);
+                await RenderChartAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading ApexCharts: {ex.Message}");
+            _retryCount++;
+            
+            if (_retryCount < MaxRetries)
+            {
+                // Retry after a delay
+                await Task.Delay(500 * _retryCount);
+                await TryLoadAndRenderAsync();
+            }
+            else
+            {
+                _isLoading = false;
+                _hasError = true;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task RetryLoadChart()
+    {
+        _isLoading = true;
+        _hasError = false;
+        _retryCount = 0;
+        _chartInitialized = false;
+        StateHasChanged();
+        
+        await TryLoadAndRenderAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Reset if we have new results
+        if (Result != null && Result != _lastResult)
+        {
+            _chartInitialized = false;
+        }
+    }
+
+    private async Task RenderChartAsync()
+    {
+        if (Result?.Years == null || Result.Years.Count == 0) return;
+        if (!_libraryLoaded) return;
+        if (_chartInitialized) return;
+
+        var years = Result.Years.Select(y => y.CalendarYear.ToString()).ToArray();
+        var contributions = Result.Years.Select(y => (double)y.Contribution).ToArray();
+        var expenditures = Result.Years.Select(y => (double)y.Expenditures).ToArray();
+        var balances = Result.Years.Select(y => (double)y.EndingBalance).ToArray();
+
+        var options = new
+        {
+            series = new object[]
+            {
+                new { name = "Ending Balance", type = "area", data = balances },
+                new { name = "Contributions", type = "bar", data = contributions },
+                new { name = "Expenditures", type = "bar", data = expenditures }
+            },
+            chart = new
+            {
+                height = Height,
+                type = "line",
+                stacked = false,
+                toolbar = new { show = true },
+                fontFamily = "Roboto, sans-serif",
+                animations = new { enabled = true, speed = 500 }
+            },
+            stroke = new
+            {
+                width = new[] { 3, 0, 0 },
+                curve = "smooth"
+            },
+            fill = new
+            {
+                opacity = new[] { 0.3, 0.9, 0.9 },
+                type = new[] { "gradient", "solid", "solid" }
+            },
+            colors = new[] { "#1976D2", "#4CAF50", "#F44336" },
+            plotOptions = new
+            {
+                bar = new { columnWidth = "50%", borderRadius = 4 }
+            },
+            xaxis = new
+            {
+                categories = years,
+                labels = new { rotate = -45, rotateAlways = years.Length > 15, style = new { fontSize = "10px" } },
+                tickAmount = Math.Min(15, years.Length)
+            },
+            yaxis = new object[]
+            {
+                new
+                {
+                    seriesName = "Ending Balance",
+                    title = new { text = "Balance ($)", style = new { color = "#1976D2" } },
+                    labels = new { formatter = "function(val) { return '$' + (val/1000).toFixed(0) + 'K'; }" }
+                },
+                new
+                {
+                    seriesName = "Contributions",
+                    opposite = true,
+                    title = new { text = "Cash Flow ($)", style = new { color = "#4CAF50" } },
+                    labels = new { formatter = "function(val) { return '$' + (val/1000).toFixed(0) + 'K'; }" }
+                },
+                new
+                {
+                    seriesName = "Expenditures",
+                    show = false
+                }
+            },
+            tooltip = new
+            {
+                shared = true,
+                intersect = false,
+                y = new { formatter = "function(val) { return '$' + val.toLocaleString('en-US', {maximumFractionDigits: 0}); }" }
+            },
+            legend = new
+            {
+                position = "top",
+                horizontalAlign = "center"
+            },
+            grid = new { borderColor = "#e7e7e7" }
+        };
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("renderApexChart", ChartId, options);
+            _chartInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Chart render error: {ex.Message}");
+            // Don't set error - the chart may just not be visible yet (e.g., in a tab)
+        }
+    }
+
+    public void Dispose()
+    {
+        // Cleanup if needed
+    }
+}

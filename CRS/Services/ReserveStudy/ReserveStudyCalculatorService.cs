@@ -1,6 +1,7 @@
 ﻿using CRS.Core.ReserveCalculator.Models;
 using CRS.Core.ReserveCalculator.Services;
 using CRS.Data;
+using CRS.Models;
 using CRS.Models.ReserveStudyCalculator;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,23 @@ public interface IReserveStudyCalculatorService
     /// Calculates results for a specific scenario.
     /// </summary>
     Task<ReserveStudyResult> CalculateScenarioAsync(int scenarioId);
+
+    /// <summary>
+    /// Calculates results directly from a ReserveStudy (with proposal data).
+    /// Converts study elements to components and uses study financial data.
+    /// </summary>
+    /// <param name="studyId">The ReserveStudy ID.</param>
+    /// <returns>Calculation result from study data.</returns>
+    Task<ReserveStudyResult> CalculateFromStudyAsync(Guid studyId);
+
+    /// <summary>
+    /// Gets or creates a scenario from a ReserveStudy.
+    /// If no scenario exists for the study, creates one from study elements.
+    /// </summary>
+    /// <param name="studyId">The ReserveStudy ID.</param>
+    /// <param name="createIfMissing">If true, creates a scenario when none exists.</param>
+    /// <returns>The scenario, or null if not found and createIfMissing is false.</returns>
+    Task<ReserveStudyScenario?> GetOrCreateScenarioForStudyAsync(Guid studyId, bool createIfMissing = true);
 
     /// <summary>
     /// Gets or creates tenant reserve settings.
@@ -41,12 +59,14 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
     private readonly ApplicationDbContext _context;
     private readonly ReserveStudyCalculator _calculator;
     private readonly SettingsResolver _resolver;
+    private readonly ReserveStudyAdapter _adapter;
 
     public ReserveStudyCalculatorService(ApplicationDbContext context)
     {
         _context = context;
         _calculator = new ReserveStudyCalculator();
         _resolver = new SettingsResolver();
+        _adapter = new ReserveStudyAdapter();
     }
 
     /// <inheritdoc />
@@ -65,16 +85,100 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
         // Load tenant settings
         var tenantSettings = await GetOrCreateTenantSettingsAsync(scenario.TenantId);
 
-        // Resolve effective settings
-        var effective = _resolver.Resolve(tenantSettings, scenario);
-
-        // Build calculator input
-        var input = _resolver.BuildCalculatorInput(effective, scenario.Components);
+        // Build calculator input using adapter
+        var input = _adapter.BuildInputFromScenario(scenario, tenantSettings);
 
         // Execute pure calculation
         var result = _calculator.Calculate(input);
 
         return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<ReserveStudyResult> CalculateFromStudyAsync(Guid studyId)
+    {
+        // Load study with all related elements
+        var study = await _context.ReserveStudies
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.BuildingElement)
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.UsefulLifeOption)
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.RemainingLifeOption)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.CommonElement)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.UsefulLifeOption)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.RemainingLifeOption)
+            .Include(s => s.ReserveStudyAdditionalElements!)
+                .ThenInclude(e => e.UsefulLifeOption)
+            .Include(s => s.ReserveStudyAdditionalElements!)
+                .ThenInclude(e => e.RemainingLifeOption)
+            .Include(s => s.Proposal)
+            .FirstOrDefaultAsync(s => s.Id == studyId);
+
+        if (study == null)
+        {
+            return ReserveStudyResult.Failure($"ReserveStudy {studyId} not found.");
+        }
+
+        // Load tenant settings
+        var tenantSettings = await GetOrCreateTenantSettingsAsync(study.TenantId);
+
+        // Build calculator input using adapter
+        var input = _adapter.BuildInputFromStudy(study, tenantSettings);
+
+        // Execute pure calculation
+        var result = _calculator.Calculate(input);
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<ReserveStudyScenario?> GetOrCreateScenarioForStudyAsync(Guid studyId, bool createIfMissing = true)
+    {
+        // Check for existing scenario
+        var scenario = await _context.ReserveStudyScenarios
+            .Include(s => s.Components.Where(c => c.DateDeleted == null))
+            .FirstOrDefaultAsync(s => s.ReserveStudyId == studyId && s.DateDeleted == null);
+
+        if (scenario != null)
+            return scenario;
+
+        if (!createIfMissing)
+            return null;
+
+        // Load study with elements to create scenario
+        var study = await _context.ReserveStudies
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.BuildingElement)
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.UsefulLifeOption)
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.RemainingLifeOption)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.CommonElement)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.UsefulLifeOption)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.RemainingLifeOption)
+            .Include(s => s.ReserveStudyAdditionalElements!)
+                .ThenInclude(e => e.UsefulLifeOption)
+            .Include(s => s.ReserveStudyAdditionalElements!)
+                .ThenInclude(e => e.RemainingLifeOption)
+            .FirstOrDefaultAsync(s => s.Id == studyId);
+
+        if (study == null)
+            return null;
+
+        // Create scenario from study using adapter
+        scenario = _adapter.CreateScenarioFromStudy(study, "From Proposal");
+
+        _context.ReserveStudyScenarios.Add(scenario);
+        await _context.SaveChangesAsync();
+
+        return scenario;
     }
 
     /// <inheritdoc />

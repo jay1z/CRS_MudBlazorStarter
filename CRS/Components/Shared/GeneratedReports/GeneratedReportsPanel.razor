@@ -1,9 +1,11 @@
 ﻿@using CRS.Models
+@using CRS.Models.Workflow
 @using CRS.Services.Interfaces
 @using CRS.Services
 @using CRS.Services.Storage
 
 @inject IGeneratedReportService ReportService
+@inject IReportGenerationService GenerationService
 @inject IDocumentStorageService DocumentStorage
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
@@ -20,16 +22,53 @@
             </MudText>
             <AuthorizeView Policy="RequireTenantStaff">
                 <Authorized>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="OpenGenerateDialog">
-                        Generate Report
-                    </MudButton>
+                    @if (canGenerateReports)
+                    {
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="OpenGenerateDialog"
+                                   Disabled="@isGenerating">
+                            @if (isGenerating)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Generating...</span>
+                            }
+                            else
+                            {
+                                <span>Generate Report</span>
+                            }
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudTooltip Text="@workflowGateMessage">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Default" 
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Lock"
+                                       Disabled="true">
+                                Generate Report
+                            </MudButton>
+                        </MudTooltip>
+                    }
                 </Authorized>
             </AuthorizeView>
         </MudStack>
+
+        <!-- Workflow Gate Warning -->
+        @if (!canGenerateReports && !isLoading)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" />
+                    <MudText Typo="Typo.body2">
+                        @workflowGateMessage
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
 
         <!-- Stats Row -->
         @if (reports.Any())
@@ -58,7 +97,14 @@
                     <MudIcon Icon="@Icons.Material.Filled.FileCopy" Style="font-size: 48px; color: #999;" />
                     <MudText Typo="Typo.body1">No reports generated yet</MudText>
                     <MudText Typo="Typo.body2" Style="color: #666;">
-                        Generate your first report when the study is ready.
+                        @if (canGenerateReports)
+                        {
+                            <span>Click "Generate Report" to create your first funding plan report.</span>
+                        }
+                        else
+                        {
+                            <span>Reports can be generated once the study reaches the Funding Plan stage.</span>
+                        }
                     </MudText>
                 </MudStack>
             </MudAlert>
@@ -202,11 +248,17 @@
     <DialogContent>
         <MudStack Spacing="3">
             <MudSelect T="ReportType" @bind-Value="newReportType" Label="Report Type" Variant="Variant.Outlined" Required="true">
-                @foreach (ReportType type in Enum.GetValues<ReportType>())
-                {
-                    <MudSelectItem T="ReportType" Value="@type">@GetReportTypeDisplayName(type)</MudSelectItem>
-                }
+                <MudSelectItem T="ReportType" Value="ReportType.FundingPlan">Funding Plan</MudSelectItem>
+                <MudSelectItem T="ReportType" Value="ReportType.ExecutiveSummary">Executive Summary</MudSelectItem>
+                <MudSelectItem T="ReportType" Value="ReportType.FullReport">Full Report</MudSelectItem>
+                <MudSelectItem T="ReportType" Value="ReportType.Draft">Draft</MudSelectItem>
             </MudSelect>
+            
+            <MudText Typo="Typo.subtitle2">Output Formats</MudText>
+            <MudStack Row="true" Spacing="4">
+                <MudCheckBox T="bool" @bind-Value="generatePdf" Label="PDF" Color="Color.Primary" />
+                <MudCheckBox T="bool" @bind-Value="generateExcel" Label="Excel" Color="Color.Primary" />
+            </MudStack>
             
             <MudTextField @bind-Value="newReportNotes" 
                           Label="Notes (optional)" 
@@ -214,13 +266,24 @@
                           Lines="3" />
             
             <MudAlert Severity="Severity.Info" Variant="Variant.Text">
-                The report will be generated as a draft. You can review and publish it after generation.
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.body2">
+                        <strong>This will:</strong>
+                    </MudText>
+                    <MudText Typo="Typo.body2">• Run the funding plan calculator</MudText>
+                    <MudText Typo="Typo.body2">• Generate report files (@(generatePdf && generateExcel ? "PDF & Excel" : generatePdf ? "PDF" : "Excel"))</MudText>
+                    <MudText Typo="Typo.body2">• Create a draft report for review</MudText>
+                </MudStack>
             </MudAlert>
         </MudStack>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseGenerateDialog">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GenerateReport">
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="GenerateReport"
+                   Disabled="@(!generatePdf && !generateExcel)">
+            <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-1" />
             Generate
         </MudButton>
     </DialogActions>
@@ -232,15 +295,37 @@
 
     private List<GeneratedReport> reports = new();
     private bool isLoading = true;
+    private bool isGenerating = false;
+    private bool canGenerateReports = false;
+    private string workflowGateMessage = "Checking workflow status...";
 
     // Dialog state
     private bool showGenerateDialog = false;
-    private ReportType newReportType = ReportType.Draft;
+    private ReportType newReportType = ReportType.FundingPlan;
     private string newReportNotes = "";
+    private bool generatePdf = true;
+    private bool generateExcel = true;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadReports();
+        await CheckWorkflowGate();
+    }
+
+    private async Task CheckWorkflowGate()
+    {
+        try
+        {
+            canGenerateReports = await GenerationService.CanGenerateReportAsync(ReserveStudyId);
+            if (!canGenerateReports)
+            {
+                workflowGateMessage = $"Report generation requires the study to be at '{GenerationService.MinimumRequiredStatus}' stage or later. Complete the site visit and data entry first.";
+            }
+        }
+        catch (Exception ex)
+        {
+            workflowGateMessage = $"Unable to check workflow status: {ex.Message}";
+        }
     }
 
     private async Task LoadReports()
@@ -263,8 +348,10 @@
 
     private void OpenGenerateDialog()
     {
-        newReportType = ReportType.Draft;
+        newReportType = ReportType.FundingPlan;
         newReportNotes = "";
+        generatePdf = true;
+        generateExcel = true;
         showGenerateDialog = true;
     }
 
@@ -275,36 +362,56 @@
 
     private async Task GenerateReport()
     {
+        if (!canGenerateReports)
+        {
+            Snackbar.Add(workflowGateMessage, Severity.Warning);
+            return;
+        }
+
         try
         {
+            isGenerating = true;
+            CloseGenerateDialog();
+            StateHasChanged();
+
             await UserState.InitializeAsync();
             var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
 
-            // Determine next version
-            var existingOfType = reports.Where(r => r.Type == newReportType);
-            var maxVersion = existingOfType.Any() ? existingOfType.Max(r => int.TryParse(r.Version, out var v) ? v : 0) : 0;
-            var nextVersion = (maxVersion + 1).ToString();
-
-            var report = new GeneratedReport
+            var options = new ReportGenerationOptions
             {
-                ReserveStudyId = ReserveStudyId,
-                Type = newReportType,
-                Status = ReportStatus.Draft,
-                Version = nextVersion,
-                GeneratedByUserId = userId,
-                GeneratedAt = DateTime.UtcNow,
-                Notes = newReportNotes
+                ReportType = newReportType,
+                Notes = newReportNotes,
+                GeneratePdf = generatePdf,
+                GenerateExcel = generateExcel
             };
 
-            await ReportService.CreateAsync(report);
-            Snackbar.Add("Report generated successfully", Severity.Success);
-            
-            CloseGenerateDialog();
-            await LoadReports();
+            var result = await GenerationService.GenerateReportAsync(ReserveStudyId, userId, options);
+
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Report generated successfully!", Severity.Success);
+                
+                // Show warnings if any
+                foreach (var warning in result.Warnings)
+                {
+                    Snackbar.Add(warning, Severity.Warning);
+                }
+
+                await LoadReports();
+            }
+            else
+            {
+                Snackbar.Add($"Error: {result.ErrorMessage}", Severity.Error);
+            }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error generating report: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isGenerating = false;
+            StateHasChanged();
         }
     }
 

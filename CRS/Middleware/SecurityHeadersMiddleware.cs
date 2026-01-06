@@ -42,8 +42,8 @@ public class SecurityHeadersMiddleware
             "img-src 'self' data: https:",
             // Allow styles from self, inline styles (for MudBlazor) and https hosts (CDNs)
             "style-src 'self' 'unsafe-inline' https:",
-            // Allow scripts from self, inline (required by some libs), Stripe, and Clarity
-            "script-src 'self' 'unsafe-inline' https://js.stripe.com https://www.clarity.ms https://scripts.clarity.ms",
+            // Allow scripts from self, inline (required by some libs), Stripe, Clarity, and jsdelivr CDN for charts
+            "script-src 'self' 'unsafe-inline' https://js.stripe.com https://www.clarity.ms https://scripts.clarity.ms https://cdn.jsdelivr.net",
             // Allow framing content from Stripe for pricing table / checkout widgets
             "frame-src 'self' https://js.stripe.com https://checkout.stripe.com",
             // allow secure websockets and https by default; connect-src includes Stripe API and Clarity
@@ -64,9 +64,6 @@ public class SecurityHeadersMiddleware
             cspSources = cspSources.Select(s => {
                 if (s.StartsWith("script-src") && !s.Contains("'unsafe-eval'"))
                     s = s + " 'unsafe-eval'";
-                // Also allow https: for script-src in development so CDN scripts can load
-                if (s.StartsWith("script-src") && !s.Contains("https:"))
-                    s = s + " https:";
                 return s;
             }).ToList();
         }

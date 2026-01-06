@@ -14,12 +14,14 @@ public class ReserveStudyCalculator
     private readonly ExpenditureScheduleService _expenditureService;
     private readonly ContributionStrategyService _contributionService;
     private readonly FundingPlanService _fundingPlanService;
+    private readonly FullyFundedBalanceService _fullyFundedService;
 
     public ReserveStudyCalculator()
     {
         _expenditureService = new ExpenditureScheduleService();
         _contributionService = new ContributionStrategyService();
         _fundingPlanService = new FundingPlanService();
+        _fullyFundedService = new FullyFundedBalanceService();
     }
 
     /// <summary>
@@ -61,6 +63,11 @@ public class ReserveStudyCalculator
             // Step 5: Build graph series
             var graph = BuildGraphSeries(input, years);
 
+            // Step 6: Calculate fully funded balance and component summaries
+            var fullyFundedBalance = _fullyFundedService.CalculateTotalFullyFundedBalance(input);
+            var componentSummaries = _fullyFundedService.BuildComponentSummaries(input, expenditureSchedule);
+            var specialAssessmentRequired = _fullyFundedService.CalculateSpecialAssessmentRequired(years);
+
             // Assemble result
             return new ReserveStudyResult
             {
@@ -71,7 +78,12 @@ public class ReserveStudyCalculator
                 Graph = graph,
                 ExpenditureSchedule = expenditureSchedule,
                 Warnings = warnings,
-                IsSuccess = true
+                IsSuccess = true,
+                // New report/narrative properties
+                StartingBalance = input.StartingBalance,
+                FullyFundedBalance = fullyFundedBalance,
+                ComponentSummaries = componentSummaries,
+                SpecialAssessmentRequired = specialAssessmentRequired
             };
         }
         catch (Exception ex)

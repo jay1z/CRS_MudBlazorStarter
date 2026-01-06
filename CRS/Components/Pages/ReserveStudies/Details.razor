@@ -140,10 +140,13 @@
                                 </MudStack>
                                 <AuthorizeView Policy="RequireTenantOwner">
                                     <Authorized>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
-                                                       Size="Size.Small" 
-                                                       Style="color: white;"
-                                                       OnClick="OpenAssignSpecialistDialog" />
+                                        <MudButton Variant="Variant.Filled" 
+                                                   Size="Size.Small" 
+                                                   Style="background: rgba(255,255,255,0.2); color: white; text-transform: none;"
+                                                   StartIcon="@Icons.Material.Filled.Edit"
+                                                   OnClick="OpenAssignSpecialistDialog">
+                                            @(reserveStudy.Specialist != null ? "Change" : "Assign")
+                                        </MudButton>
                                     </Authorized>
                                 </AuthorizeView>
                             </MudStack>

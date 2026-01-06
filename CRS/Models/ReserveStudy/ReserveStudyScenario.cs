@@ -41,8 +41,9 @@ public class ReserveStudyScenario : ITenantScoped
 
     /// <summary>
     /// The reserve study this scenario belongs to.
+    /// Changed to Guid to match ReserveStudy.Id type.
     /// </summary>
-    public int ReserveStudyId { get; set; }
+    public Guid ReserveStudyId { get; set; }
 
     /// <summary>
     /// Name of this scenario (e.g., "Base Case", "Conservative", "Aggressive Funding").

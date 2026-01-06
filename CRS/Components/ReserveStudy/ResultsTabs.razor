@@ -1,4 +1,7 @@
 ﻿@using CRS.Core.ReserveCalculator.Models
+@using CRS.Services.ReserveCalculator
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
 
 <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
     @if (Result == null)
@@ -18,6 +21,18 @@
     }
     else
     {
+        <!-- Export Buttons -->
+        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-3">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.PictureAsPdf" OnClick="ExportToPdf">
+                Export PDF
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.TableView" OnClick="ExportToExcel">
+                Export Excel
+            </MudButton>
+        </MudStack>
+
         <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
             <!-- Summary Tab -->
             <MudTabPanel Text="Summary" Icon="@Icons.Material.Filled.Dashboard">
@@ -68,6 +83,11 @@
                         </MudText>
                     </MudAlert>
                 }
+            </MudTabPanel>
+            
+            <!-- Chart Tab -->
+            <MudTabPanel Text="Chart" Icon="@Icons.Material.Filled.ShowChart">
+                <CRS.Components.ReserveStudy.CashFlowChart Result="@Result" ChartId="results-chart" Height="400" />
             </MudTabPanel>
             
             <!-- Cash Flow Table Tab -->
@@ -122,9 +142,68 @@
 @code {
     [Parameter]
     public ReserveStudyResult? Result { get; set; }
+    
+    [Parameter]
+    public string? CommunityName { get; set; }
 
     private string GetEndingBalanceStyle(decimal endingBalance)
     {
         return $"text-align: right; font-weight: bold; color: {(endingBalance >= 0 ? "inherit" : "red")}";
+    }
+
+    private async Task ExportToPdf()
+    {
+        if (Result == null) return;
+
+        try
+        {
+            var pdfService = new ReserveStudyPdfService();
+            var options = new ReserveStudyReportOptions
+            {
+                CommunityName = CommunityName,
+                PreparedDate = DateTime.Now
+            };
+            var pdfBytes = pdfService.GenerateReport(Result, options);
+            
+            var fileName = $"ReserveStudy_{Result.StartYear}_{Result.ProjectionYears}Year.pdf";
+            await DownloadFile(pdfBytes, fileName, "application/pdf");
+            
+            Snackbar.Add("PDF exported successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error exporting PDF: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        if (Result == null) return;
+
+        try
+        {
+            var excelService = new ReserveStudyExcelService();
+            var options = new ReserveStudyReportOptions
+            {
+                CommunityName = CommunityName,
+                PreparedDate = DateTime.Now
+            };
+            var excelBytes = excelService.ExportResults(Result, options);
+            
+            var fileName = $"ReserveStudy_{Result.StartYear}_{Result.ProjectionYears}Year.xlsx";
+            await DownloadFile(excelBytes, fileName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            
+            Snackbar.Add("Excel exported successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error exporting Excel: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DownloadFile(byte[] bytes, string fileName, string contentType)
+    {
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, base64, contentType);
     }
 }

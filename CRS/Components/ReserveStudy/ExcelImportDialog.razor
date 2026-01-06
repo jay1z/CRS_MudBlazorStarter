@@ -1,0 +1,222 @@
+﻿@using CRS.Core.ReserveCalculator.Models
+@using CRS.Services.ReserveCalculator
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.UploadFile" Class="mr-2" Style="vertical-align: middle;" />
+            Import Components from Excel
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="4">
+            @if (!_isProcessing && _importResult == null)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    Upload an Excel file with reserve study components. 
+                    <MudLink OnClick="DownloadTemplate" Underline="Underline.Always">Download template</MudLink>
+                </MudAlert>
+
+                <MudFileUpload T="IBrowserFile" Accept=".xlsx,.xls" FilesChanged="OnFileSelected"
+                               MaximumFileCount="1">
+                    <ActivatorContent>
+                        <MudPaper Height="150px" Outlined="true" Class="d-flex align-center justify-center"
+                                  Style="border-style: dashed; cursor: pointer;">
+                            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" />
+                                <MudText Typo="Typo.body1">
+                                    @if (_selectedFile != null)
+                                    {
+                                        <span>@_selectedFile.Name</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Click or drag Excel file here</span>
+                                    }
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">.xlsx or .xls files</MudText>
+                            </MudStack>
+                        </MudPaper>
+                    </ActivatorContent>
+                </MudFileUpload>
+            }
+            else if (_isProcessing)
+            {
+                <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="py-6">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.body1">Processing file...</MudText>
+                </MudStack>
+            }
+            else if (_importResult != null)
+            {
+                <MudAlert Severity="@(_importResult.IsSuccess ? Severity.Success : Severity.Error)">
+                    @if (_importResult.IsSuccess)
+                    {
+                        <span>Successfully imported @_importResult.Components.Count components from @_importResult.RowsProcessed rows.</span>
+                    }
+                    else
+                    {
+                        <span>Import failed. See errors below.</span>
+                    }
+                </MudAlert>
+
+                @if (_importResult.Errors.Count > 0)
+                {
+                    <MudText Typo="Typo.subtitle2" Color="Color.Error">Errors:</MudText>
+                    <MudList T="string" Dense="true">
+                        @foreach (var error in _importResult.Errors)
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.Error" IconColor="Color.Error">
+                                @error
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+
+                @if (_importResult.Warnings.Count > 0)
+                {
+                    <MudText Typo="Typo.subtitle2" Color="Color.Warning">Warnings (@_importResult.Warnings.Count):</MudText>
+                    <MudExpansionPanels>
+                        <MudExpansionPanel Text="Show warnings">
+                            <MudList T="string" Dense="true">
+                                @foreach (var warning in _importResult.Warnings.Take(20))
+                                {
+                                    <MudListItem Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning">
+                                        @warning
+                                    </MudListItem>
+                                }
+                                @if (_importResult.Warnings.Count > 20)
+                                {
+                                    <MudListItem>...and @(_importResult.Warnings.Count - 20) more</MudListItem>
+                                }
+                            </MudList>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                }
+
+                @if (_importResult.Components.Count > 0)
+                {
+                    <MudText Typo="Typo.subtitle2">Preview (@_importResult.Components.Count components):</MudText>
+                    <MudSimpleTable Dense="true" Hover="true" Style="max-height: 200px; overflow-y: auto;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Method</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var comp in _importResult.Components.Take(10))
+                            {
+                                <tr>
+                                    <td>@comp.Name</td>
+                                    <td>@comp.Category</td>
+                                    <td>@comp.Method</td>
+                                    <td>@comp.CurrentCost.ToString("C0")</td>
+                                </tr>
+                            }
+                            @if (_importResult.Components.Count > 10)
+                            {
+                                <tr>
+                                    <td colspan="4" style="text-align: center; font-style: italic;">
+                                        ...and @(_importResult.Components.Count - 10) more
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        @if (_importResult != null)
+        {
+            <MudButton OnClick="Reset">Upload Different File</MudButton>
+        }
+        <MudSpacer />
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        @if (_importResult?.IsSuccess == true)
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Confirm">
+                Import @_importResult.Components.Count Components
+            </MudButton>
+        }
+        else if (_selectedFile != null && !_isProcessing)
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ProcessFile">
+                Process File
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    private IBrowserFile? _selectedFile;
+    private bool _isProcessing;
+    private ExcelImportResult? _importResult;
+    private readonly ReserveStudyExcelService _excelService = new();
+
+    private void OnFileSelected(IBrowserFile file)
+    {
+        _selectedFile = file;
+        _importResult = null;
+    }
+
+    private async Task ProcessFile()
+    {
+        if (_selectedFile == null) return;
+
+        _isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            // Read file into memory stream
+            using var stream = new MemoryStream();
+            await _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(stream);
+            stream.Position = 0;
+
+            _importResult = await _excelService.ImportComponentsAsync(stream, _selectedFile.Name);
+        }
+        catch (Exception ex)
+        {
+            _importResult = new ExcelImportResult
+            {
+                IsSuccess = false,
+                Errors = { $"Error processing file: {ex.Message}" }
+            };
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task DownloadTemplate()
+    {
+        // This would trigger a JS download - for now just show info
+        Snackbar.Add("Template download: Use the Export Template button on the main page", Severity.Info);
+    }
+
+    private void Reset()
+    {
+        _selectedFile = null;
+        _importResult = null;
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+
+    private void Confirm()
+    {
+        if (_importResult?.Components != null)
+        {
+            MudDialog?.Close(DialogResult.Ok(_importResult.Components));
+        }
+    }
+}

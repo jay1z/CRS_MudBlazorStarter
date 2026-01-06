@@ -158,10 +158,16 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Proposal PDF Generation
     builder.Services.AddScoped<CRS.Services.Interfaces.IProposalPdfService, CRS.Services.ProposalPdfService>();
     
+    // Reserve Study Calculator Services
+    builder.Services.AddScoped<CRS.Services.ReserveCalculator.IReserveStudyCalculatorService, CRS.Services.ReserveCalculator.ReserveStudyCalculatorService>();
+    builder.Services.AddScoped<CRS.Services.ReserveCalculator.IReserveStudyPdfService, CRS.Services.ReserveCalculator.ReserveStudyPdfService>();
+    builder.Services.AddScoped<CRS.Services.ReserveCalculator.IReserveStudyExcelService, CRS.Services.ReserveCalculator.ReserveStudyExcelService>();
+    
     // Medium Priority Schema Services
     builder.Services.AddScoped<CRS.Services.Interfaces.ISiteVisitPhotoService, CRS.Services.SiteVisitPhotoService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IStudyNoteService, CRS.Services.StudyNoteService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IGeneratedReportService, CRS.Services.GeneratedReportService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.IReportGenerationService, CRS.Services.ReportGenerationService>();
     
     // Click-Wrap Agreement Services
     builder.Services.AddScoped<CRS.Services.Interfaces.IProposalAcceptanceService, CRS.Services.ProposalAcceptanceService>();
@@ -265,7 +271,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddSingleton<IStripeClientFactory, StripeClientFactory>();
     builder.Services.AddScoped<IBillingService, BillingService>();
     builder.Services.AddScoped<IFeatureGuardService, FeatureGuardService>();
-
+    
     builder.Services.AddScoped<CRS.Services.Provisioning.IOwnerProvisioningService, CRS.Services.Provisioning.OwnerProvisioningService>();
 
     // Azure Blob Storage for logo uploads

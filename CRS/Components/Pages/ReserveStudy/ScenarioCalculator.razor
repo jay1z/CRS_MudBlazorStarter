@@ -1,0 +1,482 @@
+﻿@page "/reserve-studies/{StudyId:guid}/scenarios/{ScenarioId:int}"
+@page "/reserve-studies/{StudyId:guid}/calculate"
+@page "/reserve-calculator/demo"
+@attribute [Authorize]
+@using CRS.Core.ReserveCalculator.Enums
+@using CRS.Core.ReserveCalculator.Models
+@using CRS.Core.ReserveCalculator.Services
+@using CRS.Data
+@using CRS.Models
+@using CRS.Models.ReserveStudyCalculator
+@using CRS.Services.Tenant
+@using CRS.Services.ReserveCalculator
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Reserve Study Calculator</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header -->
+    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%); border-radius: 12px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h5" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Calculate" Class="mr-2" Style="vertical-align: middle;" />
+                    Reserve Study Calculator
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    @(_scenario?.Name ?? "Demo Scenario") - @(_effectiveSettings?.ProjectionYears ?? 30) Year Projection
+                </MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="Calculate"
+                           Disabled="@(_isCalculating || _components.Count == 0)">
+                    @if (_isCalculating)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Calculating...</span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-1" />
+                        <span>Calculate</span>
+                    }
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    <MudGrid Spacing="4">
+        <!-- Left Panel: Inputs -->
+        <MudItem xs="12" md="5" lg="4">
+            <MudStack Spacing="4">
+                <!-- Quick Settings -->
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
+                    <MudText Typo="Typo.h6" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" Style="vertical-align: middle;" />
+                        Assumptions
+                    </MudText>
+                    
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6">
+                            <MudNumericField T="int" @bind-Value="_startYear" Label="Start Year" 
+                                             Variant="Variant.Outlined" Min="2020" Max="2100" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudNumericField T="decimal" @bind-Value="_startingBalance" Label="Starting Balance"
+                                             Variant="Variant.Outlined" Format="C0" Min="0" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudNumericField T="decimal" Value="@(_inflationRate * 100)" 
+                                             ValueChanged="@(v => _inflationRate = v / 100)"
+                                             Label="Inflation %" Variant="Variant.Outlined" 
+                                             Min="0" Max="20" Step="0.5m" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudNumericField T="decimal" Value="@(_interestRate * 100)"
+                                             ValueChanged="@(v => _interestRate = v / 100)"
+                                             Label="Interest %" Variant="Variant.Outlined"
+                                             Min="0" Max="15" Step="0.25m" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudNumericField T="decimal" @bind-Value="_annualContribution" Label="Annual Contribution"
+                                             Variant="Variant.Outlined" Format="C0" Min="0" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudNumericField T="decimal" Value="@(_escalationRate * 100)"
+                                             ValueChanged="@(v => _escalationRate = v / 100)"
+                                             Label="Escalation %" Variant="Variant.Outlined"
+                                             Min="0" Max="15" Step="0.5m" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <!-- Components -->
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.List" Class="mr-2" Style="vertical-align: middle;" />
+                            Components (@_components.Count)
+                        </MudText>
+                        <MudStack Row="true" Spacing="1">
+                            <MudTooltip Text="Import from Excel">
+                                <MudIconButton Icon="@Icons.Material.Filled.Upload" Size="Size.Small" Color="Color.Primary"
+                                               OnClick="OpenImportDialog" />
+                            </MudTooltip>
+                            <MudTooltip Text="Download Template">
+                                <MudIconButton Icon="@Icons.Material.Filled.FileDownload" Size="Size.Small" Color="Color.Secondary"
+                                               OnClick="DownloadTemplate" />
+                            </MudTooltip>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" OnClick="AddComponent">
+                                <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+                                Add
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+
+                    @if (_components.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.body2">Add components to generate a funding plan.</MudText>
+                                <MudStack Row="true" Spacing="2">
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="LoadSampleComponents">
+                                        <MudIcon Icon="@Icons.Material.Filled.Science" Size="Size.Small" Class="mr-1" />
+                                        Load Samples
+                                    </MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="OpenImportDialog">
+                                        <MudIcon Icon="@Icons.Material.Filled.Upload" Size="Size.Small" Class="mr-1" />
+                                        Import Excel
+                                    </MudButton>
+                                </MudStack>
+                            </MudStack>
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Total Cost: @_components.Sum(c => c.CurrentCost).ToString("C0")
+                            </MudText>
+                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="ClearComponents">
+                                Clear All
+                            </MudButton>
+                        </MudStack>
+                        <MudList T="ReserveComponentInput" Dense="true" Style="max-height: 400px; overflow-y: auto;">
+                            @foreach (var component in _components)
+                            {
+                                <MudListItem>
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@component.Name</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @component.CurrentCost.ToString("C0") • @component.Method • 
+                                                @(component.UsefulLifeYears?.ToString() ?? component.CycleYears?.ToString() ?? "-") yrs
+                                            </MudText>
+                                        </MudStack>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                       OnClick="@(() => _components.Remove(component))" />
+                                    </MudStack>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                </MudPaper>
+            </MudStack>
+        </MudItem>
+
+        <!-- Right Panel: Results -->
+        <MudItem xs="12" md="7" lg="8">
+            <CRS.Components.ReserveStudy.ResultsTabs Result="@_result" CommunityName="@_communityName" />
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<!-- Add Component Dialog -->
+<MudDialog @bind-Visible="_showAddDialog" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Add Component</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_newComponent.Name" Label="Name" Variant="Variant.Outlined" Required="true" />
+            <MudTextField @bind-Value="_newComponent.Category" Label="Category" Variant="Variant.Outlined" />
+            <MudNumericField T="decimal" @bind-Value="_newComponent.CurrentCost" Label="Current Cost" 
+                             Variant="Variant.Outlined" Format="C0" Required="true" />
+            <MudSelect T="ComponentMethod" @bind-Value="_newComponent.Method" Label="Method" Variant="Variant.Outlined">
+                <MudSelectItem Value="ComponentMethod.Replacement">Replacement</MudSelectItem>
+                <MudSelectItem Value="ComponentMethod.PRN">Periodic (PRN)</MudSelectItem>
+            </MudSelect>
+            @if (_newComponent.Method == ComponentMethod.Replacement)
+            {
+                <MudNumericField T="int?" @bind-Value="_newComponent.UsefulLifeYears" Label="Useful Life (Years)" 
+                                 Variant="Variant.Outlined" Min="1" Max="100" />
+                <MudNumericField T="int?" @bind-Value="_newComponent.RemainingLifeOverrideYears" Label="Remaining Life (Years)" 
+                                 Variant="Variant.Outlined" Min="0" Max="100" />
+            }
+            else
+            {
+                <MudNumericField T="int?" @bind-Value="_newComponent.CycleYears" Label="Cycle (Years)" 
+                                 Variant="Variant.Outlined" Min="1" Max="50" 
+                                 HelperText="1 = Annual" />
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showAddDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveComponent">Add</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public Guid? StudyId { get; set; }
+    [Parameter] public int? ScenarioId { get; set; }
+
+    private ReserveStudyScenario? _scenario;
+    private ReserveStudy? _study;
+    private EffectiveReserveSettings? _effectiveSettings;
+    private ReserveStudyResult? _result;
+    private List<ReserveComponentInput> _components = new();
+    private bool _isCalculating;
+    private bool _showAddDialog;
+    private ReserveComponentInput _newComponent = new() { Name = "", Category = "General" };
+    private string? _communityName;
+    private bool _loadedFromStudy;
+
+    // Quick input fields
+    private int _startYear = DateTime.Now.Year;
+    private decimal _startingBalance = 100000m;
+    private decimal _inflationRate = 0.03m;
+    private decimal _interestRate = 0.02m;
+    private decimal _annualContribution = 50000m;
+    private decimal _escalationRate = 0.03m;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ScenarioId.HasValue)
+        {
+            await LoadScenarioAsync();
+        }
+        else if (StudyId.HasValue)
+        {
+            // Load from ReserveStudy/Proposal
+            await LoadFromStudyAsync();
+        }
+        else
+        {
+            // Demo mode - load sample data
+            LoadSampleComponents();
+        }
+    }
+
+    private async Task LoadFromStudyAsync()
+    {
+        if (!StudyId.HasValue) return;
+
+        await using var context = await DbFactory.CreateDbContextAsync();
+        var service = new ReserveStudyCalculatorService(context);
+
+        // Try to get or create a scenario for this study
+        _scenario = await service.GetOrCreateScenarioForStudyAsync(StudyId.Value, createIfMissing: true);
+        
+        if (_scenario != null)
+        {
+            // Load effective settings and components from the scenario
+            _effectiveSettings = await service.GetEffectiveSettingsAsync(_scenario.Id);
+            _startYear = _scenario.StartYear;
+            _startingBalance = _scenario.StartingBalance;
+            _inflationRate = _effectiveSettings.InflationRate;
+            _interestRate = _effectiveSettings.InterestRateAnnual;
+            _annualContribution = _effectiveSettings.InitialAnnualContribution;
+            _escalationRate = _effectiveSettings.ContributionEscalationRate;
+
+            _components = _scenario.Components
+                .Where(c => c.DateDeleted == null)
+                .Select(c => new ReserveComponentInput
+                {
+                    Id = c.Id.ToString(),
+                    Name = c.Name,
+                    Category = c.Category,
+                    Method = c.Method,
+                    CurrentCost = c.CurrentCost,
+                    UsefulLifeYears = c.UsefulLifeYears,
+                    RemainingLifeOverrideYears = c.RemainingLifeOverrideYears,
+                    CycleYears = c.CycleYears,
+                    AnnualCostOverride = c.AnnualCostOverride,
+                    InflationRateOverride = c.InflationRateOverride
+                }).ToList();
+
+            _loadedFromStudy = true;
+            
+            // Get community name for display
+            _study = await context.ReserveStudies
+                .Include(s => s.Community)
+                .FirstOrDefaultAsync(s => s.Id == StudyId.Value);
+            _communityName = _study?.Community?.Name ?? _study?.Name;
+
+            Snackbar.Add($"Loaded scenario from study: {_components.Count} components", Severity.Info);
+        }
+        else
+        {
+            Snackbar.Add("Could not load or create scenario from study", Severity.Warning);
+            LoadSampleComponents();
+        }
+    }
+
+    private async Task LoadScenarioAsync()
+    {
+        if (!ScenarioId.HasValue) return;
+
+        await using var context = await DbFactory.CreateDbContextAsync();
+        var service = new ReserveStudyCalculatorService(context);
+        
+        _scenario = await context.ReserveStudyScenarios
+            .Include(s => s.Components.Where(c => c.DateDeleted == null))
+            .FirstOrDefaultAsync(s => s.Id == ScenarioId.Value);
+
+        if (_scenario != null)
+        {
+            _effectiveSettings = await service.GetEffectiveSettingsAsync(ScenarioId.Value);
+            _startYear = _scenario.StartYear;
+            _startingBalance = _scenario.StartingBalance;
+            _inflationRate = _effectiveSettings.InflationRate;
+            _interestRate = _effectiveSettings.InterestRateAnnual;
+            _annualContribution = _effectiveSettings.InitialAnnualContribution;
+            _escalationRate = _effectiveSettings.ContributionEscalationRate;
+
+            _components = _scenario.Components
+                .Select(c => new ReserveComponentInput
+                {
+                    Id = c.Id.ToString(),
+                    Name = c.Name,
+                    Category = c.Category,
+                    Method = c.Method,
+                    CurrentCost = c.CurrentCost,
+                    UsefulLifeYears = c.UsefulLifeYears,
+                    RemainingLifeOverrideYears = c.RemainingLifeOverrideYears,
+                    CycleYears = c.CycleYears,
+                    AnnualCostOverride = c.AnnualCostOverride,
+                    InflationRateOverride = c.InflationRateOverride
+                }).ToList();
+        }
+    }
+
+    private void LoadSampleComponents()
+    {
+        _components = new List<ReserveComponentInput>
+        {
+            new() { Name = "Roof Replacement", Category = "Building Exterior", Method = ComponentMethod.Replacement, CurrentCost = 150000m, UsefulLifeYears = 25, RemainingLifeOverrideYears = 10 },
+            new() { Name = "Exterior Painting", Category = "Building Exterior", Method = ComponentMethod.Replacement, CurrentCost = 80000m, UsefulLifeYears = 7, RemainingLifeOverrideYears = 3 },
+            new() { Name = "Pool Resurfacing", Category = "Amenities", Method = ComponentMethod.Replacement, CurrentCost = 45000m, UsefulLifeYears = 10, RemainingLifeOverrideYears = 4 },
+            new() { Name = "Asphalt Resurfacing", Category = "Site", Method = ComponentMethod.Replacement, CurrentCost = 120000m, UsefulLifeYears = 20, RemainingLifeOverrideYears = 8 },
+            new() { Name = "Landscaping", Category = "Site", Method = ComponentMethod.PRN, CurrentCost = 15000m, CycleYears = 1 },
+            new() { Name = "HVAC Replacement", Category = "Mechanical", Method = ComponentMethod.Replacement, CurrentCost = 60000m, UsefulLifeYears = 15, RemainingLifeOverrideYears = 6 }
+        };
+        Snackbar.Add("Sample components loaded", Severity.Info);
+    }
+
+    private void ClearComponents()
+    {
+        _components.Clear();
+        _result = null;
+    }
+
+    private void AddComponent()
+    {
+        _newComponent = new ReserveComponentInput { Name = "", Category = "General", Method = ComponentMethod.Replacement };
+        _showAddDialog = true;
+    }
+
+    private void SaveComponent()
+    {
+        if (string.IsNullOrWhiteSpace(_newComponent.Name))
+        {
+            Snackbar.Add("Component name is required", Severity.Warning);
+            return;
+        }
+
+        _components.Add(new ReserveComponentInput
+        {
+            Name = _newComponent.Name,
+            Category = _newComponent.Category,
+            Method = _newComponent.Method,
+            CurrentCost = _newComponent.CurrentCost,
+            UsefulLifeYears = _newComponent.UsefulLifeYears,
+            RemainingLifeOverrideYears = _newComponent.RemainingLifeOverrideYears,
+            CycleYears = _newComponent.CycleYears
+        });
+
+        _showAddDialog = false;
+        Snackbar.Add($"Added: {_newComponent.Name}", Severity.Success);
+    }
+
+    private async Task OpenImportDialog()
+    {
+        var dialog = await DialogService.ShowAsync<CRS.Components.ReserveStudy.ExcelImportDialog>("Import Components");
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled && result.Data is List<ReserveComponentInput> imported)
+        {
+            _components.AddRange(imported);
+            Snackbar.Add($"Imported {imported.Count} components", Severity.Success);
+        }
+    }
+
+    private async Task DownloadTemplate()
+    {
+        try
+        {
+            var excelService = new ReserveStudyExcelService();
+            var templateBytes = excelService.GenerateImportTemplate();
+            await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", 
+                "ReserveStudyTemplate.xlsx", 
+                Convert.ToBase64String(templateBytes),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            Snackbar.Add("Template downloaded", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error downloading template: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task Calculate()
+    {
+        if (_components.Count == 0)
+        {
+            Snackbar.Add("Add at least one component", Severity.Warning);
+            return;
+        }
+
+        _isCalculating = true;
+        StateHasChanged();
+
+        try
+        {
+            // Build input from current settings
+            var input = new ReserveStudyInput
+            {
+                StartYear = _startYear,
+                ProjectionYears = 30,
+                StartingBalance = _startingBalance,
+                InflationRateDefault = _inflationRate,
+                InterestRateAnnual = _interestRate,
+                InterestModel = InterestModel.MonthlySimulation,
+                ContributionFrequency = ContributionFrequency.Monthly,
+                ContributionTiming = Timing.StartOfPeriod,
+                ExpenditureTiming = ExpenditureTiming.MidYear,
+                RoundingPolicy = RoundingPolicy.PerComponentPerYear,
+                ContributionStrategy = ContributionStrategy.EscalatingPercent,
+                InitialAnnualContribution = _annualContribution,
+                ContributionEscalationRate = _escalationRate,
+                Components = _components
+            };
+
+            // Run calculation (pure, no DB)
+            var calculator = new ReserveStudyCalculator();
+            _result = calculator.Calculate(input);
+
+            if (_result.IsSuccess)
+            {
+                Snackbar.Add($"Calculation complete! Final balance: {_result.FinalBalance:C0}", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Calculation failed: {_result.ErrorMessage}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isCalculating = false;
+        }
+    }
+}
