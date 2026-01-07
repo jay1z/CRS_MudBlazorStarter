@@ -1,0 +1,244 @@
+﻿@using CRS.Models.Workflow
+@using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+
+@inject IScopeComparisonService ScopeComparisonService
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Color="Color.Primary" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">Scope Change Settings</MudText>
+                    <MudText Typo="Typo.caption" Style="color: #666;">
+                        Configure how scope changes are handled after site visits
+                    </MudText>
+                </div>
+            </MudStack>
+        </MudStack>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <MudGrid Spacing="3">
+                <!-- Scope Change Mode -->
+                <MudItem xs="12" md="6">
+                    <MudSelect T="ScopeChangeMode" 
+                               @bind-Value="settings.Mode" 
+                               Label="Scope Change Handling Mode"
+                               Variant="Variant.Outlined"
+                               HelperText="How to handle variances between HOA estimates and actual element counts">
+                        <MudSelectItem T="ScopeChangeMode" Value="ScopeChangeMode.NoAction">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.DoNotDisturb" Size="Size.Small" />
+                                <span>No Action - Proceed regardless</span>
+                            </MudStack>
+                        </MudSelectItem>
+                        <MudSelectItem T="ScopeChangeMode" Value="ScopeChangeMode.VarianceReportOnly">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.Assessment" Size="Size.Small" />
+                                <span>Report Only - Show variance, staff decides</span>
+                            </MudStack>
+                        </MudSelectItem>
+                        <MudSelectItem T="ScopeChangeMode" Value="ScopeChangeMode.VarianceWithAmendment">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.Gavel" Size="Size.Small" />
+                                <span>Variance + Amendment - Require action if threshold exceeded</span>
+                            </MudStack>
+                        </MudSelectItem>
+                        <MudSelectItem T="ScopeChangeMode" Value="ScopeChangeMode.AlwaysAmendment">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                                <span>Always Amendment - Require for any scope change</span>
+                            </MudStack>
+                        </MudSelectItem>
+                        <MudSelectItem T="ScopeChangeMode" Value="ScopeChangeMode.TwoPhase">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudIcon Icon="@Icons.Material.Filled.Layers" Size="Size.Small" />
+                                <span>Two-Phase - Separate site visit and study proposals</span>
+                            </MudStack>
+                        </MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <!-- Info about selected mode -->
+                <MudItem xs="12" md="6">
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+                        @GetModeDescription(settings.Mode)
+                    </MudAlert>
+                </MudItem>
+
+                <!-- Threshold Settings (only show if mode uses thresholds) -->
+                @if (settings.Mode != ScopeChangeMode.NoAction && settings.Mode != ScopeChangeMode.AlwaysAmendment)
+                {
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Variance Thresholds</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;" Class="mb-3">
+                            Action is triggered when EITHER threshold is exceeded
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="decimal" 
+                                         @bind-Value="settings.VarianceThresholdPercent"
+                                         Label="Percentage Threshold (%)"
+                                         Variant="Variant.Outlined"
+                                         Min="0" Max="100"
+                                         Step="5"
+                                         Adornment="Adornment.End"
+                                         AdornmentText="%"
+                                         HelperText="Trigger if variance exceeds this percentage (0 = disabled)" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" 
+                                         @bind-Value="settings.VarianceThresholdCount"
+                                         Label="Element Count Threshold"
+                                         Variant="Variant.Outlined"
+                                         Min="0" Max="100"
+                                         Step="1"
+                                         HelperText="Trigger if variance exceeds this many elements (0 = disabled)" />
+                    </MudItem>
+                }
+
+                <!-- Approval & Notification Settings -->
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Approval & Notifications</MudText>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="4">
+                    <MudSwitch T="bool" 
+                               @bind-Value="settings.RequireHoaApproval"
+                               Label="Require HOA Approval"
+                               Color="Color.Primary" />
+                    <MudText Typo="Typo.caption" Style="color: #666;">
+                        HOA must approve scope changes before proceeding
+                    </MudText>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="4">
+                    <MudSwitch T="bool" 
+                               @bind-Value="settings.AutoNotifyHoaOnVariance"
+                               Label="Auto-Notify HOA"
+                               Color="Color.Primary" />
+                    <MudText Typo="Typo.caption" Style="color: #666;">
+                        Automatically notify HOA when variance is detected
+                    </MudText>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="4">
+                    <MudSwitch T="bool" 
+                               @bind-Value="settings.AllowStaffOverride"
+                               Label="Allow Staff Override"
+                               Color="Color.Warning" />
+                    <MudText Typo="Typo.caption" Style="color: #666;">
+                        Staff can override variance check and proceed
+                    </MudText>
+                </MudItem>
+
+                <!-- Two-Phase Option -->
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSwitch T="bool" 
+                               @bind-Value="settings.UseTwoPhaseProposal"
+                               Label="Use Two-Phase Proposals"
+                               Color="Color.Secondary" />
+                    <MudText Typo="Typo.caption" Style="color: #666;">
+                        Split into site visit (Phase 1) and full study (Phase 2) proposals
+                    </MudText>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Save Button -->
+            <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Save"
+                           OnClick="SaveSettings"
+                           Disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Save Settings
+                </MudButton>
+            </MudStack>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private TenantScopeChangeSettings settings = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        try
+        {
+            isLoading = true;
+            var tenantId = TenantContext.TenantId ?? 0;
+            settings = await ScopeComparisonService.GetSettingsAsync(tenantId);
+            settings.TenantId = tenantId;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        try
+        {
+            isSaving = true;
+            settings.UpdatedAt = DateTime.UtcNow;
+            await ScopeComparisonService.SaveSettingsAsync(settings);
+            Snackbar.Add("Scope change settings saved successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private string GetModeDescription(ScopeChangeMode mode) => mode switch
+    {
+        ScopeChangeMode.NoAction => 
+            "Scope variances are ignored. The study proceeds regardless of any differences between HOA estimates and actual counts.",
+        ScopeChangeMode.VarianceReportOnly => 
+            "A variance report is shown to staff after site visit completion. Staff can review and decide whether to proceed or take action.",
+        ScopeChangeMode.VarianceWithAmendment => 
+            "If variance exceeds thresholds, an amendment is required before proceeding. Staff can override if allowed.",
+        ScopeChangeMode.AlwaysAmendment => 
+            "Any scope change requires a formal amendment, regardless of variance size. Most strict option.",
+        ScopeChangeMode.TwoPhase => 
+            "Uses two separate proposals: Phase 1 for site visit/assessment (fixed fee), Phase 2 for full study (priced after actual scope known).",
+        _ => "Select a mode to see its description."
+    };
+}

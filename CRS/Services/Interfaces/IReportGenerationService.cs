@@ -5,6 +5,53 @@ using CRS.Models.Workflow;
 namespace CRS.Services.Interfaces;
 
 /// <summary>
+/// Result of validating study data completeness for report generation.
+/// </summary>
+public class StudyDataValidationResult
+{
+    /// <summary>
+    /// Whether the study is ready for report generation.
+    /// True if no errors (warnings are allowed).
+    /// </summary>
+    public bool IsReady => !Errors.Any();
+
+    /// <summary>
+    /// Blocking errors that prevent report generation.
+    /// </summary>
+    public List<string> Errors { get; set; } = new();
+
+    /// <summary>
+    /// Non-blocking warnings (report can still be generated).
+    /// </summary>
+    public List<string> Warnings { get; set; } = new();
+
+    /// <summary>
+    /// List of missing financial data fields.
+    /// </summary>
+    public List<string> MissingFinancialData { get; set; } = new();
+
+    /// <summary>
+    /// List of elements missing useful life or remaining life data.
+    /// </summary>
+    public List<string> MissingElementData { get; set; } = new();
+
+    /// <summary>
+    /// List of elements that need service contacts but are missing them.
+    /// </summary>
+    public List<string> MissingServiceContacts { get; set; } = new();
+
+    /// <summary>
+    /// Total number of elements in the study.
+    /// </summary>
+    public int TotalElementCount { get; set; }
+
+    /// <summary>
+    /// Total count of all issues (errors + warnings).
+    /// </summary>
+    public int TotalIssueCount => Errors.Count + Warnings.Count;
+}
+
+/// <summary>
 /// Result of a report generation operation.
 /// </summary>
 public class ReportGenerationResult
@@ -97,8 +144,16 @@ public class ReportGenerationOptions
 public interface IReportGenerationService
 {
     /// <summary>
+    /// Validates that a study has all required data for report generation.
+    /// Returns detailed information about what data is missing.
+    /// </summary>
+    /// <param name="studyId">The reserve study ID.</param>
+    /// <returns>Validation result with errors, warnings, and missing data lists.</returns>
+    Task<StudyDataValidationResult> ValidateStudyDataAsync(Guid studyId);
+
+    /// <summary>
     /// Checks if a reserve study is ready for report generation.
-    /// Returns true if the study is at FundingPlanReady stage or later.
+    /// Returns true if the study has all required data and is at the correct workflow stage.
     /// </summary>
     /// <param name="studyId">The reserve study ID.</param>
     /// <returns>True if ready for report generation.</returns>

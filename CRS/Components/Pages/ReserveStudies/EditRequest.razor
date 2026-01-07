@@ -1,4 +1,4 @@
-@page "/ReserveStudies/{Id:guid}/Edit"
+﻿@page "/ReserveStudies/{Id:guid}/Edit"
 @attribute [Authorize]
 
 @using System.Security.Claims
@@ -55,8 +55,7 @@
         <MudAlert Severity="Severity.Info">
             <MudText Typo="Typo.h6" Class="mb-2">Request Cannot Be Modified</MudText>
             <MudText Typo="Typo.body2">
-                This reserve study request can no longer be edited because the proposal has already been accepted.
-                If you need to make changes, please contact @TenantContext.TenantName directly.
+                This reserve study has been completed or archived and can no longer be modified.
             </MudText>
             <MudStack Row="true" Spacing="2" Class="mt-3">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/ReserveStudies/{Id}/Details")">View Details</MudButton>
@@ -252,8 +251,11 @@
                     return;
                 }
 
-                // Check if the study can be edited based on status
-                canEdit = ReserveStudyService.CanUpdateReserveStudy(Model);
+                // Check if the study can be edited based on status and user role
+                // Staff can edit at any point before completion; HOA only before proposal acceptance
+                canEdit = isStaff 
+                    ? ReserveStudyService.CanStaffUpdateReserveStudy(Model) 
+                    : ReserveStudyService.CanUpdateReserveStudy(Model);
 
                 if (canEdit) {
                     InitializeSteps();

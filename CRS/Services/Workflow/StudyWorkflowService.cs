@@ -95,6 +95,7 @@ namespace CRS.Services.Workflow {
             
             [StudyStatus.FinancialInfoReceived] = new() { 
                 StudyStatus.SiteVisitPending,
+                StudyStatus.FinancialInfoRequested, // Request more info if needed
                 StudyStatus.RequestCancelled 
             },
 
@@ -103,39 +104,49 @@ namespace CRS.Services.Workflow {
             // ═══════════════════════════════════════════════════════════════
             [StudyStatus.SiteVisitPending] = new() { 
                 StudyStatus.SiteVisitScheduled,
+                StudyStatus.FinancialInfoRequested, // Request more financial info
                 StudyStatus.RequestCancelled 
             },
             
             [StudyStatus.SiteVisitScheduled] = new() { 
                 StudyStatus.SiteVisitCompleted,
+                StudyStatus.FinancialInfoRequested, // Request more financial info
                 StudyStatus.RequestCancelled 
             },
             
             [StudyStatus.SiteVisitCompleted] = new() { 
                 StudyStatus.SiteVisitDataEntered,
+                StudyStatus.FinancialInfoRequested, // Request more financial info
                 StudyStatus.RequestCancelled 
             },
             
             [StudyStatus.SiteVisitDataEntered] = new() { 
                 StudyStatus.FundingPlanReady,
+                StudyStatus.FinancialInfoRequested, // Request more financial info
                 StudyStatus.RequestCancelled 
             },
 
             // ═══════════════════════════════════════════════════════════════
-            // FUNDING PLAN PHASE
+            // FUNDING PLAN PHASE - Allow going back for more data
             // ═══════════════════════════════════════════════════════════════
             [StudyStatus.FundingPlanReady] = new() { 
                 StudyStatus.FundingPlanInProcess,
+                StudyStatus.FinancialInfoRequested, // Request more financial info
+                StudyStatus.SiteVisitDataEntered,   // Go back to enter more site data
                 StudyStatus.RequestCancelled 
             },
             
             [StudyStatus.FundingPlanInProcess] = new() { 
                 StudyStatus.FundingPlanComplete,
+                StudyStatus.FundingPlanReady,       // Go back to ready state
+                StudyStatus.FinancialInfoRequested, // Request more financial info
                 StudyStatus.RequestCancelled 
             },
             
             [StudyStatus.FundingPlanComplete] = new() { 
                 StudyStatus.NarrativeReady,
+                StudyStatus.FundingPlanInProcess,   // Go back to recalculate
+                StudyStatus.FinancialInfoRequested, // Request more financial info
                 StudyStatus.RequestCancelled 
             },
 

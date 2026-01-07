@@ -578,6 +578,27 @@ namespace CRS.Services {
         }
 
         /// <summary>
+        /// Determines if a reserve study can be updated by staff (TenantOwner, TenantSpecialist, Admin).
+        /// Staff can update at any time before the study is completed.
+        /// </summary>
+        public bool CanStaffUpdateReserveStudy(ReserveStudy reserveStudy) {
+            if (reserveStudy == null) {
+                return false;
+            }
+
+            // Cannot update if the study is complete or cancelled
+            if (reserveStudy.IsComplete || 
+                reserveStudy.CurrentStatus == StudyStatus.RequestCompleted ||
+                reserveStudy.CurrentStatus == StudyStatus.RequestCancelled ||
+                reserveStudy.CurrentStatus == StudyStatus.RequestArchived) {
+                return false;
+            }
+
+            // Staff can update at any point before completion
+            return true;
+        }
+
+        /// <summary>
         /// Gets all active reserve studies
         /// </summary>
         public async Task<List<ReserveStudy>> GetAllReserveStudiesAsync() {

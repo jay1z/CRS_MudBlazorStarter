@@ -169,6 +169,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.Interfaces.IGeneratedReportService, CRS.Services.GeneratedReportService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IReportGenerationService, CRS.Services.ReportGenerationService>();
     
+    // Scope Comparison Service (for tracking scope variance after site visits)
+    builder.Services.AddScoped<CRS.Services.Interfaces.IScopeComparisonService, CRS.Services.Workflow.ScopeComparisonService>();
+    
     // Click-Wrap Agreement Services
     builder.Services.AddScoped<CRS.Services.Interfaces.IProposalAcceptanceService, CRS.Services.ProposalAcceptanceService>();
     

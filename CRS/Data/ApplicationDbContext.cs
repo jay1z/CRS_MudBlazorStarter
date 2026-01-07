@@ -129,6 +129,15 @@ namespace CRS.Data {
                 .HasFilter("[DateDeleted] IS NULL")
                 .HasDatabaseName("IX_Proposal_Tenant_Study_Approved_NotDeleted");
 
+            // Scope comparison indexes
+            builder.Entity<ScopeComparison>()
+                .HasIndex(sc => new { sc.TenantId, sc.ReserveStudyId })
+                .HasDatabaseName("IX_ScopeComparison_Tenant_Study");
+            
+            builder.Entity<ScopeComparison>()
+                .HasIndex(sc => new { sc.TenantId, sc.Status })
+                .HasDatabaseName("IX_ScopeComparison_Tenant_Status");
+
             // Element indexes for service contact queries
             builder.Entity<ReserveStudyBuildingElement>()
                 .HasIndex(e => new { e.ReserveStudyId, e.BuildingElementId })
@@ -845,6 +854,10 @@ namespace CRS.Data {
         public DbSet<TenantReserveSettings> TenantReserveSettings { get; set; }
         public DbSet<ReserveStudyScenario> ReserveStudyScenarios { get; set; }
         public DbSet<ReserveScenarioComponent> ReserveScenarioComponents { get; set; }
+        
+        // Scope Change Management
+        public DbSet<TenantScopeChangeSettings> TenantScopeChangeSettings { get; set; }
+        public DbSet<ScopeComparison> ScopeComparisons { get; set; }
         #endregion
 
         #region Seed Data

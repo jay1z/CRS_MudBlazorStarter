@@ -27,6 +27,34 @@ namespace CRS.Models.Workflow {
         /// <summary>Current status in the workflow.</summary>
         public StudyStatus CurrentStatus { get; set; } = StudyStatus.RequestCreated;
 
+        // ─────────────────────────────────────────────────────────────
+        // HOA Element Count Estimates (captured during request creation)
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>Estimated number of building elements (e.g., roofs, siding).</summary>
+        public int? EstimatedBuildingElementCount { get; set; }
+
+        /// <summary>Estimated number of common elements (e.g., pools, clubhouses).</summary>
+        public int? EstimatedCommonElementCount { get; set; }
+
+        /// <summary>Estimated number of additional/custom elements.</summary>
+        public int? EstimatedAdditionalElementCount { get; set; }
+
+        /// <summary>Total estimated element count.</summary>
+        [NotMapped]
+        public int EstimatedTotalCount => 
+            (EstimatedBuildingElementCount ?? 0) + 
+            (EstimatedCommonElementCount ?? 0) + 
+            (EstimatedAdditionalElementCount ?? 0);
+
+        /// <summary>Optional notes about property elements from HOA.</summary>
+        [MaxLength(2000)]
+        public string? ElementEstimateNotes { get; set; }
+
+        // ─────────────────────────────────────────────────────────────
+        // Timestamps and Status
+        // ─────────────────────────────────────────────────────────────
+
         /// <summary>When the request was created.</summary>
         [DataType(DataType.DateTime)]
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

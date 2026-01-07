@@ -19,5 +19,7 @@ namespace CRS.Services.Interfaces {
         Task<Guid?> ValidateAccessTokenAsync(Guid token);
         Task RevokeAccessTokenAsync(Guid token);
         bool CanUpdateReserveStudy(ReserveStudy reserveStudy);
+        bool CanStaffUpdateReserveStudy(ReserveStudy reserveStudy);
     }
 }
+

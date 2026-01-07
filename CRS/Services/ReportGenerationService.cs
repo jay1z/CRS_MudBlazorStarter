@@ -44,17 +44,221 @@ public class ReportGenerationService : IReportGenerationService
     /// <inheritdoc />
     public async Task<bool> CanGenerateReportAsync(Guid studyId)
     {
+        var validation = await ValidateStudyDataAsync(studyId);
+        return validation.IsReady;
+    }
+
+    /// <inheritdoc />
+    public async Task<StudyDataValidationResult> ValidateStudyDataAsync(Guid studyId)
+    {
+        var result = new StudyDataValidationResult();
+        
         await using var context = await _dbFactory.CreateDbContextAsync();
         
         var study = await context.ReserveStudies
             .Include(s => s.StudyRequest)
+            .Include(s => s.FinancialInfo)
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.BuildingElement)
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.UsefulLifeOption)
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.RemainingLifeOption)
+            .Include(s => s.ReserveStudyBuildingElements!)
+                .ThenInclude(e => e.ServiceContact)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.CommonElement)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.UsefulLifeOption)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.RemainingLifeOption)
+            .Include(s => s.ReserveStudyCommonElements!)
+                .ThenInclude(e => e.ServiceContact)
+            .Include(s => s.ReserveStudyAdditionalElements!)
+                .ThenInclude(e => e.UsefulLifeOption)
+            .Include(s => s.ReserveStudyAdditionalElements!)
+                .ThenInclude(e => e.RemainingLifeOption)
+            .Include(s => s.ReserveStudyAdditionalElements!)
+                .ThenInclude(e => e.ServiceContact)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(s => s.Id == studyId);
 
-        if (study?.StudyRequest == null)
-            return false;
+        if (study == null)
+        {
+            result.Errors.Add("Reserve study not found.");
+            return result;
+        }
 
-        // Check if at FundingPlanReady or later
-        return study.StudyRequest.CurrentStatus >= MinimumRequiredStatus;
+        // Check workflow status
+        if (study.StudyRequest == null || study.StudyRequest.CurrentStatus < MinimumRequiredStatus)
+        {
+            result.Errors.Add($"Study must be at '{MinimumRequiredStatus}' stage or later. Current: {study.StudyRequest?.CurrentStatus ?? StudyStatus.RequestCreated}");
+        }
+
+        // Check financial data
+        ValidateFinancialData(study, result);
+
+        // Check element data
+        ValidateElementData(study, result);
+
+        // Check service contacts
+        ValidateServiceContacts(study, result);
+
+        return result;
+    }
+
+    private void ValidateFinancialData(ReserveStudy study, StudyDataValidationResult result)
+    {
+        if (study.FinancialInfo == null)
+        {
+            result.Errors.Add("Financial information has not been submitted.");
+            result.MissingFinancialData.Add("All financial data");
+            return;
+        }
+
+        // Check required financial fields
+        if (!study.FinancialInfo.JanuaryFirstReserveBalance.HasValue && 
+            !study.CurrentReserveFunds.HasValue)
+        {
+            result.Warnings.Add("Current reserve fund balance is not set.");
+            result.MissingFinancialData.Add("Current Reserve Balance");
+        }
+
+        if (!study.FinancialInfo.BudgetedContributionCurrentYear.HasValue &&
+            !study.MonthlyReserveContribution.HasValue)
+        {
+            result.Warnings.Add("Monthly/annual contribution is not set.");
+            result.MissingFinancialData.Add("Reserve Contribution");
+        }
+    }
+
+    private void ValidateElementData(ReserveStudy study, StudyDataValidationResult result)
+    {
+        var allElements = new List<(string Name, string Type, bool HasUsefulLife, bool HasRemainingLife)>();
+
+        // Building elements
+        if (study.ReserveStudyBuildingElements != null)
+        {
+            foreach (var element in study.ReserveStudyBuildingElements)
+            {
+                var name = element.BuildingElement?.Name ?? "Unknown Building Element";
+                var hasUsefulLife = element.UsefulLifeOption != null;
+                var hasRemainingLife = element.RemainingLifeOption != null || element.LastServiced.HasValue;
+                allElements.Add((name, "Building", hasUsefulLife, hasRemainingLife));
+            }
+        }
+
+        // Common elements
+        if (study.ReserveStudyCommonElements != null)
+        {
+            foreach (var element in study.ReserveStudyCommonElements)
+            {
+                var name = element.ElementName ?? element.CommonElement?.Name ?? "Unknown Common Element";
+                var hasUsefulLife = element.UsefulLife.HasValue || element.UsefulLifeOption != null;
+                var hasRemainingLife = element.RemainingLife.HasValue || element.RemainingLifeOption != null || element.LastServiced.HasValue;
+                allElements.Add((name, "Common", hasUsefulLife, hasRemainingLife));
+            }
+        }
+
+        // Additional elements
+        if (study.ReserveStudyAdditionalElements != null)
+        {
+            foreach (var element in study.ReserveStudyAdditionalElements)
+            {
+                var name = element.Name ?? "Unknown Additional Element";
+                var hasUsefulLife = element.UsefulLifeOption != null;
+                var hasRemainingLife = element.RemainingLifeOption != null || element.LastServiced.HasValue;
+                allElements.Add((name, "Additional", hasUsefulLife, hasRemainingLife));
+            }
+        }
+
+        if (!allElements.Any())
+        {
+            result.TotalElementCount = 0;
+            result.Errors.Add("No property elements have been added to this study. At least one element is required.");
+            return;
+        }
+
+        result.TotalElementCount = allElements.Count;
+
+        // Check for missing useful life
+        var missingUsefulLife = allElements.Where(e => !e.HasUsefulLife).ToList();
+        if (missingUsefulLife.Any())
+        {
+            foreach (var element in missingUsefulLife)
+            {
+                result.MissingElementData.Add($"{element.Name} ({element.Type}): Missing Useful Life");
+            }
+            result.Warnings.Add($"{missingUsefulLife.Count} element(s) are missing Useful Life data.");
+        }
+
+        // Check for missing remaining life
+        var missingRemainingLife = allElements.Where(e => !e.HasRemainingLife).ToList();
+        if (missingRemainingLife.Any())
+        {
+            foreach (var element in missingRemainingLife)
+            {
+                result.MissingElementData.Add($"{element.Name} ({element.Type}): Missing Remaining Life");
+            }
+            result.Warnings.Add($"{missingRemainingLife.Count} element(s) are missing Remaining Life data.");
+        }
+    }
+
+    private void ValidateServiceContacts(ReserveStudy study, StudyDataValidationResult result)
+    {
+        var elementsNeedingContacts = new List<(string Name, string Type, bool HasContact)>();
+
+        // Building elements that need service
+        if (study.ReserveStudyBuildingElements != null)
+        {
+            foreach (var element in study.ReserveStudyBuildingElements.Where(e => e.BuildingElement?.NeedsService == true))
+            {
+                var name = element.BuildingElement?.Name ?? "Unknown";
+                var hasContact = element.ServiceContact != null && 
+                                 (!string.IsNullOrEmpty(element.ServiceContact.CompanyName) ||
+                                  !string.IsNullOrEmpty(element.ServiceContact.Phone) ||
+                                  !string.IsNullOrEmpty(element.ServiceContact.Email));
+                elementsNeedingContacts.Add((name, "Building", hasContact));
+            }
+        }
+
+        // Common elements that need service
+        if (study.ReserveStudyCommonElements != null)
+        {
+            foreach (var element in study.ReserveStudyCommonElements.Where(e => e.CommonElement?.NeedsService == true))
+            {
+                var name = element.ElementName ?? element.CommonElement?.Name ?? "Unknown";
+                var hasContact = element.ServiceContact != null &&
+                                 (!string.IsNullOrEmpty(element.ServiceContact.CompanyName) ||
+                                  !string.IsNullOrEmpty(element.ServiceContact.Phone) ||
+                                  !string.IsNullOrEmpty(element.ServiceContact.Email));
+                elementsNeedingContacts.Add((name, "Common", hasContact));
+            }
+        }
+
+        // Additional elements that need service
+        if (study.ReserveStudyAdditionalElements != null)
+        {
+            foreach (var element in study.ReserveStudyAdditionalElements.Where(e => e.NeedsService))
+            {
+                var name = element.Name ?? "Unknown";
+                var hasContact = element.ServiceContact != null &&
+                                 (!string.IsNullOrEmpty(element.ServiceContact.CompanyName) ||
+                                  !string.IsNullOrEmpty(element.ServiceContact.Phone) ||
+                                  !string.IsNullOrEmpty(element.ServiceContact.Email));
+                elementsNeedingContacts.Add((name, "Additional", hasContact));
+            }
+        }
+
+        var missingContacts = elementsNeedingContacts.Where(e => !e.HasContact).ToList();
+        if (missingContacts.Any())
+        {
+            foreach (var element in missingContacts)
+            {
+                result.MissingServiceContacts.Add($"{element.Name} ({element.Type})");
+            }
+            result.Warnings.Add($"{missingContacts.Count} element(s) require service contacts but are missing contact information.");
+        }
     }
 
     /// <inheritdoc />
@@ -67,11 +271,14 @@ public class ReportGenerationService : IReportGenerationService
 
         try
         {
-            // Step 1: Verify study is ready
-            if (!await CanGenerateReportAsync(studyId))
+            // Step 1: Validate study data completeness
+            var validation = await ValidateStudyDataAsync(studyId);
+            
+            if (!validation.IsReady)
             {
+                var errorMessage = string.Join("; ", validation.Errors);
                 return ReportGenerationResult.Failure(
-                    $"Reserve study is not ready for report generation. Minimum status required: {MinimumRequiredStatus}");
+                    $"Study data is incomplete: {errorMessage}");
             }
 
             // Step 2: Load study data

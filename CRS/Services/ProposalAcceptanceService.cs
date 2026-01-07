@@ -15,15 +15,18 @@ public class ProposalAcceptanceService : IProposalAcceptanceService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
+    private readonly IScopeComparisonService _scopeComparisonService;
     private readonly ILogger<ProposalAcceptanceService> _logger;
 
     public ProposalAcceptanceService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
         ITenantContext tenantContext,
+        IScopeComparisonService scopeComparisonService,
         ILogger<ProposalAcceptanceService> logger)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
+        _scopeComparisonService = scopeComparisonService;
         _logger = logger;
     }
 
@@ -101,6 +104,22 @@ public class ProposalAcceptanceService : IProposalAcceptanceService
 
         db.ProposalAcceptances.Add(acceptance);
         await db.SaveChangesAsync(ct);
+
+        // Capture original scope for variance tracking after site visit
+        try
+        {
+            await _scopeComparisonService.CaptureOriginalScopeAsync(acceptance.ReserveStudyId);
+            _logger.LogInformation(
+                "Captured original scope for study {StudyId} at proposal acceptance",
+                acceptance.ReserveStudyId);
+        }
+        catch (Exception ex)
+        {
+            // Log but don't fail the acceptance - scope comparison is optional
+            _logger.LogWarning(ex,
+                "Failed to capture original scope for study {StudyId}. Scope comparison may not be available.",
+                acceptance.ReserveStudyId);
+        }
 
         _logger.LogInformation(
             "Recorded proposal acceptance {AcceptanceId} for study {StudyId} by user {UserId}",

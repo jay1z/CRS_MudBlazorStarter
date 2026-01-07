@@ -4,6 +4,7 @@ using CRS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260106223331_AddScopeComparisonEntities")]
+    partial class AddScopeComparisonEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3702,19 +3705,6 @@ namespace CRS.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<int>("CurrentStatus")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ElementEstimateNotes")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<int?>("EstimatedAdditionalElementCount")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("EstimatedBuildingElementCount")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("EstimatedCommonElementCount")
                         .HasColumnType("int");
 
                     b.Property<int?>("PreviousStatus")

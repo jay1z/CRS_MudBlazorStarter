@@ -1,0 +1,387 @@
+﻿@using CRS.Models.Workflow
+@using CRS.Services.Interfaces
+
+@inject IScopeComparisonService ScopeComparisonService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="pa-4">
+    <MudStack Spacing="3">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Class="mr-2" Style="vertical-align: middle;" />
+                Scope Comparison
+            </MudText>
+            @if (comparison != null && comparison.Status == ScopeComparisonStatus.ExceedsThreshold)
+            {
+                <AuthorizeView Policy="RequireTenantStaff">
+                    <Authorized>
+                        @if (settings?.AllowStaffOverride == true && !showOverrideForm)
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Warning" 
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.SkipNext"
+                                       OnClick="@(() => showOverrideForm = true)">
+                                Override & Proceed
+                            </MudButton>
+                        }
+                    </Authorized>
+                </AuthorizeView>
+            }
+        </MudStack>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (comparison == null)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" />
+                    <MudText Typo="Typo.body2">
+                        Scope comparison will be available after the site visit is completed.
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
+        else
+        {
+            <!-- Status Badge -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudChip T="string" 
+                         Size="Size.Medium" 
+                         Color="@GetStatusColor(comparison.Status)" 
+                         Variant="Variant.Filled"
+                         Icon="@GetStatusIcon(comparison.Status)">
+                    @GetStatusText(comparison.Status)
+                </MudChip>
+                @if (comparison.ComparedAt.HasValue)
+                {
+                    <MudText Typo="Typo.caption" Style="color: #666;">
+                        Compared on @comparison.ComparedAt.Value.ToString("MMM dd, yyyy")
+                    </MudText>
+                }
+            </MudStack>
+
+            <!-- Variance Summary -->
+            <MudGrid Spacing="3">
+                <!-- Original Scope -->
+                <MudItem xs="12" sm="4">
+                    <MudPaper Elevation="1" Class="pa-3" Style="text-align: center; border-radius: 8px;">
+                        <MudText Typo="Typo.caption" Style="color: #666;">HOA Estimate</MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Default">@comparison.OriginalTotalCount</MudText>
+                        <MudText Typo="Typo.caption">
+                            @comparison.OriginalBuildingElementCount Building • 
+                            @comparison.OriginalCommonElementCount Common • 
+                            @comparison.OriginalAdditionalElementCount Additional
+                        </MudText>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Variance -->
+                <MudItem xs="12" sm="4">
+                    <MudPaper Elevation="1" Class="pa-3" Style="@GetVariancePanelStyle()">
+                        <MudText Typo="Typo.caption" Style="color: #666;">Variance</MudText>
+                        <MudText Typo="Typo.h4" Color="@GetVarianceColor()">
+                            @(comparison.VarianceCount >= 0 ? "+" : "")@comparison.VarianceCount
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="@GetVarianceColor()">
+                            @(comparison.VariancePercent >= 0 ? "+" : "")@comparison.VariancePercent.ToString("F1")%
+                        </MudText>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Actual Scope -->
+                <MudItem xs="12" sm="4">
+                    <MudPaper Elevation="1" Class="pa-3" Style="text-align: center; border-radius: 8px;">
+                        <MudText Typo="Typo.caption" Style="color: #666;">Actual (Site Visit)</MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@comparison.ActualTotalCount</MudText>
+                        <MudText Typo="Typo.caption">
+                            @comparison.ActualBuildingElementCount Building • 
+                            @comparison.ActualCommonElementCount Common • 
+                            @comparison.ActualAdditionalElementCount Additional
+                        </MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Detailed Breakdown -->
+            @if (showDetails)
+            {
+                <MudSimpleTable Dense="true" Hover="true" Style="border-radius: 8px;">
+                    <thead>
+                        <tr>
+                            <th>Element Type</th>
+                            <th style="text-align: right;">HOA Estimate</th>
+                            <th style="text-align: right;">Actual</th>
+                            <th style="text-align: right;">Difference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Small" Class="mr-1" />Building</td>
+                            <td style="text-align: right;">@comparison.OriginalBuildingElementCount</td>
+                            <td style="text-align: right;">@comparison.ActualBuildingElementCount</td>
+                            <td style="text-align: right; color: @GetDiffColor(comparison.ActualBuildingElementCount - comparison.OriginalBuildingElementCount)">
+                                @FormatDiff(comparison.ActualBuildingElementCount - comparison.OriginalBuildingElementCount)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><MudIcon Icon="@Icons.Material.Filled.Pool" Size="Size.Small" Class="mr-1" />Common</td>
+                            <td style="text-align: right;">@comparison.OriginalCommonElementCount</td>
+                            <td style="text-align: right;">@comparison.ActualCommonElementCount</td>
+                            <td style="text-align: right; color: @GetDiffColor(comparison.ActualCommonElementCount - comparison.OriginalCommonElementCount)">
+                                @FormatDiff(comparison.ActualCommonElementCount - comparison.OriginalCommonElementCount)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="mr-1" />Additional</td>
+                            <td style="text-align: right;">@comparison.OriginalAdditionalElementCount</td>
+                            <td style="text-align: right;">@comparison.ActualAdditionalElementCount</td>
+                            <td style="text-align: right; color: @GetDiffColor(comparison.ActualAdditionalElementCount - comparison.OriginalAdditionalElementCount)">
+                                @FormatDiff(comparison.ActualAdditionalElementCount - comparison.OriginalAdditionalElementCount)
+                            </td>
+                        </tr>
+                        <tr style="font-weight: bold; background-color: #f5f5f5;">
+                            <td>Total</td>
+                            <td style="text-align: right;">@comparison.OriginalTotalCount</td>
+                            <td style="text-align: right;">@comparison.ActualTotalCount</td>
+                            <td style="text-align: right; color: @GetDiffColor(comparison.VarianceCount)">
+                                @FormatDiff(comparison.VarianceCount)
+                            </td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+            }
+
+            <MudButton Variant="Variant.Text" 
+                       Size="Size.Small" 
+                       OnClick="@(() => showDetails = !showDetails)"
+                       StartIcon="@(showDetails ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
+                @(showDetails ? "Hide Details" : "Show Details")
+            </MudButton>
+
+            <!-- Warning/Action Messages -->
+            @if (comparison.Status == ScopeComparisonStatus.ExceedsThreshold)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                            Scope variance exceeds threshold
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            @GetThresholdMessage()
+                        </MudText>
+                    </MudStack>
+                </MudAlert>
+            }
+
+            @if (comparison.Status == ScopeComparisonStatus.Overridden && !string.IsNullOrEmpty(comparison.OverrideReason))
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                            Override Reason
+                        </MudText>
+                        <MudText Typo="Typo.body2">@comparison.OverrideReason</MudText>
+                        @if (comparison.OverriddenAt.HasValue)
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                Overridden on @comparison.OverriddenAt.Value.ToString("MMM dd, yyyy")
+                            </MudText>
+                        }
+                    </MudStack>
+                </MudAlert>
+            }
+
+            <!-- Override Form -->
+            @if (showOverrideForm)
+            {
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; border-left: 4px solid #FFA726;">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2">Override Variance Check</MudText>
+                        <MudTextField @bind-Value="overrideReason"
+                                      Label="Reason for Override"
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      Required="true"
+                                      HelperText="Please provide a reason for proceeding despite the scope variance." />
+                        <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                            <MudButton Variant="Variant.Text" OnClick="@(() => showOverrideForm = false)">
+                                Cancel
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Warning" 
+                                       OnClick="SubmitOverride"
+                                       Disabled="@(string.IsNullOrWhiteSpace(overrideReason) || isSubmitting)">
+                                @if (isSubmitting)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                }
+                                Confirm Override
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            }
+
+            <!-- Notes -->
+            @if (!string.IsNullOrEmpty(comparison.Notes))
+            {
+                <MudText Typo="Typo.caption" Style="color: #666;">
+                    <strong>Notes:</strong> @comparison.Notes
+                </MudText>
+            }
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    [Parameter]
+    public int TenantId { get; set; }
+
+    private ScopeComparison? comparison;
+    private TenantScopeChangeSettings? settings;
+    private bool isLoading = true;
+    private bool showDetails = false;
+    private bool showOverrideForm = false;
+    private string overrideReason = "";
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            comparison = await ScopeComparisonService.GetByStudyIdAsync(ReserveStudyId);
+            settings = await ScopeComparisonService.GetSettingsAsync(TenantId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading scope comparison: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SubmitOverride()
+    {
+        if (comparison == null || string.IsNullOrWhiteSpace(overrideReason))
+            return;
+
+        try
+        {
+            isSubmitting = true;
+            // Get current user ID from somewhere - for now use empty guid
+            await ScopeComparisonService.OverrideVarianceAsync(comparison.Id, Guid.Empty, overrideReason);
+            Snackbar.Add("Variance override recorded. Proceeding with study.", Severity.Success);
+            showOverrideForm = false;
+            overrideReason = "";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private Color GetStatusColor(ScopeComparisonStatus status) => status switch
+    {
+        ScopeComparisonStatus.WithinThreshold => Color.Success,
+        ScopeComparisonStatus.ExceedsThreshold => Color.Warning,
+        ScopeComparisonStatus.AmendmentPending => Color.Info,
+        ScopeComparisonStatus.AmendmentAccepted => Color.Success,
+        ScopeComparisonStatus.AmendmentRejected => Color.Error,
+        ScopeComparisonStatus.Overridden => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private string GetStatusIcon(ScopeComparisonStatus status) => status switch
+    {
+        ScopeComparisonStatus.WithinThreshold => Icons.Material.Filled.CheckCircle,
+        ScopeComparisonStatus.ExceedsThreshold => Icons.Material.Filled.Warning,
+        ScopeComparisonStatus.AmendmentPending => Icons.Material.Filled.Send,
+        ScopeComparisonStatus.AmendmentAccepted => Icons.Material.Filled.ThumbUp,
+        ScopeComparisonStatus.AmendmentRejected => Icons.Material.Filled.ThumbDown,
+        ScopeComparisonStatus.Overridden => Icons.Material.Filled.SkipNext,
+        ScopeComparisonStatus.Pending => Icons.Material.Filled.HourglassEmpty,
+        _ => Icons.Material.Filled.Help
+    };
+
+    private string GetStatusText(ScopeComparisonStatus status) => status switch
+    {
+        ScopeComparisonStatus.Pending => "Pending Comparison",
+        ScopeComparisonStatus.WithinThreshold => "Within Threshold",
+        ScopeComparisonStatus.ExceedsThreshold => "Exceeds Threshold",
+        ScopeComparisonStatus.AmendmentPending => "Amendment Pending",
+        ScopeComparisonStatus.AmendmentAccepted => "Amendment Accepted",
+        ScopeComparisonStatus.AmendmentRejected => "Amendment Rejected",
+        ScopeComparisonStatus.Overridden => "Overridden",
+        _ => status.ToString()
+    };
+
+    private Color GetVarianceColor()
+    {
+        if (comparison == null) return Color.Default;
+        if (comparison.VarianceCount == 0) return Color.Success;
+        if (comparison.Status == ScopeComparisonStatus.ExceedsThreshold) return Color.Warning;
+        return Color.Default;
+    }
+
+    private string GetVariancePanelStyle()
+    {
+        var baseStyle = "text-align: center; border-radius: 8px;";
+        if (comparison != null && comparison.Status == ScopeComparisonStatus.ExceedsThreshold)
+            return $"{baseStyle} border: 2px solid #FFA726;";
+        return baseStyle;
+    }
+
+    private string GetDiffColor(int diff)
+    {
+        if (diff == 0) return "#666";
+        if (diff > 0) return "#FFA726"; // warning orange
+        return "#42A5F5"; // info blue
+    }
+
+    private string FormatDiff(int diff)
+    {
+        if (diff == 0) return "—";
+        return diff > 0 ? $"+{diff}" : diff.ToString();
+    }
+
+    private string GetThresholdMessage()
+    {
+        if (settings == null) return "Scope change detected. Review may be required.";
+        
+        var messages = new List<string>();
+        if (settings.VarianceThresholdPercent > 0)
+            messages.Add($">{settings.VarianceThresholdPercent}% variance");
+        if (settings.VarianceThresholdCount > 0)
+            messages.Add($">{settings.VarianceThresholdCount} element difference");
+        
+        return settings.Mode switch
+        {
+            ScopeChangeMode.VarianceReportOnly => 
+                $"Threshold exceeded ({string.Join(" or ", messages)}). Review recommended before proceeding.",
+            ScopeChangeMode.VarianceWithAmendment or ScopeChangeMode.AlwaysAmendment => 
+                $"Threshold exceeded ({string.Join(" or ", messages)}). Amendment or override required to proceed.",
+            _ => "Scope change detected. Review may be required."
+        };
+    }
+}

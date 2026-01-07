@@ -92,6 +92,12 @@
                                     OnClick="@(() => activeTab = 4)">
                             Advanced
                         </MudNavLink>
+                        <MudNavLink Icon="@Icons.Material.Filled.CompareArrows" 
+                                    IconColor="@(activeTab == 5 ? Color.Primary : Color.Default)"
+                                    Class="@(activeTab == 5 ? "mud-nav-link-active" : "")"
+                                    OnClick="@(() => activeTab = 5)">
+                            Scope Changes
+                        </MudNavLink>
                     </MudNavMenu>
                 </MudPaper>
             </MudItem>
@@ -902,6 +908,11 @@
                                 </code>
                             </MudPaper>
                         </MudStack>
+                    }
+                    else if (activeTab == 5)
+                    {
+                        <!-- Scope Change Settings -->
+                        <CRS.Components.Shared.Settings.TenantScopeChangeSettingsPanel />
                     }
                 </MudPaper>
 

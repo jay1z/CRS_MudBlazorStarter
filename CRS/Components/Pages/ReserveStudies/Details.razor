@@ -77,7 +77,7 @@
                         </MudStack>
                     </MudStack>
                     
-                    @if (canEdit && !UserState.UserRoles.Any(r => r == "TenantOwner" || r == "TenantSpecialist" || r == "Admin")) {
+                    @if (canEdit || canStaffEdit) {
                         <MudButton Variant="Variant.Filled" 
                                    Size="Size.Large"
                                    StartIcon="@Icons.Material.Filled.Edit"
@@ -657,6 +657,40 @@
                                                     </Authorized>
                                                 </AuthorizeView>
                                             }
+
+                                            @* Funding Plan Phase - Request more financial info if data is incomplete *@
+                                            @if ((currentStatus == StudyStatus.FundingPlanReady || 
+                                                  currentStatus == StudyStatus.FundingPlanInProcess ||
+                                                  currentStatus == StudyStatus.FundingPlanComplete) &&
+                                                 allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Outlined" 
+                                                                   Color="Color.Warning" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.Refresh" 
+                                                                   OnClick="@(() => RequestMoreFinancialInfoAsync())">
+                                                            Request More Financial Info
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+
+                                            @* Funding Plan Phase - Go back to site data entry *@
+                                            @if (currentStatus == StudyStatus.FundingPlanReady &&
+                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitDataEntered)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Outlined" 
+                                                                   Color="Color.Secondary" 
+                                                                   Size="Size.Medium"
+                                                                   StartIcon="@Icons.Material.Filled.Edit" 
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitDataEntered))">
+                                                            Edit Site Visit Data
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
                                             
                                             @* Complete study *@
                                             @if (allowedNextStudy.Contains(StudyStatus.RequestCompleted)) {
@@ -923,27 +957,6 @@
                                                         }
                                                     </Authorized>
                                                 </AuthorizeView>
-
-                                                @* Comments - visible to all *@
-                                                @if (!string.IsNullOrEmpty(reserveStudy.FinancialInfo.Comments)) {
-                                                    <MudDivider Class="my-3" />
-                                                    <MudText Typo="Typo.caption" Style="color: #888;">Additional Comments</MudText>
-                                                    <MudText Typo="Typo.body2">@reserveStudy.FinancialInfo.Comments</MudText>
-                                                }
-
-                                                @* Acknowledgment *@
-                                                @if (reserveStudy.FinancialInfo.AcknowledgementAccepted) {
-                                                    <MudDivider Class="my-3" />
-                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                        <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Success" Size="Size.Small" />
-                                                        <MudText Typo="Typo.body2" Style="color: #10b981;">
-                                                            Acknowledged by @(reserveStudy.FinancialInfo.PresidentSignature ?? "Authorized Signer")
-                                                            @if (reserveStudy.FinancialInfo.AcknowledgmentSignatureDate.HasValue) {
-                                                                <text> on @reserveStudy.FinancialInfo.AcknowledgmentSignatureDate.Value.ToString("MMM dd, yyyy")</text>
-                                                            }
-                                                        </MudText>
-                                                    </MudStack>
-                                                }
                                             </MudCardContent>
                                         </MudCard>
                                     }
@@ -1194,6 +1207,12 @@
                                         }
                                     </MudStack>
                                 </MudTabPanel>
+                                <!-- Scope Comparison Tab -->
+                                <MudTabPanel Text="Scope" Icon="@Icons.Material.Filled.CompareArrows">
+                                    <CRS.Components.Shared.ScopeComparison.ScopeVariancePanel 
+                                        ReserveStudyId="@Id" 
+                                        TenantId="@(reserveStudy?.TenantId ?? 0)" />
+                                </MudTabPanel>
                             </MudTabs>
                 </MudItem>
             </MudGrid>
@@ -1211,9 +1230,11 @@ private bool isContactsLoading = false;
 private bool elementsLoaded = false;
 private bool serviceContactsLoaded = false;
 private bool canEdit = false;
+private bool canStaffEdit = false;
 private bool canEditPhotos = false;
 private List<IReserveStudyElement> elementsWithServiceContact = new();
 private int activeTabIndex = 0;
+
 private CRS.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel? acceptancePanel;
 private bool hasValidAcceptance = false;
 
@@ -1467,6 +1488,9 @@ private bool hasValidAcceptance = false;
                 canEdit = ReserveStudyService.CanUpdateReserveStudy(reserveStudy) && 
                           UserState.CurrentUser?.Id == reserveStudy.ApplicationUserId;
                 
+                // Staff can edit at any time before completion
+                canStaffEdit = isStaff && ReserveStudyService.CanStaffUpdateReserveStudy(reserveStudy);
+                
                 // Photos can be edited by staff (specialists, owners, admins) only
                 canEditPhotos = isStaff;
             }
@@ -1686,10 +1710,34 @@ private bool hasValidAcceptance = false;
     }
 
     private async Task RequestFinancialInfoAsync(Guid studyId) {
-        var success = await ExecuteActionAsync(
+        await ExecuteActionAsync(
             async () => await WorkflowService.RequestFinancialInfoAsync(studyId),
             "Financial information requested successfully",
             "Failed to request financial information"
+        );
+    }
+
+    /// <summary>
+    /// Request more financial info when data is incomplete during funding plan phase.
+    /// Shows a confirmation dialog explaining this will move the study back to data collection.
+    /// </summary>
+    private async Task RequestMoreFinancialInfoAsync() {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Request More Financial Information",
+            new MarkupString(@"
+                <p>This will move the study back to the <strong>Data Collection</strong> phase to request additional financial information from the client.</p>
+                <p>The client will receive an email notification with a link to update their financial information.</p>
+                <p><strong>Current progress in the Funding Plan phase will be preserved.</strong></p>
+            "),
+            yesText: "Yes, Request More Info",
+            cancelText: "Cancel");
+
+        if (confirmed != true) return;
+
+        var success = await ExecuteActionAsync(
+            async () => await WorkflowService.RequestFinancialInfoAsync(Id),
+            "Financial information request sent. Study moved back to Data Collection phase.",
+            "Failed to request additional financial information"
         );
 
         if (success) await ReloadAfterChange();

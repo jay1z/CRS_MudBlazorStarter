@@ -58,7 +58,159 @@
         </MudStack>
 
         <!-- Workflow Gate Warning -->
-        @if (!canGenerateReports && !isLoading)
+        @if (!canGenerateReports && !isLoading && validationResult != null)
+        {
+            <MudAlert Severity="@(validationResult.Errors.Any() ? Severity.Error : Severity.Warning)" 
+                      Variant="Variant.Outlined" 
+                      Dense="false">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@(validationResult.Errors.Any() ? Icons.Material.Filled.Error : Icons.Material.Filled.Warning)" />
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">
+                            @workflowGateMessage
+                        </MudText>
+                    </MudStack>
+
+                    @if (validationResult.Errors.Any())
+                    {
+                        <MudText Typo="Typo.body2" Style="color: #d32f2f;">
+                            <strong>Blocking Issues:</strong>
+                        </MudText>
+                        <ul style="margin: 0; padding-left: 20px;">
+                            @foreach (var error in validationResult.Errors)
+                            {
+                                <li><MudText Typo="Typo.body2">@error</MudText></li>
+                            }
+                        </ul>
+                    }
+
+                    @if (validationResult.MissingFinancialData.Any())
+                    {
+                        <MudStack Spacing="1">
+                            <MudButton Variant="Variant.Text" 
+                                       Size="Size.Small" 
+                                       Color="Color.Default"
+                                       StartIcon="@(showFinancialData ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                       OnClick="@(() => showFinancialData = !showFinancialData)"
+                                       Style="justify-content: flex-start; text-transform: none;">
+                                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Class="mr-1" />
+                                Missing Financial Data (@validationResult.MissingFinancialData.Count)
+                            </MudButton>
+                            <MudCollapse Expanded="@showFinancialData">
+                                <ul style="margin: 0; padding-left: 40px;">
+                                    @foreach (var item in validationResult.MissingFinancialData)
+                                    {
+                                        <li><MudText Typo="Typo.caption">@item</MudText></li>
+                                    }
+                                </ul>
+                            </MudCollapse>
+                        </MudStack>
+                    }
+
+                    @if (validationResult.MissingElementData.Any())
+                    {
+                        <MudStack Spacing="1">
+                            <MudButton Variant="Variant.Text" 
+                                       Size="Size.Small" 
+                                       Color="Color.Default"
+                                       StartIcon="@(showElementData ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                       OnClick="@(() => showElementData = !showElementData)"
+                                       Style="justify-content: flex-start; text-transform: none;">
+                                <MudIcon Icon="@Icons.Material.Filled.Apartment" Size="Size.Small" Class="mr-1" />
+                                Missing Element Data (@validationResult.MissingElementData.Count of @validationResult.TotalElementCount elements)
+                            </MudButton>
+                            <MudCollapse Expanded="@showElementData">
+                                <MudStack Spacing="2" Class="pl-10">
+                                    @{
+                                        var elementGroups = GetElementDataGroups();
+                                    }
+                                    <!-- Summary by issue type (primary grouping) -->
+                                    <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                                        @foreach (var group in elementGroups.IssueGroups)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning">
+                                                @group.Key: @group.Value
+                                            </MudChip>
+                                        }
+                                    </MudStack>
+                                    
+                                    <!-- Summary by element type (secondary info) -->
+                                    <MudText Typo="Typo.caption" Style="color: #666;">
+                                        Affects: @string.Join(", ", elementGroups.TypeGroups.Select(g => $"{g.Value} {g.Key}"))
+                                    </MudText>
+                                    
+                                    <!-- Preview items -->
+                                    @if (showAllElementData)
+                                    {
+                                        <ul style="margin: 0; padding-left: 20px; max-height: 200px; overflow-y: auto;">
+                                            @foreach (var item in validationResult.MissingElementData)
+                                            {
+                                                <li><MudText Typo="Typo.caption">@item</MudText></li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <ul style="margin: 0; padding-left: 20px;">
+                                            @foreach (var item in validationResult.MissingElementData.Take(5))
+                                            {
+                                                <li><MudText Typo="Typo.caption">@item</MudText></li>
+                                            }
+                                        </ul>
+                                        @if (validationResult.MissingElementData.Count > 5)
+                                        {
+                                            <MudLink Typo="Typo.caption" 
+                                                     Color="Color.Primary" 
+                                                     OnClick="@(() => showAllElementData = true)"
+                                                     Style="cursor: pointer;">
+                                                ...and @(validationResult.MissingElementData.Count - 5) more
+                                            </MudLink>
+                                        }
+                                    }
+                                </MudStack>
+                            </MudCollapse>
+                        </MudStack>
+                    }
+                    else if (validationResult.TotalElementCount == 0)
+                    {
+                        <!-- No elements at all - show as a distinct warning -->
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="pl-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Apartment" Size="Size.Small" Color="Color.Error" />
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error">
+                                No Elements: 0
+                            </MudChip>
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                Add building, common, or additional elements to proceed
+                            </MudText>
+                        </MudStack>
+                    }
+
+                    @if (validationResult.MissingServiceContacts.Any())
+                    {
+                        <MudStack Spacing="1">
+                            <MudButton Variant="Variant.Text" 
+                                       Size="Size.Small" 
+                                       Color="Color.Default"
+                                       StartIcon="@(showServiceContacts ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                       OnClick="@(() => showServiceContacts = !showServiceContacts)"
+                                       Style="justify-content: flex-start; text-transform: none;">
+                                <MudIcon Icon="@Icons.Material.Filled.ContactPhone" Size="Size.Small" Class="mr-1" />
+                                Missing Service Contacts (@validationResult.MissingServiceContacts.Count)
+                            </MudButton>
+                            <MudCollapse Expanded="@showServiceContacts">
+                                <ul style="margin: 0; padding-left: 40px;">
+                                    @foreach (var item in validationResult.MissingServiceContacts)
+                                    {
+                                        <li><MudText Typo="Typo.caption">@item</MudText></li>
+                                    }
+                                </ul>
+                            </MudCollapse>
+                        </MudStack>
+                    }
+                </MudStack>
+            </MudAlert>
+        }
+        else if (!canGenerateReports && !isLoading)
         {
             <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -298,6 +450,12 @@
     private bool isGenerating = false;
     private bool canGenerateReports = false;
     private string workflowGateMessage = "Checking workflow status...";
+    private StudyDataValidationResult? validationResult;
+
+    // Collapsible section states
+    private bool showFinancialData = false;
+    private bool showElementData = false;
+    private bool showServiceContacts = false;
 
     // Dialog state
     private bool showGenerateDialog = false;
@@ -305,6 +463,7 @@
     private string newReportNotes = "";
     private bool generatePdf = true;
     private bool generateExcel = true;
+    private bool showAllElementData = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -316,10 +475,23 @@
     {
         try
         {
-            canGenerateReports = await GenerationService.CanGenerateReportAsync(ReserveStudyId);
+            validationResult = await GenerationService.ValidateStudyDataAsync(ReserveStudyId);
+            canGenerateReports = validationResult.IsReady;
+            
             if (!canGenerateReports)
             {
-                workflowGateMessage = $"Report generation requires the study to be at '{GenerationService.MinimumRequiredStatus}' stage or later. Complete the site visit and data entry first.";
+                if (validationResult.Errors.Any())
+                {
+                    workflowGateMessage = "Report generation is blocked due to missing required data.";
+                }
+                else if (validationResult.Warnings.Any())
+                {
+                    workflowGateMessage = "Some data is missing but report generation may still proceed.";
+                }
+                else
+                {
+                    workflowGateMessage = $"Report generation requires the study to be at '{GenerationService.MinimumRequiredStatus}' stage or later. Complete the site visit and data entry first.";
+                }
             }
         }
         catch (Exception ex)
@@ -578,4 +750,41 @@
         ReportStatus.Archived => "Archived",
         _ => status.ToString()
     };
+
+    private record ElementDataGroups(
+        Dictionary<string, int> TypeGroups, 
+        Dictionary<string, int> IssueGroups);
+
+    private ElementDataGroups GetElementDataGroups()
+    {
+        var typeGroups = new Dictionary<string, int>();
+        var issueGroups = new Dictionary<string, int>();
+
+        if (validationResult?.MissingElementData == null)
+            return new ElementDataGroups(typeGroups, issueGroups);
+
+        foreach (var item in validationResult.MissingElementData)
+        {
+            // Parse format: "ElementName (Type): Missing Issue"
+            var colonIndex = item.LastIndexOf(':');
+            if (colonIndex > 0)
+            {
+                var namePart = item[..colonIndex].Trim();
+                var issuePart = item[(colonIndex + 1)..].Trim().Replace("Missing ", "");
+
+                // Extract type from parentheses
+                var openParen = namePart.LastIndexOf('(');
+                var closeParen = namePart.LastIndexOf(')');
+                if (openParen > 0 && closeParen > openParen)
+                {
+                    var type = namePart[(openParen + 1)..closeParen];
+                    typeGroups[type] = typeGroups.GetValueOrDefault(type) + 1;
+                }
+
+                issueGroups[issuePart] = issueGroups.GetValueOrDefault(issuePart) + 1;
+            }
+        }
+
+        return new ElementDataGroups(typeGroups, issueGroups);
+    }
 }
