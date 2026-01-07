@@ -61,6 +61,7 @@ registration.Register<ProposalApprovedEvent>().Subscribe<ProposalApprovedListene
 registration.Register<FinancialInfoRequestedEvent>().Subscribe<FinancialInfoRequestedListener>();
 registration.Register<FinancialInfoSubmittedEvent>().Subscribe<FinancialInfoSubmittedListener>();
 registration.Register<ReserveStudyCompletedEvent>().Subscribe<ReserveStudyCompletedListener>();
+registration.Register<SiteVisitScheduledEvent>().Subscribe<SiteVisitScheduledListener>();
 
 app.Run();
 
@@ -207,6 +208,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<FinancialInfoRequestedListener>();
     builder.Services.AddScoped<FinancialInfoSubmittedListener>();
     builder.Services.AddScoped<ReserveStudyCompletedListener>();
+    builder.Services.AddScoped<SiteVisitScheduledListener>();
     builder.Services.AddEvents();
     
     // Register lifecycle job

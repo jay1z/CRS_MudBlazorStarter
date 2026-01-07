@@ -8,6 +8,13 @@
 @inject IElementService ElementService
 @inject ILogger<PropertyElementsEdit> Logger
 
+@* Staff mode shows detailed data entry; HOA mode shows checkbox selection *@
+@if (IsStaffMode)
+{
+    <StaffElementDataEntry Model="Model" StepValidated="StepValidated" />
+}
+else
+{
 <MudForm Model="Model" @ref="form">
     <MudGrid>
         <!-- Property Elements Header -->
@@ -92,6 +99,7 @@
         </MudItem>
     </MudGrid>
 </MudForm>
+}
 
 @code {
 private ApplicationDbContext? context;
@@ -101,6 +109,9 @@ public ReserveStudy? Model { get; set; }
 
 [Parameter]
 public bool IsEdit { get; set; } = false;
+
+[Parameter]
+public bool IsStaffMode { get; set; } = false;
 
 private List<BuildingElement>? buildingElements;
 private List<CommonElement>? commonElements;
@@ -182,7 +193,8 @@ private List<CommonElement>? commonElements;
             if (!Model.ReserveStudyBuildingElements.Any(e => e.BuildingElementId == element.Id)) {
                 Model.ReserveStudyBuildingElements.Add(new ReserveStudyBuildingElement { 
                     BuildingElementId = element.Id, 
-                    ReserveStudyId = Model.Id 
+                    ReserveStudyId = Model.Id,
+                    Count = 1 // Default count to 1 when adding element
                 });
             }
         }
@@ -205,7 +217,8 @@ private List<CommonElement>? commonElements;
             if (!Model.ReserveStudyCommonElements.Any(e => e.CommonElementId == element.Id)) {
                 Model.ReserveStudyCommonElements.Add(new ReserveStudyCommonElement { 
                     CommonElementId = element.Id, 
-                    ReserveStudyId = Model.Id 
+                    ReserveStudyId = Model.Id,
+                    Count = 1 // Default count to 1 when adding element
                 });
             }
         }
@@ -227,15 +240,21 @@ private List<CommonElement>? commonElements;
     public EventCallback<bool> StepValidated { get; set; }
 
     public async Task<bool> ValidateAsync() {
-        await form.Validate();
-        bool valid = form.IsValid;
+        bool valid = true;
         
-        // IMPORTANT: Sync selections back to Model before saving
-        // This ensures any checkbox changes are reflected in the Model's collections
-        SyncSelectionsToModel();
+        // Only validate the form if it exists (not in staff mode)
+        if (form != null) {
+            await form.Validate();
+            valid = form.IsValid;
+            
+            // IMPORTANT: Only sync selections when NOT in staff mode
+            // In staff mode, StaffElementDataEntry directly modifies the Model collections
+            // Syncing here would overwrite those changes with empty dictionaries
+            SyncSelectionsToModel();
+        }
         
         // Log the current state of collections for debugging
-        System.Diagnostics.Debug.WriteLine($"PropertyElementsEdit.ValidateAsync: BuildingElements count: {Model?.ReserveStudyBuildingElements?.Count ?? 0}");
+        System.Diagnostics.Debug.WriteLine($"PropertyElementsEdit.ValidateAsync: IsStaffMode={IsStaffMode}, BuildingElements count: {Model?.ReserveStudyBuildingElements?.Count ?? 0}");
         System.Diagnostics.Debug.WriteLine($"PropertyElementsEdit.ValidateAsync: CommonElements count: {Model?.ReserveStudyCommonElements?.Count ?? 0}");
         System.Diagnostics.Debug.WriteLine($"PropertyElementsEdit.ValidateAsync: AdditionalElements count: {Model?.ReserveStudyAdditionalElements?.Count ?? 0}");
         
@@ -257,7 +276,8 @@ private List<CommonElement>? commonElements;
             if (kvp.Value && !currentBuildingElementIds.Contains(kvp.Key)) {
                 Model.ReserveStudyBuildingElements.Add(new ReserveStudyBuildingElement {
                     BuildingElementId = kvp.Key,
-                    ReserveStudyId = Model.Id
+                    ReserveStudyId = Model.Id,
+                    Count = 1 // Default count to 1 when adding element
                 });
             } else if (!kvp.Value && currentBuildingElementIds.Contains(kvp.Key)) {
                 var toRemove = Model.ReserveStudyBuildingElements.FirstOrDefault(e => e.BuildingElementId == kvp.Key);
@@ -275,7 +295,8 @@ private List<CommonElement>? commonElements;
             if (kvp.Value && !currentCommonElementIds.Contains(kvp.Key)) {
                 Model.ReserveStudyCommonElements.Add(new ReserveStudyCommonElement {
                     CommonElementId = kvp.Key,
-                    ReserveStudyId = Model.Id
+                    ReserveStudyId = Model.Id,
+                    Count = 1 // Default count to 1 when adding element
                 });
             } else if (!kvp.Value && currentCommonElementIds.Contains(kvp.Key)) {
                 var toRemove = Model.ReserveStudyCommonElements.FirstOrDefault(e => e.CommonElementId == kvp.Key);
@@ -299,3 +320,4 @@ private List<CommonElement>? commonElements;
         }
     }
 }
+

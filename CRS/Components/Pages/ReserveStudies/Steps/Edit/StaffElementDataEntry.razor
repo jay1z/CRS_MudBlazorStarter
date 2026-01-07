@@ -1,0 +1,497 @@
+﻿@namespace CRS.Components.Pages.ReserveStudyPages.Steps.Edit
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IElementService ElementService
+@inject ILogger<StaffElementDataEntry> Logger
+
+<MudPaper Elevation="0" Class="pa-2">
+    <MudStack Spacing="3">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="flex-wrap">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Apartment" Class="mr-1" Style="vertical-align: middle;" />
+                Property Elements
+            </MudText>
+            <MudChip T="string" Color="Color.Info" Size="Size.Small">
+                @GetTotalElementCount() Total
+            </MudChip>
+        </MudStack>
+
+        @if (!isLoaded)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <!-- Building Elements Section -->
+            <MudExpansionPanels MultiExpansion="true">
+                <MudExpansionPanel @bind-Expanded="buildingExpanded">
+                    <TitleContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Home" Color="Color.Primary" Size="Size.Small" />
+                            <MudText Typo="Typo.subtitle2">Building Elements (@(Model?.ReserveStudyBuildingElements?.Count ?? 0))</MudText>
+                        </MudStack>
+                    </TitleContent>
+                    <ChildContent>
+                        @if (Model?.ReserveStudyBuildingElements?.Any() == true)
+                        {
+                            @foreach (var element in Model.ReserveStudyBuildingElements)
+                            {
+                                <MudPaper Elevation="1" Class="pa-3 mb-2" Style="border-radius: 8px;">
+                                    <MudGrid Spacing="2">
+                                        <MudItem xs="12">
+                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">
+                                                    @(element.BuildingElement?.Name ?? "Unknown Element")
+                                                </MudText>
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                               Color="Color.Error" 
+                                                               Size="Size.Small"
+                                                               OnClick="@(() => RemoveBuildingElement(element))" />
+                                            </MudStack>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="4">
+                                            <MudNumericField T="int" @bind-Value="element.Count" 
+                                                             Label="Count"
+                                                             Variant="Variant.Outlined" 
+                                                             Margin="Margin.Dense"
+                                                             Min="1" Max="9999" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="4">
+                                            <MudDatePicker @bind-Date="element.LastServiced"
+                                                           Label="Last Replaced"
+                                                           Variant="Variant.Outlined"
+                                                           Margin="Margin.Dense"
+                                                           DateFormat="MM/yyyy" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="4">
+                                            <MudSelect T="Guid?" @bind-Value="element.UsefulLifeOptionId"
+                                                       Label="Useful Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in usefulLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="4">
+                                            <MudSelect T="Guid?" @bind-Value="element.RemainingLifeOptionId"
+                                                       Label="Remaining Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in remainingLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="4">
+                                            <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"
+                                                       Label="Measurement"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in measurementOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
+                            }
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Style="color: #666;">No building elements added yet.</MudText>
+                        }
+                        
+                        <MudDivider Class="my-2" />
+                        
+                        <!-- Add Building Element -->
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
+                            <MudSelect T="Guid?" @bind-Value="selectedNewBuildingElementId"
+                                       Label="Add Building Element"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Style="min-width: 200px; max-width: 300px;">
+                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                @foreach (var element in buildingElements)
+                                {
+                                    <MudSelectItem T="Guid?" Value="@element.Id">@element.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       Disabled="@(!selectedNewBuildingElementId.HasValue)"
+                                       OnClick="AddSelectedBuildingElement">
+                                Add
+                            </MudButton>
+                            @if (buildingElements.Count == 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Warning">No elements available - check element configuration</MudText>
+                            }
+                        </MudStack>
+                    </ChildContent>
+                </MudExpansionPanel>
+
+                <!-- Common Elements Section -->
+                <MudExpansionPanel @bind-Expanded="commonExpanded">
+                    <TitleContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Pool" Color="Color.Secondary" Size="Size.Small" />
+                            <MudText Typo="Typo.subtitle2">Common Elements (@(Model?.ReserveStudyCommonElements?.Count ?? 0))</MudText>
+                        </MudStack>
+                    </TitleContent>
+                    <ChildContent>
+                        @if (Model?.ReserveStudyCommonElements?.Any() == true)
+                        {
+                            @foreach (var element in Model.ReserveStudyCommonElements)
+                            {
+                                <MudPaper Elevation="1" Class="pa-3 mb-2" Style="border-radius: 8px;">
+                                    <MudGrid Spacing="2">
+                                        <MudItem xs="12">
+                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">
+                                                    @(element.CommonElement?.Name ?? "Unknown Element")
+                                                </MudText>
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                               Color="Color.Error" 
+                                                               Size="Size.Small"
+                                                               OnClick="@(() => RemoveCommonElement(element))" />
+                                            </MudStack>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="4">
+                                            <MudNumericField T="int" @bind-Value="element.Count" 
+                                                             Label="Count"
+                                                             Variant="Variant.Outlined" 
+                                                             Margin="Margin.Dense"
+                                                             Min="1" Max="9999" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="4">
+                                            <MudDatePicker @bind-Date="element.LastServiced"
+                                                           Label="Last Replaced"
+                                                           Variant="Variant.Outlined"
+                                                           Margin="Margin.Dense"
+                                                           DateFormat="MM/yyyy" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="4">
+                                            <MudSelect T="Guid?" @bind-Value="element.UsefulLifeOptionId"
+                                                       Label="Useful Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in usefulLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="4">
+                                            <MudSelect T="Guid?" @bind-Value="element.RemainingLifeOptionId"
+                                                       Label="Remaining Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in remainingLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
+                            }
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Style="color: #666;">No common elements added yet.</MudText>
+                        }
+                        
+                        <MudDivider Class="my-2" />
+                        
+                        <!-- Add Common Element -->
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
+                            <MudSelect T="Guid?" @bind-Value="selectedNewCommonElementId"
+                                       Label="Add Common Element"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Style="min-width: 200px; max-width: 300px;">
+                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                @foreach (var element in commonElements)
+                                {
+                                    <MudSelectItem T="Guid?" Value="@element.Id">@element.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Secondary" 
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       Disabled="@(!selectedNewCommonElementId.HasValue)"
+                                       OnClick="AddSelectedCommonElement">
+                                Add
+                            </MudButton>
+                            @if (commonElements.Count == 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Warning">No elements available - check element configuration</MudText>
+                            }
+                        </MudStack>
+                    </ChildContent>
+                </MudExpansionPanel>
+
+                <!-- Additional Elements Section -->
+                <MudExpansionPanel @bind-Expanded="additionalExpanded">
+                    <TitleContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.AddCircle" Color="Color.Tertiary" Size="Size.Small" />
+                            <MudText Typo="Typo.subtitle2">Additional Elements (@(Model?.ReserveStudyAdditionalElements?.Count ?? 0))</MudText>
+                        </MudStack>
+                    </TitleContent>
+                    <ChildContent>
+                        @if (Model?.ReserveStudyAdditionalElements?.Any() == true)
+                        {
+                            @foreach (var element in Model.ReserveStudyAdditionalElements.OrderBy(e => e.DateCreated))
+                            {
+                                <MudPaper Elevation="1" Class="pa-3 mb-2" Style="border-radius: 8px;">
+                                    <MudGrid Spacing="2">
+                                        <MudItem xs="10" sm="11">
+                                            <MudTextField T="string" @bind-Value="element.Name" 
+                                                          Label="Element Name"
+                                                          Variant="Variant.Outlined"
+                                                          Margin="Margin.Dense" />
+                                        </MudItem>
+                                        <MudItem xs="2" sm="1" Class="d-flex align-center justify-center">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                           Color="Color.Error" 
+                                                           Size="Size.Small"
+                                                           OnClick="@(() => RemoveAdditionalElement(element))" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudNumericField T="int" @bind-Value="element.Count" 
+                                                             Label="Count"
+                                                             Variant="Variant.Outlined" 
+                                                             Margin="Margin.Dense"
+                                                             Min="1" Max="9999" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudCheckBox T="bool" @bind-Value="element.NeedsService" 
+                                                         Label="Needs Service" 
+                                                         Color="Color.Primary" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudSelect T="Guid?" @bind-Value="element.UsefulLifeOptionId"
+                                                       Label="Useful Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in usefulLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="3">
+                                            <MudSelect T="Guid?" @bind-Value="element.RemainingLifeOptionId"
+                                                       Label="Remaining Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in remainingLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
+                            }
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Style="color: #666;">No additional elements added yet.</MudText>
+                        }
+                        
+                        <MudDivider Class="my-2" />
+                        
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Tertiary" 
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="AddAdditionalElement">
+                            Add Custom Element
+                        </MudButton>
+                    </ChildContent>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public ReserveStudy? Model { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> StepValidated { get; set; }
+
+    private List<BuildingElement> buildingElements = new();
+    private List<CommonElement> commonElements = new();
+    private List<ElementOption> measurementOptions = new();
+    private List<ElementOption> usefulLifeOptions = new();
+    private List<ElementOption> remainingLifeOptions = new();
+
+    private bool buildingExpanded = true;
+    private bool commonExpanded = true;
+    private bool additionalExpanded = true;
+    private bool isLoaded = false;
+
+    private Guid? selectedNewBuildingElementId;
+    private Guid? selectedNewCommonElementId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadElementOptions();
+        await LoadAvailableElements();
+        isLoaded = true;
+        
+        Logger.LogInformation("StaffElementDataEntry: Loaded {BuildingCount} building elements, {CommonCount} common elements",
+            buildingElements.Count, commonElements.Count);
+    }
+
+    private async Task LoadElementOptions()
+    {
+        try
+        {
+            await using var context = await DbFactory.CreateDbContextAsync();
+            
+            var options = await context.Set<ElementOption>()
+                .Where(o => o.IsActive)
+                .OrderBy(o => o.ZOrder)
+                .ToListAsync();
+
+            measurementOptions = options.Where(o => o.OptionType == ElementOptionType.Measurement).ToList();
+            usefulLifeOptions = options.Where(o => o.OptionType == ElementOptionType.UsefulLife).ToList();
+            remainingLifeOptions = options.Where(o => o.OptionType == ElementOptionType.RemainingLife).ToList();
+            
+            Logger.LogInformation("StaffElementDataEntry: Loaded {MeasurementCount} measurement, {UsefulCount} useful life, {RemainingCount} remaining life options",
+                measurementOptions.Count, usefulLifeOptions.Count, remainingLifeOptions.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading element options");
+        }
+    }
+
+    private async Task LoadAvailableElements()
+    {
+        try
+        {
+            buildingElements = await ElementService.GetBuildingElementsAsync();
+            commonElements = await ElementService.GetCommonElementsAsync();
+            
+            Logger.LogInformation("StaffElementDataEntry: Loaded {BuildingCount} building elements, {CommonCount} common elements",
+                buildingElements.Count, commonElements.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading available elements");
+        }
+    }
+
+    private int GetTotalElementCount()
+    {
+        return (Model?.ReserveStudyBuildingElements?.Count ?? 0) +
+               (Model?.ReserveStudyCommonElements?.Count ?? 0) +
+               (Model?.ReserveStudyAdditionalElements?.Count ?? 0);
+    }
+
+    private void AddSelectedBuildingElement()
+    {
+        if (!selectedNewBuildingElementId.HasValue || Model == null) return;
+
+        var element = buildingElements.FirstOrDefault(e => e.Id == selectedNewBuildingElementId.Value);
+        if (element == null) return;
+
+        Model.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
+        Model.ReserveStudyBuildingElements.Add(new ReserveStudyBuildingElement
+        {
+            ReserveStudyId = Model.Id,
+            BuildingElementId = element.Id,
+            BuildingElement = element,
+            Count = 1
+        });
+
+        selectedNewBuildingElementId = null;
+        NotifyValidation();
+    }
+
+    private void AddSelectedCommonElement()
+    {
+        if (!selectedNewCommonElementId.HasValue || Model == null) return;
+
+        var element = commonElements.FirstOrDefault(e => e.Id == selectedNewCommonElementId.Value);
+        if (element == null) return;
+
+        Model.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
+        Model.ReserveStudyCommonElements.Add(new ReserveStudyCommonElement
+        {
+            ReserveStudyId = Model.Id,
+            CommonElementId = element.Id,
+            CommonElement = element,
+            Count = 1
+        });
+
+        selectedNewCommonElementId = null;
+        NotifyValidation();
+    }
+
+    private void AddAdditionalElement()
+    {
+        if (Model == null) return;
+
+        Model.ReserveStudyAdditionalElements ??= new List<ReserveStudyAdditionalElement>();
+        Model.ReserveStudyAdditionalElements.Add(new ReserveStudyAdditionalElement
+        {
+            ReserveStudyId = Model.Id,
+            Name = "",
+            Count = 1
+        });
+
+        NotifyValidation();
+    }
+
+    private void RemoveBuildingElement(ReserveStudyBuildingElement element)
+    {
+        Model?.ReserveStudyBuildingElements?.Remove(element);
+        NotifyValidation();
+    }
+
+    private void RemoveCommonElement(ReserveStudyCommonElement element)
+    {
+        Model?.ReserveStudyCommonElements?.Remove(element);
+        NotifyValidation();
+    }
+
+    private void RemoveAdditionalElement(ReserveStudyAdditionalElement element)
+    {
+        Model?.ReserveStudyAdditionalElements?.Remove(element);
+        NotifyValidation();
+    }
+
+    private void NotifyValidation()
+    {
+        var isValid = GetTotalElementCount() > 0;
+        StepValidated.InvokeAsync(isValid);
+    }
+}

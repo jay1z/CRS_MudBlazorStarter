@@ -4,6 +4,7 @@ using CRS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260107094613_AddSiteVisitDateToReserveStudy")]
+    partial class AddSiteVisitDateToReserveStudy
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1913,12 +1916,6 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("AmendmentNumber")
-                        .HasColumnType("int");
-
-                    b.Property<string>("AmendmentReason")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ApprovedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -1959,14 +1956,8 @@ namespace CRS.Migrations
                     b.Property<bool>("IncludePrepaymentDiscount")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsAmendment")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
-
-                    b.Property<Guid?>("OriginalProposalId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PaymentTerms")
                         .HasColumnType("nvarchar(max)");
@@ -1994,8 +1985,6 @@ namespace CRS.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("OriginalProposalId");
 
                     b.HasIndex("ReserveStudyId")
                         .IsUnique();
@@ -4211,17 +4200,11 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.Proposal", b =>
                 {
-                    b.HasOne("CRS.Models.Proposal", "OriginalProposal")
-                        .WithMany("Amendments")
-                        .HasForeignKey("OriginalProposalId");
-
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
                         .WithOne("Proposal")
                         .HasForeignKey("CRS.Models.Proposal", "ReserveStudyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("OriginalProposal");
 
                     b.Navigation("ReserveStudy");
                 });
@@ -4706,11 +4689,6 @@ namespace CRS.Migrations
             modelBuilder.Entity("CRS.Models.CommonElement", b =>
                 {
                     b.Navigation("ReserveStudyCommonElements");
-                });
-
-            modelBuilder.Entity("CRS.Models.Proposal", b =>
-                {
-                    b.Navigation("Amendments");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>

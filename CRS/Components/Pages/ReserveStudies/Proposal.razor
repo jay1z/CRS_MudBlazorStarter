@@ -18,7 +18,7 @@
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Reserve Study Proposal</PageTitle>
+<PageTitle>@(isAmendment ? "Proposal Amendment" : "Reserve Study Proposal")</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     @if (isLoading) {
@@ -32,8 +32,18 @@
         <MudCard Elevation="3" Class="mb-6">
             <MudCardHeader>
                 <CardHeaderContent>
-                    <MudText Typo="Typo.h4">Create Proposal</MudText>
-                    <MudText Typo="Typo.subtitle1" Color="Color.Primary">@reserveStudy.Community?.Name</MudText>
+                    @if (isAmendment) {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Edit">
+                                Amendment
+                            </MudChip>
+                            <MudText Typo="Typo.h4">Proposal Amendment</MudText>
+                        </MudStack>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">@reserveStudy.Community?.Name</MudText>
+                    } else {
+                        <MudText Typo="Typo.h4">Create Proposal</MudText>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">@reserveStudy.Community?.Name</MudText>
+                    }
                 </CardHeaderContent>
                 <CardHeaderActions>
                     <MudTooltip Text="Return to Study Details">
@@ -43,15 +53,54 @@
             </MudCardHeader>
 
             <MudCardContent>
+                @if (isAmendment) {
+                    <MudAlert Severity="Severity.Warning" Class="mb-4" Variant="Variant.Outlined">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                                Creating Proposal Amendment
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                This amendment will replace the original proposal. The scope has changed based on the site visit findings.
+                                Please update the estimated cost and scope to reflect the actual work required.
+                            </MudText>
+                            @if (originalProposal != null) {
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    Original proposal cost: $@originalProposal.EstimatedCost.ToString("N2") | 
+                                    Amendment #@proposal.AmendmentNumber
+                                </MudText>
+                            }
+                        </MudStack>
+                    </MudAlert>
+                }
+
                 <EditForm Model="@proposal" OnValidSubmit="HandleValidSubmit">
                     <DataAnnotationsValidator />
 
                     <MudPaper Elevation="0" Class="pa-4 mud-theme-primary" Style="background-color: var(--mud-palette-primary-lighten);">
                         <MudText Typo="Typo.h6">Proposal Information</MudText>
                         <MudText Typo="Typo.body2" Class="mb-4">
-                            This proposal will be sent to the point of contact for review and approval.
+                            @if (isAmendment) {
+                                <span>This amended proposal will be sent to the point of contact for review and approval.</span>
+                            } else {
+                                <span>This proposal will be sent to the point of contact for review and approval.</span>
+                            }
                         </MudText>
                     </MudPaper>
+
+                    @if (isAmendment) {
+                        <MudGrid Class="mt-4">
+                            <MudItem xs="12">
+                                <MudTextField T="string"
+                                              Label="Reason for Amendment"
+                                              @bind-Value="proposal.AmendmentReason"
+                                              Required="true"
+                                              Variant="Variant.Outlined"
+                                              Lines="2"
+                                              Placeholder="e.g., Scope increased after site visit revealed additional elements requiring assessment" />
+                                <ValidationMessage For="@(() => proposal.AmendmentReason)" />
+                            </MudItem>
+                        </MudGrid>
+                    }
 
                     <MudGrid Class="mt-4">
                         <MudItem xs="12" md="6">
@@ -60,6 +109,11 @@
                         <MudItem xs="12" md="6">
                             <MudNumericField Label="Estimated Cost ($)" @bind-Value="proposal.EstimatedCost" Format="N2" Variant="Variant.Outlined" Min="0" Required="true" />
                             <ValidationMessage For="@(() => proposal.EstimatedCost)" />
+                            @if (isAmendment && originalProposal != null) {
+                                <MudText Typo="Typo.caption" Style="@GetCostDiffStyle()">
+                                    @GetCostDiffText()
+                                </MudText>
+                            }
                         </MudItem>
 
                         <MudItem xs="12">
@@ -168,13 +222,13 @@
                         </MudButton>
                         <MudButton ButtonType="ButtonType.Submit"
                                    Variant="Variant.Filled"
-                                   Color="Color.Primary"
+                                   Color="@(isAmendment ? Color.Warning : Color.Primary)"
                                    Disabled="@isSaving">
                             @if (isSaving) {
                                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                                 <span>Sending...</span>
                             } else {
-                                <span>Send Proposal</span>
+                                <span>@(isAmendment ? "Send Amendment" : "Send Proposal")</span>
                             }
                         </MudButton>
                     </MudItem>
@@ -187,11 +241,16 @@
 @code {
     [Parameter]
     public Guid studyId { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "amendment")]
+    public bool? AmendmentQueryParam { get; set; }
 
     private ReserveStudy? reserveStudy;
     private ProposalViewModel proposal = new();
+    private Models.Proposal? originalProposal;
     private bool isLoading = true;
     private bool isSaving = false;
+    private bool isAmendment => AmendmentQueryParam == true || proposal.AmendmentNumber > 0;
 
     protected override async Task OnInitializedAsync() {
         await LoadReserveStudy();
@@ -209,6 +268,7 @@
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
+                .Include(rs => rs.Proposal)
                 .FirstOrDefaultAsync(rs => rs.Id == studyId);
 
             if (reserveStudy != null) {
@@ -218,6 +278,42 @@
                 proposal.DeliveryTimeframe = "Standard";
                 proposal.IncludeDigitalDelivery = true;
                 proposal.PaymentTerms = "50% due upon acceptance, remainder due upon completion of the study";
+
+                // Check if we're creating an amendment
+                if (AmendmentQueryParam == true && reserveStudy.Proposal != null) {
+                    originalProposal = reserveStudy.Proposal;
+                    
+                    // Calculate next amendment number
+                    var existingAmendmentCount = await context.Proposals
+                        .CountAsync(p => p.ReserveStudyId == studyId && p.IsAmendment);
+                    
+                    // Pre-populate from original proposal
+                    proposal.ProposalScope = originalProposal.ProposalScope + "\n\n[AMENDMENT: Scope updated based on site visit findings]";
+                    proposal.EstimatedCost = originalProposal.EstimatedCost;
+                    proposal.ServiceLevel = originalProposal.ServiceLevel ?? "Level1";
+                    proposal.DeliveryTimeframe = originalProposal.DeliveryTimeframe ?? "Standard";
+                    proposal.PaymentTerms = originalProposal.PaymentTerms;
+                    proposal.IncludePrepaymentDiscount = originalProposal.IncludePrepaymentDiscount;
+                    proposal.IncludeDigitalDelivery = originalProposal.IncludeDigitalDelivery;
+                    proposal.IncludeComponentInventory = originalProposal.IncludeComponentInventory;
+                    proposal.IncludeFundingPlans = originalProposal.IncludeFundingPlans;
+                    proposal.AmendmentNumber = existingAmendmentCount + 1;
+                    proposal.AmendmentReason = "Scope changed after site visit - actual element count differs from original estimate.";
+                } else if (reserveStudy.Proposal != null) {
+                    // Editing existing proposal (not amendment)
+                    var existing = reserveStudy.Proposal;
+                    proposal.ProposalDate = existing.ProposalDate;
+                    proposal.ProposalScope = existing.ProposalScope;
+                    proposal.EstimatedCost = existing.EstimatedCost;
+                    proposal.Comments = existing.Comments;
+                    proposal.ServiceLevel = existing.ServiceLevel ?? "Level1";
+                    proposal.DeliveryTimeframe = existing.DeliveryTimeframe ?? "Standard";
+                    proposal.PaymentTerms = existing.PaymentTerms;
+                    proposal.IncludePrepaymentDiscount = existing.IncludePrepaymentDiscount;
+                    proposal.IncludeDigitalDelivery = existing.IncludeDigitalDelivery;
+                    proposal.IncludeComponentInventory = existing.IncludeComponentInventory;
+                    proposal.IncludeFundingPlans = existing.IncludeFundingPlans;
+                }
             }
         } catch (Exception ex) {
             Snackbar.Add($"Error loading reserve study: {ex.Message}", Severity.Error);
@@ -242,12 +338,18 @@
                 IncludePrepaymentDiscount = proposal.IncludePrepaymentDiscount,
                 IncludeDigitalDelivery = proposal.IncludeDigitalDelivery,
                 IncludeComponentInventory = proposal.IncludeComponentInventory,
-                IncludeFundingPlans = proposal.IncludeFundingPlans
+                IncludeFundingPlans = proposal.IncludeFundingPlans,
+                // Amendment tracking
+                IsAmendment = isAmendment,
+                OriginalProposalId = isAmendment ? originalProposal?.Id : null,
+                AmendmentNumber = isAmendment ? proposal.AmendmentNumber : 0,
+                AmendmentReason = isAmendment ? proposal.AmendmentReason : null
             };
 
             var result = await WorkflowService.SendProposalAsync(studyId, proposalEntity);
             if (result) {
-                Snackbar.Add("Proposal created successfully", Severity.Success);
+                var message = isAmendment ? "Proposal amendment created successfully" : "Proposal created successfully";
+                Snackbar.Add(message, Severity.Success);
                 Navigation.NavigateTo($"/ReserveStudies/{studyId}/Details");
             } else {
                 Snackbar.Add("Failed to create proposal. Please check the workflow status.", Severity.Error);
@@ -257,6 +359,22 @@
         } finally {
             isSaving = false;
         }
+    }
+
+    private string GetCostDiffStyle() {
+        if (originalProposal == null) return "";
+        var costDiff = proposal.EstimatedCost - originalProposal.EstimatedCost;
+        return costDiff >= 0 ? "color: #d32f2f;" : "color: #388e3c;";
+    }
+
+    private string GetCostDiffText() {
+        if (originalProposal == null) return "";
+        var costDiff = proposal.EstimatedCost - originalProposal.EstimatedCost;
+        var diffPercent = originalProposal.EstimatedCost > 0 
+            ? (costDiff / originalProposal.EstimatedCost) * 100m 
+            : 0m;
+        var sign = costDiff >= 0 ? "+" : "";
+        return $"{sign}${costDiff:N2} ({sign}{diffPercent:F1}%) from original";
     }
 
     public class ProposalViewModel {
@@ -288,5 +406,9 @@
         // Terms and comments
         public string? PaymentTerms { get; set; }
         public string? Comments { get; set; }
+
+        // Amendment properties
+        public int AmendmentNumber { get; set; } = 0;
+        public string? AmendmentReason { get; set; }
     }
 }

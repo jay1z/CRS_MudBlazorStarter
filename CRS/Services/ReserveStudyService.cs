@@ -406,11 +406,21 @@ namespace CRS.Services {
                         existingStudy.ReserveStudyBuildingElements.Add(element);
                         context.Add(element);
                     } else {
-                        // Update existing element's service contact
+                        // Update existing element's properties
                         var existingElement = existingStudy.ReserveStudyBuildingElements?
                             .FirstOrDefault(e => e.BuildingElementId == element.BuildingElementId);
-                        if (existingElement != null && element.ServiceContact != null) {
-                            UpdateServiceContact(existingElement, element.ServiceContact);
+                        if (existingElement != null) {
+                            // Update element details (staff mode data entry)
+                            existingElement.Count = element.Count;
+                            existingElement.LastServiced = element.LastServiced;
+                            existingElement.UsefulLifeOptionId = element.UsefulLifeOptionId;
+                            existingElement.RemainingLifeOptionId = element.RemainingLifeOptionId;
+                            existingElement.MeasurementOptionId = element.MeasurementOptionId;
+                            
+                            // Update service contact if provided
+                            if (element.ServiceContact != null) {
+                                UpdateServiceContact(existingElement, element.ServiceContact);
+                            }
                         }
                     }
                 }
@@ -447,11 +457,21 @@ namespace CRS.Services {
                         existingStudy.ReserveStudyCommonElements.Add(element);
                         context.Add(element);
                     } else {
-                        // Update existing element's service contact
+                        // Update existing element's properties
                         var existingElement = existingStudy.ReserveStudyCommonElements?
                             .FirstOrDefault(e => e.CommonElementId == element.CommonElementId);
-                        if (existingElement != null && element.ServiceContact != null) {
-                            UpdateServiceContact(existingElement, element.ServiceContact);
+                        if (existingElement != null) {
+                            // Update element details (staff mode data entry)
+                            existingElement.Count = element.Count;
+                            existingElement.LastServiced = element.LastServiced;
+                            existingElement.UsefulLifeOptionId = element.UsefulLifeOptionId;
+                            existingElement.RemainingLifeOptionId = element.RemainingLifeOptionId;
+                            existingElement.MeasurementOptionId = element.MeasurementOptionId;
+                            
+                            // Update service contact if provided
+                            if (element.ServiceContact != null) {
+                                UpdateServiceContact(existingElement, element.ServiceContact);
+                            }
                         }
                     }
                 }
@@ -508,6 +528,10 @@ namespace CRS.Services {
                         if (existingElement != null) {
                             existingElement.Name = element.Name;
                             existingElement.NeedsService = element.NeedsService;
+                            // Update element details (staff mode data entry)
+                            existingElement.Count = element.Count;
+                            existingElement.UsefulLifeOptionId = element.UsefulLifeOptionId;
+                            existingElement.RemainingLifeOptionId = element.RemainingLifeOptionId;
                             // Update service contact
                             if (element.ServiceContact != null) {
                                 UpdateServiceContact(existingElement, element.ServiceContact);

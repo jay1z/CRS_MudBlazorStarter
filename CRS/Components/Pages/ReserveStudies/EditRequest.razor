@@ -85,95 +85,69 @@
             </MudStack>
         </MudPaper>
 
-        <!-- Info Alert -->
-        <MudAlert Severity="Severity.Info" Class="mb-4" Elevation="0">
-            <MudText Typo="Typo.body2">
-                <strong>Note:</strong> You can edit this request until the proposal is accepted.
-                After that point, please contact @TenantContext.TenantName for any changes.
-            </MudText>
-        </MudAlert>
+        <!-- Info Alert - different message for staff vs HOA -->
+        @if (isHOAUser)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4" Elevation="0">
+                <MudText Typo="Typo.body2">
+                    <strong>Note:</strong> You can edit this request until the proposal is accepted.
+                    After that point, please contact @TenantContext.TenantName for any changes.
+                </MudText>
+            </MudAlert>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4" Elevation="0">
+                <MudText Typo="Typo.body2">
+                    <strong>Staff Edit Mode:</strong> You can update property elements, counts, and other details.
+                    Changes made here will be compared against the original HOA estimates.
+                </MudText>
+            </MudAlert>
+        }
 
         <MudCard Elevation="4">
             <MudCardContent>
-                @if (isHOAUser) {
-                    <!-- Tab-based interface for HOA Users -->
-                    <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" ActivePanelIndex="@activeTabIndex" ActivePanelIndexChanged="@OnTabChanged">
-                        <MudTabPanel Text="Community Information" Icon="@Icons.Material.Filled.LocationCity">
-                            <CommunityInfoEdit @ref="communityInfoEdit" Model="Model" StepValidated="OnStepValidated" />
-                        </MudTabPanel>
-                        <MudTabPanel Text="Contacts" Icon="@Icons.Material.Filled.Business">
-                            <ContactInfoEdit @ref="contactInfoEdit" Model="Model" StepValidated="OnStepValidated" />
-                        </MudTabPanel>
-                        <MudTabPanel Text="Property Elements" Icon="@Icons.Material.Filled.List">
-                            <PropertyElementsEdit @ref="propertyElementsEdit" Model="Model" StepValidated="OnStepValidated" />
-                        </MudTabPanel>
-                        <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone">
-                            <StepServiceContacts @ref="stepServiceContacts" Model="Model" StepValidated="OnStepValidated" IsEdit="true" />
-                        </MudTabPanel>
-                    </MudTabs>
+                <!-- Tab-based interface for both HOA and Staff Users -->
+                <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" 
+                         @bind-ActivePanelIndex="activeTabIndex">
+                    <MudTabPanel Text="Community Information" Icon="@Icons.Material.Filled.LocationCity">
+                        <CommunityInfoEdit @ref="communityInfoEdit" Model="Model" StepValidated="OnStepValidated" />
+                    </MudTabPanel>
+                    <MudTabPanel Text="Contacts" Icon="@Icons.Material.Filled.Business">
+                        <ContactInfoEdit @ref="contactInfoEdit" Model="Model" StepValidated="OnStepValidated" />
+                    </MudTabPanel>
+                    <MudTabPanel Text="Property Elements" Icon="@Icons.Material.Filled.List">
+                        <PropertyElementsEdit @ref="propertyElementsEdit" Model="Model" StepValidated="OnStepValidated" IsStaffMode="@(!isHOAUser)" />
+                    </MudTabPanel>
+                    <MudTabPanel Text="Service Contacts" Icon="@Icons.Material.Filled.ContactPhone">
+                        <StepServiceContacts @ref="stepServiceContacts" Model="Model" StepValidated="OnStepValidated" IsEdit="true" />
+                    </MudTabPanel>
+                </MudTabs>
 
-                    <!-- Save/Cancel buttons for tabs -->
-                    <MudDivider Class="my-4" />
-                    <MudGrid Justify="Justify.SpaceBetween">
-                        <MudItem>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
-                                       Disabled="isSubmitting"
-                                       Href="@($"/ReserveStudies/{Id}/Details")">
-                                <MudIcon Icon="@Icons.Material.Filled.Cancel" Class="mr-2" />
-                                Cancel
-                            </MudButton>
-                        </MudItem>
-                        <MudItem>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                       OnClick="SaveChanges" Disabled="isSubmitting || !IsFormValid()">
-                                @if (isSubmitting) {
-                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                    <span>Saving...</span>
-                                } else {
-                                    <MudIcon Icon="@Icons.Material.Filled.Save" Class="mr-2" />
-                                    <span>Save Changes</span>
-                                }
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-                } else {
-                    <!-- Stepper interface for Staff Users -->
-                    <MudStepper @bind-ActiveStep="activeStep" Linear="false" CenterLabels="true"
-                                CompletedStepColor="Color.Success" CurrentStepColor="Color.Primary"
-                                Class="mb-4" @ref="stepper">
-                        <ChildContent>
-                            @foreach (var step in steps) {
-                                <MudStep Title="@step.Title"
-                                         Icon="@(stepValidationState.GetValueOrDefault(step.Index) ? Icons.Material.Filled.CheckCircle : null)"
-                                         IconColor="@(stepValidationState.GetValueOrDefault(step.Index) ? Color.Success : Color.Default)">
-                                    @step.Content
-                                </MudStep>
+                <!-- Save/Cancel buttons -->
+                <MudDivider Class="my-4" />
+                <MudGrid Justify="Justify.SpaceBetween">
+                    <MudItem>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                                   Disabled="isSubmitting"
+                                   Href="@($"/ReserveStudies/{Id}/Details")">
+                            <MudIcon Icon="@Icons.Material.Filled.Cancel" Class="mr-2" />
+                            Cancel
+                        </MudButton>
+                    </MudItem>
+                    <MudItem>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   OnClick="SaveChanges" Disabled="isSubmitting || !IsFormValid()">
+                            @if (isSubmitting) {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Saving...</span>
+                            } else {
+                                <MudIcon Icon="@Icons.Material.Filled.Save" Class="mr-2" />
+                                <span>Save Changes</span>
                             }
-                        </ChildContent>
-                        <ActionContent>
-                            <MudGrid Justify="Justify.SpaceBetween" Class="mt-4">
-                                <MudItem>
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Disabled="isSubmitting" Href="@($"/ReserveStudies/{Id}/Details")">
-                                        <MudIcon Icon="@Icons.Material.Filled.Cancel" Class="mr-2" />
-                                        Cancel
-                                    </MudButton>
-                                </MudItem>
-                                <MudItem>
-                                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                                               OnClick="SaveChanges" Disabled="isSubmitting || !IsFormValid()">
-                                        @if (isSubmitting) {
-                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                            <span>Saving...</span>
-                                        } else {
-                                            <MudIcon Icon="@Icons.Material.Filled.Save" Class="mr-2" />
-                                            <span>Save Changes</span>
-                                        }
-                                    </MudButton>
-                                </MudItem>
-                            </MudGrid>
-                        </ActionContent>
-                    </MudStepper>
-                }
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
             </MudCardContent>
         </MudCard>
 
@@ -310,10 +284,13 @@
     }
 
     private void InitializeSteps() {
+        // Staff mode is enabled for non-HOA users
+        var useStaffMode = !isHOAUser;
+        
         steps = new List<StepDefinition> {
             new(0, "Community Information", @<CommunityInfoEdit @ref="communityInfoEdit" Model="Model" StepValidated="OnStepValidated" />),
             new(1, "Property Manager", @<ContactInfoEdit @ref="contactInfoEdit" Model="Model" StepValidated="OnStepValidated" />),
-            new(2, "Property Elements", @<PropertyElementsEdit @ref="propertyElementsEdit" Model="Model" StepValidated="OnStepValidated" />),
+            new(2, "Property Elements", @<PropertyElementsEdit @ref="propertyElementsEdit" Model="Model" StepValidated="OnStepValidated" IsStaffMode="useStaffMode" />),
             new(3, "Service Contacts", @<StepServiceContacts @ref="stepServiceContacts" Model="Model" StepValidated="OnStepValidated" IsEdit="true" />)
         };
     }
@@ -323,6 +300,20 @@
         stepValidationState[0] = true; // Community info is required to exist
         stepValidationState[1] = Model?.PropertyManager != null;
         stepValidationState[2] = Model?.ReserveStudyAdditionalElements?.Any() ?? false;
+    }
+
+    private void GoToNextStep() {
+        if (activeStep < steps.Count - 1) {
+            activeStep++;
+            StateHasChanged();
+        }
+    }
+
+    private void GoToPreviousStep() {
+        if (activeStep > 0) {
+            activeStep--;
+            StateHasChanged();
+        }
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
@@ -413,7 +404,26 @@
             StudyStatus.ProposalReviewed => "Under Review",
             StudyStatus.ProposalSent => "Awaiting Response",
             StudyStatus.ProposalAccepted => "Proposal Accepted",
-            _ => Model.CurrentStatus.ToString()
+            StudyStatus.FinancialInfoRequested => "Financial Info Requested",
+            StudyStatus.FinancialInfoInProgress => "Financial Info In Progress",
+            StudyStatus.FinancialInfoSubmitted => "Financial Info Submitted",
+            StudyStatus.FinancialInfoReviewed => "Financial Info Reviewed",
+            StudyStatus.FinancialInfoReceived => "Financial Info Received",
+            StudyStatus.SiteVisitPending => "Site Visit Pending",
+            StudyStatus.SiteVisitScheduled => "Site Visit Scheduled",
+            StudyStatus.SiteVisitCompleted => "Site Visit Completed",
+            StudyStatus.SiteVisitDataEntered => "Data Entry",
+            StudyStatus.FundingPlanReady => "Funding Plan Ready",
+            StudyStatus.FundingPlanInProcess => "Funding Plan In Progress",
+            StudyStatus.FundingPlanComplete => "Funding Plan Complete",
+            StudyStatus.NarrativeReady => "Narrative Ready",
+            StudyStatus.NarrativeInProcess => "Narrative In Progress",
+            StudyStatus.NarrativeComplete => "Narrative Complete",
+            StudyStatus.ReportComplete => "Report Complete",
+            StudyStatus.RequestCompleted => "Completed",
+            StudyStatus.RequestCancelled => "Cancelled",
+            StudyStatus.RequestArchived => "Archived",
+            _ => Model.CurrentStatus.ToString().Replace("Status", "").Trim()
         };
     }
 }

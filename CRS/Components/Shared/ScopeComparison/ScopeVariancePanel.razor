@@ -16,16 +16,28 @@
             {
                 <AuthorizeView Policy="RequireTenantStaff">
                     <Authorized>
-                        @if (settings?.AllowStaffOverride == true && !showOverrideForm)
-                        {
-                            <MudButton Variant="Variant.Outlined" 
-                                       Color="Color.Warning" 
+                        <MudStack Row="true" Spacing="2">
+                            @* Create Amendment Button *@
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
                                        Size="Size.Small"
-                                       StartIcon="@Icons.Material.Filled.SkipNext"
-                                       OnClick="@(() => showOverrideForm = true)">
-                                Override & Proceed
+                                       StartIcon="@Icons.Material.Filled.PostAdd"
+                                       Href="@($"/ReserveStudies/{ReserveStudyId}/Proposal?amendment=true")">
+                                Create Amendment
                             </MudButton>
-                        }
+                            
+                            @* Override Button *@
+                            @if (settings?.AllowStaffOverride == true && !showOverrideForm)
+                            {
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Warning" 
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.SkipNext"
+                                           OnClick="@(() => showOverrideForm = true)">
+                                    Override & Proceed
+                                </MudButton>
+                            }
+                        </MudStack>
                     </Authorized>
                 </AuthorizeView>
             }
@@ -167,13 +179,24 @@
             @if (comparison.Status == ScopeComparisonStatus.ExceedsThreshold)
             {
                 <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
-                    <MudStack Spacing="1">
-                        <MudText Typo="Typo.body2" Style="font-weight: 600;">
-                            Scope variance exceeds threshold
-                        </MudText>
-                        <MudText Typo="Typo.body2">
-                            @GetThresholdMessage()
-                        </MudText>
+                    <MudStack Spacing="2">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                                Scope variance exceeds threshold
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                @GetThresholdMessage()
+                            </MudText>
+                        </MudStack>
+                        <MudStack Row="true" Spacing="2" Class="mt-2">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.PostAdd"
+                                       Href="@($"/ReserveStudies/{ReserveStudyId}/Proposal?amendment=true")">
+                                Create Proposal Amendment
+                            </MudButton>
+                        </MudStack>
                     </MudStack>
                 </MudAlert>
             }

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 using CRS.Data;
@@ -87,6 +87,12 @@ namespace CRS.Models {
 
         [DataType(DataType.DateTime)]
         public DateTime? DateApproved { get; set; }
+
+        /// <summary>
+        /// The scheduled date for the site visit.
+        /// </summary>
+        [DataType(DataType.Date)]
+        public DateTime? SiteVisitDate { get; set; }
 
         public enum PointOfContactTypeEnum {
             Contact = 0,

@@ -47,5 +47,34 @@ namespace CRS.Models {
         public bool IncludeComponentInventory { get; set; }
         
         public bool IncludeFundingPlans { get; set; }
+        
+        // Amendment tracking
+        /// <summary>
+        /// Indicates if this proposal is an amendment to a previous proposal
+        /// </summary>
+        public bool IsAmendment { get; set; }
+        
+        /// <summary>
+        /// Reference to the original proposal this amendment is based on
+        /// </summary>
+        public Guid? OriginalProposalId { get; set; }
+        
+        [ForeignKey("OriginalProposalId")]
+        public Proposal? OriginalProposal { get; set; }
+        
+        /// <summary>
+        /// The amendment version number (1 = first amendment, 2 = second amendment, etc.)
+        /// </summary>
+        public int AmendmentNumber { get; set; }
+        
+        /// <summary>
+        /// Reason for the amendment (e.g., scope change after site visit)
+        /// </summary>
+        public string? AmendmentReason { get; set; }
+        
+        /// <summary>
+        /// Collection of amendments based on this proposal
+        /// </summary>
+        public virtual ICollection<Proposal>? Amendments { get; set; }
     }
 }
