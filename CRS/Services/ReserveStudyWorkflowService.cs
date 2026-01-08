@@ -12,6 +12,7 @@ using CRS.Services.Workflow;
 using Coravel.Events.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CRS.Services {
     /// <summary>
@@ -27,6 +28,7 @@ namespace CRS.Services {
         private readonly INotificationService _notifier;
         private readonly IDispatcher _dispatcher;
         private readonly IScopeComparisonService _scopeComparisonService;
+        private readonly ILogger<ReserveStudyWorkflowService> _logger;
 
         public ReserveStudyWorkflowService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
@@ -36,7 +38,8 @@ namespace CRS.Services {
         IStudyWorkflowService engine,
         INotificationService notifier,
         IDispatcher dispatcher,
-        IScopeComparisonService scopeComparisonService) {
+        IScopeComparisonService scopeComparisonService,
+        ILogger<ReserveStudyWorkflowService> logger) {
             _dbFactory = dbFactory;
             _reserveStudyService = reserveStudyService;
             _tenantContext = tenantContext;
@@ -45,6 +48,7 @@ namespace CRS.Services {
             _notifier = notifier;
             _dispatcher = dispatcher;
             _scopeComparisonService = scopeComparisonService;
+            _logger = logger;
         }
 
         private bool IsCurrentUserInRole(params string[] roles) {
@@ -78,7 +82,8 @@ namespace CRS.Services {
             await using var db = await _dbFactory.CreateDbContextAsync();
 
             var study = await db.ReserveStudies
-            .Include(s => s.Proposal)
+            .Include(s => s.Proposals)
+            .Include(s => s.CurrentProposal)
             .Include(s => s.Community)
             .Include(s => s.User)
             .Include(s => s.Contact)
@@ -89,15 +94,67 @@ namespace CRS.Services {
             // Upsert proposal
             proposal.ReserveStudyId = study.Id;
             proposal.TenantId = study.TenantId;
-            var isNewProposal = study.Proposal == null;
+            var isNewProposal = study.CurrentProposalId == null;
+            var isAmendment = proposal.IsAmendment;
+            
             if (isNewProposal) {
-                await db.Proposals.AddAsync(proposal);
-                study.Proposal = proposal;
+                // Generate ID for new proposal if not set
+                if (proposal.Id == Guid.Empty) {
+                    proposal.Id = Guid.CreateVersion7();
+                }
+                db.Proposals.Add(proposal);
+                // Set as current proposal
+                study.CurrentProposalId = proposal.Id;
+            } else if (isAmendment) {
+                // For amendments, create a new proposal record linked to the original
+                var originalProposalId = study.CurrentProposalId!.Value;
+                
+                // Generate new ID for amendment
+                if (proposal.Id == Guid.Empty) {
+                    proposal.Id = Guid.CreateVersion7();
+                }
+                proposal.OriginalProposalId = originalProposalId;
+                proposal.DateSent = DateTime.UtcNow;
+                
+                // Add the new amendment proposal
+                db.Proposals.Add(proposal);
+                
+                // Update current proposal to the amendment
+                study.CurrentProposalId = proposal.Id;
+                study.DateModified = DateTime.UtcNow;
+                
+                try {
+                    await db.SaveChangesAsync();
+                } catch (Exception ex) {
+                    _logger.LogError(ex, "Error saving proposal amendment for study {StudyId}", reserveStudyId);
+                    throw;
+                }
+                
+                // Reload study with new proposal for event
+                study = await db.ReserveStudies
+                    .Include(s => s.CurrentProposal)
+                    .Include(s => s.Community)
+                    .Include(s => s.Contact)
+                    .FirstOrDefaultAsync(s => s.Id == reserveStudyId);
+                
+                // Fire event for email notification
+                await _dispatcher.Broadcast(new ProposalSentEvent(study!, proposal));
+                return true;
             } else {
-                // Update existing
-                study.Proposal.ProposalScope = proposal.ProposalScope;
-                study.Proposal.EstimatedCost = proposal.EstimatedCost;
-                study.Proposal.Comments = proposal.Comments;
+                // Update existing proposal (not an amendment)
+                var currentProposal = study.CurrentProposal;
+                if (currentProposal != null) {
+                    currentProposal.ProposalScope = proposal.ProposalScope;
+                    currentProposal.EstimatedCost = proposal.EstimatedCost;
+                    currentProposal.Comments = proposal.Comments;
+                    currentProposal.ServiceLevel = proposal.ServiceLevel;
+                    currentProposal.DeliveryTimeframe = proposal.DeliveryTimeframe;
+                    currentProposal.PaymentTerms = proposal.PaymentTerms;
+                    currentProposal.IncludePrepaymentDiscount = proposal.IncludePrepaymentDiscount;
+                    currentProposal.IncludeDigitalDelivery = proposal.IncludeDigitalDelivery;
+                    currentProposal.IncludeComponentInventory = proposal.IncludeComponentInventory;
+                    currentProposal.IncludeFundingPlans = proposal.IncludeFundingPlans;
+                }
             }
 
             // Determine target status based on current workflow state
@@ -112,13 +169,18 @@ namespace CRS.Services {
             } else if (from == StudyStatus.ProposalApproved) {
                 desired = StudyStatus.ProposalSent;
                 // Set DateSent when actually sending
-                if (study.Proposal != null) {
-                    study.Proposal.DateSent = DateTime.UtcNow;
+                if (study.CurrentProposal != null) {
+                    study.CurrentProposal.DateSent = DateTime.UtcNow;
                 }
             } else if (from == StudyStatus.ProposalCreated || from == StudyStatus.ProposalUpdated) {
                 // Updating proposal but not sending yet - just save without transition
                 study.DateModified = DateTime.UtcNow;
-                await db.SaveChangesAsync();
+                try {
+                    await db.SaveChangesAsync();
+                } catch (Exception ex) {
+                    _logger.LogError(ex, "Error updating proposal for study {StudyId}", reserveStudyId);
+                    throw;
+                }
                 return true;
             } else {
                 // Unknown state - try to proceed with the most logical transition
@@ -132,11 +194,16 @@ namespace CRS.Services {
 
             // History row
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
-            await db.SaveChangesAsync();
+            try {
+                await db.SaveChangesAsync();
+            } catch (Exception ex) {
+                _logger.LogError(ex, "Error saving proposal workflow transition for study {StudyId}", reserveStudyId);
+                throw;
+            }
 
             // Fire event for email workflows/listeners only when actually sending to client
             if (desired == StudyStatus.ProposalSent) {
-                await _dispatcher.Broadcast(new ProposalSentEvent(study, study.Proposal ?? proposal));
+                await _dispatcher.Broadcast(new ProposalSentEvent(study, study.CurrentProposal ?? proposal));
             }
             return true;
         }
@@ -175,14 +242,14 @@ namespace CRS.Services {
             await using var db = await _dbFactory.CreateDbContextAsync();
 
             var study = await db.ReserveStudies
-                .Include(s => s.Proposal)
+                .Include(s => s.CurrentProposal)
                 .Include(s => s.Community)
                 .Include(s => s.User)
                 .Include(s => s.Contact)
                 .Include(s => s.PropertyManager)
                 .FirstOrDefaultAsync(s => s.Id == reserveStudyId);
             
-            if (study?.Proposal == null) return false;
+            if (study?.CurrentProposal == null) return false;
 
             // Only allow resending if proposal has already been sent
             var sr = await db.StudyRequests.FirstOrDefaultAsync(x => x.Id == reserveStudyId);
@@ -192,11 +259,11 @@ namespace CRS.Services {
             if (sr.CurrentStatus >= StudyStatus.ProposalAccepted) return false;
 
             // Update the DateSent to track when it was last sent
-            study.Proposal.DateSent = DateTime.UtcNow;
+            study.CurrentProposal.DateSent = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
             // Fire the event to send the email
-            await _dispatcher.Broadcast(new ProposalSentEvent(study, study.Proposal));
+            await _dispatcher.Broadcast(new ProposalSentEvent(study, study.CurrentProposal));
             return true;
         }
 

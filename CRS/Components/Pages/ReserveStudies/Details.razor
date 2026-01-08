@@ -37,6 +37,7 @@
 @inject IDispatcher _dispatcher
 @inject IDialogService DialogService
 @inject IProposalAcceptanceService AcceptanceService
+@inject ILogger<Details> Logger
 
 <PageTitle>Reserve Study Details</PageTitle>
 
@@ -1996,6 +1997,7 @@ private bool hasValidAcceptance = false;
                 await ReloadAfterChange();
             }
         } catch (Exception ex) {
+            Logger.LogError(ex, "Error assigning specialist to study {StudyId}", reserveStudy?.Id);
             Snackbar.Add($"Error assigning specialist: {ex.Message}", Severity.Error);
         }
     }
@@ -2081,6 +2083,7 @@ private bool hasValidAcceptance = false;
                 }
             }
         } catch (Exception ex) {
+            Logger.LogError(ex, "Error scheduling site visit for study {StudyId}", reserveStudy?.Id);
             Snackbar.Add($"Error scheduling site visit: {ex.Message}", Severity.Error);
         }
     }
@@ -2088,8 +2091,8 @@ private bool hasValidAcceptance = false;
     // Workflow helper methods
     private bool NeedsApproval() {
         var currentStatus = GetCurrentStatus();
-        // Only RequestCreated needs initial approval
-        return currentStatus == StudyStatus.RequestCreated;
+        // Only RequestApproved needs initial approval
+        return currentStatus == StudyStatus.RequestApproved;
     }
 
     private bool CanAssignSpecialist() {

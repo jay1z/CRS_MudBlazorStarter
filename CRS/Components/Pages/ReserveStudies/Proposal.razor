@@ -17,6 +17,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<Proposal> Logger
 
 <PageTitle>@(isAmendment ? "Proposal Amendment" : "Reserve Study Proposal")</PageTitle>
 
@@ -355,6 +356,7 @@
                 Snackbar.Add("Failed to create proposal. Please check the workflow status.", Severity.Error);
             }
         } catch (Exception ex) {
+            Logger.LogError(ex, "Error saving proposal for study {StudyId}, IsAmendment: {IsAmendment}", studyId, isAmendment);
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         } finally {
             isSaving = false;

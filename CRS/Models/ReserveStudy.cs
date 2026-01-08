@@ -34,8 +34,24 @@ namespace CRS.Models {
         public Guid? PropertyManagerId { get; set; }
         public PropertyManager? PropertyManager { get; set; }
 
-        //1:1 relationships managed via dependent FKs
-        public Proposal? Proposal { get; set; }
+        //1:many relationship - a study can have multiple proposals (original + amendments)
+        public List<Proposal>? Proposals { get; set; }
+        
+        /// <summary>
+        /// The currently active/latest proposal for this study.
+        /// When amendments are created, this points to the new amendment.
+        /// </summary>
+        [ForeignKey("CurrentProposal")]
+        public Guid? CurrentProposalId { get; set; }
+        public Proposal? CurrentProposal { get; set; }
+        
+        /// <summary>
+        /// Convenience property that returns the current active proposal.
+        /// For backward compatibility with code that expects study.Proposal.
+        /// </summary>
+        [NotMapped]
+        public Proposal? Proposal => CurrentProposal ?? Proposals?.OrderByDescending(p => p.AmendmentNumber).ThenByDescending(p => p.DateCreated).FirstOrDefault();
+
         public FinancialInfo? FinancialInfo { get; set; }
 
         // Shared PK1:1 to workflow StudyRequest (Id)

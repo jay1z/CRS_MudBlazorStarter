@@ -7,9 +7,11 @@ using Microsoft.EntityFrameworkCore;
 namespace CRS.Services {
     public class CalendarService : ICalendarService {
         private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
+        private readonly ILogger<CalendarService> _logger;
 
-        public CalendarService(IDbContextFactory<ApplicationDbContext> dbContextFactory) {
+        public CalendarService(IDbContextFactory<ApplicationDbContext> dbContextFactory, ILogger<CalendarService> logger) {
             _dbContextFactory = dbContextFactory;
+            _logger = logger;
         }
 
         public async Task<CalendarEvent?> GetEventAsync(Guid id) {
@@ -63,8 +65,13 @@ namespace CRS.Services {
                 calendarEvent.End = calendarEvent.Start.Value.AddHours(1);
             }
 
-            await context.CalendarEvents.AddAsync(calendarEvent);
-            await context.SaveChangesAsync();
+            try {
+                await context.CalendarEvents.AddAsync(calendarEvent);
+                await context.SaveChangesAsync();
+            } catch (Exception ex) {
+                _logger.LogError(ex, "Error adding calendar event for study {StudyId}", calendarEvent.ReserveStudyId);
+                throw;
+            }
 
             return calendarEvent;
         }
@@ -94,8 +101,13 @@ namespace CRS.Services {
 
             // Update any other properties as needed
 
-            context.CalendarEvents.Update(existingEvent);
-            await context.SaveChangesAsync();
+            try {
+                context.CalendarEvents.Update(existingEvent);
+                await context.SaveChangesAsync();
+            } catch (Exception ex) {
+                _logger.LogError(ex, "Error updating calendar event {EventId}", calendarEvent.Id);
+                throw;
+            }
 
             return existingEvent;
         }
@@ -108,10 +120,14 @@ namespace CRS.Services {
                 return false;
             }
 
-            context.CalendarEvents.Remove(calendarEvent);
-            var result = await context.SaveChangesAsync();
-
-            return result > 0;
+            try {
+                context.CalendarEvents.Remove(calendarEvent);
+                var result = await context.SaveChangesAsync();
+                return result > 0;
+            } catch (Exception ex) {
+                _logger.LogError(ex, "Error deleting calendar event {EventId}", id);
+                throw;
+            }
         }
 
         public async Task<bool> SoftDeleteEventAsync(Guid id) {

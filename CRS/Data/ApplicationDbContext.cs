@@ -163,11 +163,19 @@ namespace CRS.Data {
             builder.Entity<ReserveStudyAdditionalElement>().HasQueryFilter(e => _tenantContext == null || _tenantContext.TenantId == null || (e.ReserveStudy != null && e.ReserveStudy.TenantId == _tenantContext.TenantId));
             builder.Entity<ContactXContactGroup>().HasQueryFilter(e => _tenantContext == null || _tenantContext.TenantId == null || (e.Contact != null && e.Contact.TenantId == _tenantContext.TenantId));
 
-            // Fix1: Configure1:1 relationships using dependent FKs
+            // Configure 1:many relationship for ReserveStudy to Proposals (to support amendments)
             builder.Entity<ReserveStudy>()
-                .HasOne(r => r.Proposal)
+                .HasMany(r => r.Proposals)
                 .WithOne(p => p.ReserveStudy)
-                .HasForeignKey<Proposal>(p => p.ReserveStudyId);
+                .HasForeignKey(p => p.ReserveStudyId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Configure the CurrentProposal reference (optional, no cascade to avoid cycles)
+            builder.Entity<ReserveStudy>()
+                .HasOne(r => r.CurrentProposal)
+                .WithMany()
+                .HasForeignKey(r => r.CurrentProposalId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<ReserveStudy>()
                 .HasOne(r => r.FinancialInfo)
