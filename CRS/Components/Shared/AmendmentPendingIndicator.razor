@@ -1,0 +1,94 @@
+﻿@using CRS.Services.Interfaces
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject IScopeComparisonService ScopeComparisonService
+@inject AuthenticationStateProvider AuthStateProvider
+
+@if (isLoading)
+{
+    <!-- Show nothing while loading -->
+}
+else if (pendingAmendments.Count > 0)
+{
+    <MudAlert Severity="Severity.Warning" 
+              Variant="Variant.Filled" 
+              Class="mb-4" 
+              Style="border-radius: 12px;"
+              Icon="@Icons.Material.Filled.Warning">
+        <MudStack Spacing="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                    @if (pendingAmendments.Count == 1)
+                    {
+                        <text>You have a proposal amendment awaiting your review</text>
+                    }
+                    else
+                    {
+                        <text>You have @pendingAmendments.Count proposal amendments awaiting your review</text>
+                    }
+                </MudText>
+            </MudStack>
+            
+            @foreach (var amendment in pendingAmendments.Take(3))
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">
+                        @(amendment.ReserveStudy?.Community?.Name ?? "Unknown Community")
+                        - @(amendment.VarianceCount >= 0 ? "+" : "")@amendment.VarianceCount elements variance
+                    </MudText>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Inherit" 
+                               Size="Size.Small"
+                               Href="@($"/ReserveStudies/{amendment.ReserveStudyId}/Amendment")"
+                               Style="text-decoration: underline;">
+                        Review Now
+                    </MudButton>
+                </MudStack>
+            }
+            
+            @if (pendingAmendments.Count > 3)
+            {
+                <MudText Typo="Typo.caption">
+                    And @(pendingAmendments.Count - 3) more...
+                </MudText>
+            }
+        </MudStack>
+    </MudAlert>
+}
+
+@code {
+    private List<CRS.Models.Workflow.ScopeComparison> pendingAmendments = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingAmendments();
+    }
+
+    private async Task LoadPendingAmendments()
+    {
+        try
+        {
+            isLoading = true;
+
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                pendingAmendments = await ScopeComparisonService.GetPendingAmendmentsForUserAsync(userId);
+            }
+        }
+        catch
+        {
+            // Silently fail - don't disrupt the dashboard
+            pendingAmendments = new();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

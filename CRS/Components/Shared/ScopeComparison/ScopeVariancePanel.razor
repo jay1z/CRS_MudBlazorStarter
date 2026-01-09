@@ -223,6 +223,74 @@
                 </MudAlert>
             }
 
+            @if (comparison.Status == ScopeComparisonStatus.AmendmentPending)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Filled">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                            Amendment Awaiting HOA Approval
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            A proposal amendment has been sent to the HOA for review. 
+                            The study will proceed once the amendment is accepted.
+                        </MudText>
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Inherit" 
+                                   Size="Size.Small"
+                                   Href="@($"/ReserveStudies/{ReserveStudyId}/Amendment")"
+                                   Style="text-decoration: underline; margin-top: 4px;">
+                            View Amendment Details
+                        </MudButton>
+                    </MudStack>
+                </MudAlert>
+            }
+
+            @if (comparison.Status == ScopeComparisonStatus.AmendmentAccepted)
+            {
+                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                            Amendment Accepted
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            The HOA has accepted the proposal amendment.
+                            @if (comparison.AmendmentAcceptedAt.HasValue)
+                            {
+                                <text> Accepted on @comparison.AmendmentAcceptedAt.Value.ToString("MMM dd, yyyy").</text>
+                            }
+                        </MudText>
+                    </MudStack>
+                </MudAlert>
+            }
+
+            @if (comparison.Status == ScopeComparisonStatus.AmendmentRejected)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                            Amendment Rejected
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            The HOA has rejected the proposal amendment.
+                            @if (!string.IsNullOrEmpty(comparison.AmendmentRejectionReason))
+                            {
+                                <text> Reason: @comparison.AmendmentRejectionReason</text>
+                            }
+                        </MudText>
+                        <AuthorizeView Policy="RequireTenantStaff">
+                            <Authorized>
+                                <MudText Typo="Typo.caption" Style="color: #666; margin-top: 4px;">
+                                    Please contact the HOA to discuss next steps.
+                                </MudText>
+                            </Authorized>
+                        </AuthorizeView>
+                    </MudStack>
+                </MudAlert>
+            }
+
             <!-- Override Form -->
             @if (showOverrideForm)
             {

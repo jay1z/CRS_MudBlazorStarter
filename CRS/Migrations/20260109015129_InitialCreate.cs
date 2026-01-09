@@ -1642,11 +1642,21 @@ namespace CRS.Migrations
                     Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     OverriddenByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     OverriddenAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    OverrideReason = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true)
+                    OverrideReason = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    AmendmentProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    AmendmentAcceptedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AmendmentAcceptedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    AmendmentRejectedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AmendmentRejectionReason = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ScopeComparisons", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ScopeComparisons_Proposals_AmendmentProposalId",
+                        column: x => x.AmendmentProposalId,
+                        principalTable: "Proposals",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ScopeComparisons_ReserveStudies_ReserveStudyId",
                         column: x => x.ReserveStudyId,
@@ -1771,6 +1781,13 @@ namespace CRS.Migrations
                     StatusChangedBy = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     StatusNotes = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: true),
                     PreviousStatus = table.Column<int>(type: "int", nullable: true),
+                    ProposalAccepted = table.Column<bool>(type: "bit", nullable: false),
+                    ProposalAcceptedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AmendmentRequired = table.Column<bool>(type: "bit", nullable: false),
+                    AmendmentAccepted = table.Column<bool>(type: "bit", nullable: false),
+                    AmendmentAcceptedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SiteVisitComplete = table.Column<bool>(type: "bit", nullable: false),
+                    SiteVisitCompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true)
                 },
                 constraints: table =>
@@ -2560,6 +2577,11 @@ namespace CRS.Migrations
                 name: "IX_ScopeComparison_Tenant_Study",
                 table: "ScopeComparisons",
                 columns: new[] { "TenantId", "ReserveStudyId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScopeComparisons_AmendmentProposalId",
+                table: "ScopeComparisons",
+                column: "AmendmentProposalId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ScopeComparisons_ReserveStudyId",

@@ -123,8 +123,18 @@ namespace CRS.Services.Workflow {
             
             [StudyStatus.SiteVisitDataEntered] = new() { 
                 StudyStatus.FundingPlanReady,
+                StudyStatus.AmendmentPending,       // If scope variance exceeds threshold
                 StudyStatus.FinancialInfoRequested, // Request more financial info
                 StudyStatus.RequestCancelled 
+            },
+
+            // ═══════════════════════════════════════════════════════════════
+            // AMENDMENT PHASE (triggered by scope variance after site visit)
+            // ═══════════════════════════════════════════════════════════════
+            [StudyStatus.AmendmentPending] = new() {
+                StudyStatus.FundingPlanReady,       // HOA accepted amendment
+                StudyStatus.SiteVisitDataEntered,   // Go back if needs rework
+                StudyStatus.RequestCancelled        // HOA rejected and cancelled
             },
 
             // ═══════════════════════════════════════════════════════════════

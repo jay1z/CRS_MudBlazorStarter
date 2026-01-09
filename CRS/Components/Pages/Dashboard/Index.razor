@@ -93,6 +93,12 @@
         </MudAlert>
     }
 
+    <!-- PENDING AMENDMENTS INDICATOR (for HOA users) -->
+    @if (RoleService.IsHOAUser || RoleService.IsHOAAuditor)
+    {
+        <CRS.Components.Shared.AmendmentPendingIndicator />
+    }
+
     @* Conditional rendering based on role *@
     @if (RoleService.IsHOAUser || RoleService.IsHOAAuditor)
     {
@@ -182,7 +188,20 @@
                             <RowTemplate>
                                 <MudTd DataLabel="Community">
                                     <MudStack Spacing="0">
-                                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Community?.Name</MudText>
+                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Community?.Name</MudText>
+                                            @if (pendingAmendmentStudyIds.Contains(context.Id))
+                                            {
+                                                <MudChip T="string" 
+                                                         Size="Size.Small" 
+                                                         Color="Color.Warning" 
+                                                         Variant="Variant.Outlined"
+                                                         Icon="@Icons.Material.Filled.Warning"
+                                                         Style="font-size: 0.7rem;">
+                                                    Action Required
+                                                </MudChip>
+                                            }
+                                        </MudStack>
                                         <MudText Typo="Typo.caption" Style="color: #999;">
                                             @(context.Community?.PhysicalAddress?.City ?? ""), @(context.Community?.PhysicalAddress?.State ?? "")
                                         </MudText>
@@ -202,25 +221,40 @@
                                     </MudText>
                                 </MudTd>
                                 <MudTd DataLabel="Actions" Style="text-align: right;">
-                                    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
-                                        <MudButton Variant="Variant.Text" 
-                                                   Color="Color.Primary" 
+                                    @if (pendingAmendmentStudyIds.Contains(context.Id))
+                                    {
+                                        @* Amendment pending - show only the review action *@
+                                        <MudButton Variant="Variant.Filled" 
+                                                   Color="Color.Warning" 
                                                    Size="Size.Small"
-                                                   Href="@($"/ReserveStudies/{context.Id}/Details")"
-                                                   StartIcon="@Icons.Material.Filled.Visibility">
-                                            View
+                                                   Href="@($"/ReserveStudies/{context.Id}/Amendment")"
+                                                   StartIcon="@Icons.Material.Filled.RateReview">
+                                            Review Amendment
                                         </MudButton>
-                                        @if (CanEditStudy(context))
-                                        {
+                                    }
+                                    else
+                                    {
+                                        @* Normal actions *@
+                                        <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
                                             <MudButton Variant="Variant.Text" 
-                                                       Color="Color.Info" 
+                                                       Color="Color.Primary" 
                                                        Size="Size.Small"
-                                                       Href="@($"/ReserveStudies/{context.Id}/Edit")"
-                                                       StartIcon="@Icons.Material.Filled.Edit">
-                                                Edit
+                                                       Href="@($"/ReserveStudies/{context.Id}/Details")"
+                                                       StartIcon="@Icons.Material.Filled.Visibility">
+                                                View
                                             </MudButton>
-                                        }
-                                    </MudStack>
+                                            @if (CanEditStudy(context))
+                                            {
+                                                <MudButton Variant="Variant.Text" 
+                                                           Color="Color.Info" 
+                                                           Size="Size.Small"
+                                                           Href="@($"/ReserveStudies/{context.Id}/Edit")"
+                                                           StartIcon="@Icons.Material.Filled.Edit">
+                                                    Edit
+                                                </MudButton>
+                                            }
+                                        </MudStack>
+                                    }
                                 </MudTd>
                             </RowTemplate>
                         </MudTable>
@@ -689,6 +723,7 @@ private List<PropertyRow> Properties { get; set; } = new();
 private List<ActivityItem> Activity { get; set; } = new();
 private List<TicketItem> Tickets { get; set; } = new();
 private List<ReserveStudy> hoaUserStudies { get; set; } = new();
+private HashSet<Guid> pendingAmendmentStudyIds { get; set; } = new();
 private bool isLoadingStudies = false;
 private Guid? currentUserId = null;
 
@@ -708,7 +743,7 @@ protected override async Task OnInitializedAsync()
         currentUserId = userId;
     }
         
-    // Load real data from services based on role and tenant context
+    // Load real code from services based on role and tenant context
     await LoadDashboardDataAsync();
     
     // Load HOA user studies if applicable
@@ -893,11 +928,23 @@ private async Task LoadPipelineDataAsync(int tenantId)
                             rs.TenantId == TenantContext.TenantId.Value)
                 .OrderByDescending(rs => rs.DateCreated)
                 .ToListAsync();
+
+            // Get study IDs that have pending amendments for this user
+            var studyIds = hoaUserStudies.Select(s => s.Id).ToList();
+            pendingAmendmentStudyIds = (await context.ScopeComparisons
+                .AsNoTracking()
+                .Where(sc => sc.TenantId == TenantContext.TenantId.Value 
+                    && sc.Status == CRS.Models.Workflow.ScopeComparisonStatus.AmendmentPending
+                    && studyIds.Contains(sc.ReserveStudyId))
+                .Select(sc => sc.ReserveStudyId)
+                .ToListAsync())
+                .ToHashSet();
         }
         catch (Exception)
         {
             // Silently fail - dashboard will show empty list
             hoaUserStudies = new List<ReserveStudy>();
+            pendingAmendmentStudyIds = new HashSet<Guid>();
         }
         finally
         {
@@ -939,6 +986,7 @@ private async Task LoadPipelineDataAsync(int tenantId)
             StudyStatus.SiteVisitPending => "Site Visit Pending",
             StudyStatus.SiteVisitScheduled => "Visit Scheduled",
             StudyStatus.SiteVisitCompleted => "Visit Complete",
+            StudyStatus.AmendmentPending => "Amendment Review Required",
             StudyStatus.ReportComplete => "Report Ready",
             StudyStatus.RequestCompleted => "Complete",
             StudyStatus.RequestCancelled => "Cancelled",
@@ -970,6 +1018,7 @@ private async Task LoadPipelineDataAsync(int tenantId)
             StudyStatus.SiteVisitPending => Color.Primary,
             StudyStatus.SiteVisitScheduled => Color.Primary,
             StudyStatus.SiteVisitCompleted => Color.Primary,
+            StudyStatus.AmendmentPending => Color.Warning,
             StudyStatus.ReportComplete => Color.Success,
             StudyStatus.RequestCompleted => Color.Success,
             StudyStatus.RequestCancelled => Color.Error,

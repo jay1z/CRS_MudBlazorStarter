@@ -153,7 +153,7 @@
 
                     <MudGrid>
                         <MudItem xs="12">
-                            <MudRadioGroup T="string" @bind-SelectedOption="@proposal.DeliveryTimeframe">
+                            <MudRadioGroup T="string" @bind-Value="@proposal.DeliveryTimeframe">
                                 <MudRadio Value="@("Standard")" Color="Color.Primary">Standard (4-6 weeks)</MudRadio>
                                 <MudRadio Value="@("Expedited")" Color="Color.Primary">Expedited (2-3 weeks, additional fee applies)</MudRadio>
                                 <MudRadio Value="@("Rush")" Color="Color.Primary">Rush (7-10 days, premium fee applies)</MudRadio>
@@ -227,9 +227,9 @@
                                    Disabled="@isSaving">
                             @if (isSaving) {
                                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                <span>Sending...</span>
+                                <span>Saving...</span>
                             } else {
-                                <span>@(isAmendment ? "Send Amendment" : "Send Proposal")</span>
+                                <span>@(isAmendment ? "Save Amendment" : "Save Proposal")</span>
                             }
                         </MudButton>
                     </MudItem>
@@ -349,11 +349,11 @@
 
             var result = await WorkflowService.SendProposalAsync(studyId, proposalEntity);
             if (result) {
-                var message = isAmendment ? "Proposal amendment created successfully" : "Proposal created successfully";
+                var message = isAmendment ? "Amendment saved successfully" : "Proposal saved successfully";
                 Snackbar.Add(message, Severity.Success);
                 Navigation.NavigateTo($"/ReserveStudies/{studyId}/Details");
             } else {
-                Snackbar.Add("Failed to create proposal. Please check the workflow status.", Severity.Error);
+                Snackbar.Add("Failed to save proposal. Please check the workflow status.", Severity.Error);
             }
         } catch (Exception ex) {
             Logger.LogError(ex, "Error saving proposal for study {StudyId}, IsAmendment: {IsAmendment}", studyId, isAmendment);

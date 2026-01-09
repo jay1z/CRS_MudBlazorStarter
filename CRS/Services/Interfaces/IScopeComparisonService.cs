@@ -105,4 +105,49 @@ public interface IScopeComparisonService
     /// <param name="newStatus">The new status.</param>
     /// <param name="notes">Optional notes.</param>
     Task<ScopeComparison> UpdateStatusAsync(Guid scopeComparisonId, ScopeComparisonStatus newStatus, string? notes = null);
+
+    // ─────────────────────────────────────────────────────────────
+    // Amendment workflow methods
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Marks that an amendment proposal has been sent to HOA for approval.
+    /// Updates the scope comparison status and links to the amendment proposal.
+    /// Also transitions the workflow to AmendmentPending stage.
+    /// </summary>
+    /// <param name="scopeComparisonId">The scope comparison ID.</param>
+    /// <param name="amendmentProposalId">The ID of the amendment proposal.</param>
+    /// <param name="actor">The user who sent the amendment.</param>
+    Task<ScopeComparison> MarkAmendmentSentAsync(Guid scopeComparisonId, Guid amendmentProposalId, string? actor = null);
+
+    /// <summary>
+    /// Records HOA acceptance of the amendment proposal.
+    /// Updates the scope comparison status and workflow stage.
+    /// </summary>
+    /// <param name="scopeComparisonId">The scope comparison ID.</param>
+    /// <param name="userId">The HOA user who accepted.</param>
+    Task<ScopeComparison> AcceptAmendmentAsync(Guid scopeComparisonId, Guid userId);
+
+    /// <summary>
+    /// Records HOA rejection of the amendment proposal.
+    /// </summary>
+    /// <param name="scopeComparisonId">The scope comparison ID.</param>
+    /// <param name="userId">The HOA user who rejected.</param>
+    /// <param name="reason">Reason for rejection.</param>
+    Task<ScopeComparison> RejectAmendmentAsync(Guid scopeComparisonId, Guid userId, string reason);
+
+    /// <summary>
+    /// Gets all pending amendments for a specific HOA user.
+    /// Used for dashboard indicators.
+    /// </summary>
+    /// <param name="userId">The HOA user ID.</param>
+    /// <returns>List of scope comparisons with pending amendments for this user's studies.</returns>
+    Task<List<ScopeComparison>> GetPendingAmendmentsForUserAsync(Guid userId);
+
+    /// <summary>
+    /// Gets the scope comparison with full details including amendment proposal.
+    /// </summary>
+    /// <param name="scopeComparisonId">The scope comparison ID.</param>
+    /// <returns>The scope comparison with navigation properties loaded.</returns>
+    Task<ScopeComparison?> GetByIdWithDetailsAsync(Guid scopeComparisonId);
 }

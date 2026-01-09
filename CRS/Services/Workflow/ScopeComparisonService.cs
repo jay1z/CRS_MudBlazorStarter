@@ -14,15 +14,18 @@ public class ScopeComparisonService : IScopeComparisonService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
+    private readonly IStudyWorkflowService _workflowService;
     private readonly ILogger<ScopeComparisonService> _logger;
 
     public ScopeComparisonService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
         ITenantContext tenantContext,
+        IStudyWorkflowService workflowService,
         ILogger<ScopeComparisonService> logger)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
+        _workflowService = workflowService;
         _logger = logger;
     }
 
@@ -352,5 +355,181 @@ public class ScopeComparisonService : IScopeComparisonService
             
             _ => $"Scope comparison complete: {absVariance} {direction} elements ({comparison.VariancePercent:F1}% variance)."
         };
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Amendment workflow methods
+    // ─────────────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public async Task<ScopeComparison> MarkAmendmentSentAsync(Guid scopeComparisonId, Guid amendmentProposalId, string? actor = null)
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+        var tenantId = _tenantContext.TenantId 
+            ?? throw new InvalidOperationException("Tenant context is required");
+
+        var comparison = await context.ScopeComparisons
+            .Include(sc => sc.ReserveStudy)
+                .ThenInclude(rs => rs!.StudyRequest)
+            .FirstOrDefaultAsync(sc => sc.Id == scopeComparisonId && sc.TenantId == tenantId);
+
+        if (comparison == null)
+        {
+            throw new InvalidOperationException($"Scope comparison {scopeComparisonId} not found");
+        }
+
+        // Update comparison to link amendment and set status
+        comparison.AmendmentProposalId = amendmentProposalId;
+        comparison.Status = ScopeComparisonStatus.AmendmentPending;
+
+        // Update StudyRequest flags
+        var studyRequest = comparison.ReserveStudy?.StudyRequest;
+        if (studyRequest != null)
+        {
+            studyRequest.AmendmentRequired = true;
+            studyRequest.AmendmentAccepted = false;
+
+            // Transition workflow to AmendmentPending stage
+            await _workflowService.TryTransitionAsync(studyRequest, StudyStatus.AmendmentPending, actor);
+        }
+
+        await context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Amendment sent for scope comparison {Id}, proposal {ProposalId}, study {StudyId}",
+            scopeComparisonId, amendmentProposalId, comparison.ReserveStudyId);
+
+        return comparison;
+    }
+
+    /// <inheritdoc />
+    public async Task<ScopeComparison> AcceptAmendmentAsync(Guid scopeComparisonId, Guid userId)
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+        var tenantId = _tenantContext.TenantId 
+            ?? throw new InvalidOperationException("Tenant context is required");
+
+        var comparison = await context.ScopeComparisons
+            .Include(sc => sc.ReserveStudy)
+                .ThenInclude(rs => rs!.StudyRequest)
+            .Include(sc => sc.ReserveStudy)
+                .ThenInclude(rs => rs!.CurrentProposal)
+            .FirstOrDefaultAsync(sc => sc.Id == scopeComparisonId && sc.TenantId == tenantId);
+
+        if (comparison == null)
+        {
+            throw new InvalidOperationException($"Scope comparison {scopeComparisonId} not found");
+        }
+
+        if (comparison.Status != ScopeComparisonStatus.AmendmentPending)
+        {
+            throw new InvalidOperationException($"Cannot accept amendment - current status is {comparison.Status}");
+        }
+
+        // Update comparison
+        comparison.Status = ScopeComparisonStatus.AmendmentAccepted;
+        comparison.AmendmentAcceptedAt = DateTime.UtcNow;
+        comparison.AmendmentAcceptedByUserId = userId;
+
+        // Update StudyRequest flags and transition workflow
+        var studyRequest = comparison.ReserveStudy?.StudyRequest;
+        if (studyRequest != null)
+        {
+            studyRequest.AmendmentAccepted = true;
+            studyRequest.AmendmentAcceptedAt = DateTime.UtcNow;
+
+            // Transition workflow from AmendmentPending to FundingPlanReady
+            await _workflowService.TryTransitionAsync(studyRequest, StudyStatus.FundingPlanReady, userId.ToString());
+        }
+
+        // Update the ReserveStudy's CurrentProposal to point to the amendment
+        if (comparison.ReserveStudy != null && comparison.AmendmentProposalId.HasValue)
+        {
+            comparison.ReserveStudy.CurrentProposalId = comparison.AmendmentProposalId;
+        }
+
+        await context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Amendment accepted for scope comparison {Id} by user {UserId}, study {StudyId}",
+            scopeComparisonId, userId, comparison.ReserveStudyId);
+
+        return comparison;
+    }
+
+    /// <inheritdoc />
+    public async Task<ScopeComparison> RejectAmendmentAsync(Guid scopeComparisonId, Guid userId, string reason)
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+        var tenantId = _tenantContext.TenantId 
+            ?? throw new InvalidOperationException("Tenant context is required");
+
+        var comparison = await context.ScopeComparisons
+            .Include(sc => sc.ReserveStudy)
+                .ThenInclude(rs => rs!.StudyRequest)
+            .FirstOrDefaultAsync(sc => sc.Id == scopeComparisonId && sc.TenantId == tenantId);
+
+        if (comparison == null)
+        {
+            throw new InvalidOperationException($"Scope comparison {scopeComparisonId} not found");
+        }
+
+        if (comparison.Status != ScopeComparisonStatus.AmendmentPending)
+        {
+            throw new InvalidOperationException($"Cannot reject amendment - current status is {comparison.Status}");
+        }
+
+        // Update comparison
+        comparison.Status = ScopeComparisonStatus.AmendmentRejected;
+        comparison.AmendmentRejectedAt = DateTime.UtcNow;
+        comparison.AmendmentRejectionReason = reason;
+
+        // Note: We don't automatically cancel the study - staff will need to decide next steps
+        // The study remains in AmendmentPending state until staff takes action
+
+        await context.SaveChangesAsync();
+
+        _logger.LogWarning(
+            "Amendment rejected for scope comparison {Id} by user {UserId}: {Reason}",
+            scopeComparisonId, userId, reason);
+
+        return comparison;
+    }
+
+    /// <inheritdoc />
+    public async Task<List<ScopeComparison>> GetPendingAmendmentsForUserAsync(Guid userId)
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+        var tenantId = _tenantContext.TenantId 
+            ?? throw new InvalidOperationException("Tenant context is required");
+
+        // Find studies where the user is the HOA owner (RequestedByUserId or ApplicationUserId)
+        // and there's a pending amendment
+        return await context.ScopeComparisons
+            .Include(sc => sc.ReserveStudy)
+                .ThenInclude(rs => rs!.Community)
+            .Include(sc => sc.AmendmentProposal)
+            .Where(sc => sc.TenantId == tenantId 
+                && sc.Status == ScopeComparisonStatus.AmendmentPending
+                && sc.ReserveStudy != null
+                && (sc.ReserveStudy.RequestedByUserId == userId 
+                    || sc.ReserveStudy.ApplicationUserId == userId))
+            .ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task<ScopeComparison?> GetByIdWithDetailsAsync(Guid scopeComparisonId)
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+        var tenantId = _tenantContext.TenantId 
+            ?? throw new InvalidOperationException("Tenant context is required");
+
+        return await context.ScopeComparisons
+            .Include(sc => sc.ReserveStudy)
+                .ThenInclude(rs => rs!.Community)
+            .Include(sc => sc.ReserveStudy)
+                .ThenInclude(rs => rs!.CurrentProposal)
+            .Include(sc => sc.AmendmentProposal)
+            .FirstOrDefaultAsync(sc => sc.Id == scopeComparisonId && sc.TenantId == tenantId);
     }
 }

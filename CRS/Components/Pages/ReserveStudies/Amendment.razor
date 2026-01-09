@@ -1,0 +1,527 @@
+﻿@page "/ReserveStudies/{ReserveStudyId:guid}/Amendment"
+@attribute [Authorize]
+@using CRS.Models.Workflow
+@using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject IScopeComparisonService ScopeComparisonService
+@inject IProposalAcceptanceService AcceptanceService
+@inject IReserveStudyService ReserveStudyService
+@inject ITenantContext TenantContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Review Amendment - @(reserveStudy?.Community?.Name ?? "Reserve Study")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-6 mb-8">
+    @if (isLoading)
+    {
+        <MudStack AlignItems="AlignItems.Center" Class="py-12">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+            <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-4">Loading amendment details...</MudText>
+        </MudStack>
+    }
+    else if (errorMessage != null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mb-4">
+            @errorMessage
+        </MudAlert>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/Dashboard">
+            Return to Dashboard
+        </MudButton>
+    }
+    else if (scopeComparison == null || reserveStudy == null)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Filled">
+            No pending amendment found for this study.
+        </MudAlert>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/Dashboard" Class="mt-4">
+            Return to Dashboard
+        </MudButton>
+    }
+    else
+    {
+        <!-- Header -->
+        <MudPaper Elevation="0" Class="pa-6 mb-6" Style="background: linear-gradient(135deg, #FF8C00 0%, #FFA726 100%); border-radius: 16px;">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" Style="vertical-align: middle;" />
+                    Proposal Amendment Review
+                </MudText>
+                <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.95);">
+                    @reserveStudy.Community?.Name
+                </MudText>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Amendment Already Processed -->
+        @if (scopeComparison.Status == ScopeComparisonStatus.AmendmentAccepted)
+        {
+            <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="mb-4">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.body1" Style="font-weight: 600;">Amendment Accepted</MudText>
+                    <MudText Typo="Typo.body2">
+                        This amendment was accepted on @(scopeComparison.AmendmentAcceptedAt?.ToString("MMMM dd, yyyy 'at' h:mm tt") ?? "N/A").
+                        The study is now proceeding with the updated scope.
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
+        else if (scopeComparison.Status == ScopeComparisonStatus.AmendmentRejected)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="mb-4">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.body1" Style="font-weight: 600;">Amendment Rejected</MudText>
+                    <MudText Typo="Typo.body2">
+                        This amendment was rejected on @(scopeComparison.AmendmentRejectedAt?.ToString("MMMM dd, yyyy") ?? "N/A").
+                        @if (!string.IsNullOrEmpty(scopeComparison.AmendmentRejectionReason))
+                        {
+                            <text>Reason: @scopeComparison.AmendmentRejectionReason</text>
+                        }
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
+        else if (scopeComparison.Status == ScopeComparisonStatus.AmendmentPending)
+        {
+            <!-- Scope Change Explanation -->
+            <MudPaper Elevation="2" Class="pa-5 mb-4" Style="border-radius: 12px;">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                        <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Class="mr-2" Style="vertical-align: middle;" />
+                        Why This Amendment?
+                    </MudText>
+                    <MudText Typo="Typo.body1">
+                        During the site visit, our specialists identified a difference between the original 
+                        scope estimate and the actual property elements. This amendment reflects the updated 
+                        scope and associated costs.
+                    </MudText>
+
+                    <!-- Variance Summary -->
+                    <MudGrid Spacing="3" Class="mt-2">
+                        <MudItem xs="12" sm="4">
+                            <MudPaper Elevation="1" Class="pa-3" Style="text-align: center; border-radius: 8px; background: #f5f5f5;">
+                                <MudText Typo="Typo.caption" Style="color: #666;">Original Estimate</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Default">@scopeComparison.OriginalTotalCount elements</MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudPaper Elevation="1" Class="pa-3" Style="text-align: center; border-radius: 8px; border: 2px solid #FFA726;">
+                                <MudText Typo="Typo.caption" Style="color: #666;">Variance</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Warning">
+                                    @(scopeComparison.VarianceCount >= 0 ? "+" : "")@scopeComparison.VarianceCount elements
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Warning">
+                                    (@(scopeComparison.VariancePercent >= 0 ? "+" : "")@scopeComparison.VariancePercent.ToString("F1")%)
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudPaper Elevation="1" Class="pa-3" Style="text-align: center; border-radius: 8px; background: #E3F2FD;">
+                                <MudText Typo="Typo.caption" Style="color: #666;">Actual (Site Visit)</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Primary">@scopeComparison.ActualTotalCount elements</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Proposal Comparison -->
+            <MudPaper Elevation="2" Class="pa-5 mb-4" Style="border-radius: 12px;">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                        <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" Style="vertical-align: middle;" />
+                        Proposal Comparison
+                    </MudText>
+
+                    <MudSimpleTable Dense="true" Hover="true" Style="border-radius: 8px;">
+                        <thead>
+                            <tr style="background-color: #f5f5f5;">
+                                <th></th>
+                                <th style="text-align: right;">Original Proposal</th>
+                                <th style="text-align: right;">Amended Proposal</th>
+                                <th style="text-align: right;">Difference</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="font-weight: 600;">Estimated Cost</td>
+                                <td style="text-align: right;">@(originalProposal?.EstimatedCost.ToString("C") ?? "N/A")</td>
+                                <td style="text-align: right; color: #1976D2; font-weight: 600;">@(amendmentProposal?.EstimatedCost.ToString("C") ?? "N/A")</td>
+                                <td style="text-align: right; color: @GetCostDiffColor()">
+                                    @GetCostDiffText()
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600;">Scope</td>
+                                <td style="text-align: right;">@(scopeComparison.OriginalTotalCount) elements</td>
+                                <td style="text-align: right; color: #1976D2; font-weight: 600;">@(scopeComparison.ActualTotalCount) elements</td>
+                                <td style="text-align: right; color: @GetScopeDiffColor()">
+                                    @GetScopeDiffText()
+                                </td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
+
+                    @if (!string.IsNullOrEmpty(amendmentProposal?.AmendmentReason))
+                    {
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                            <MudText Typo="Typo.body2">
+                                <strong>Amendment Reason:</strong> @amendmentProposal.AmendmentReason
+                            </MudText>
+                        </MudAlert>
+                    }
+                </MudStack>
+            </MudPaper>
+
+            <!-- Acceptance Form -->
+            <MudPaper Elevation="2" Class="pa-5 mb-4" Style="border-radius: 12px;">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                        <MudIcon Icon="@Icons.Material.Filled.Draw" Class="mr-2" Style="vertical-align: middle;" />
+                        Your Decision
+                    </MudText>
+
+                    @if (termsTemplate != null)
+                    {
+                        <!-- Terms -->
+                        <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 8px; max-height: 200px; overflow-y: auto; background: #fafafa;">
+                            <MudMarkdown Value="@termsTemplate.TermsText" />
+                        </MudPaper>
+                    }
+
+                    <!-- Typed Signature -->
+                    <MudTextField @bind-Value="typedSignature"
+                                  Label="Full Legal Name (Electronic Signature)"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  Placeholder="Type your full legal name"
+                                  HelperText="Your typed name serves as your electronic signature"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Draw" />
+
+                    <!-- Agreement Checkbox -->
+                    <MudCheckBox @bind-Value="agreedToTerms" Color="Color.Primary" Dense="true">
+                        <MudText Typo="Typo.body2">
+                            I have reviewed and agree to the amended proposal terms and conditions.
+                        </MudText>
+                    </MudCheckBox>
+
+                    <!-- Rejection Reason (shown when rejecting) -->
+                    @if (showRejectionReason)
+                    {
+                        <MudTextField @bind-Value="rejectionReason"
+                                      Label="Reason for Rejection"
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      Required="true"
+                                      Placeholder="Please explain why you are rejecting this amendment..."
+                                      HelperText="This information helps us understand your concerns." />
+                    }
+
+                    <!-- Validation Errors -->
+                    @if (validationErrors.Count > 0)
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true">
+                            <ul class="mb-0 pl-3">
+                                @foreach (var error in validationErrors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </MudAlert>
+                    }
+
+                    <!-- Action Buttons -->
+                    <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd" Class="mt-4">
+                        @if (!showRejectionReason)
+                        {
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Error"
+                                       Size="Size.Large"
+                                       StartIcon="@Icons.Material.Filled.Cancel"
+                                       OnClick="ShowRejectForm"
+                                       Disabled="@isSubmitting">
+                                Reject Amendment
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Default"
+                                       Size="Size.Large"
+                                       OnClick="@(() => showRejectionReason = false)"
+                                       Disabled="@isSubmitting">
+                                Cancel
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Error"
+                                       Size="Size.Large"
+                                       StartIcon="@(isSubmitting ? null : Icons.Material.Filled.Cancel)"
+                                       OnClick="RejectAmendment"
+                                       Disabled="@(isSubmitting || string.IsNullOrWhiteSpace(rejectionReason))">
+                                @if (isSubmitting)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                    <span>Submitting...</span>
+                                }
+                                else
+                                {
+                                    <span>Confirm Rejection</span>
+                                }
+                            </MudButton>
+                        }
+
+                        @if (!showRejectionReason)
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Success"
+                                       Size="Size.Large"
+                                       StartIcon="@(isSubmitting ? null : Icons.Material.Filled.CheckCircle)"
+                                       OnClick="AcceptAmendment"
+                                       Disabled="@(!CanAccept || isSubmitting)">
+                                @if (isSubmitting)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                    <span>Processing...</span>
+                                }
+                                else
+                                {
+                                    <span>Accept Amendment</span>
+                                }
+                            </MudButton>
+                        }
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        }
+
+        <!-- Back to Dashboard -->
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   Href="/Dashboard">
+            Back to Dashboard
+        </MudButton>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    private CRS.Models.ReserveStudy? reserveStudy;
+    private ScopeComparison? scopeComparison;
+    private CRS.Models.Proposal? originalProposal;
+    private CRS.Models.Proposal? amendmentProposal;
+    private AcceptanceTermsTemplate? termsTemplate;
+
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    // Form fields
+    private string typedSignature = "";
+    private bool agreedToTerms = false;
+    private bool showRejectionReason = false;
+    private string rejectionReason = "";
+    private List<string> validationErrors = new();
+
+    private bool CanAccept => !string.IsNullOrWhiteSpace(typedSignature) && agreedToTerms && !isSubmitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+
+            // Load reserve study
+            reserveStudy = await ReserveStudyService.GetReserveStudyByIdAsync(ReserveStudyId);
+            if (reserveStudy == null)
+            {
+                errorMessage = "Reserve study not found.";
+                return;
+            }
+
+            // Load scope comparison
+            scopeComparison = await ScopeComparisonService.GetByStudyIdAsync(ReserveStudyId);
+            if (scopeComparison == null)
+            {
+                errorMessage = "No scope comparison found for this study.";
+                return;
+            }
+
+            // Load comparison with details including proposals
+            var detailedComparison = await ScopeComparisonService.GetByIdWithDetailsAsync(scopeComparison.Id);
+            if (detailedComparison != null)
+            {
+                scopeComparison = detailedComparison;
+                amendmentProposal = detailedComparison.AmendmentProposal;
+                
+                // Get original proposal
+                if (amendmentProposal?.OriginalProposalId != null)
+                {
+                    originalProposal = amendmentProposal.OriginalProposal;
+                }
+                else
+                {
+                    // Use the previous current proposal
+                    originalProposal = reserveStudy.CurrentProposal;
+                }
+            }
+
+            // Load terms template
+            await AcceptanceService.SeedDefaultTermsIfNeededAsync();
+            termsTemplate = await AcceptanceService.GetActiveTermsTemplateAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading amendment details: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowRejectForm()
+    {
+        showRejectionReason = true;
+        rejectionReason = "";
+    }
+
+    private async Task AcceptAmendment()
+    {
+        validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(typedSignature))
+            validationErrors.Add("Please type your full legal name as your electronic signature.");
+
+        if (!agreedToTerms)
+            validationErrors.Add("You must agree to the terms and conditions.");
+
+        if (scopeComparison == null)
+            validationErrors.Add("Amendment information is missing.");
+
+        if (validationErrors.Count > 0)
+            return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                Snackbar.Add("Unable to identify current user.", Severity.Error);
+                return;
+            }
+
+            await ScopeComparisonService.AcceptAmendmentAsync(scopeComparison!.Id, userId);
+
+            Snackbar.Add("Amendment accepted successfully! The study will now proceed.", Severity.Success);
+            
+            // Reload to show updated status
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error accepting amendment: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RejectAmendment()
+    {
+        validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(rejectionReason))
+            validationErrors.Add("Please provide a reason for rejection.");
+
+        if (scopeComparison == null)
+            validationErrors.Add("Amendment information is missing.");
+
+        if (validationErrors.Count > 0)
+            return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                Snackbar.Add("Unable to identify current user.", Severity.Error);
+                return;
+            }
+
+            await ScopeComparisonService.RejectAmendmentAsync(scopeComparison!.Id, userId, rejectionReason);
+
+            Snackbar.Add("Amendment rejected. Our team will be in touch to discuss next steps.", Severity.Info);
+            
+            // Reload to show updated status
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error rejecting amendment: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+            showRejectionReason = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetCostDiffColor()
+    {
+        if (originalProposal == null || amendmentProposal == null) return "#666";
+        var diff = amendmentProposal.EstimatedCost - originalProposal.EstimatedCost;
+        if (diff == 0) return "#666";
+        return diff > 0 ? "#FFA726" : "#4CAF50";
+    }
+
+    private string GetCostDiffText()
+    {
+        if (originalProposal == null || amendmentProposal == null) return "N/A";
+        var diff = amendmentProposal.EstimatedCost - originalProposal.EstimatedCost;
+        if (diff == 0) return "No change";
+        return diff > 0 ? $"+{diff:C}" : diff.ToString("C");
+    }
+
+    private string GetScopeDiffColor()
+    {
+        if (scopeComparison == null) return "#666";
+        if (scopeComparison.VarianceCount == 0) return "#666";
+        return scopeComparison.VarianceCount > 0 ? "#FFA726" : "#42A5F5";
+    }
+
+    private string GetScopeDiffText()
+    {
+        if (scopeComparison == null) return "N/A";
+        if (scopeComparison.VarianceCount == 0) return "No change";
+        return scopeComparison.VarianceCount > 0 
+            ? $"+{scopeComparison.VarianceCount}" 
+            : scopeComparison.VarianceCount.ToString();
+    }
+}

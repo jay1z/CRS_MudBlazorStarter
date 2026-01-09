@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260108074816_InitialCreate")]
+    [Migration("20260109015129_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -3660,6 +3660,22 @@ namespace CRS.Migrations
                     b.Property<int>("ActualCommonElementCount")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("AmendmentAcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("AmendmentAcceptedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AmendmentProposalId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AmendmentRejectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AmendmentRejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<DateTime?>("ComparedAt")
                         .HasColumnType("datetime2");
 
@@ -3703,6 +3719,8 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AmendmentProposalId");
+
                     b.HasIndex("ReserveStudyId");
 
                     b.HasIndex("TenantId", "ReserveStudyId")
@@ -3718,6 +3736,15 @@ namespace CRS.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AmendmentAccepted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("AmendmentAcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("AmendmentRequired")
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("CommunityId")
                         .HasColumnType("uniqueidentifier");
@@ -3744,10 +3771,22 @@ namespace CRS.Migrations
                     b.Property<int?>("PreviousStatus")
                         .HasColumnType("int");
 
+                    b.Property<bool>("ProposalAccepted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ProposalAcceptedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<bool>("SiteVisitComplete")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("SiteVisitCompletedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTimeOffset>("StateChangedAt")
                         .HasColumnType("datetimeoffset");
@@ -4625,11 +4664,17 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.Workflow.ScopeComparison", b =>
                 {
+                    b.HasOne("CRS.Models.Proposal", "AmendmentProposal")
+                        .WithMany()
+                        .HasForeignKey("AmendmentProposalId");
+
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
                         .WithMany()
                         .HasForeignKey("ReserveStudyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AmendmentProposal");
 
                     b.Navigation("ReserveStudy");
                 });

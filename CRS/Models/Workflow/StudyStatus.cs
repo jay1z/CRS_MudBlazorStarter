@@ -126,9 +126,20 @@ namespace CRS.Models.Workflow {
 
         /// <summary>
         /// Site visit data entered into system.
-        /// Transitions: → FundingPlanReady
+        /// Transitions: → FundingPlanReady | AmendmentPending (if scope variance exceeds threshold)
         /// </summary>
         SiteVisitDataEntered = 17,
+
+        // ═══════════════════════════════════════════════════════════════
+        // AMENDMENT PHASE (triggered by scope variance after site visit)
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// Scope variance exceeds threshold - amendment sent to HOA for approval.
+        /// This is a blocking state that requires HOA action before proceeding.
+        /// Transitions: → FundingPlanReady (if accepted) | RequestCancelled (if rejected and no resolution)
+        /// </summary>
+        AmendmentPending = 50,
 
         // ═══════════════════════════════════════════════════════════════
         // FUNDING PLAN PHASE

@@ -78,6 +78,32 @@ namespace CRS.Models.Workflow {
         /// <summary>Previous status (stored for cancellation reversal).</summary>
         public StudyStatus? PreviousStatus { get; set; }
 
+        // ─────────────────────────────────────────────────────────────
+        // Stage Completion Flags (Option 4: Boolean tracking)
+        // These track what has been completed, independent of current stage
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>Whether the initial proposal has been accepted by HOA.</summary>
+        public bool ProposalAccepted { get; set; }
+
+        /// <summary>When the initial proposal was accepted.</summary>
+        public DateTime? ProposalAcceptedAt { get; set; }
+
+        /// <summary>Whether an amendment is required due to scope variance.</summary>
+        public bool AmendmentRequired { get; set; }
+
+        /// <summary>Whether the amendment has been accepted by HOA.</summary>
+        public bool AmendmentAccepted { get; set; }
+
+        /// <summary>When the amendment was accepted.</summary>
+        public DateTime? AmendmentAcceptedAt { get; set; }
+
+        /// <summary>Whether the site visit has been completed.</summary>
+        public bool SiteVisitComplete { get; set; }
+
+        /// <summary>When the site visit was completed.</summary>
+        public DateTime? SiteVisitCompletedAt { get; set; }
+
         /// <summary>Concurrency token.</summary>
         [Timestamp]
         public byte[]? RowVersion { get; set; }

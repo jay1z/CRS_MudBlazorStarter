@@ -530,8 +530,10 @@ namespace CRS.Services {
                             existingElement.NeedsService = element.NeedsService;
                             // Update element details (staff mode data entry)
                             existingElement.Count = element.Count;
+                            existingElement.LastServiced = element.LastServiced;
                             existingElement.UsefulLifeOptionId = element.UsefulLifeOptionId;
                             existingElement.RemainingLifeOptionId = element.RemainingLifeOptionId;
+                            existingElement.MeasurementOptionId = element.MeasurementOptionId;
                             // Update service contact
                             if (element.ServiceContact != null) {
                                 UpdateServiceContact(existingElement, element.ServiceContact);

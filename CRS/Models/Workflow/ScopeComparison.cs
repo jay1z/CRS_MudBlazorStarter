@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using CRS.Models;
 using CRS.Services.Tenant;
 
 namespace CRS.Models.Workflow;
@@ -148,10 +149,34 @@ public class ScopeComparison : ITenantScoped
     public string? OverrideReason { get; set; }
 
     // ─────────────────────────────────────────────────────────────
+    // Amendment tracking
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>The amendment proposal created due to scope variance.</summary>
+    public Guid? AmendmentProposalId { get; set; }
+
+    /// <summary>When the amendment was accepted by HOA.</summary>
+    public DateTime? AmendmentAcceptedAt { get; set; }
+
+    /// <summary>User who accepted the amendment (HOA representative).</summary>
+    public Guid? AmendmentAcceptedByUserId { get; set; }
+
+    /// <summary>When the amendment was rejected by HOA.</summary>
+    public DateTime? AmendmentRejectedAt { get; set; }
+
+    /// <summary>Reason provided by HOA for rejecting the amendment.</summary>
+    [MaxLength(1000)]
+    public string? AmendmentRejectionReason { get; set; }
+
+    // ─────────────────────────────────────────────────────────────
     // Navigation
     // ─────────────────────────────────────────────────────────────
 
     /// <summary>Navigation to the reserve study.</summary>
     [ForeignKey(nameof(ReserveStudyId))]
     public ReserveStudy? ReserveStudy { get; set; }
+
+    /// <summary>Navigation to the amendment proposal.</summary>
+    [ForeignKey(nameof(AmendmentProposalId))]
+    public Proposal? AmendmentProposal { get; set; }
 }
