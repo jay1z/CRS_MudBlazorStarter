@@ -188,15 +188,19 @@
                                 @GetThresholdMessage()
                             </MudText>
                         </MudStack>
-                        <MudStack Row="true" Spacing="2" Class="mt-2">
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="Color.Primary" 
-                                       Size="Size.Small"
-                                       StartIcon="@Icons.Material.Filled.PostAdd"
-                                       Href="@($"/ReserveStudies/{ReserveStudyId}/Proposal?amendment=true")">
-                                Create Proposal Amendment
-                            </MudButton>
-                        </MudStack>
+                        <AuthorizeView Policy="RequireTenantStaff">
+                            <Authorized>
+                                <MudStack Row="true" Spacing="2" Class="mt-2">
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="Color.Primary" 
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.PostAdd"
+                                               Href="@($"/ReserveStudies/{ReserveStudyId}/Proposal?amendment=true")">
+                                        Create Proposal Amendment
+                                    </MudButton>
+                                </MudStack>
+                            </Authorized>
+                        </AuthorizeView>
                     </MudStack>
                 </MudAlert>
             }

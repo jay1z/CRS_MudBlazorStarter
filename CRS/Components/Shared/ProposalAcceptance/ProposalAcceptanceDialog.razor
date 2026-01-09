@@ -1,4 +1,4 @@
-﻿@using CRS.Models
+@using CRS.Models
 @using CRS.Services
 @using CRS.Services.Interfaces
 @using Microsoft.AspNetCore.Components.Authorization
@@ -56,10 +56,10 @@
                             <MudText Typo="Typo.body2">
                                 <strong>Community:</strong> @ReserveStudy.Community?.Name
                             </MudText>
-                            @if (ReserveStudy.Proposal != null)
+                            @if (ReserveStudy.CurrentProposal != null)
                             {
                                 <MudText Typo="Typo.body2">
-                                    <strong>Estimated Cost:</strong> @ReserveStudy.Proposal.EstimatedCost.ToString("C")
+                                    <strong>Estimated Cost:</strong> @ReserveStudy.CurrentProposal.EstimatedCost.ToString("C")
                                 </MudText>
                             }
                         </MudStack>
@@ -216,7 +216,7 @@
 
     private async Task DownloadProposalPdf()
     {
-        if (ReserveStudy?.Proposal == null)
+        if (ReserveStudy?.CurrentProposal == null)
         {
             Snackbar.Add("No proposal available to download.", Severity.Warning);
             return;
@@ -292,7 +292,7 @@
             var acceptance = new ProposalAcceptance
             {
                 ReserveStudyId = ReserveStudy!.Id,
-                ProposalId = ProposalId ?? ReserveStudy.Proposal?.Id,
+                ProposalId = ProposalId ?? ReserveStudy.CurrentProposal?.Id,
                 AcceptedByUserId = userId,
                 TypedSignature = typedSignature.Trim(),
                 AcceptorTitle = string.IsNullOrWhiteSpace(acceptorTitle) ? null : acceptorTitle.Trim(),

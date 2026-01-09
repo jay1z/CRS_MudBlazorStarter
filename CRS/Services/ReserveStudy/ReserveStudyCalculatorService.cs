@@ -115,7 +115,7 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
                 .ThenInclude(e => e.UsefulLifeOption)
             .Include(s => s.ReserveStudyAdditionalElements!)
                 .ThenInclude(e => e.RemainingLifeOption)
-            .Include(s => s.Proposal)
+            .Include(s => s.CurrentProposal)
             .FirstOrDefaultAsync(s => s.Id == studyId);
 
         if (study == null)

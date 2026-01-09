@@ -44,13 +44,6 @@ namespace CRS.Models {
         [ForeignKey("CurrentProposal")]
         public Guid? CurrentProposalId { get; set; }
         public Proposal? CurrentProposal { get; set; }
-        
-        /// <summary>
-        /// Convenience property that returns the current active proposal.
-        /// For backward compatibility with code that expects study.Proposal.
-        /// </summary>
-        [NotMapped]
-        public Proposal? Proposal => CurrentProposal ?? Proposals?.OrderByDescending(p => p.AmendmentNumber).ThenByDescending(p => p.DateCreated).FirstOrDefault();
 
         public FinancialInfo? FinancialInfo { get; set; }
 

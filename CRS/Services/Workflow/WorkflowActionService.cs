@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CRS.Data;
 using CRS.Models;
 using CRS.Models.Workflow;
@@ -366,7 +366,7 @@ public class WorkflowActionService : IWorkflowActionService
         await using var db = await _dbFactory.CreateDbContextAsync();
         var study = await db.ReserveStudies
             .Include(s => s.StudyRequest)
-            .Include(s => s.Proposal)
+            .Include(s => s.CurrentProposal)
             .Include(s => s.FinancialInfo)
             .FirstOrDefaultAsync(s => s.Id == studyId);
 
@@ -402,15 +402,15 @@ public class WorkflowActionService : IWorkflowActionService
             
             // Proposal validations - use existing properties
             StageValidation.ProposalDocumentAttached => 
-                (study.Proposal != null, 
+                (study.CurrentProposal != null, 
                  "Proposal must be created."),
                  
             StageValidation.ProposalReviewed => 
-                (study.Proposal != null, 
+                (study.CurrentProposal != null, 
                  "Proposal must exist."),
                  
             StageValidation.ESignEnvelopeCreated => 
-                (study.Proposal?.DateSent != null, 
+                (study.CurrentProposal?.DateSent != null, 
                  "Proposal must be sent."),
                  
             StageValidation.SignedAcceptanceReceived => 

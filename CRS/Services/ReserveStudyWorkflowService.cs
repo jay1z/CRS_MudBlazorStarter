@@ -238,6 +238,68 @@ namespace CRS.Services {
             return true;
         }
 
+        public async Task<bool> AcceptProposalAmendmentAsync(Guid reserveStudyId, string acceptedBy) {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var study = await db.ReserveStudies
+                .Include(s => s.CurrentProposal)
+                .Include(s => s.Community)
+                .Include(s => s.User)
+                .Include(s => s.Contact)
+                .Include(s => s.PropertyManager)
+                .FirstOrDefaultAsync(s => s.Id == reserveStudyId);
+            
+            if (study?.CurrentProposal == null) return false;
+            
+            // Verify this is actually an amendment
+            if (!study.CurrentProposal.IsAmendment) {
+                _logger.LogWarning("AcceptProposalAmendmentAsync called for non-amendment proposal on study {StudyId}", reserveStudyId);
+                return false;
+            }
+
+            // Mark the proposal as approved/accepted
+            study.CurrentProposal.IsApproved = true;
+            study.CurrentProposal.ApprovedBy = acceptedBy;
+            study.CurrentProposal.DateApproved = DateTime.UtcNow;
+
+            // Get the workflow state
+            var sr = await EnsureStudyRequestAsync(db, study);
+            var from = sr.CurrentStatus;
+            
+            // For amendments, we need to transition through ProposalAccepted first
+            // then skip directly to FundingPlanReady
+            var proposalAcceptedOk = await _engine.TryTransitionAsync(sr, StudyStatus.ProposalAccepted, acceptedBy);
+            if (!proposalAcceptedOk) {
+                _logger.LogWarning("Failed to transition to ProposalAccepted for amendment on study {StudyId}", reserveStudyId);
+                return false;
+            }
+            
+            await AppendHistoryAsync(db, sr, from, StudyStatus.ProposalAccepted, acceptedBy);
+            
+            // Now skip directly to FundingPlanReady (bypassing FinancialInfo and SiteVisit phases)
+            // This is allowed for amendments since Financial Info and Site Visit were already completed
+            var fundingPlanOk = await _engine.TryTransitionAsync(sr, StudyStatus.FundingPlanReady, acceptedBy);
+            if (!fundingPlanOk) {
+                _logger.LogWarning("Failed to transition to FundingPlanReady for amendment on study {StudyId}. Current status: {Status}", 
+                    reserveStudyId, sr.CurrentStatus);
+                // Even if this fails, we've at least accepted the proposal
+            } else {
+                await AppendHistoryAsync(db, sr, StudyStatus.ProposalAccepted, StudyStatus.FundingPlanReady, acceptedBy);
+            }
+
+            study.DateModified = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Amendment accepted for study {StudyId}. Transitioned from {From} to {To} (skipping Financial Info and Site Visit phases)",
+                reserveStudyId, from, sr.CurrentStatus);
+
+            // Fire the proposal approved event
+            await _dispatcher.Broadcast(new ProposalApprovedEvent(study, study.CurrentProposal));
+            
+            return true;
+        }
+
         public async Task<bool> ResendProposalEmailAsync(Guid reserveStudyId) {
             await using var db = await _dbFactory.CreateDbContextAsync();
 
@@ -440,7 +502,7 @@ namespace CRS.Services {
             await using var db = await _dbFactory.CreateDbContextAsync();
             var study = await db.ReserveStudies
                 .Include(s => s.Community)
-                .Include(s => s.Proposal)
+                .Include(s => s.CurrentProposal)
                 .Include(s => s.User)
                 .Include(s => s.Contact)
                 .Include(s => s.PropertyManager)
@@ -454,16 +516,16 @@ namespace CRS.Services {
             study.DateModified = DateTime.UtcNow;
             
             // Set DateSent when transitioning to ProposalSent
-            if (targetStatus == StudyStatus.ProposalSent && study.Proposal != null) {
-                study.Proposal.DateSent = DateTime.UtcNow;
+            if (targetStatus == StudyStatus.ProposalSent && study.CurrentProposal != null) {
+                study.CurrentProposal.DateSent = DateTime.UtcNow;
             }
             
             await AppendHistoryAsync(db, sr, from, targetStatus, actor ?? GetActor());
             await db.SaveChangesAsync();
             
             // Fire events for specific transitions
-            if (targetStatus == StudyStatus.ProposalSent && study.Proposal != null) {
-                await _dispatcher.Broadcast(new ProposalSentEvent(study, study.Proposal));
+            if (targetStatus == StudyStatus.ProposalSent && study.CurrentProposal != null) {
+                await _dispatcher.Broadcast(new ProposalSentEvent(study, study.CurrentProposal));
             }
             
             // Trigger scope comparison when site visit data entry is complete

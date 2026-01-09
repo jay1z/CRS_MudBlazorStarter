@@ -338,7 +338,7 @@
                                                    OnClick="SendAccessTokenLink">
                                             Send Access Token
                                         </MudButton>
-                                        @if (reserveStudy?.Proposal != null && reserveStudy?.CurrentStatus < StudyStatus.ProposalSent) {
+                                        @if (reserveStudy?.CurrentProposal != null && reserveStudy?.CurrentStatus < StudyStatus.ProposalSent) {
                                             <MudDivider Class="my-2" />
                                             <MudButton Variant="Variant.Filled" 
                                                        Color="Color.Primary" 
@@ -473,7 +473,7 @@
                                             
 
                                             @* Create Proposal - when no proposal exists and ProposalCreated is allowed *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalCreated) && reserveStudy?.Proposal == null) {
+                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalCreated) && reserveStudy?.CurrentProposal == null) {
                                                 <AuthorizeView Policy="RequireTenantStaff">
                                                     <Authorized>
                                                         <MudButton Variant="Variant.Filled" 
@@ -765,7 +765,7 @@
 
 
                                     @* Proposal Details - only show before financial info stage *@
-                                    @if (reserveStudy?.Proposal != null && currentStatus < StudyStatus.FinancialInfoRequested) {
+                                    @if (reserveStudy?.CurrentProposal != null && currentStatus < StudyStatus.FinancialInfoRequested) {
                                         <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px; border-left: 4px solid #10b981;">
                                             <MudCardContent>
                                                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
@@ -775,18 +775,18 @@
                                                 <MudGrid Spacing="3">
                                                     <MudItem xs="12" md="6">
                                                         <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Scope</MudText>
-                                                        <MudText Typo="Typo.body1">@reserveStudy.Proposal.ProposalScope</MudText>
+                                                        <MudText Typo="Typo.body1">@reserveStudy.CurrentProposal.ProposalScope</MudText>
                                                     </MudItem>
                                                     <MudItem xs="12" md="6">
                                                         <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Estimated Cost</MudText>
                                                         <MudText Typo="Typo.h5" Style="color: #10b981; font-weight: 700;">
-                                                            $@reserveStudy.Proposal.EstimatedCost.ToString("N2")
+                                                            $@reserveStudy.CurrentProposal.EstimatedCost.ToString("N2")
                                                         </MudText>
                                                     </MudItem>
-                                                    @if (!string.IsNullOrEmpty(reserveStudy.Proposal.Comments)) {
+                                                    @if (!string.IsNullOrEmpty(reserveStudy.CurrentProposal.Comments)) {
                                                         <MudItem xs="12">
                                                             <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Comments</MudText>
-                                                            <MudText Typo="Typo.body2">@reserveStudy.Proposal.Comments</MudText>
+                                                            <MudText Typo="Typo.body2">@reserveStudy.CurrentProposal.Comments</MudText>
                                                         </MudItem>
                                                     }
                                                 </MudGrid>
@@ -1393,7 +1393,7 @@ private bool hasValidAcceptance = false;
 
         var parameters = new DialogParameters {
             ["ReserveStudy"] = reserveStudy,
-            ["ProposalId"] = reserveStudy.Proposal?.Id
+            ["ProposalId"] = reserveStudy.CurrentProposal?.Id
         };
 
         var options = new DialogOptions {
@@ -1409,16 +1409,30 @@ private bool hasValidAcceptance = false;
         if (!result.Canceled) {
             hasValidAcceptance = true;
     
+            // Check if this is an amendment - amendments skip Financial Info and Site Visit phases
+            var isAmendment = reserveStudy.CurrentProposal?.IsAmendment ?? false;
+            
             // Advance workflow to ProposalAccepted if applicable
             if (allowedNextStudy.Contains(StudyStatus.ProposalAccepted)) {
-                await ApplyTransition(StudyStatus.ProposalAccepted);
-                
-                // Automatically request financial information after proposal acceptance
-                await RequestFinancialInfoAsync(Id);
-                Snackbar.Add("Proposal accepted! Financial information request sent to client.", Severity.Success);
-                
-                // Reload to reflect the new FinancialInfoRequested status
-                await ReloadAfterChange();
+                if (isAmendment) {
+                    // For amendments, use the special acceptance flow that skips to FundingPlanReady
+                    var currentUser = UserState.CurrentUser?.UserName ?? "Unknown";
+                    var success = await WorkflowService.AcceptProposalAmendmentAsync(Id, currentUser);
+                    
+                    if (success) {
+                        Snackbar.Add("Amendment accepted! Proceeding to Funding Plan phase (Financial Info and Site Visit already completed).", Severity.Success);
+                    } else {
+                        Snackbar.Add("Amendment accepted, but workflow transition failed. Please check the study status.", Severity.Warning);
+                    }
+                    
+                    await ReloadAfterChange();
+                } else {
+                    // Standard proposal acceptance - request financial information
+                    await ApplyTransition(StudyStatus.ProposalAccepted);
+                    await RequestFinancialInfoAsync(Id);
+                    Snackbar.Add("Proposal accepted! Financial information request sent to client.", Severity.Success);
+                    await ReloadAfterChange();
+                }
             } else {
                 // Still reload the page to show updated acceptance status
                 await ReloadAfterChange();
@@ -1499,8 +1513,8 @@ private bool hasValidAcceptance = false;
     private DateTime? GetFallbackDate(StudyStatus status) {
         // Fallback dates for key milestones only
         if (status == StudyStatus.RequestCreated) return reserveStudy?.DateCreated;
-        if (status == StudyStatus.ProposalCreated || status == StudyStatus.ProposalSent) return reserveStudy?.Proposal?.DateSent;
-        if (status == StudyStatus.ProposalApproved || status == StudyStatus.ProposalAccepted) return reserveStudy?.Proposal?.DateApproved;
+        if (status == StudyStatus.ProposalCreated || status == StudyStatus.ProposalSent) return reserveStudy?.CurrentProposal?.DateSent;
+        if (status == StudyStatus.ProposalApproved || status == StudyStatus.ProposalAccepted) return reserveStudy?.CurrentProposal?.DateApproved;
         if (status == StudyStatus.FinancialInfoRequested) return reserveStudy?.FinancialInfo?.DateCreated;
         if (status == StudyStatus.FinancialInfoSubmitted) return reserveStudy?.FinancialInfo?.DateSubmitted;
         if (status == StudyStatus.FinancialInfoReviewed) return reserveStudy?.FinancialInfo?.DateReviewed;
@@ -1532,7 +1546,7 @@ private bool hasValidAcceptance = false;
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
-                .Include(rs => rs.Proposal)
+                .Include(rs => rs.CurrentProposal)
                 .Include(rs => rs.FinancialInfo)
                 .Include(rs => rs.StudyRequest)
                 .AsSplitQuery()
@@ -1581,7 +1595,7 @@ private bool hasValidAcceptance = false;
         }
     }
 
-    private async Task LoadElementsDataIfNeeded() {
+   private async Task LoadElementsDataIfNeeded() {
         if (elementsLoaded || isElementsLoading || reserveStudy == null)
             return;
 
@@ -1775,12 +1789,12 @@ private bool hasValidAcceptance = false;
     }
 
     private async Task ApproveProposalAsync(Guid studyId) {
-        if (reserveStudy?.Proposal == null) return;
+        if (reserveStudy?.CurrentProposal == null) return;
 
         var success = await ExecuteActionAsync(
             async () => {
                 var currentUser = UserState.CurrentUser?.UserName ?? "system";
-                return await WorkflowService.ApproveProposalAsync(reserveStudy.Proposal.Id, currentUser);
+                return await WorkflowService.ApproveProposalAsync(reserveStudy.CurrentProposal.Id, currentUser);
             },
             "Proposal approved successfully",
             "Failed to approve proposal"
@@ -1852,7 +1866,7 @@ private bool hasValidAcceptance = false;
         if (reserveStudy == null) return;
 
         // If no proposal exists yet, navigate to the proposal creation page
-        if (reserveStudy.Proposal == null) {
+        if (reserveStudy.CurrentProposal == null) {
             NavigationManager.NavigateTo($"/ReserveStudies/{studyId}/Proposal");
         } else {
             // If proposal already exists, try to transition to ProposalPendingESign

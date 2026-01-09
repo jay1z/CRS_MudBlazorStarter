@@ -838,7 +838,7 @@ namespace CRS.Services {
                 .Include(rs => rs.Specialist)
                 .Include(rs => rs.User)
                 .Include(rs => rs.FinancialInfo)
-                .Include(rs => rs.Proposal)
+                .Include(rs => rs.CurrentProposal)
                 .Include(rs => rs.ReserveStudyBuildingElements!).ThenInclude(be => be.BuildingElement)
                 .Include(rs => rs.ReserveStudyBuildingElements!).ThenInclude(be => be.ServiceContact)
                 .Include(rs => rs.ReserveStudyCommonElements!).ThenInclude(be => be.CommonElement)

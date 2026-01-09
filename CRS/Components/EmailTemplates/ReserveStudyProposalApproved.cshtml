@@ -5,9 +5,9 @@
     var baseUrl = string.IsNullOrEmpty(Model.BaseUrl) ? "" : Model.BaseUrl;
     var detailsUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/Details";
     var communityName = Model.ReserveStudy?.Community?.Name ?? "Your Community";
-    var proposalCost = Model.ReserveStudy?.Proposal?.EstimatedCost.ToString("C") ?? "TBD";
-    var approvedBy = Model.ReserveStudy?.Proposal?.ApprovedBy ?? "Management";
-    var approvedDate = Model.ReserveStudy?.Proposal?.DateApproved?.ToString("MMMM d, yyyy") ?? DateTime.Now.ToString("MMMM d, yyyy");
+    var proposalCost = Model.ReserveStudy?.CurrentProposal?.EstimatedCost.ToString("C") ?? "TBD";
+    var approvedBy = Model.ReserveStudy?.CurrentProposal?.ApprovedBy ?? "Management";
+    var approvedDate = Model.ReserveStudy?.CurrentProposal?.DateApproved?.ToString("MMMM d, yyyy") ?? DateTime.Now.ToString("MMMM d, yyyy");
 }
 
 <!DOCTYPE html>

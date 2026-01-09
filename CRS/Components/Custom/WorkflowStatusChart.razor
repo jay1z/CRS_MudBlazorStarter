@@ -1,4 +1,4 @@
-@using CRS.Models
+﻿@using CRS.Models
 @using CRS.Models.Workflow
 @using MudBlazor
 @inject IJSRuntime JSRuntime
@@ -96,12 +96,12 @@
         AddWorkflowStatusData("Request Created", startDate, currentStatus >= StudyStatus.ProposalCreated ? ReserveStudy.DateModified ?? today : today);
 
         if (currentStatus >= StudyStatus.ProposalCreated) {
-            var proposalDate = ReserveStudy.Proposal?.DateCreated ?? ReserveStudy.DateModified ?? startDate.AddDays(7);
-            AddWorkflowStatusData("Proposal Phase", proposalDate, currentStatus >= StudyStatus.ProposalAccepted ? ReserveStudy.Proposal?.DateApproved ?? today : today);
+            var proposalDate = ReserveStudy.CurrentProposal?.DateCreated ?? ReserveStudy.DateModified ?? startDate.AddDays(7);
+            AddWorkflowStatusData("Proposal Phase", proposalDate, currentStatus >= StudyStatus.ProposalAccepted ? ReserveStudy.CurrentProposal?.DateApproved ?? today : today);
         }
 
         if (currentStatus >= StudyStatus.ProposalAccepted) {
-            var financialInfoDate = currentStatus >= StudyStatus.FinancialInfoRequested ? ReserveStudy.FinancialInfo?.DateCreated ?? ReserveStudy.Proposal?.DateApproved?.AddDays(3) ?? startDate.AddDays(14) : startDate.AddDays(14);
+            var financialInfoDate = currentStatus >= StudyStatus.FinancialInfoRequested ? ReserveStudy.FinancialInfo?.DateCreated ?? ReserveStudy.CurrentProposal?.DateApproved?.AddDays(3) ?? startDate.AddDays(14) : startDate.AddDays(14);
             AddWorkflowStatusData("Financial Information", financialInfoDate, currentStatus >= StudyStatus.FinancialInfoSubmitted ? ReserveStudy.FinancialInfo?.DateReviewed ?? today : today);
         }
 

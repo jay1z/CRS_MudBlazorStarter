@@ -269,7 +269,7 @@
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
-                .Include(rs => rs.Proposal)
+                .Include(rs => rs.CurrentProposal)
                 .FirstOrDefaultAsync(rs => rs.Id == studyId);
 
             if (reserveStudy != null) {
@@ -281,8 +281,8 @@
                 proposal.PaymentTerms = "50% due upon acceptance, remainder due upon completion of the study";
 
                 // Check if we're creating an amendment
-                if (AmendmentQueryParam == true && reserveStudy.Proposal != null) {
-                    originalProposal = reserveStudy.Proposal;
+                if (AmendmentQueryParam == true && reserveStudy.CurrentProposal != null) {
+                    originalProposal = reserveStudy.CurrentProposal;
                     
                     // Calculate next amendment number
                     var existingAmendmentCount = await context.Proposals
@@ -300,9 +300,9 @@
                     proposal.IncludeFundingPlans = originalProposal.IncludeFundingPlans;
                     proposal.AmendmentNumber = existingAmendmentCount + 1;
                     proposal.AmendmentReason = "Scope changed after site visit - actual element count differs from original estimate.";
-                } else if (reserveStudy.Proposal != null) {
+                } else if (reserveStudy.CurrentProposal != null) {
                     // Editing existing proposal (not amendment)
-                    var existing = reserveStudy.Proposal;
+                    var existing = reserveStudy.CurrentProposal;
                     proposal.ProposalDate = existing.ProposalDate;
                     proposal.ProposalScope = existing.ProposalScope;
                     proposal.EstimatedCost = existing.EstimatedCost;

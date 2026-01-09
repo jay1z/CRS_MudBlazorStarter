@@ -448,6 +448,28 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TenantScopeChangeSettings",
+                columns: table => new
+                {
+                    TenantId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Mode = table.Column<int>(type: "int", nullable: false),
+                    VarianceThresholdPercent = table.Column<decimal>(type: "decimal(5,2)", nullable: false),
+                    VarianceThresholdCount = table.Column<int>(type: "int", nullable: false),
+                    RequireHoaApproval = table.Column<bool>(type: "bit", nullable: false),
+                    UseTwoPhaseProposal = table.Column<bool>(type: "bit", nullable: false),
+                    AutoNotifyHoaOnVariance = table.Column<bool>(type: "bit", nullable: false),
+                    VarianceNotificationTemplateId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    AllowStaffOverride = table.Column<bool>(type: "bit", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenantScopeChangeSettings", x => x.TenantId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Communities",
                 columns: table => new
                 {
@@ -891,6 +913,36 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TenantReserveSettings",
+                columns: table => new
+                {
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    DefaultProjectionYears = table.Column<int>(type: "int", nullable: false),
+                    DefaultInflationRate = table.Column<decimal>(type: "decimal(8,6)", nullable: false),
+                    DefaultInterestRateAnnual = table.Column<decimal>(type: "decimal(8,6)", nullable: false),
+                    DefaultInterestModel = table.Column<int>(type: "int", nullable: false),
+                    DefaultContributionStrategy = table.Column<int>(type: "int", nullable: false),
+                    DefaultInitialAnnualContribution = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DefaultContributionEscalationRate = table.Column<decimal>(type: "decimal(8,6)", nullable: false),
+                    DefaultContributionFrequency = table.Column<int>(type: "int", nullable: false),
+                    DefaultContributionTiming = table.Column<int>(type: "int", nullable: false),
+                    DefaultExpenditureTiming = table.Column<int>(type: "int", nullable: false),
+                    DefaultRoundingPolicy = table.Column<int>(type: "int", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenantReserveSettings", x => x.TenantId);
+                    table.ForeignKey(
+                        name: "FK_TenantReserveSettings_Tenants_TenantId",
+                        column: x => x.TenantId,
+                        principalTable: "Tenants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserRoleAssignments",
                 columns: table => new
                 {
@@ -948,76 +1000,6 @@ namespace CRS.Migrations
                         principalTable: "Contacts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ReserveStudies",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    SpecialistUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    RequestedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    PointOfContactType = table.Column<int>(type: "int", nullable: false),
-                    ContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    PropertyManagerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
-                    IsComplete = table.Column<bool>(type: "bit", nullable: false),
-                    DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    TenantId = table.Column<int>(type: "int", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
-                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    StudyDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    FiscalYearEnd = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CurrentReserveFunds = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
-                    MonthlyReserveContribution = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
-                    AnnualInflationRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
-                    AnnualInterestRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
-                    StudyType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PreparedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ReserveStudies", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ReserveStudies_AspNetUsers_ApplicationUserId",
-                        column: x => x.ApplicationUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_ReserveStudies_AspNetUsers_RequestedByUserId",
-                        column: x => x.RequestedByUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_ReserveStudies_AspNetUsers_SpecialistUserId",
-                        column: x => x.SpecialistUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_ReserveStudies_Communities_CommunityId",
-                        column: x => x.CommunityId,
-                        principalTable: "Communities",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_ReserveStudies_Contacts_ContactId",
-                        column: x => x.ContactId,
-                        principalTable: "Contacts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_ReserveStudies_PropertyManagers_PropertyManagerId",
-                        column: x => x.PropertyManagerId,
-                        principalTable: "PropertyManagers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1080,12 +1062,6 @@ namespace CRS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_CalendarEvents", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_CalendarEvents_ReserveStudies_ReserveStudyId",
-                        column: x => x.ReserveStudyId,
-                        principalTable: "ReserveStudies",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1124,11 +1100,6 @@ namespace CRS.Migrations
                         column: x => x.CommunityId,
                         principalTable: "Communities",
                         principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Documents_ReserveStudies_ReserveStudyId",
-                        column: x => x.ReserveStudyId,
-                        principalTable: "ReserveStudies",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -1164,11 +1135,6 @@ namespace CRS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_EmailLogs", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_EmailLogs_ReserveStudies_ReserveStudyId",
-                        column: x => x.ReserveStudyId,
-                        principalTable: "ReserveStudies",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -1178,6 +1144,32 @@ namespace CRS.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     TenantId = table.Column<int>(type: "int", nullable: false),
+                    JanuaryFirstReserveBalance = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    DecemberThirtyFirstReserveBalance = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    BudgetedContributionLastYear = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    BudgetedContributionCurrentYear = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    BudgetedContributionNextYear = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    OperatingBudgetCurrentYear = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    OperatingBudgetNextYear = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    TotalNumberOfUnits = table.Column<int>(type: "int", nullable: true),
+                    AnnualMeetingMonth = table.Column<int>(type: "int", nullable: true),
+                    AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LoanAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    LoanBalanceRemaining = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    LoanExpectedYearComplete = table.Column<int>(type: "int", nullable: true),
+                    SpecialAssessmentAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    SpecialAssessmentBalanceRemaining = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    SpecialAssessmentExpectedYearComplete = table.Column<int>(type: "int", nullable: true),
+                    PlannedProjects = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PropertyInsuranceDeductible = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    InterestRateOnReserveFunds = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: true),
+                    BuildingRoofSidingInfo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ComponentReplacementDates = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SidingCalculationPreference = table.Column<int>(type: "int", nullable: true),
+                    AcknowledgementAccepted = table.Column<bool>(type: "bit", nullable: false),
+                    CommunityNameOnAcknowledgment = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PresidentSignature = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AcknowledgmentSignatureDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CurrentReserveFundBalance = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     AnnualContribution = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
                     ProjectedAnnualExpenses = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
@@ -1196,12 +1188,6 @@ namespace CRS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_FinancialInfos", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_FinancialInfos_ReserveStudies_ReserveStudyId",
-                        column: x => x.ReserveStudyId,
-                        principalTable: "ReserveStudies",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1263,12 +1249,50 @@ namespace CRS.Migrations
                         column: x => x.SupersedesReportId,
                         principalTable: "GeneratedReports",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProposalAcceptances",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    AcceptedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TypedSignature = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    AcceptorTitle = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    AcceptorOrganization = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    IpAddress = table.Column<string>(type: "nvarchar(45)", maxLength: 45, nullable: true),
+                    UserAgent = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    TermsVersion = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    AcceptanceTermsTemplateId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    TermsContentHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    AcceptedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CheckboxConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    AcceptorEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    IsValid = table.Column<bool>(type: "bit", nullable: false),
+                    RevocationReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    RevokedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProposalAcceptances", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_GeneratedReports_ReserveStudies_ReserveStudyId",
-                        column: x => x.ReserveStudyId,
-                        principalTable: "ReserveStudies",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        name: "FK_ProposalAcceptances_AcceptanceTermsTemplates_AcceptanceTermsTemplateId",
+                        column: x => x.AcceptanceTermsTemplateId,
+                        principalTable: "AcceptanceTermsTemplates",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ProposalAcceptances_AspNetUsers_AcceptedByUserId",
+                        column: x => x.AcceptedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -1293,6 +1317,10 @@ namespace CRS.Migrations
                     IncludeDigitalDelivery = table.Column<bool>(type: "bit", nullable: false),
                     IncludeComponentInventory = table.Column<bool>(type: "bit", nullable: false),
                     IncludeFundingPlans = table.Column<bool>(type: "bit", nullable: false),
+                    IsAmendment = table.Column<bool>(type: "bit", nullable: false),
+                    OriginalProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    AmendmentNumber = table.Column<int>(type: "int", nullable: false),
+                    AmendmentReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1302,11 +1330,87 @@ namespace CRS.Migrations
                 {
                     table.PrimaryKey("PK_Proposals", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Proposals_ReserveStudies_ReserveStudyId",
-                        column: x => x.ReserveStudyId,
-                        principalTable: "ReserveStudies",
+                        name: "FK_Proposals_Proposals_OriginalProposalId",
+                        column: x => x.OriginalProposalId,
+                        principalTable: "Proposals",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ReserveStudies",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SpecialistUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RequestedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PointOfContactType = table.Column<int>(type: "int", nullable: false),
+                    ContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PropertyManagerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CurrentProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
+                    IsComplete = table.Column<bool>(type: "bit", nullable: false),
+                    DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SiteVisitDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
+                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StudyDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FiscalYearEnd = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CurrentReserveFunds = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    MonthlyReserveContribution = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    AnnualInflationRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    AnnualInterestRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    StudyType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PreparedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ReserveStudies", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ReserveStudies_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ReserveStudies_AspNetUsers_RequestedByUserId",
+                        column: x => x.RequestedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ReserveStudies_AspNetUsers_SpecialistUserId",
+                        column: x => x.SpecialistUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ReserveStudies_Communities_CommunityId",
+                        column: x => x.CommunityId,
+                        principalTable: "Communities",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ReserveStudies_Contacts_ContactId",
+                        column: x => x.ContactId,
+                        principalTable: "Contacts",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ReserveStudies_PropertyManagers_PropertyManagerId",
+                        column: x => x.PropertyManagerId,
+                        principalTable: "PropertyManagers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ReserveStudies_Proposals_CurrentProposalId",
+                        column: x => x.CurrentProposalId,
+                        principalTable: "Proposals",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -1478,6 +1582,80 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ReserveStudyScenarios",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    StartYear = table.Column<int>(type: "int", nullable: false),
+                    StartingBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    OverrideProjectionYears = table.Column<int>(type: "int", nullable: true),
+                    OverrideInflationRate = table.Column<decimal>(type: "decimal(8,6)", nullable: true),
+                    OverrideInterestRateAnnual = table.Column<decimal>(type: "decimal(8,6)", nullable: true),
+                    OverrideInterestModel = table.Column<int>(type: "int", nullable: true),
+                    OverrideContributionStrategy = table.Column<int>(type: "int", nullable: true),
+                    OverrideInitialAnnualContribution = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    OverrideContributionEscalationRate = table.Column<decimal>(type: "decimal(8,6)", nullable: true),
+                    OverrideContributionFrequency = table.Column<int>(type: "int", nullable: true),
+                    OverrideContributionTiming = table.Column<int>(type: "int", nullable: true),
+                    OverrideExpenditureTiming = table.Column<int>(type: "int", nullable: true),
+                    OverrideRoundingPolicy = table.Column<int>(type: "int", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ModifiedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ReserveStudyScenarios", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ReserveStudyScenarios_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ScopeComparisons",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OriginalBuildingElementCount = table.Column<int>(type: "int", nullable: false),
+                    OriginalCommonElementCount = table.Column<int>(type: "int", nullable: false),
+                    OriginalAdditionalElementCount = table.Column<int>(type: "int", nullable: false),
+                    OriginalCapturedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ActualBuildingElementCount = table.Column<int>(type: "int", nullable: false),
+                    ActualCommonElementCount = table.Column<int>(type: "int", nullable: false),
+                    ActualAdditionalElementCount = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    ComparedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ComparedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    OverriddenByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    OverriddenAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    OverrideReason = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ScopeComparisons", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ScopeComparisons_ReserveStudies_ReserveStudyId",
+                        column: x => x.ReserveStudyId,
+                        principalTable: "ReserveStudies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "SiteVisitPhotos",
                 columns: table => new
                 {
@@ -1583,6 +1761,10 @@ namespace CRS.Migrations
                     TenantId = table.Column<int>(type: "int", nullable: false),
                     CommunityId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CurrentStatus = table.Column<int>(type: "int", nullable: false),
+                    EstimatedBuildingElementCount = table.Column<int>(type: "int", nullable: true),
+                    EstimatedCommonElementCount = table.Column<int>(type: "int", nullable: true),
+                    EstimatedAdditionalElementCount = table.Column<int>(type: "int", nullable: true),
+                    ElementEstimateNotes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     StateChangedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
@@ -1647,56 +1829,50 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ProposalAcceptances",
+                name: "ReserveScenarioComponents",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     TenantId = table.Column<int>(type: "int", nullable: false),
-                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    AcceptedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TypedSignature = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    AcceptorTitle = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    AcceptorOrganization = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    IpAddress = table.Column<string>(type: "nvarchar(45)", maxLength: 45, nullable: true),
-                    UserAgent = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    TermsVersion = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    AcceptanceTermsTemplateId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    TermsContentHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
-                    AcceptedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CheckboxConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    AcceptorEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Notes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    IsValid = table.Column<bool>(type: "bit", nullable: false),
-                    RevocationReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    RevokedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    ScenarioId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Category = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Method = table.Column<int>(type: "int", nullable: false),
+                    CurrentCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    InflationRateOverride = table.Column<decimal>(type: "decimal(8,6)", nullable: true),
+                    LastServiceYear = table.Column<int>(type: "int", nullable: true),
+                    UsefulLifeYears = table.Column<int>(type: "int", nullable: true),
+                    RemainingLifeOverrideYears = table.Column<int>(type: "int", nullable: true),
+                    CycleYears = table.Column<int>(type: "int", nullable: true),
+                    AnnualCostOverride = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    LinkedBuildingElementId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    LinkedCommonElementId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ProposalAcceptances", x => x.Id);
+                    table.PrimaryKey("PK_ReserveScenarioComponents", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ProposalAcceptances_AcceptanceTermsTemplates_AcceptanceTermsTemplateId",
-                        column: x => x.AcceptanceTermsTemplateId,
-                        principalTable: "AcceptanceTermsTemplates",
-                        principalColumn: "Id");
+                        name: "FK_ReserveScenarioComponents_BuildingElements_LinkedBuildingElementId",
+                        column: x => x.LinkedBuildingElementId,
+                        principalTable: "BuildingElements",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_ProposalAcceptances_AspNetUsers_AcceptedByUserId",
-                        column: x => x.AcceptedByUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        name: "FK_ReserveScenarioComponents_CommonElements_LinkedCommonElementId",
+                        column: x => x.LinkedCommonElementId,
+                        principalTable: "CommonElements",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_ProposalAcceptances_Proposals_ProposalId",
-                        column: x => x.ProposalId,
-                        principalTable: "Proposals",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_ProposalAcceptances_ReserveStudies_ReserveStudyId",
-                        column: x => x.ReserveStudyId,
-                        principalTable: "ReserveStudies",
+                        name: "FK_ReserveScenarioComponents_ReserveStudyScenarios_ScenarioId",
+                        column: x => x.ScenarioId,
+                        principalTable: "ReserveStudyScenarios",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -2157,15 +2333,50 @@ namespace CRS.Migrations
                 filter: "[DateDeleted] IS NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Proposals_OriginalProposalId",
+                table: "Proposals",
+                column: "OriginalProposalId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Proposals_ReserveStudyId",
                 table: "Proposals",
-                column: "ReserveStudyId",
-                unique: true);
+                column: "ReserveStudyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Proposals_TenantId",
                 table: "Proposals",
                 column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveScenarioComponent_Tenant",
+                table: "ReserveScenarioComponents",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveScenarioComponent_Tenant_Scenario",
+                table: "ReserveScenarioComponents",
+                columns: new[] { "TenantId", "ScenarioId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveScenarioComponent_Tenant_Scenario_Category",
+                table: "ReserveScenarioComponents",
+                columns: new[] { "TenantId", "ScenarioId", "Category" },
+                filter: "[DateDeleted] IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveScenarioComponents_LinkedBuildingElementId",
+                table: "ReserveScenarioComponents",
+                column: "LinkedBuildingElementId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveScenarioComponents_LinkedCommonElementId",
+                table: "ReserveScenarioComponents",
+                column: "LinkedCommonElementId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveScenarioComponents_ScenarioId",
+                table: "ReserveScenarioComponents",
+                column: "ScenarioId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_ApplicationUserId",
@@ -2181,6 +2392,11 @@ namespace CRS.Migrations
                 name: "IX_ReserveStudies_ContactId",
                 table: "ReserveStudies",
                 column: "ContactId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudies_CurrentProposalId",
+                table: "ReserveStudies",
+                column: "CurrentProposalId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudies_PropertyManagerId",
@@ -2309,10 +2525,46 @@ namespace CRS.Migrations
                 columns: new[] { "ReserveStudyId", "CommonElementId" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyScenario_Tenant",
+                table: "ReserveStudyScenarios",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyScenario_Tenant_Study",
+                table: "ReserveStudyScenarios",
+                columns: new[] { "TenantId", "ReserveStudyId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyScenario_Tenant_Study_Status",
+                table: "ReserveStudyScenarios",
+                columns: new[] { "TenantId", "ReserveStudyId", "Status" },
+                filter: "[DateDeleted] IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyScenarios_ReserveStudyId",
+                table: "ReserveStudyScenarios",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Roles_Name",
                 table: "Roles",
                 column: "Name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScopeComparison_Tenant_Status",
+                table: "ScopeComparisons",
+                columns: new[] { "TenantId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScopeComparison_Tenant_Study",
+                table: "ScopeComparisons",
+                columns: new[] { "TenantId", "ReserveStudyId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScopeComparisons_ReserveStudyId",
+                table: "ScopeComparisons",
+                column: "ReserveStudyId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ServiceContact_Tenant",
@@ -2556,11 +2808,96 @@ namespace CRS.Migrations
                 name: "IX_UserRoleAssignments_UserId",
                 table: "UserRoleAssignments",
                 column: "UserId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_CalendarEvents_ReserveStudies_ReserveStudyId",
+                table: "CalendarEvents",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.SetNull);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Documents_ReserveStudies_ReserveStudyId",
+                table: "Documents",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_EmailLogs_ReserveStudies_ReserveStudyId",
+                table: "EmailLogs",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_FinancialInfos_ReserveStudies_ReserveStudyId",
+                table: "FinancialInfos",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_GeneratedReports_ReserveStudies_ReserveStudyId",
+                table: "GeneratedReports",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_ProposalAcceptances_Proposals_ProposalId",
+                table: "ProposalAcceptances",
+                column: "ProposalId",
+                principalTable: "Proposals",
+                principalColumn: "Id");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_ProposalAcceptances_ReserveStudies_ReserveStudyId",
+                table: "ProposalAcceptances",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Proposals_ReserveStudies_ReserveStudyId",
+                table: "Proposals",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_Contacts_AspNetUsers_ApplicationUserId",
+                table: "Contacts");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_PropertyManagers_AspNetUsers_ApplicationUserId",
+                table: "PropertyManagers");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_ReserveStudies_AspNetUsers_ApplicationUserId",
+                table: "ReserveStudies");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_ReserveStudies_AspNetUsers_RequestedByUserId",
+                table: "ReserveStudies");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_ReserveStudies_AspNetUsers_SpecialistUserId",
+                table: "ReserveStudies");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_Proposals_ReserveStudies_ReserveStudyId",
+                table: "Proposals");
+
             migrationBuilder.DropTable(
                 name: "AccessTokens");
 
@@ -2625,6 +2962,9 @@ namespace CRS.Migrations
                 name: "ProposalAcceptances");
 
             migrationBuilder.DropTable(
+                name: "ReserveScenarioComponents");
+
+            migrationBuilder.DropTable(
                 name: "ReserveStudyAdditionalElements");
 
             migrationBuilder.DropTable(
@@ -2632,6 +2972,9 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "ReserveStudyCommonElements");
+
+            migrationBuilder.DropTable(
+                name: "ScopeComparisons");
 
             migrationBuilder.DropTable(
                 name: "Settings");
@@ -2658,6 +3001,12 @@ namespace CRS.Migrations
                 name: "TenantHomepages");
 
             migrationBuilder.DropTable(
+                name: "TenantReserveSettings");
+
+            migrationBuilder.DropTable(
+                name: "TenantScopeChangeSettings");
+
+            migrationBuilder.DropTable(
                 name: "TicketComments");
 
             migrationBuilder.DropTable(
@@ -2673,7 +3022,7 @@ namespace CRS.Migrations
                 name: "AcceptanceTermsTemplates");
 
             migrationBuilder.DropTable(
-                name: "Proposals");
+                name: "ReserveStudyScenarios");
 
             migrationBuilder.DropTable(
                 name: "BuildingElements");
@@ -2700,6 +3049,9 @@ namespace CRS.Migrations
                 name: "Tenants");
 
             migrationBuilder.DropTable(
+                name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
                 name: "ReserveStudies");
 
             migrationBuilder.DropTable(
@@ -2712,10 +3064,10 @@ namespace CRS.Migrations
                 name: "PropertyManagers");
 
             migrationBuilder.DropTable(
-                name: "Addresses");
+                name: "Proposals");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "Addresses");
         }
     }
 }

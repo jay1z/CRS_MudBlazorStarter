@@ -5,8 +5,8 @@
     var baseUrl = string.IsNullOrEmpty(Model.BaseUrl) ? "" : Model.BaseUrl;
     var detailsUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/Details";
     var communityName = Model.ReserveStudy?.Community?.Name ?? "Your Community";
-    var proposalCost = Model.ReserveStudy?.Proposal?.EstimatedCost.ToString("C") ?? "TBD";
-    var proposalScope = Model.ReserveStudy?.Proposal?.ProposalScope ?? "Reserve Study";
+    var proposalCost = Model.ReserveStudy?.CurrentProposal?.EstimatedCost.ToString("C") ?? "TBD";
+    var proposalScope = Model.ReserveStudy?.CurrentProposal?.ProposalScope ?? "Reserve Study";
 }
 
 <!DOCTYPE html>
@@ -167,13 +167,13 @@
                                         <code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 13px; color: #374151;">@(Model.ReserveStudy?.Id.ToString().Substring(0, 8))...</code>
                                     </td>
                                 </tr>
-                                @if (Model.ReserveStudy?.Proposal?.ProposalDate != null) {
+                                @if (Model.ReserveStudy?.CurrentProposal?.ProposalDate != null) {
                                     <tr>
                                         <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
                                             <span style="color: #6b7280; font-size: 14px;">Proposal Date</span>
                                         </td>
                                         <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">
-                                            <span style="color: #374151; font-size: 14px; font-weight: 500;">@Model.ReserveStudy.Proposal.ProposalDate.ToString("MMMM d, yyyy")</span>
+                                            <span style="color: #374151; font-size: 14px; font-weight: 500;">@Model.ReserveStudy.CurrentProposal.ProposalDate.ToString("MMMM d, yyyy")</span>
                                         </td>
                                     </tr>
                                 }

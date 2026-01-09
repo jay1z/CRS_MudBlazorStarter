@@ -61,6 +61,7 @@ namespace CRS.Services.Workflow {
             [StudyStatus.ProposalAccepted] = new() { 
                 StudyStatus.ServiceContactsRequested,
                 StudyStatus.FinancialInfoRequested,
+                StudyStatus.FundingPlanReady, // Amendment acceptance - skip to funding plan when amendment is accepted
                 StudyStatus.RequestCancelled 
             },
 

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260105041357_AddPropertyFinancialInfoFields")]
-    partial class AddPropertyFinancialInfoFields
+    [Migration("20260108074816_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1916,6 +1916,12 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("AmendmentNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AmendmentReason")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ApprovedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -1956,8 +1962,14 @@ namespace CRS.Migrations
                     b.Property<bool>("IncludePrepaymentDiscount")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsAmendment")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
+
+                    b.Property<Guid?>("OriginalProposalId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PaymentTerms")
                         .HasColumnType("nvarchar(max)");
@@ -1986,8 +1998,9 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ReserveStudyId")
-                        .IsUnique();
+                    b.HasIndex("OriginalProposalId");
+
+                    b.HasIndex("ReserveStudyId");
 
                     b.HasIndex("TenantId");
 
@@ -2133,6 +2146,9 @@ namespace CRS.Migrations
                     b.Property<Guid?>("ContactId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("CurrentProposalId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal?>("CurrentReserveFunds")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -2191,6 +2207,9 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<DateTime?>("SiteVisitDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid?>("SpecialistUserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2210,6 +2229,8 @@ namespace CRS.Migrations
                     b.HasIndex("CommunityId");
 
                     b.HasIndex("ContactId");
+
+                    b.HasIndex("CurrentProposalId");
 
                     b.HasIndex("PropertyManagerId");
 
@@ -2361,6 +2382,243 @@ namespace CRS.Migrations
                         .HasDatabaseName("IX_RSBuildingElement_Study_Element");
 
                     b.ToTable("ReserveStudyBuildingElements");
+                });
+
+            modelBuilder.Entity("CRS.Models.ReserveStudyCalculator.ReserveScenarioComponent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("AnnualCostOverride")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("CurrentCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("CycleYears")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("InflationRateOverride")
+                        .HasColumnType("decimal(8,6)");
+
+                    b.Property<int?>("LastServiceYear")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("LinkedBuildingElementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("LinkedCommonElementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("RemainingLifeOverrideYears")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ScenarioId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UsefulLifeYears")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LinkedBuildingElementId");
+
+                    b.HasIndex("LinkedCommonElementId");
+
+                    b.HasIndex("ScenarioId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_ReserveScenarioComponent_Tenant");
+
+                    b.HasIndex("TenantId", "ScenarioId")
+                        .HasDatabaseName("IX_ReserveScenarioComponent_Tenant_Scenario");
+
+                    b.HasIndex("TenantId", "ScenarioId", "Category")
+                        .HasDatabaseName("IX_ReserveScenarioComponent_Tenant_Scenario_Category")
+                        .HasFilter("[DateDeleted] IS NULL");
+
+                    b.ToTable("ReserveScenarioComponents", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.ReserveStudyCalculator.ReserveStudyScenario", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid?>("ModifiedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal?>("OverrideContributionEscalationRate")
+                        .HasColumnType("decimal(8,6)");
+
+                    b.Property<int?>("OverrideContributionFrequency")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OverrideContributionStrategy")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OverrideContributionTiming")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OverrideExpenditureTiming")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("OverrideInflationRate")
+                        .HasColumnType("decimal(8,6)");
+
+                    b.Property<decimal?>("OverrideInitialAnnualContribution")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("OverrideInterestModel")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("OverrideInterestRateAnnual")
+                        .HasColumnType("decimal(8,6)");
+
+                    b.Property<int?>("OverrideProjectionYears")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OverrideRoundingPolicy")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("StartYear")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("StartingBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_ReserveStudyScenario_Tenant");
+
+                    b.HasIndex("TenantId", "ReserveStudyId")
+                        .HasDatabaseName("IX_ReserveStudyScenario_Tenant_Study");
+
+                    b.HasIndex("TenantId", "ReserveStudyId", "Status")
+                        .HasDatabaseName("IX_ReserveStudyScenario_Tenant_Study_Status")
+                        .HasFilter("[DateDeleted] IS NULL");
+
+                    b.ToTable("ReserveStudyScenarios", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.ReserveStudyCalculator.TenantReserveSettings", b =>
+                {
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DefaultContributionEscalationRate")
+                        .HasColumnType("decimal(8,6)");
+
+                    b.Property<int>("DefaultContributionFrequency")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DefaultContributionStrategy")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DefaultContributionTiming")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DefaultExpenditureTiming")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DefaultInflationRate")
+                        .HasColumnType("decimal(8,6)");
+
+                    b.Property<decimal>("DefaultInitialAnnualContribution")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("DefaultInterestModel")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DefaultInterestRateAnnual")
+                        .HasColumnType("decimal(8,6)");
+
+                    b.Property<int>("DefaultProjectionYears")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DefaultRoundingPolicy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("TenantReserveSettings", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudyCommonElement", b =>
@@ -3387,6 +3645,75 @@ namespace CRS.Migrations
                     b.ToTable("TicketComments", (string)null);
                 });
 
+            modelBuilder.Entity("CRS.Models.Workflow.ScopeComparison", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ActualAdditionalElementCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ActualBuildingElementCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ActualCommonElementCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ComparedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ComparedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("OriginalAdditionalElementCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OriginalBuildingElementCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OriginalCapturedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OriginalCommonElementCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("OverriddenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("OverriddenByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("OverrideReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("TenantId", "ReserveStudyId")
+                        .HasDatabaseName("IX_ScopeComparison_Tenant_Study");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("IX_ScopeComparison_Tenant_Status");
+
+                    b.ToTable("ScopeComparisons");
+                });
+
             modelBuilder.Entity("CRS.Models.Workflow.StudyRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3399,6 +3726,19 @@ namespace CRS.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<int>("CurrentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ElementEstimateNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("EstimatedAdditionalElementCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EstimatedBuildingElementCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EstimatedCommonElementCount")
                         .HasColumnType("int");
 
                     b.Property<int?>("PreviousStatus")
@@ -3492,6 +3832,49 @@ namespace CRS.Migrations
                     b.HasIndex("TenantId", "ToStatus", "ChangedAt");
 
                     b.ToTable("StudyStatusHistories");
+                });
+
+            modelBuilder.Entity("CRS.Models.Workflow.TenantScopeChangeSettings", b =>
+                {
+                    b.Property<int>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TenantId"));
+
+                    b.Property<bool>("AllowStaffOverride")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AutoNotifyHoaOnVariance")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("RequireHoaApproval")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("UseTwoPhaseProposal")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("VarianceNotificationTemplateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("VarianceThresholdCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("VarianceThresholdPercent")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("TenantScopeChangeSettings");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -3835,11 +4218,17 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.Proposal", b =>
                 {
+                    b.HasOne("CRS.Models.Proposal", "OriginalProposal")
+                        .WithMany("Amendments")
+                        .HasForeignKey("OriginalProposalId");
+
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
-                        .WithOne("Proposal")
-                        .HasForeignKey("CRS.Models.Proposal", "ReserveStudyId")
+                        .WithMany("Proposals")
+                        .HasForeignKey("ReserveStudyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("OriginalProposal");
 
                     b.Navigation("ReserveStudy");
                 });
@@ -3892,6 +4281,11 @@ namespace CRS.Migrations
                         .HasForeignKey("ContactId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("CRS.Models.Proposal", "CurrentProposal")
+                        .WithMany()
+                        .HasForeignKey("CurrentProposalId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("CRS.Models.PropertyManager", "PropertyManager")
                         .WithMany()
                         .HasForeignKey("PropertyManagerId")
@@ -3908,6 +4302,8 @@ namespace CRS.Migrations
                     b.Navigation("Community");
 
                     b.Navigation("Contact");
+
+                    b.Navigation("CurrentProposal");
 
                     b.Navigation("PropertyManager");
 
@@ -3992,6 +4388,53 @@ namespace CRS.Migrations
                     b.Navigation("ServiceContact");
 
                     b.Navigation("UsefulLifeOption");
+                });
+
+            modelBuilder.Entity("CRS.Models.ReserveStudyCalculator.ReserveScenarioComponent", b =>
+                {
+                    b.HasOne("CRS.Models.BuildingElement", "LinkedBuildingElement")
+                        .WithMany()
+                        .HasForeignKey("LinkedBuildingElementId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CRS.Models.CommonElement", "LinkedCommonElement")
+                        .WithMany()
+                        .HasForeignKey("LinkedCommonElementId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("CRS.Models.ReserveStudyCalculator.ReserveStudyScenario", "Scenario")
+                        .WithMany("Components")
+                        .HasForeignKey("ScenarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LinkedBuildingElement");
+
+                    b.Navigation("LinkedCommonElement");
+
+                    b.Navigation("Scenario");
+                });
+
+            modelBuilder.Entity("CRS.Models.ReserveStudyCalculator.ReserveStudyScenario", b =>
+                {
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReserveStudy");
+                });
+
+            modelBuilder.Entity("CRS.Models.ReserveStudyCalculator.TenantReserveSettings", b =>
+                {
+                    b.HasOne("CRS.Models.Tenant", "Tenant")
+                        .WithOne()
+                        .HasForeignKey("CRS.Models.ReserveStudyCalculator.TenantReserveSettings", "TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("CRS.Models.ReserveStudyCommonElement", b =>
@@ -4180,6 +4623,17 @@ namespace CRS.Migrations
                     b.Navigation("Ticket");
                 });
 
+            modelBuilder.Entity("CRS.Models.Workflow.ScopeComparison", b =>
+                {
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReserveStudy");
+                });
+
             modelBuilder.Entity("CRS.Models.Workflow.StudyRequest", b =>
                 {
                     b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
@@ -4268,11 +4722,16 @@ namespace CRS.Migrations
                     b.Navigation("ReserveStudyCommonElements");
                 });
 
+            modelBuilder.Entity("CRS.Models.Proposal", b =>
+                {
+                    b.Navigation("Amendments");
+                });
+
             modelBuilder.Entity("CRS.Models.ReserveStudy", b =>
                 {
                     b.Navigation("FinancialInfo");
 
-                    b.Navigation("Proposal");
+                    b.Navigation("Proposals");
 
                     b.Navigation("ReserveStudyAdditionalElements");
 
@@ -4281,6 +4740,11 @@ namespace CRS.Migrations
                     b.Navigation("ReserveStudyCommonElements");
 
                     b.Navigation("StudyRequest");
+                });
+
+            modelBuilder.Entity("CRS.Models.ReserveStudyCalculator.ReserveStudyScenario", b =>
+                {
+                    b.Navigation("Components");
                 });
 
             modelBuilder.Entity("CRS.Models.Security.Role", b =>

@@ -285,7 +285,7 @@ public class ReportGenerationService : IReportGenerationService
             await using var context = await _dbFactory.CreateDbContextAsync();
             var study = await context.ReserveStudies
                 .Include(s => s.Community)
-                .Include(s => s.Proposal)
+                .Include(s => s.CurrentProposal)
                 .FirstOrDefaultAsync(s => s.Id == studyId);
 
             if (study == null)

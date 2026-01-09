@@ -37,10 +37,10 @@ public class ProposalPdfService : IProposalPdfService
             .Include(rs => rs.Community).ThenInclude(c => c!.PhysicalAddress)
             .Include(rs => rs.Contact)
             .Include(rs => rs.Specialist)
-            .Include(rs => rs.Proposal)
+            .Include(rs => rs.CurrentProposal)
             .FirstOrDefaultAsync(rs => rs.Id == reserveStudyId);
 
-        if (study?.Proposal == null)
+        if (study?.CurrentProposal == null)
             throw new InvalidOperationException("Reserve study or proposal not found.");
 
         // Load effective PDF settings (merged from branding + PDF overrides)
@@ -154,7 +154,7 @@ public class ProposalPdfService : IProposalPdfService
                 {
                     col.Item().Text(settings.Proposal.Title)
                         .FontSize(settings.HeaderFontSize).Bold().FontColor(settings.PrimaryColor);
-                    col.Item().Text($"Proposal Date: {study.Proposal!.ProposalDate:MMMM dd, yyyy}")
+                    col.Item().Text($"Proposal Date: {study.CurrentProposal!.ProposalDate:MMMM dd, yyyy}")
                         .FontSize(10).FontColor(settings.MutedTextColor);
                     
                     // Show company name if configured
@@ -207,7 +207,7 @@ public class ProposalPdfService : IProposalPdfService
                 if (proposalSettings.ShowScopeOfWork)
                 {
                     col.Item().Text("Scope of Work").Bold().FontSize(12);
-                    col.Item().PaddingTop(5).Text(study.Proposal!.ProposalScope ?? "N/A");
+                    col.Item().PaddingTop(5).Text(study.CurrentProposal!.ProposalScope ?? "N/A");
                     col.Item().Height(15);
                 }
 
@@ -218,28 +218,28 @@ public class ProposalPdfService : IProposalPdfService
                         row.RelativeItem().Column(c =>
                         {
                             c.Item().Text("Estimated Cost").Bold();
-                            c.Item().Text($"${study.Proposal!.EstimatedCost:N2}")
+                            c.Item().Text($"${study.CurrentProposal!.EstimatedCost:N2}")
                                 .FontSize(18).Bold().FontColor(settings.AccentColor);
                         });
                     });
                 }
 
-                if (!string.IsNullOrEmpty(study.Proposal!.Comments))
+                if (!string.IsNullOrEmpty(study.CurrentProposal!.Comments))
                 {
                     col.Item().Height(15);
                     col.Item().Text("Additional Comments").Bold().FontSize(12);
-                    col.Item().PaddingTop(5).Text(study.Proposal.Comments);
+                    col.Item().PaddingTop(5).Text(study.CurrentProposal.Comments);
                 }
             }));
 
             column.Item().Height(20);
 
             // Service Level Section
-            if (proposalSettings.ShowServiceLevel && !string.IsNullOrEmpty(study.Proposal!.ServiceLevel))
+            if (proposalSettings.ShowServiceLevel && !string.IsNullOrEmpty(study.CurrentProposal!.ServiceLevel))
             {
                 column.Item().Element(c => ComposeSection(c, "Service Level", settings, col =>
                 {
-                    var serviceLevelDescription = GetServiceLevelDescription(study.Proposal.ServiceLevel);
+                    var serviceLevelDescription = GetServiceLevelDescription(study.CurrentProposal.ServiceLevel);
                     col.Item().Text(serviceLevelDescription).FontSize(settings.BaseFontSize);
                 }));
 
@@ -247,11 +247,11 @@ public class ProposalPdfService : IProposalPdfService
             }
 
             // Delivery Timeframe Section
-            if (proposalSettings.ShowDeliveryTimeframe && !string.IsNullOrEmpty(study.Proposal.DeliveryTimeframe))
+            if (proposalSettings.ShowDeliveryTimeframe && !string.IsNullOrEmpty(study.CurrentProposal.DeliveryTimeframe))
             {
                 column.Item().Element(c => ComposeSection(c, "Delivery Timeframe", settings, col =>
                 {
-                    var timeframeDescription = GetDeliveryTimeframeDescription(study.Proposal.DeliveryTimeframe);
+                    var timeframeDescription = GetDeliveryTimeframeDescription(study.CurrentProposal.DeliveryTimeframe);
                     col.Item().Text(timeframeDescription).FontSize(settings.BaseFontSize);
                 }));
 
@@ -261,7 +261,7 @@ public class ProposalPdfService : IProposalPdfService
             // Additional Services Section
             if (proposalSettings.ShowAdditionalServices)
             {
-                var additionalServices = GetAdditionalServices(study.Proposal);
+                var additionalServices = GetAdditionalServices(study.CurrentProposal);
                 if (additionalServices.Count > 0)
                 {
                     column.Item().Element(c => ComposeSection(c, "Additional Services Included", settings, col =>
@@ -281,11 +281,11 @@ public class ProposalPdfService : IProposalPdfService
             }
 
             // Payment Terms Section
-            if (proposalSettings.ShowPaymentTerms && !string.IsNullOrEmpty(study.Proposal.PaymentTerms))
+            if (proposalSettings.ShowPaymentTerms && !string.IsNullOrEmpty(study.CurrentProposal.PaymentTerms))
             {
                 column.Item().Element(c => ComposeSection(c, "Payment Terms", settings, col =>
                 {
-                    col.Item().Text(study.Proposal.PaymentTerms);
+                    col.Item().Text(study.CurrentProposal.PaymentTerms);
                 }));
 
                 column.Item().Height(20);
