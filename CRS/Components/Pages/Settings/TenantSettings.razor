@@ -16,6 +16,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject CRS.Services.Storage.ILogoStorageService LogoStorage
+@inject CRS.Services.Interfaces.IProposalAcceptanceService AcceptanceService
 
 <PageTitle>Organization Settings</PageTitle>
 
@@ -92,13 +93,19 @@
                                     OnClick="@(() => activeTab = 4)">
                             Advanced
                         </MudNavLink>
-                        <MudNavLink Icon="@Icons.Material.Filled.CompareArrows" 
-                                    IconColor="@(activeTab == 5 ? Color.Primary : Color.Default)"
-                                    Class="@(activeTab == 5 ? "mud-nav-link-active" : "")"
-                                    OnClick="@(() => activeTab = 5)">
-                            Scope Changes
-                        </MudNavLink>
-                    </MudNavMenu>
+                            <MudNavLink Icon="@Icons.Material.Filled.CompareArrows" 
+                                        IconColor="@(activeTab == 5 ? Color.Primary : Color.Default)"
+                                        Class="@(activeTab == 5 ? "mud-nav-link-active" : "")"
+                                        OnClick="@(() => activeTab = 5)">
+                                Scope Changes
+                            </MudNavLink>
+                            <MudNavLink Icon="@Icons.Material.Filled.Gavel" 
+                                        IconColor="@(activeTab == 6 ? Color.Primary : Color.Default)"
+                                        Class="@(activeTab == 6 ? "mud-nav-link-active" : "")"
+                                        OnClick="@(() => activeTab = 6)">
+                                Acceptance Terms
+                            </MudNavLink>
+                        </MudNavMenu>
                 </MudPaper>
             </MudItem>
 
@@ -905,16 +912,108 @@
   "UseDarkMode": false,
   "Preset": null
 }
-                                </code>
-                            </MudPaper>
-                        </MudStack>
-                    }
-                    else if (activeTab == 5)
-                    {
-                        <!-- Scope Change Settings -->
-                        <CRS.Components.Shared.Settings.TenantScopeChangeSettingsPanel />
-                    }
-                </MudPaper>
+                                            </code>
+                                        </MudPaper>
+                                    </MudStack>
+                                }
+                                    else if (activeTab == 5)
+                                    {
+                                        <!-- Scope Change Settings -->
+                                        <CRS.Components.Shared.Settings.TenantScopeChangeSettingsPanel @ref="scopeChangeSettingsPanel" OnSettingsChanged="MarkAsChanged" />
+                                    }
+                                    else if (activeTab == 6)
+                                    {
+                                        <!-- Acceptance Terms Settings -->
+                                        <MudStack Spacing="4">
+                                            <div>
+                                                <MudText Typo="Typo.h5" Class="fw-bold mb-2">Proposal Acceptance Terms</MudText>
+                                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                        Configure the legal terms and conditions shown when clients accept proposals or amendments.
+                                        These are the formal click-wrap terms that require electronic signature.
+                                    </MudText>
+                                </div>
+
+                                <MudDivider />
+
+                                @if (isLoadingTerms)
+                                {
+                                    <MudStack AlignItems="AlignItems.Center" Class="py-8">
+                                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                                        <MudText Typo="Typo.body2">Loading terms template...</MudText>
+                                    </MudStack>
+                                }
+                                else
+                                {
+                                    <MudGrid Spacing="3">
+                                        <MudItem xs="12" md="6">
+                                            <MudTextField @bind-Value="acceptanceTerms.Name"
+                                                          Label="Template Name"
+                                                          Variant="Variant.Outlined"
+                                                          HelperText="A name to identify this terms template"
+                                                          OnBlur="MarkAsChanged" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="6">
+                                            <MudTextField @bind-Value="acceptanceTerms.Version"
+                                                          Label="Version"
+                                                          Variant="Variant.Outlined"
+                                                          HelperText="e.g., 1.0, 2.0, 2024-01"
+                                                          OnBlur="MarkAsChanged" />
+                                        </MudItem>
+                                    </MudGrid>
+
+                                    <MudTextField @bind-Value="acceptanceTerms.Summary"
+                                                  Label="Summary (Optional)"
+                                                  Variant="Variant.Outlined"
+                                                  Lines="2"
+                                                  HelperText="A brief summary shown before the full terms"
+                                                  OnBlur="MarkAsChanged" />
+
+                                    <MudTextField @bind-Value="acceptanceTerms.TermsText"
+                                                  Label="Terms and Conditions (Markdown supported)"
+                                                  Variant="Variant.Outlined"
+                                                  Lines="15"
+                                                  HelperText="The full legal terms. Supports markdown formatting (## for headers, - for lists, **bold**, etc.)"
+                                                  OnBlur="MarkAsChanged" />
+
+                                    <MudGrid Spacing="3">
+                                        <MudItem xs="12" md="8">
+                                            <MudTextField @bind-Value="acceptanceTerms.CheckboxText"
+                                                          Label="Checkbox Agreement Text"
+                                                          Variant="Variant.Outlined"
+                                                          HelperText="Text shown next to the agreement checkbox"
+                                                          OnBlur="MarkAsChanged" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="4">
+                                            <MudTextField @bind-Value="acceptanceTerms.AcceptButtonText"
+                                                          Label="Accept Button Text"
+                                                          Variant="Variant.Outlined"
+                                                          HelperText="Text on the accept button"
+                                                          OnBlur="MarkAsChanged" />
+                                        </MudItem>
+                                    </MudGrid>
+
+                                    @if (acceptanceTerms.Id != Guid.Empty)
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: #666;" Class="mt-2">
+                                            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Style="vertical-align: middle;" />
+                                            Last modified: @(acceptanceTerms.DateModified?.ToString("g") ?? acceptanceTerms.DateCreated?.ToString("g") ?? "N/A")
+                                        </MudText>
+                                    }
+
+                                    <MudDivider Class="my-4" />
+
+                                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                                        <MudText Typo="Typo.body2">
+                                            <strong>Where are these terms used?</strong><br />
+                                            These terms appear on the Proposal Acceptance page and Amendment Acceptance page 
+                                            when clients electronically sign to accept your proposals. They are legally binding 
+                                            and include an audit trail with timestamps and IP addresses.
+                                        </MudText>
+                                    </MudAlert>
+                                }
+                            </MudStack>
+                        }
+                    </MudPaper>
 
                 <!-- Action Buttons - Fixed at bottom -->
                 <MudPaper Elevation="3" Class="pa-4 mt-4" Style="border-radius: 12px; position: sticky; bottom: 20px; background: white; z-index: 100;">
@@ -985,9 +1084,18 @@ private string? companyAddress;
 // Reference to the InputFile element
 private InputFile? fileInput;
 
+// Acceptance Terms
+private AcceptanceTermsTemplate acceptanceTerms = new();
+private bool isLoadingTerms = false;
+private bool isSavingTerms = false;
+
+// Scope Change Settings Panel reference
+private CRS.Components.Shared.Settings.TenantScopeChangeSettingsPanel? scopeChangeSettingsPanel;
+
 protected override async Task OnInitializedAsync() {
     presetNames = ThemeService.GetPresetNames();
     await LoadTenant();
+    await LoadAcceptanceTermsAsync();
 }
 
     private async Task LoadTenant() {
@@ -1167,26 +1275,35 @@ protected override async Task OnInitializedAsync() {
             
             TenantContext.TenantName = existing.Name;
             TenantContext.BrandingJson = existing.BrandingJson;
-            TenantContext.IsActive = existing.IsActive;
-            ThemeService.ApplyTenantBrandingIfAvailable();
-            
-            originalTenant = new Tenant
-            {
-                Id = tenant.Id,
-                Name = tenant.Name,
-                Subdomain = tenant.Subdomain,
-                IsActive = tenant.IsActive,
-                BrandingJson = tenant.BrandingJson
-            };
-            
-            hasUnsavedChanges = false;
-            Snackbar.Add("Settings saved successfully!", MudBlazor.Severity.Success);
-        } catch (Exception ex) {
-            Snackbar.Add($"Error saving: {ex.Message}", MudBlazor.Severity.Error);
-        } finally {
-            isSaving = false;
-        }
-    }
+                    TenantContext.IsActive = existing.IsActive;
+                    ThemeService.ApplyTenantBrandingIfAvailable();
+
+                    originalTenant = new Tenant
+                    {
+                        Id = tenant.Id,
+                        Name = tenant.Name,
+                        Subdomain = tenant.Subdomain,
+                        IsActive = tenant.IsActive,
+                        BrandingJson = tenant.BrandingJson
+                    };
+
+                    // Save acceptance terms if they have content
+                    await SaveAcceptanceTermsAsync();
+
+                    // Save scope change settings
+                    if (scopeChangeSettingsPanel != null)
+                    {
+                        await scopeChangeSettingsPanel.SaveAsync();
+                    }
+
+                    hasUnsavedChanges = false;
+                    Snackbar.Add("Settings saved successfully!", MudBlazor.Severity.Success);
+                } catch (Exception ex) {
+                    Snackbar.Add($"Error saving settings: {ex.Message}", MudBlazor.Severity.Error);
+                } finally {
+                    isSaving = false;
+                }
+            }
 
     private async Task CancelChanges()
     {
@@ -1290,6 +1407,83 @@ protected override async Task OnInitializedAsync() {
         {
             pdfSettings.Proposal.TermsAndConditions.RemoveAt(index);
             MarkAsChanged();
+        }
+    }
+
+    private async Task LoadAcceptanceTermsAsync()
+    {
+        if (!TenantContext.TenantId.HasValue) return;
+
+        try
+        {
+            isLoadingTerms = true;
+            var template = await AcceptanceService.GetActiveTermsTemplateAsync();
+            if (template != null)
+            {
+                acceptanceTerms = template;
+            }
+            else
+            {
+                // Create a new template with defaults
+                acceptanceTerms = new AcceptanceTermsTemplate
+                {
+                    Name = "Proposal Acceptance Terms",
+                    Version = "1.0",
+                    Type = TermsType.ProposalAcceptance,
+                    CheckboxText = "I have read and agree to the terms and conditions above.",
+                    AcceptButtonText = "Accept Proposal",
+                    IsActive = true,
+                    IsDefault = true
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading terms: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            isLoadingTerms = false;
+        }
+    }
+
+    private async Task SaveAcceptanceTermsAsync()
+    {
+        if (!TenantContext.TenantId.HasValue) return;
+
+        // Only save if the terms have meaningful content
+        if (string.IsNullOrWhiteSpace(acceptanceTerms.Name) || string.IsNullOrWhiteSpace(acceptanceTerms.TermsText))
+        {
+            // No terms to save - this is fine, just skip
+            return;
+        }
+
+        try
+        {
+            isSavingTerms = true;
+
+            if (acceptanceTerms.Id == Guid.Empty)
+            {
+                // Create new template
+                acceptanceTerms.EffectiveDate = DateTime.UtcNow;
+                await AcceptanceService.CreateTermsTemplateAsync(acceptanceTerms);
+            }
+            else
+            {
+                // Update existing template
+                await AcceptanceService.UpdateTermsTemplateAsync(acceptanceTerms);
+            }
+
+            // Reload to get updated data
+            await LoadAcceptanceTermsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving acceptance terms: {ex.Message}", MudBlazor.Severity.Warning);
+        }
+        finally
+        {
+            isSavingTerms = false;
         }
     }
 

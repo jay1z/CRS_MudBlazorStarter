@@ -1,6 +1,7 @@
 ﻿@page "/ReserveStudies/{studyId:guid}/FinancialInfo"
 @attribute [Authorize]
 @using CRS.Models
+@using CRS.Models.Workflow
 @using CRS.Services.Interfaces
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
@@ -532,6 +533,12 @@
                         AnnualMeetingDate = reserveStudy.Community?.AnnualMeetingDate,
                         AcknowledgmentSignatureDate = DateTime.Today
                     };
+                }
+
+                // After FinancialInfoReceived (status 13), make page read-only for all users
+                var currentStatus = reserveStudy.StudyRequest?.CurrentStatus ?? reserveStudy.CurrentStatus;
+                if (currentStatus > StudyStatus.FinancialInfoReceived) {
+                    isReadOnly = true;
                 }
             }
         } catch (Exception ex) {

@@ -137,17 +137,26 @@ public interface IScopeComparisonService
     Task<ScopeComparison> RejectAmendmentAsync(Guid scopeComparisonId, Guid userId, string reason);
 
     /// <summary>
-    /// Gets all pending amendments for a specific HOA user.
-    /// Used for dashboard indicators.
-    /// </summary>
-    /// <param name="userId">The HOA user ID.</param>
-    /// <returns>List of scope comparisons with pending amendments for this user's studies.</returns>
-    Task<List<ScopeComparison>> GetPendingAmendmentsForUserAsync(Guid userId);
+        /// Gets all pending amendments for a specific HOA user.
+        /// Used for dashboard indicators.
+        /// </summary>
+        /// <param name="userId">The HOA user ID.</param>
+        /// <returns>List of scope comparisons with pending amendments for this user's studies.</returns>
+        Task<List<ScopeComparison>> GetPendingAmendmentsForUserAsync(Guid userId);
 
-    /// <summary>
-    /// Gets the scope comparison with full details including amendment proposal.
-    /// </summary>
-    /// <param name="scopeComparisonId">The scope comparison ID.</param>
-    /// <returns>The scope comparison with navigation properties loaded.</returns>
-    Task<ScopeComparison?> GetByIdWithDetailsAsync(Guid scopeComparisonId);
-}
+        /// <summary>
+        /// Gets the scope comparison with full details including amendment proposal.
+        /// </summary>
+        /// <param name="scopeComparisonId">The scope comparison ID.</param>
+        /// <returns>The scope comparison with navigation properties loaded.</returns>
+        Task<ScopeComparison?> GetByIdWithDetailsAsync(Guid scopeComparisonId);
+
+        /// <summary>
+        /// Prepares for a revised amendment after the HOA rejected the original.
+        /// Resets the scope comparison status to allow creating a new amendment.
+        /// </summary>
+        /// <param name="scopeComparisonId">The scope comparison ID.</param>
+        /// <param name="userId">The staff user initiating the revision.</param>
+        /// <returns>The updated scope comparison ready for a new amendment.</returns>
+        Task<ScopeComparison> PrepareRevisedAmendmentAsync(Guid scopeComparisonId, Guid userId);
+    }

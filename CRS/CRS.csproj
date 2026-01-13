@@ -19,6 +19,7 @@
     <PackageReference Include="Coravel.Mailer" Version="7.1.0" />
     <PackageReference Include="Heron.MudCalendar" Version="3.4.0" />
     <PackageReference Include="HtmlSanitizer" Version="9.0.889" />
+    <PackageReference Include="Markdig" Version="0.44.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid.EntityFrameworkAdapter" Version="10.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.1" />
@@ -50,6 +51,7 @@
     <PackageReference Include="Stripe.net" Version="50.1.0" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
     <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="PuppeteerSharp" Version="20.2.5" />
   </ItemGroup>
 
 
@@ -58,6 +60,7 @@
     <Folder Include="MultiTenancy\Database\" />
     <Folder Include="Services\Guid\" />
     <Folder Include="Services\MultiTenancy\Provisioning\" />
+    <Folder Include="Services\Narrative\" />
     <Folder Include="Tests\ReserveStudy\" />
     <Folder Include="Workers\" />
   </ItemGroup>

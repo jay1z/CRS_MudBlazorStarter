@@ -225,16 +225,40 @@
         <!-- Stats Row -->
         @if (reports.Any())
         {
-            <MudStack Row="true" Spacing="3">
+            <MudStack Row="true" Spacing="3" Style="flex-wrap: wrap;">
                 <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">
                     @reports.Count Total
                 </MudChip>
                 <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">
                     @reports.Count(r => r.Status == ReportStatus.Published) Published
                 </MudChip>
+                @{
+                    var pendingReviewCount = reports.Count(r => r.Status == ReportStatus.PendingReview);
+                }
+                @if (pendingReviewCount > 0)
+                {
+                    <AuthorizeView Policy="RequireTenantOwner">
+                        <Authorized>
+                            <MudChip T="string" Color="Color.Info" Variant="Variant.Filled">
+                                <MudIcon Icon="@Icons.Material.Filled.RateReview" Size="Size.Small" Class="mr-1" />
+                                @pendingReviewCount Pending Review
+                            </MudChip>
+                        </Authorized>
+                    </AuthorizeView>
+                }
                 <MudChip T="string" Color="Color.Warning" Variant="Variant.Outlined">
                     @reports.Count(r => r.Status == ReportStatus.Draft) Drafts
                 </MudChip>
+                @{
+                    // Only count reports needing revision that don't have a newer version
+                    var revisionCount = reports.Count(r => r.Status == ReportStatus.RevisionRequired && !HasNewerReportVersion(r));
+                }
+                @if (revisionCount > 0)
+                {
+                    <MudChip T="string" Color="Color.Error" Variant="Variant.Outlined">
+                        @revisionCount Needs Revision
+                    </MudChip>
+                }
             </MudStack>
         }
 
@@ -285,8 +309,12 @@
                                     </MudStack>
                                     
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(report.Status)" Variant="Variant.Filled">
-                                            @GetStatusDisplayName(report.Status)
+                                        @{
+                                            var isSuperseded = report.Status == ReportStatus.RevisionRequired && HasNewerReportVersion(report);
+                                            var displayStatus = isSuperseded ? ReportStatus.Superseded : report.Status;
+                                        }
+                                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(displayStatus)" Variant="Variant.Filled">
+                                            @GetStatusDisplayName(displayStatus)
                                         </MudChip>
                                         
                                         <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
@@ -332,6 +360,25 @@
                                                     </MudMenuItem>
                                                 </Authorized>
                                             </AuthorizeView>
+                                            @* TenantOwner-only actions for report approval *@
+                                            <AuthorizeView Policy="RequireTenantOwner">
+                                                <Authorized>
+                                                    @if (report.Status == ReportStatus.PendingReview)
+                                                    {
+                                                        <MudDivider />
+                                                        <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle"
+                                                                     OnClick="@(() => ApproveReport(report))"
+                                                                     IconColor="Color.Success">
+                                                            Approve Report
+                                                        </MudMenuItem>
+                                                        <MudMenuItem Icon="@Icons.Material.Filled.Edit"
+                                                                     OnClick="@(() => RequestRevisions(report))"
+                                                                     IconColor="Color.Warning">
+                                                            Request Revisions
+                                                        </MudMenuItem>
+                                                    }
+                                                </Authorized>
+                                            </AuthorizeView>
                                         </MudMenu>
                                     </MudStack>
                                 </MudStack>
@@ -361,6 +408,87 @@
                                     }
                                 </MudGrid>
 
+                                <!-- Pending Review Alert - for TenantOwner -->
+                                @if (report.Status == ReportStatus.PendingReview)
+                                {
+                                    <AuthorizeView Policy="RequireTenantOwner">
+                                        <Authorized>
+                                            <MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Outlined" Class="mt-2">
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                                    <MudText Typo="Typo.body2">
+                                                        <MudIcon Icon="@Icons.Material.Filled.RateReview" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                                                        This report is awaiting your review and approval.
+                                                    </MudText>
+                                                    <MudStack Row="true" Spacing="1">
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Success" 
+                                                                   Size="Size.Small"
+                                                                   StartIcon="@Icons.Material.Filled.CheckCircle"
+                                                                   OnClick="@(() => ApproveReport(report))">
+                                                            Approve
+                                                        </MudButton>
+                                                        <MudButton Variant="Variant.Outlined" 
+                                                                   Color="Color.Warning" 
+                                                                   Size="Size.Small"
+                                                                   StartIcon="@Icons.Material.Filled.Edit"
+                                                                   OnClick="@(() => RequestRevisions(report))">
+                                                            Request Revisions
+                                                        </MudButton>
+                                                    </MudStack>
+                                                </MudStack>
+                                            </MudAlert>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                }
+
+                                <!-- Revision Required Alert -->
+                                @if (report.Status == ReportStatus.RevisionRequired)
+                                {
+                                    var hasNewerVersion = HasNewerReportVersion(report);
+                                    <MudAlert Severity="@(hasNewerVersion ? Severity.Normal : Severity.Warning)" 
+                                              Dense="false" 
+                                              Variant="Variant.Outlined" 
+                                              Class="mt-2">
+                                        <MudStack Spacing="2">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudIcon Icon="@(hasNewerVersion ? Icons.Material.Filled.History : Icons.Material.Filled.Edit)" Size="Size.Small" />
+                                                    <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                                                        @(hasNewerVersion ? "Superseded - Revision Created" : "Revisions Requested")
+                                                    </MudText>
+                                                    @if (report.ReviewedAt.HasValue && report.ReviewedBy != null)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Style="color: #666;">
+                                                            by @report.ReviewedBy.FullName on @report.ReviewedAt.Value.ToString("MMM dd, yyyy")
+                                                        </MudText>
+                                                    }
+                                                </MudStack>
+                                                @if (!hasNewerVersion)
+                                                {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled" 
+                                                                       Color="Color.Primary" 
+                                                                       Size="Size.Small"
+                                                                       StartIcon="@Icons.Material.Filled.Refresh"
+                                                                       OnClick="@(() => ReviseReport(report))">
+                                                                Revise Report
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+                                            </MudStack>
+                                            @if (!string.IsNullOrEmpty(report.InternalNotes) && !hasNewerVersion)
+                                            {
+                                                <MudPaper Elevation="0" Class="pa-2" Style="background: #fff8e1; border-radius: 4px;">
+                                                    <MudText Typo="Typo.caption" Style="font-weight: 600; color: #f57c00;">Revision Notes:</MudText>
+                                                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@report.InternalNotes</MudText>
+                                                </MudPaper>
+                                            }
+                                        </MudStack>
+                                    </MudAlert>
+                                }
+
                                 <!-- Published Info -->
                                 @if (report.Status == ReportStatus.Published && report.PublishedAt.HasValue)
                                 {
@@ -374,10 +502,10 @@
                                 }
 
                                 <!-- Review Info -->
-                                @if (report.ReviewedAt.HasValue && report.ReviewedBy != null)
+                                @if (report.ReviewedAt.HasValue && report.ReviewedBy != null && report.Status == ReportStatus.Approved)
                                 {
                                     <MudText Typo="Typo.caption" Style="color: #666;">
-                                        Reviewed by @report.ReviewedBy.FullName on @report.ReviewedAt.Value.ToString("MMM dd, yyyy")
+                                        Approved by @report.ReviewedBy.FullName on @report.ReviewedAt.Value.ToString("MMM dd, yyyy")
                                     </MudText>
                                 }
                             </MudStack>
@@ -601,6 +729,74 @@
         }
     }
 
+    private async Task ApproveReport(GeneratedReport report)
+    {
+        try
+        {
+            await UserState.InitializeAsync();
+            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+            await ReportService.ApproveAsync(report.Id, userId);
+            report.Status = ReportStatus.Approved;
+            report.ReviewedAt = DateTime.UtcNow;
+            Snackbar.Add("Report approved successfully", Severity.Success);
+            await LoadReports();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RequestRevisions(GeneratedReport report)
+    {
+        var parameters = new DialogParameters
+        {
+            ["ReportTitle"] = GetReportTypeDisplayName(report.Type)
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialog = await DialogService.ShowAsync<RequestRevisionsDialog>("Request Revisions", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string revisionNotes)
+        {
+            try
+            {
+                await UserState.InitializeAsync();
+                var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+                await ReportService.RequestRevisionsAsync(report.Id, userId, revisionNotes);
+                report.Status = ReportStatus.RevisionRequired;
+                report.InternalNotes = revisionNotes;
+                Snackbar.Add("Revisions requested - the specialist has been notified", Severity.Success);
+                await LoadReports();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ReviseReport(GeneratedReport report)
+    {
+        // Open the generate dialog pre-filled with the same report type
+        // The specialist can adjust parameters and regenerate
+        newReportType = report.Type;
+        newReportNotes = $"Revision of report v{report.Version}. Original notes: {report.InternalNotes}";
+        generatePdf = true;
+        generateExcel = true;
+        showGenerateDialog = true;
+
+        // The new report will supersede this one when generated
+        // TODO: Consider adding SupersedesReportId tracking when generating
+    }
+
     private async Task PublishReport(GeneratedReport report)
     {
         try
@@ -750,6 +946,20 @@
         ReportStatus.Archived => "Archived",
         _ => status.ToString()
     };
+
+    /// <summary>
+    /// Checks if there's a newer report of the same type created after this one.
+    /// Used to determine if the "Revise Report" button should be shown.
+    /// </summary>
+    private bool HasNewerReportVersion(GeneratedReport report)
+    {
+        return reports.Any(r => 
+            r.Id != report.Id && 
+            r.Type == report.Type && 
+            r.GeneratedAt > report.GeneratedAt &&
+            r.Status != ReportStatus.Superseded &&
+            r.Status != ReportStatus.Archived);
+    }
 
     private record ElementDataGroups(
         Dictionary<string, int> TypeGroups, 

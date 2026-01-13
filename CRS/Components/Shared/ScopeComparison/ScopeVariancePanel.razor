@@ -3,6 +3,7 @@
 
 @inject IScopeComparisonService ScopeComparisonService
 @inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
 
 <MudPaper Elevation="0" Class="pa-4">
     <MudStack Spacing="3">
@@ -229,19 +230,23 @@
                     <MudStack Spacing="1">
                         <MudText Typo="Typo.body2" Style="font-weight: 600;">
                             <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
-                            Amendment Awaiting HOA Approval
+                            Amendment Awaiting Admin Approval
                         </MudText>
                         <MudText Typo="Typo.body2">
-                            A proposal amendment has been sent to the HOA for review. 
-                            The study will proceed once the amendment is accepted.
+                            A proposal amendment has been created and is awaiting administrative review. 
+                            Once approved, it will be sent to the HOA for acceptance.
                         </MudText>
-                        <MudButton Variant="Variant.Text" 
-                                   Color="Color.Inherit" 
-                                   Size="Size.Small"
-                                   Href="@($"/ReserveStudies/{ReserveStudyId}/Amendment")"
-                                   Style="text-decoration: underline; margin-top: 4px;">
-                            View Amendment Details
-                        </MudButton>
+                        <AuthorizeView Policy="RequireTenantStaff">
+                            <Authorized>
+                                <MudButton Variant="Variant.Text" 
+                                           Color="Color.Inherit" 
+                                           Size="Size.Small"
+                                           Href="@($"/ReserveStudies/{ReserveStudyId}/Amendment")"
+                                           Style="text-decoration: underline; margin-top: 4px;">
+                                    View Amendment Details
+                                </MudButton>
+                            </Authorized>
+                        </AuthorizeView>
                     </MudStack>
                 </MudAlert>
             }
@@ -268,7 +273,7 @@
             @if (comparison.Status == ScopeComparisonStatus.AmendmentRejected)
             {
                 <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
-                    <MudStack Spacing="1">
+                    <MudStack Spacing="2">
                         <MudText Typo="Typo.body2" Style="font-weight: 600;">
                             <MudIcon Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
                             Amendment Rejected
@@ -277,14 +282,43 @@
                             The HOA has rejected the proposal amendment.
                             @if (!string.IsNullOrEmpty(comparison.AmendmentRejectionReason))
                             {
-                                <text> Reason: @comparison.AmendmentRejectionReason</text>
+                                <br /><strong>Reason:</strong> @comparison.AmendmentRejectionReason
+                            }
+                            @if (comparison.AmendmentRejectedAt.HasValue)
+                            {
+                                <br /><MudText Typo="Typo.caption" Style="color: #666;">
+                                    Rejected on @comparison.AmendmentRejectedAt.Value.ToString("MMM dd, yyyy 'at' h:mm tt")
+                                </MudText>
                             }
                         </MudText>
                         <AuthorizeView Policy="RequireTenantStaff">
                             <Authorized>
-                                <MudText Typo="Typo.caption" Style="color: #666; margin-top: 4px;">
-                                    Please contact the HOA to discuss next steps.
-                                </MudText>
+                                <MudDivider Class="my-2" />
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">Next Steps</MudText>
+                                <MudStack Row="true" Spacing="2">
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="Color.Primary" 
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Edit"
+                                               OnClick="PrepareRevisedAmendment"
+                                               Disabled="@isSubmitting">
+                                        @if (isSubmitting)
+                                        {
+                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        }
+                                        Create Revised Amendment
+                                    </MudButton>
+                                    @if (comparison.AmendmentProposalId.HasValue)
+                                    {
+                                        <MudButton Variant="Variant.Outlined" 
+                                                   Color="Color.Default" 
+                                                   Size="Size.Small"
+                                                   StartIcon="@Icons.Material.Filled.Visibility"
+                                                   Href="@($"/ReserveStudies/{ReserveStudyId}/Amendment")">
+                                            View Rejected Amendment
+                                        </MudButton>
+                                    }
+                                </MudStack>
                             </Authorized>
                         </AuthorizeView>
                     </MudStack>
@@ -322,12 +356,29 @@
                 </MudPaper>
             }
 
-            <!-- Notes -->
+            <!-- Notes / Amendment History -->
             @if (!string.IsNullOrEmpty(comparison.Notes))
             {
-                <MudText Typo="Typo.caption" Style="color: #666;">
-                    <strong>Notes:</strong> @comparison.Notes
-                </MudText>
+                <MudExpansionPanels Elevation="0">
+                    <MudExpansionPanel Style="background: #f9f9f9; border-radius: 8px;">
+                        <TitleContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Style="color: #666;" />
+                                <MudText Typo="Typo.body2" Style="font-weight: 600; color: #666;">Amendment History</MudText>
+                            </MudStack>
+                        </TitleContent>
+                        <ChildContent>
+                            <MudStack Spacing="2">
+                                @foreach (var note in comparison.Notes.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    <MudPaper Elevation="0" Class="pa-3" Style="background: white; border-left: 3px solid #FFA726; border-radius: 4px;">
+                                        <MudText Typo="Typo.caption" Style="color: #666; white-space: pre-wrap;">@note.Trim()</MudText>
+                                    </MudPaper>
+                                }
+                            </MudStack>
+                        </ChildContent>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
             }
         }
     </MudStack>
@@ -351,6 +402,15 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+    }
+
+    /// <summary>
+    /// Public method to refresh the scope comparison data from external components
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        await LoadData();
+        StateHasChanged();
     }
 
     private async Task LoadData()
@@ -474,9 +534,37 @@
         {
             ScopeChangeMode.VarianceReportOnly => 
                 $"Threshold exceeded ({string.Join(" or ", messages)}). Review recommended before proceeding.",
-            ScopeChangeMode.VarianceWithAmendment or ScopeChangeMode.AlwaysAmendment => 
-                $"Threshold exceeded ({string.Join(" or ", messages)}). Amendment or override required to proceed.",
-            _ => "Scope change detected. Review may be required."
-        };
-    }
-}
+                        ScopeChangeMode.VarianceWithAmendment or ScopeChangeMode.AlwaysAmendment => 
+                            $"Threshold exceeded ({string.Join(" or ", messages)}). Amendment or override required to proceed.",
+                        _ => "Scope change detected. Review may be required."
+                    };
+                }
+
+                private async Task PrepareRevisedAmendment()
+                {
+                    if (comparison == null)
+                        return;
+
+                    try
+                    {
+                        isSubmitting = true;
+                        StateHasChanged();
+
+                        // Reset the scope comparison to allow new amendment creation
+                        await ScopeComparisonService.PrepareRevisedAmendmentAsync(comparison.Id, Guid.Empty);
+
+                        Snackbar.Add("Ready to create revised amendment. Redirecting to proposal page...", Severity.Success);
+
+                        // Navigate to the proposal page in amendment mode
+                        NavigationManager.NavigateTo($"/ReserveStudies/{ReserveStudyId}/Proposal?amendment=true");
+                    }
+                    catch (Exception ex)
+                    {
+                        Snackbar.Add($"Error preparing revised amendment: {ex.Message}", Severity.Error);
+                    }
+                    finally
+                    {
+                        isSubmitting = false;
+                    }
+                }
+            }

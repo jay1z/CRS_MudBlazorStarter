@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CRS.Data;
 using CRS.Models;
 using CRS.Models.Workflow;
@@ -448,10 +448,14 @@ public class WorkflowActionService : IWorkflowActionService
                 (true, null), // TODO: Implement funding plan completion check
                 
             StageValidation.NarrativeCreated => 
-                (true, null), // TODO: Implement narrative check
-                
+                (await db.Narratives.AnyAsync(n => n.ReserveStudyId == study.Id && n.DateDeleted == null), 
+                 "Narrative must be created."),
+
             StageValidation.NarrativeComplete => 
-                (true, null), // TODO: Implement narrative completion check
+                (await db.Narratives.AnyAsync(n => n.ReserveStudyId == study.Id && 
+                                                   n.DateDeleted == null && 
+                                                   (n.Status == NarrativeStatus.Approved || n.Status == NarrativeStatus.Published)), 
+                 "Narrative must be completed and approved."),
                 
             StageValidation.ReportAttached => 
                 (study.IsComplete, 

@@ -1,15 +1,18 @@
 ﻿@page "/ReserveStudies/{ReserveStudyId:guid}/Amendment"
 @attribute [Authorize]
+@rendermode InteractiveServer
 @using CRS.Models.Workflow
 @using CRS.Services.Interfaces
 @using CRS.Services.Tenant
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using Markdig
 
 @inject IScopeComparisonService ScopeComparisonService
 @inject IProposalAcceptanceService AcceptanceService
 @inject IReserveStudyService ReserveStudyService
 @inject ITenantContext TenantContext
+@inject ThemeService ThemeService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IHttpContextAccessor HttpContextAccessor
 @inject NavigationManager NavigationManager
@@ -80,12 +83,101 @@
                         This amendment was rejected on @(scopeComparison.AmendmentRejectedAt?.ToString("MMMM dd, yyyy") ?? "N/A").
                         @if (!string.IsNullOrEmpty(scopeComparison.AmendmentRejectionReason))
                         {
-                            <text>Reason: @scopeComparison.AmendmentRejectionReason</text>
-                        }
-                    </MudText>
-                </MudStack>
-            </MudAlert>
-        }
+                                                <text>Reason: @scopeComparison.AmendmentRejectionReason</text>
+                                            }
+                                        </MudText>
+                                    </MudStack>
+                                </MudAlert>
+
+                                <!-- Show proposal details for rejected amendments (read-only) -->
+                                <!-- Scope Change Explanation -->
+                                <MudPaper Elevation="2" Class="pa-5 mb-4" Style="border-radius: 12px;">
+                                    <MudStack Spacing="3">
+                                        <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                                            <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Class="mr-2" Style="vertical-align: middle;" />
+                                            Rejected Amendment Details
+                                        </MudText>
+                                        <MudText Typo="Typo.body1">
+                                            The following amendment was rejected by the HOA.
+                                        </MudText>
+
+                                        <!-- Variance Summary -->
+                                        <MudGrid Spacing="3" Class="mt-2">
+                                            <MudItem xs="12" sm="4">
+                                                <MudPaper Elevation="1" Class="pa-3" Style="text-align: center; border-radius: 8px; background: #f5f5f5;">
+                                                    <MudText Typo="Typo.caption" Style="color: #666;">Original Estimate</MudText>
+                                                    <MudText Typo="Typo.h5" Color="Color.Default">@scopeComparison.OriginalTotalCount elements</MudText>
+                                                </MudPaper>
+                                            </MudItem>
+                                            <MudItem xs="12" sm="4">
+                                                <MudPaper Elevation="1" Class="pa-3" Style="text-align: center; border-radius: 8px; border: 2px solid #FFA726;">
+                                                    <MudText Typo="Typo.caption" Style="color: #666;">Variance</MudText>
+                                                    <MudText Typo="Typo.h5" Color="Color.Warning">
+                                                        @(scopeComparison.VarianceCount >= 0 ? "+" : "")@scopeComparison.VarianceCount elements
+                                                    </MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Warning">
+                                                        (@(scopeComparison.VariancePercent >= 0 ? "+" : "")@scopeComparison.VariancePercent.ToString("F1")%)
+                                                    </MudText>
+                                                </MudPaper>
+                                            </MudItem>
+                                            <MudItem xs="12" sm="4">
+                                                <MudPaper Elevation="1" Class="pa-3" Style="text-align: center; border-radius: 8px; background: #E3F2FD;">
+                                                    <MudText Typo="Typo.caption" Style="color: #666;">Actual (Site Visit)</MudText>
+                                                    <MudText Typo="Typo.h5" Color="Color.Primary">@scopeComparison.ActualTotalCount elements</MudText>
+                                                </MudPaper>
+                                            </MudItem>
+                                        </MudGrid>
+                                    </MudStack>
+                                </MudPaper>
+
+                                <!-- Proposal Comparison for Rejected Amendment -->
+                                <MudPaper Elevation="2" Class="pa-5 mb-4" Style="border-radius: 12px;">
+                                    <MudStack Spacing="3">
+                                        <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                                            <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" Style="vertical-align: middle;" />
+                                            Proposal Comparison
+                                        </MudText>
+
+                                        <MudSimpleTable Dense="true" Hover="true" Style="border-radius: 8px;">
+                                            <thead>
+                                                <tr style="background-color: #f5f5f5;">
+                                                    <th></th>
+                                                    <th style="text-align: right;">Original Proposal</th>
+                                                    <th style="text-align: right;">Rejected Amendment</th>
+                                                    <th style="text-align: right;">Difference</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td style="font-weight: 600;">Estimated Cost</td>
+                                                    <td style="text-align: right;">@(originalProposal?.EstimatedCost.ToString("C") ?? "N/A")</td>
+                                                    <td style="text-align: right; color: #d32f2f; font-weight: 600;">@(amendmentProposal?.EstimatedCost.ToString("C") ?? "N/A")</td>
+                                                    <td style="text-align: right; color: @GetCostDiffColor()">
+                                                        @GetCostDiffText()
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="font-weight: 600;">Scope</td>
+                                                    <td style="text-align: right;">@(scopeComparison.OriginalTotalCount) elements</td>
+                                                    <td style="text-align: right; color: #d32f2f; font-weight: 600;">@(scopeComparison.ActualTotalCount) elements</td>
+                                                    <td style="text-align: right; color: @GetScopeDiffColor()">
+                                                        @GetScopeDiffText()
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </MudSimpleTable>
+
+                                        @if (!string.IsNullOrEmpty(amendmentProposal?.AmendmentReason))
+                                        {
+                                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                                                <MudText Typo="Typo.body2">
+                                                    <strong>Amendment Reason:</strong> @amendmentProposal.AmendmentReason
+                                                </MudText>
+                                            </MudAlert>
+                                        }
+                                    </MudStack>
+                                </MudPaper>
+                            }
         else if (scopeComparison.Status == ScopeComparisonStatus.AmendmentPending)
         {
             <!-- Scope Change Explanation -->
@@ -175,24 +267,47 @@
                             </MudText>
                         </MudAlert>
                     }
-                </MudStack>
-            </MudPaper>
+                    </MudStack>
+                </MudPaper>
 
-            <!-- Acceptance Form -->
-            <MudPaper Elevation="2" Class="pa-5 mb-4" Style="border-radius: 12px;">
-                <MudStack Spacing="3">
-                    <MudText Typo="Typo.h6" Style="font-weight: 600;">
-                        <MudIcon Icon="@Icons.Material.Filled.Draw" Class="mr-2" Style="vertical-align: middle;" />
-                        Your Decision
-                    </MudText>
+                <!-- Acceptance Form - Only show for owners -->
+                @if (isOwner)
+                {
+                    <MudPaper Elevation="2" Class="pa-5 mb-4" Style="border-radius: 12px;">
+                        <MudStack Spacing="3">
+                            <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                                <MudIcon Icon="@Icons.Material.Filled.Draw" Class="mr-2" Style="vertical-align: middle;" />
+                                Your Decision
+                            </MudText>
 
-                    @if (termsTemplate != null)
-                    {
-                        <!-- Terms -->
-                        <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 8px; max-height: 200px; overflow-y: auto; background: #fafafa;">
-                            <MudMarkdown Value="@termsTemplate.TermsText" />
-                        </MudPaper>
-                    }
+                            <!-- Terms and Conditions -->
+                            <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 8px; max-height: 250px; overflow-y: auto; background: #fafafa;">
+                                @if (termsTemplate != null && !string.IsNullOrWhiteSpace(termsTemplate.TermsText))
+                                {
+                                    <div class="terms-content markdown-content" style="font-size: 0.875rem; line-height: 1.6;">
+                                        @((MarkupString)RenderMarkdownToHtml(termsTemplate.TermsText))
+                                    </div>
+                                }
+                        else if (pdfTermsAndConditions != null && pdfTermsAndConditions.Count > 0)
+                        {
+                            <h6 style="font-weight: 600; margin-bottom: 12px;">Terms and Conditions</h6>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                @foreach (var term in pdfTermsAndConditions)
+                                {
+                                    <li style="margin-bottom: 8px;">@term</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                <MudText Typo="Typo.body2">
+                                    <strong>No terms and conditions configured.</strong> Please contact your administrator to set up 
+                                    acceptance terms in Settings → Tenant Settings → PDF Settings → Proposal Terms and Conditions.
+                                </MudText>
+                            </MudAlert>
+                        }
+                    </MudPaper>
 
                     <!-- Typed Signature -->
                     <MudTextField @bind-Value="typedSignature"
@@ -287,20 +402,30 @@
                                 @if (isSubmitting)
                                 {
                                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                    <span>Processing...</span>
-                                }
-                                else
-                                {
-                                    <span>Accept Amendment</span>
-                                }
-                            </MudButton>
-                        }
-                    </MudStack>
-                </MudStack>
-            </MudPaper>
-        }
+                                                                <span>Processing...</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span>Accept Amendment</span>
+                                                            }
+                                                        </MudButton>
+                                                    }
+                                                </MudStack>
+                                            </MudStack>
+                                        </MudPaper>
+                                        }
+                                        else
+                                        {
+                                            <!-- Not the owner - show info message -->
+                                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">
+                                                <MudText Typo="Typo.body2">
+                                                    <strong>View Only:</strong> Only the HOA representative who owns this study can accept or reject this amendment.
+                                                </MudText>
+                                            </MudAlert>
+                                        }
+                                    }
 
-        <!-- Back to Dashboard -->
+                                    <!-- Back to Dashboard -->
         <MudButton Variant="Variant.Text"
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.ArrowBack"
@@ -319,10 +444,13 @@
     private CRS.Models.Proposal? originalProposal;
     private CRS.Models.Proposal? amendmentProposal;
     private AcceptanceTermsTemplate? termsTemplate;
+    private List<string>? pdfTermsAndConditions;
 
     private bool isLoading = true;
     private bool isSubmitting = false;
     private string? errorMessage;
+    private Guid? currentUserId;
+    private bool isOwner = false;
 
     // Form fields
     private string typedSignature = "";
@@ -331,7 +459,11 @@
     private string rejectionReason = "";
     private List<string> validationErrors = new();
 
-    private bool CanAccept => !string.IsNullOrWhiteSpace(typedSignature) && agreedToTerms && !isSubmitting;
+    private bool HasTermsToShow => 
+        (termsTemplate != null && !string.IsNullOrWhiteSpace(termsTemplate.TermsText)) 
+        || (pdfTermsAndConditions != null && pdfTermsAndConditions.Count > 0);
+
+    private bool CanAccept => isOwner && !string.IsNullOrWhiteSpace(typedSignature) && agreedToTerms && !isSubmitting;
 
     protected override async Task OnInitializedAsync()
     {
@@ -350,6 +482,15 @@
             {
                 errorMessage = "Reserve study not found.";
                 return;
+            }
+
+            // Check if current user is the owner
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                currentUserId = userId;
+                isOwner = reserveStudy.ApplicationUserId == userId || reserveStudy.RequestedByUserId == userId;
             }
 
             // Load scope comparison
@@ -379,19 +520,45 @@
                 }
             }
 
-            // Load terms template
-            await AcceptanceService.SeedDefaultTermsIfNeededAsync();
-            termsTemplate = await AcceptanceService.GetActiveTermsTemplateAsync();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error loading amendment details: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
+            // Try to load terms template (formal click-wrap terms) - may fail if no tenant context
+            try
+            {
+                await AcceptanceService.SeedDefaultTermsIfNeededAsync();
+                termsTemplate = await AcceptanceService.GetActiveTermsTemplateAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail - we have fallback terms
+                Console.WriteLine($"Could not load terms template: {ex.Message}");
+                    }
+
+                    // Try to load PDF terms and conditions from tenant branding
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(TenantContext.BrandingJson))
+                        {
+                            if (ThemeService.TryParseBranding(TenantContext.BrandingJson, out var branding, out _))
+                            {
+                                pdfTermsAndConditions = branding.PdfSettings?.Proposal?.TermsAndConditions;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Could not load PDF terms: {ex.Message}");
+                    }
+
+                    // No default terms - if nothing is configured, the UI will show a warning
+                }
+                catch (Exception ex)
+                {
+                    errorMessage = $"Error loading amendment details: {ex.Message}";
+                }
+                finally
+                {
+                    isLoading = false;
+                }
+            }
 
     private void ShowRejectForm()
     {
@@ -402,6 +569,12 @@
     private async Task AcceptAmendment()
     {
         validationErrors.Clear();
+
+        if (!isOwner)
+        {
+            Snackbar.Add("You are not authorized to accept this amendment.", Severity.Error);
+            return;
+        }
 
         if (string.IsNullOrWhiteSpace(typedSignature))
             validationErrors.Add("Please type your full legal name as your electronic signature.");
@@ -450,6 +623,12 @@
     private async Task RejectAmendment()
     {
         validationErrors.Clear();
+
+        if (!isOwner)
+        {
+            Snackbar.Add("You are not authorized to reject this amendment.", Severity.Error);
+            return;
+        }
 
         if (string.IsNullOrWhiteSpace(rejectionReason))
             validationErrors.Add("Please provide a reason for rejection.");
@@ -516,12 +695,27 @@
         return scopeComparison.VarianceCount > 0 ? "#FFA726" : "#42A5F5";
     }
 
-    private string GetScopeDiffText()
-    {
-        if (scopeComparison == null) return "N/A";
-        if (scopeComparison.VarianceCount == 0) return "No change";
-        return scopeComparison.VarianceCount > 0 
-            ? $"+{scopeComparison.VarianceCount}" 
-            : scopeComparison.VarianceCount.ToString();
+        private string GetScopeDiffText()
+        {
+            if (scopeComparison == null) return "N/A";
+            if (scopeComparison.VarianceCount == 0) return "No change";
+            return scopeComparison.VarianceCount > 0 
+                ? $"+{scopeComparison.VarianceCount}" 
+                : scopeComparison.VarianceCount.ToString();
+        }
+
+        private string RenderMarkdownToHtml(string? markdown)
+        {
+            if (string.IsNullOrWhiteSpace(markdown))
+                return string.Empty;
+
+            // Convert markdown to HTML using Markdig
+            var pipeline = new MarkdownPipelineBuilder()
+                .UseAdvancedExtensions()
+                .Build();
+            var html = Markdown.ToHtml(markdown, pipeline);
+
+            // Sanitize the HTML to prevent XSS
+            return CRS.Services.HtmlSanitizerHelper.Sanitize(html);
+        }
     }
-}

@@ -2,6 +2,7 @@
 using System.Security.Claims;
 
 using CRS.Models;
+using CRS.Models.NarrativeTemplates; // Narrative template entities
 using CRS.Models.Security; // add
 using CRS.Models.Workflow; // add
 using CRS.Models.ReserveStudyCalculator; // Reserve Study Calculator entities
@@ -618,7 +619,94 @@ namespace CRS.Data {
                             .OnDelete(DeleteBehavior.NoAction);
                     });
 
-                    // ProposalAcceptance entity configuration (click-wrap agreements)
+                    // Narrative entity configuration
+                    builder.Entity<Narrative>(entity => {
+                        entity.ToTable("Narratives");
+                        entity.HasIndex(e => e.TenantId)
+                            .HasDatabaseName("IX_Narrative_Tenant");
+                        entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId })
+                            .HasDatabaseName("IX_Narrative_Tenant_Study");
+                        entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId, e.Status })
+                            .HasFilter("[DateDeleted] IS NULL")
+                            .HasDatabaseName("IX_Narrative_Tenant_Study_Status");
+                        entity.HasIndex(e => new { e.TenantId, e.AuthorUserId })
+                            .HasFilter("[AuthorUserId] IS NOT NULL")
+                            .HasDatabaseName("IX_Narrative_Tenant_Author");
+                        entity.HasOne(n => n.ReserveStudy)
+                            .WithMany()
+                            .HasForeignKey(n => n.ReserveStudyId)
+                            .OnDelete(DeleteBehavior.Cascade);
+                        entity.HasOne(n => n.Author)
+                            .WithMany()
+                            .HasForeignKey(n => n.AuthorUserId)
+                            .OnDelete(DeleteBehavior.NoAction);
+                        entity.HasOne(n => n.CompletedBy)
+                            .WithMany()
+                            .HasForeignKey(n => n.CompletedByUserId)
+                            .OnDelete(DeleteBehavior.NoAction);
+                        entity.HasOne(n => n.ReviewedBy)
+                            .WithMany()
+                            .HasForeignKey(n => n.ReviewedByUserId)
+                            .OnDelete(DeleteBehavior.NoAction);
+                        // Large text fields
+                        entity.Property(n => n.ExecutiveSummary).HasColumnType("nvarchar(max)");
+                        entity.Property(n => n.Introduction).HasColumnType("nvarchar(max)");
+                        entity.Property(n => n.PropertyDescription).HasColumnType("nvarchar(max)");
+                        entity.Property(n => n.Methodology).HasColumnType("nvarchar(max)");
+                        entity.Property(n => n.Findings).HasColumnType("nvarchar(max)");
+                        entity.Property(n => n.FundingAnalysis).HasColumnType("nvarchar(max)");
+                        entity.Property(n => n.Recommendations).HasColumnType("nvarchar(max)");
+                        entity.Property(n => n.Conclusion).HasColumnType("nvarchar(max)");
+                            entity.Property(n => n.AdditionalNotes).HasColumnType("nvarchar(max)");
+                        });
+
+                        // NarrativeTemplateSection entity configuration
+                        builder.Entity<NarrativeTemplateSection>(entity => {
+                            entity.ToTable("NarrativeTemplateSections");
+                            entity.HasIndex(e => e.TenantId)
+                                .HasDatabaseName("IX_NarrativeTemplateSection_Tenant");
+                            entity.HasIndex(e => new { e.TenantId, e.SectionKey })
+                                .HasDatabaseName("IX_NarrativeTemplateSection_Tenant_Key");
+                            entity.HasIndex(e => new { e.TenantId, e.IsEnabled, e.SortOrder })
+                                .HasDatabaseName("IX_NarrativeTemplateSection_Tenant_Enabled_Order");
+                            entity.Property(e => e.Description).HasMaxLength(500);
+                            entity.Property(e => e.CssClass).HasMaxLength(200);
+                        });
+
+                        // NarrativeTemplateBlock entity configuration
+                        builder.Entity<NarrativeTemplateBlock>(entity => {
+                            entity.ToTable("NarrativeTemplateBlocks");
+                            entity.HasIndex(e => e.TenantId)
+                                .HasDatabaseName("IX_NarrativeTemplateBlock_Tenant");
+                            entity.HasIndex(e => new { e.TenantId, e.SectionKey, e.BlockKey })
+                                .HasDatabaseName("IX_NarrativeTemplateBlock_Tenant_Section_Block");
+                            entity.HasIndex(e => new { e.TenantId, e.SectionKey, e.IsEnabled, e.SortOrder })
+                                .HasDatabaseName("IX_NarrativeTemplateBlock_Tenant_Section_Enabled_Order");
+                            entity.Property(e => e.HtmlTemplate).HasColumnType("nvarchar(max)");
+                            entity.Property(e => e.AppliesWhenJson).HasColumnType("nvarchar(max)");
+                            entity.Property(e => e.Description).HasMaxLength(500);
+                            entity.Property(e => e.CssClass).HasMaxLength(200);
+                            entity.HasOne(b => b.Section)
+                                .WithMany(s => s.Blocks)
+                                .HasForeignKey(b => b.SectionId)
+                                .OnDelete(DeleteBehavior.SetNull);
+                        });
+
+                        // NarrativeInsert entity configuration
+                        builder.Entity<NarrativeInsert>(entity => {
+                            entity.ToTable("NarrativeInserts");
+                            entity.HasIndex(e => e.TenantId)
+                                .HasDatabaseName("IX_NarrativeInsert_Tenant");
+                            entity.HasIndex(e => new { e.TenantId, e.InsertKey })
+                                .HasDatabaseName("IX_NarrativeInsert_Tenant_Key");
+                            entity.HasIndex(e => new { e.TenantId, e.IsEnabled, e.TargetSectionKey })
+                                .HasDatabaseName("IX_NarrativeInsert_Tenant_Enabled_Section");
+                            entity.Property(e => e.HtmlTemplate).HasColumnType("nvarchar(max)");
+                            entity.Property(e => e.AppliesWhenJson).HasColumnType("nvarchar(max)");
+                            entity.Property(e => e.Description).HasMaxLength(500);
+                        });
+
+                        // ProposalAcceptance entity configuration (click-wrap agreements)
                     builder.Entity<ProposalAcceptance>(entity => {
                         entity.ToTable("ProposalAcceptances");
                         entity.HasIndex(e => e.TenantId)
@@ -866,6 +954,14 @@ namespace CRS.Data {
         // Scope Change Management
         public DbSet<TenantScopeChangeSettings> TenantScopeChangeSettings { get; set; }
         public DbSet<ScopeComparison> ScopeComparisons { get; set; }
+
+        // Narrative
+        public DbSet<Narrative> Narratives { get; set; }
+
+        // Narrative Templates
+        public DbSet<NarrativeTemplateSection> NarrativeTemplateSections { get; set; }
+        public DbSet<NarrativeTemplateBlock> NarrativeTemplateBlocks { get; set; }
+        public DbSet<NarrativeInsert> NarrativeInserts { get; set; }
         #endregion
 
         #region Seed Data
@@ -874,10 +970,13 @@ namespace CRS.Data {
             context.SaveChanges();
             GenerateCommonElements(context);
             context.SaveChanges();
-            
+
             // Phase 2: Use consolidated ElementOptions instead of separate tables
             GenerateElementOptions(context);
             context.SaveChanges();
+
+            // Narrative Templates: Seed global defaults
+            NarrativeTemplateSeed.Seed((ApplicationDbContext)context);
 
             // Removed default tenant seeding for new multi-tenant site; tenants are created via signup
         }

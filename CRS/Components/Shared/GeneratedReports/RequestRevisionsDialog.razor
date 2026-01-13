@@ -1,0 +1,65 @@
+﻿@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Color="Color.Warning" />
+            <MudText Typo="Typo.h6">Request Report Revisions</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">
+                <MudText Typo="Typo.body2">
+                    Please describe what changes are needed. The specialist will see these notes 
+                    when they revise the report.
+                </MudText>
+            </MudAlert>
+            
+            <MudTextField @bind-Value="RevisionNotes"
+                          Label="Revision Notes"
+                          Placeholder="Describe what needs to be changed..."
+                          Variant="Variant.Outlined"
+                          Lines="5"
+                          Required="true"
+                          RequiredError="Please provide revision notes"
+                          Immediate="true"
+                          HelperText="Be specific about what needs to be corrected or changed" />
+            
+            <MudText Typo="Typo.caption" Style="color: #666;">
+                Examples: "Adjust inflation rate to 3.5%", "Pool resurfacing should be 2028 not 2027", 
+                "Missing elevator component"
+            </MudText>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Warning" 
+                   Variant="Variant.Filled" 
+                   OnClick="Submit"
+                   Disabled="@(string.IsNullOrWhiteSpace(RevisionNotes))"
+                   StartIcon="@Icons.Material.Filled.Send">
+            Request Revisions
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public string ReportTitle { get; set; } = "Report";
+
+    public string RevisionNotes { get; set; } = "";
+
+    private void Cancel() => MudDialog?.Cancel();
+
+    private void Submit()
+    {
+        if (!string.IsNullOrWhiteSpace(RevisionNotes))
+        {
+            MudDialog?.Close(DialogResult.Ok(RevisionNotes));
+        }
+    }
+}

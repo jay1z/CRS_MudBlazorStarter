@@ -6,20 +6,19 @@
 @inject ITenantContext TenantContext
 @inject ISnackbar Snackbar
 
-<MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
-    <MudStack Spacing="4">
-        <!-- Header -->
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Color="Color.Primary" Size="Size.Large" />
-                <div>
-                    <MudText Typo="Typo.h6" Style="font-weight: 600;">Scope Change Settings</MudText>
-                    <MudText Typo="Typo.caption" Style="color: #666;">
-                        Configure how scope changes are handled after site visits
-                    </MudText>
-                </div>
-            </MudStack>
+<MudStack Spacing="4">
+    <!-- Header -->
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Color="Color.Primary" Size="Size.Large" />
+            <div>
+                <MudText Typo="Typo.h6" Style="font-weight: 600;">Scope Change Settings</MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;">
+                    Configure how scope changes are handled after site visits
+                </MudText>
+            </div>
         </MudStack>
+    </MudStack>
 
         @if (isLoading)
         {
@@ -158,74 +157,68 @@
                     <MudText Typo="Typo.caption" Style="color: #666;">
                         Split into site visit (Phase 1) and full study (Phase 2) proposals
                     </MudText>
-                </MudItem>
-            </MudGrid>
+                                </MudItem>
+                            </MudGrid>
+                        }
+                    </MudStack>
 
-            <!-- Save Button -->
-            <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Save"
-                           OnClick="SaveSettings"
-                           Disabled="@isSaving">
-                    @if (isSaving)
+                @code {
+                    [Parameter]
+                    public EventCallback OnSettingsChanged { get; set; }
+
+                    private TenantScopeChangeSettings settings = new();
+                    private bool isLoading = true;
+                    private bool isSaving = false;
+
+                    protected override async Task OnInitializedAsync()
                     {
-                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        await LoadSettings();
                     }
-                    Save Settings
-                </MudButton>
-            </MudStack>
-        }
-    </MudStack>
-</MudPaper>
 
-@code {
-    private TenantScopeChangeSettings settings = new();
-    private bool isLoading = true;
-    private bool isSaving = false;
+                    private async Task LoadSettings()
+                    {
+                        try
+                        {
+                            isLoading = true;
+                            var tenantId = TenantContext.TenantId ?? 0;
+                            settings = await ScopeComparisonService.GetSettingsAsync(tenantId);
+                            settings.TenantId = tenantId;
+                        }
+                        catch (Exception ex)
+                        {
+                            Snackbar.Add($"Error loading settings: {ex.Message}", Severity.Error);
+                        }
+                        finally
+                        {
+                            isLoading = false;
+                        }
+                    }
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadSettings();
-    }
+                    /// <summary>
+                    /// Public method to save settings - called by parent component
+                    /// </summary>
+                    public async Task SaveAsync()
+                    {
+                        try
+                        {
+                            isSaving = true;
+                            settings.UpdatedAt = DateTime.UtcNow;
+                            await ScopeComparisonService.SaveSettingsAsync(settings);
+                        }
+                        catch (Exception ex)
+                        {
+                            Snackbar.Add($"Error saving scope settings: {ex.Message}", Severity.Warning);
+                        }
+                        finally
+                        {
+                            isSaving = false;
+                        }
+                    }
 
-    private async Task LoadSettings()
-    {
-        try
-        {
-            isLoading = true;
-            var tenantId = TenantContext.TenantId ?? 0;
-            settings = await ScopeComparisonService.GetSettingsAsync(tenantId);
-            settings.TenantId = tenantId;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading settings: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private async Task SaveSettings()
-    {
-        try
-        {
-            isSaving = true;
-            settings.UpdatedAt = DateTime.UtcNow;
-            await ScopeComparisonService.SaveSettingsAsync(settings);
-            Snackbar.Add("Scope change settings saved successfully", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error saving settings: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            isSaving = false;
-        }
-    }
+                    private async Task NotifyChanged()
+                    {
+                        await OnSettingsChanged.InvokeAsync();
+                    }
 
     private string GetModeDescription(ScopeChangeMode mode) => mode switch
     {

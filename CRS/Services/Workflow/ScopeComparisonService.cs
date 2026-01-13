@@ -517,19 +517,79 @@ public class ScopeComparisonService : IScopeComparisonService
             .ToListAsync();
     }
 
-    /// <inheritdoc />
-    public async Task<ScopeComparison?> GetByIdWithDetailsAsync(Guid scopeComparisonId)
-    {
-        await using var context = await _dbFactory.CreateDbContextAsync();
-        var tenantId = _tenantContext.TenantId 
-            ?? throw new InvalidOperationException("Tenant context is required");
+        /// <inheritdoc />
+        public async Task<ScopeComparison?> GetByIdWithDetailsAsync(Guid scopeComparisonId)
+        {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var tenantId = _tenantContext.TenantId 
+                ?? throw new InvalidOperationException("Tenant context is required");
 
-        return await context.ScopeComparisons
-            .Include(sc => sc.ReserveStudy)
-                .ThenInclude(rs => rs!.Community)
-            .Include(sc => sc.ReserveStudy)
-                .ThenInclude(rs => rs!.CurrentProposal)
-            .Include(sc => sc.AmendmentProposal)
-            .FirstOrDefaultAsync(sc => sc.Id == scopeComparisonId && sc.TenantId == tenantId);
+            return await context.ScopeComparisons
+                .Include(sc => sc.ReserveStudy)
+                    .ThenInclude(rs => rs!.Community)
+                .Include(sc => sc.ReserveStudy)
+                    .ThenInclude(rs => rs!.CurrentProposal)
+                .Include(sc => sc.AmendmentProposal)
+                    .ThenInclude(ap => ap!.OriginalProposal)
+                .FirstOrDefaultAsync(sc => sc.Id == scopeComparisonId && sc.TenantId == tenantId);
+        }
+
+        /// <inheritdoc />
+        public async Task<ScopeComparison> PrepareRevisedAmendmentAsync(Guid scopeComparisonId, Guid userId)
+        {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var tenantId = _tenantContext.TenantId 
+                ?? throw new InvalidOperationException("Tenant context is required");
+
+            var comparison = await context.ScopeComparisons
+                .Include(sc => sc.ReserveStudy)
+                    .ThenInclude(rs => rs!.StudyRequest)
+                .Include(sc => sc.AmendmentProposal)
+                .FirstOrDefaultAsync(sc => sc.Id == scopeComparisonId && sc.TenantId == tenantId);
+
+            if (comparison == null)
+            {
+                throw new InvalidOperationException($"Scope comparison {scopeComparisonId} not found");
+            }
+
+            if (comparison.Status != ScopeComparisonStatus.AmendmentRejected)
+            {
+                throw new InvalidOperationException(
+                    $"Can only prepare revised amendment for rejected amendments. Current status: {comparison.Status}");
+            }
+
+            // Store the previous amendment info in notes for audit trail
+            var previousAmendmentNote = $"Previous amendment (ID: {comparison.AmendmentProposalId}) rejected on {comparison.AmendmentRejectedAt:g}. ";
+            if (!string.IsNullOrEmpty(comparison.AmendmentRejectionReason))
+            {
+                previousAmendmentNote += $"Reason: {comparison.AmendmentRejectionReason}";
+            }
+            comparison.Notes = string.IsNullOrEmpty(comparison.Notes) 
+                ? previousAmendmentNote 
+                : $"{comparison.Notes}\n\n{previousAmendmentNote}";
+
+            // Reset status to allow new amendment creation
+            comparison.Status = ScopeComparisonStatus.ExceedsThreshold;
+            comparison.AmendmentProposalId = null;
+            comparison.AmendmentAcceptedAt = null;
+            comparison.AmendmentAcceptedByUserId = null;
+            comparison.AmendmentRejectedAt = null;
+            comparison.AmendmentRejectionReason = null;
+
+            // Update study request if needed
+            var studyRequest = comparison.ReserveStudy?.StudyRequest;
+            if (studyRequest != null)
+            {
+                studyRequest.AmendmentRequired = true;
+                studyRequest.AmendmentAccepted = false;
+            }
+
+            await context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Prepared revised amendment for scope comparison {Id} by user {UserId}, study {StudyId}",
+                scopeComparisonId, userId, comparison.ReserveStudyId);
+
+            return comparison;
+        }
     }
-}

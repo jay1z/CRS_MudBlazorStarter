@@ -27,6 +27,11 @@ public class ThemeService {
         OnThemeChanged?.Invoke();
     }
 
+    public void ToggleDarkMode(bool isDark) {
+        IsDarkMode = isDark;
+        OnThemeChanged?.Invoke();
+    }
+
     // Apply a theme from BrandingJson stored on the tenant over a base theme (Default preset if available)
     public void ApplyTenantBrandingIfAvailable() {
         if (_tenantContext == null) return;

@@ -1,5 +1,6 @@
 ﻿using CRS.Data;
 using CRS.Models;
+using CRS.Models.Workflow;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 
@@ -14,13 +15,16 @@ public class GeneratedReportService : IGeneratedReportService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
+    private readonly IReserveStudyWorkflowService _workflowService;
 
     public GeneratedReportService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
-        ITenantContext tenantContext)
+        ITenantContext tenantContext,
+        IReserveStudyWorkflowService workflowService)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
+        _workflowService = workflowService;
     }
 
     public async Task<IReadOnlyList<GeneratedReport>> GetByReserveStudyAsync(Guid reserveStudyId, CancellationToken ct = default)
@@ -204,7 +208,7 @@ public class GeneratedReportService : IGeneratedReportService
         if (!_tenantContext.TenantId.HasValue) return false;
 
         await using var context = await _dbFactory.CreateDbContextAsync(ct);
-        
+
         var report = await context.GeneratedReports
             .FirstOrDefaultAsync(r => r.Id == id && r.DateDeleted == null, ct);
 
@@ -216,6 +220,13 @@ public class GeneratedReportService : IGeneratedReportService
         report.DateModified = DateTime.UtcNow;
 
         await context.SaveChangesAsync(ct);
+
+        // Auto-advance workflow when FundingPlan report is approved
+        if (report.Type == ReportType.FundingPlan)
+        {
+            await _workflowService.TryTransitionStudyAsync(report.ReserveStudyId, StudyStatus.FundingPlanComplete);
+        }
+
         return true;
     }
 

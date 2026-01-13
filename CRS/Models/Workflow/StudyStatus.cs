@@ -135,11 +135,17 @@ namespace CRS.Models.Workflow {
         // ═══════════════════════════════════════════════════════════════
         
         /// <summary>
-        /// Scope variance exceeds threshold - amendment sent to HOA for approval.
-        /// This is a blocking state that requires HOA action before proceeding.
-        /// Transitions: → FundingPlanReady (if accepted) | RequestCancelled (if rejected and no resolution)
+        /// Scope variance exceeds threshold - amendment created and pending admin approval.
+        /// This is a blocking state that requires admin review before sending to HOA.
+        /// Transitions: → AmendmentApproved | RequestCancelled
         /// </summary>
         AmendmentPending = 50,
+        
+        /// <summary>
+        /// Amendment has been approved by admin and sent to HOA for acceptance.
+        /// Transitions: → FundingPlanReady (if HOA accepts) | RequestCancelled (if rejected)
+        /// </summary>
+        AmendmentApproved = 51,
 
         // ═══════════════════════════════════════════════════════════════
         // FUNDING PLAN PHASE

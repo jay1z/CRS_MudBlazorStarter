@@ -21,6 +21,8 @@ public class ReportGenerationService : IReportGenerationService
     private readonly IReserveStudyExcelService _excelService;
     private readonly IDocumentStorageService _storageService;
     private readonly IGeneratedReportService _reportService;
+    private readonly IReserveStudyWorkflowService _workflowService;
+    private readonly INarrativeService _narrativeService;
 
     public ReportGenerationService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
@@ -28,15 +30,19 @@ public class ReportGenerationService : IReportGenerationService
         IReserveStudyPdfService pdfService,
         IReserveStudyExcelService excelService,
         IDocumentStorageService storageService,
-        IGeneratedReportService reportService)
-    {
-        _dbFactory = dbFactory;
-        _calculatorService = calculatorService;
-        _pdfService = pdfService;
-        _excelService = excelService;
-        _storageService = storageService;
-        _reportService = reportService;
-    }
+        IGeneratedReportService reportService,
+        IReserveStudyWorkflowService workflowService,
+            INarrativeService narrativeService)
+        {
+            _dbFactory = dbFactory;
+            _calculatorService = calculatorService;
+            _pdfService = pdfService;
+            _excelService = excelService;
+            _storageService = storageService;
+            _reportService = reportService;
+            _workflowService = workflowService;
+            _narrativeService = narrativeService;
+        }
 
     /// <inheritdoc />
     public StudyStatus MinimumRequiredStatus => StudyStatus.FundingPlanReady;
@@ -293,6 +299,10 @@ public class ReportGenerationService : IReportGenerationService
                 return ReportGenerationResult.Failure("Reserve study not found.");
             }
 
+            // Step 2b: Load narrative if available (for full reports)
+            var narrative = await _narrativeService.GetByStudyIdAsync(studyId);
+            // TODO: Pass narrative to PDF service when generating full reports with narrative sections
+
             // Step 3: Run calculation
             ReserveStudyResult calculationResult;
             if (options.ScenarioId.HasValue)
@@ -394,6 +404,12 @@ public class ReportGenerationService : IReportGenerationService
             };
 
             var savedReport = await _reportService.CreateAsync(report);
+
+            // Advance workflow status when FundingPlan report is generated
+            if (options.ReportType == ReportType.FundingPlan)
+            {
+                await _workflowService.TryTransitionStudyAsync(studyId, StudyStatus.FundingPlanInProcess);
+            }
 
             // Build result with warnings
             var result = ReportGenerationResult.Success(savedReport, calculationResult);

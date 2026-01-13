@@ -1,0 +1,496 @@
+﻿@using CRS.Models
+@using CRS.Services
+@using CRS.Services.Interfaces
+
+@inject INarrativeService NarrativeService
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="pa-4">
+    <MudStack Spacing="3">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Article" Color="Color.Primary" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">Narrative Editor</MudText>
+                    @if (narrative != null)
+                    {
+                        <MudText Typo="Typo.caption" Style="color: #666;">
+                            Version @narrative.Version • @narrative.TotalWordCount words
+                        </MudText>
+                    }
+                </div>
+            </MudStack>
+            
+            <MudStack Row="true" Spacing="2">
+                @if (narrative != null)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(narrative.Status)" Variant="Variant.Filled">
+                        @GetStatusDisplayName(narrative.Status)
+                    </MudChip>
+                    
+                    @if (narrative.Status == NarrativeStatus.Draft || narrative.Status == NarrativeStatus.InProgress)
+                    {
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   OnClick="SaveAllSections"
+                                   Disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>Save All</span>
+                            }
+                        </MudButton>
+                    }
+                    
+                    @if (narrative.Status == NarrativeStatus.InProgress || narrative.Status == NarrativeStatus.RevisionRequired)
+                    {
+                        <AuthorizeView Policy="RequireTenantStaff">
+                            <Authorized>
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary" 
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Send"
+                                           OnClick="SubmitForReview"
+                                           Disabled="@(!CanSubmitForReview())">
+                                    Submit for Review
+                                </MudButton>
+                            </Authorized>
+                        </AuthorizeView>
+                    }
+                    
+                    @if (narrative.Status == NarrativeStatus.PendingReview)
+                    {
+                        <AuthorizeView Policy="RequireTenantOwner">
+                            <Authorized>
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Success" 
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.CheckCircle"
+                                           OnClick="ApproveNarrative">
+                                    Approve
+                                </MudButton>
+                                <MudButton Variant="Variant.Outlined" 
+                                           Color="Color.Warning" 
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Edit"
+                                           OnClick="RequestRevisions">
+                                    Request Revisions
+                                </MudButton>
+                            </Authorized>
+                        </AuthorizeView>
+                    }
+                }
+            </MudStack>
+        </MudStack>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (narrative == null)
+        {
+            <!-- No narrative exists - show create options -->
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.body1">
+                        No narrative has been created for this reserve study yet.
+                    </MudText>
+                    
+                    <AuthorizeView Policy="RequireTenantStaff">
+                        <Authorized>
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">
+                                    Choose a template to get started:
+                                </MudText>
+                                <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                                    @foreach (var template in NarrativeService.GetAvailableTemplates())
+                                    {
+                                        <MudButton Variant="Variant.Outlined" 
+                                                   Color="Color.Primary"
+                                                   StartIcon="@Icons.Material.Filled.Description"
+                                                   OnClick="@(() => CreateNarrative(template.Name))">
+                                            @template.Name
+                                        </MudButton>
+                                    }
+                                </MudStack>
+                            </MudStack>
+                        </Authorized>
+                    </AuthorizeView>
+                </MudStack>
+            </MudAlert>
+        }
+        else
+        {
+            <!-- Validation warnings -->
+            @if (validationResult != null && !validationResult.IsValid)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Outlined">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                            Missing required sections:
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            @string.Join(", ", validationResult.MissingSections)
+                        </MudText>
+                    </MudStack>
+                </MudAlert>
+            }
+            
+            <!-- Revision notes if any -->
+            @if (narrative.Status == NarrativeStatus.RevisionRequired && !string.IsNullOrEmpty(narrative.ReviewNotes))
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">
+                            Revision Notes from Reviewer:
+                        </MudText>
+                        <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">
+                            @narrative.ReviewNotes
+                        </MudText>
+                    </MudStack>
+                </MudAlert>
+            }
+
+            <!-- Section Editor -->
+            <MudExpansionPanels MultiExpansion="true" Elevation="1">
+                @foreach (var sect in GetSections())
+                {
+                    <MudExpansionPanel @key="sect.Name" IsInitiallyExpanded="@sect.IsRequired">
+                        <TitleContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width: 100%;">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    @if (sect.IsRequired)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Color="Color.Warning" />
+                                    }
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                                        @sect.DisplayName
+                                    </MudText>
+                                </MudStack>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    @if (!string.IsNullOrWhiteSpace(sect.Content))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                                            @CountWords(sect.Content) words
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="@(sect.IsRequired ? Color.Error : Color.Default)" Variant="Variant.Outlined">
+                                            Empty
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                            </MudStack>
+                        </TitleContent>
+                        <ChildContent>
+                            <MudStack Spacing="2">
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    @sect.HelpText
+                                </MudText>
+                                <MudTextField @bind-Value="sect.Content"
+                                              Variant="Variant.Outlined"
+                                              Lines="8"
+                                              Placeholder="@sect.Placeholder"
+                                              Immediate="false"
+                                              DebounceInterval="500"
+                                              OnBlur="@(() => SaveSection(sect))"
+                                              Disabled="@(!CanEdit())" />
+                            </MudStack>
+                        </ChildContent>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+
+            <!-- Word count summary -->
+            <MudPaper Elevation="0" Class="pa-3" Style="background: #f5f5f5; border-radius: 8px;">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.body2">
+                        <strong>Total Word Count:</strong> @narrative.TotalWordCount words
+                    </MudText>
+                    @if (narrative.TotalWordCount < 500)
+                    {
+                        <MudText Typo="Typo.caption" Style="color: #f57c00;">
+                            Recommended: at least 500 words
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    private Narrative? narrative;
+    private NarrativeValidationResult? validationResult;
+    private List<NarrativeSection> sections = [];
+    private bool isLoading = true;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNarrative();
+    }
+
+    private async Task LoadNarrative()
+    {
+        try
+        {
+            isLoading = true;
+            narrative = await NarrativeService.GetByStudyIdAsync(ReserveStudyId);
+            
+            if (narrative != null)
+            {
+                InitializeSections();
+                validationResult = await NarrativeService.ValidateAsync(narrative.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading narrative: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void InitializeSections()
+    {
+        if (narrative == null) return;
+
+        sections =
+        [
+            new NarrativeSection("ExecutiveSummary", "Executive Summary", narrative.ExecutiveSummary ?? "", true,
+                "High-level overview for board members. Summarize key findings and recommendations.",
+                "Enter a brief executive summary..."),
+            new NarrativeSection("Introduction", "Introduction", narrative.Introduction ?? "", true,
+                "Purpose and scope of the study.",
+                "Enter the introduction..."),
+            new NarrativeSection("PropertyDescription", "Property Description", narrative.PropertyDescription ?? "", true,
+                "Details about the community/property including location, age, units, and building types.",
+                "Describe the property..."),
+            new NarrativeSection("Methodology", "Methodology", narrative.Methodology ?? "", false,
+                "How the study was conducted - approach, site visit details, data gathering methods.",
+                "Explain your methodology..."),
+            new NarrativeSection("Findings", "Findings", narrative.Findings ?? "", true,
+                "Detailed analysis results - component conditions, observations, key concerns.",
+                "Document your findings..."),
+            new NarrativeSection("FundingAnalysis", "Funding Analysis", narrative.FundingAnalysis ?? "", false,
+                "Explanation of the funding plan calculations - contribution rates, methods, projections.",
+                "Explain the funding analysis..."),
+            new NarrativeSection("Recommendations", "Recommendations", narrative.Recommendations ?? "", true,
+                "Suggested actions for the association - prioritized maintenance items, funding adjustments.",
+                "List your recommendations..."),
+            new NarrativeSection("Conclusion", "Conclusion", narrative.Conclusion ?? "", true,
+                "Closing remarks and next steps.",
+                "Write your conclusion..."),
+            new NarrativeSection("AdditionalNotes", "Additional Notes", narrative.AdditionalNotes ?? "", false,
+                "Any supplementary information.",
+                "Add any additional notes...")
+        ];
+    }
+
+    private List<NarrativeSection> GetSections() => sections;
+
+    private async Task CreateNarrative(string templateName)
+    {
+        try
+        {
+            await UserState.InitializeAsync();
+            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+            
+            narrative = await NarrativeService.CreateAsync(ReserveStudyId, userId, templateName);
+            InitializeSections();
+            validationResult = await NarrativeService.ValidateAsync(narrative.Id);
+            
+            Snackbar.Add($"Narrative created with '{templateName}' template", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating narrative: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveSection(NarrativeSection section)
+    {
+        if (narrative == null || !CanEdit()) return;
+
+        try
+        {
+            await NarrativeService.SaveSectionAsync(narrative.Id, section.Name, section.Content);
+            
+            // Reload to get updated word count
+            narrative = await NarrativeService.GetByIdAsync(narrative.Id);
+            validationResult = await NarrativeService.ValidateAsync(narrative!.Id);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving section: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveAllSections()
+    {
+        if (narrative == null || !CanEdit()) return;
+
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+
+            // Update narrative with all section content
+            narrative.ExecutiveSummary = sections.First(s => s.Name == "ExecutiveSummary").Content;
+            narrative.Introduction = sections.First(s => s.Name == "Introduction").Content;
+            narrative.PropertyDescription = sections.First(s => s.Name == "PropertyDescription").Content;
+            narrative.Methodology = sections.First(s => s.Name == "Methodology").Content;
+            narrative.Findings = sections.First(s => s.Name == "Findings").Content;
+            narrative.FundingAnalysis = sections.First(s => s.Name == "FundingAnalysis").Content;
+            narrative.Recommendations = sections.First(s => s.Name == "Recommendations").Content;
+            narrative.Conclusion = sections.First(s => s.Name == "Conclusion").Content;
+            narrative.AdditionalNotes = sections.First(s => s.Name == "AdditionalNotes").Content;
+
+            await NarrativeService.UpdateAsync(narrative);
+            
+            // Reload
+            narrative = await NarrativeService.GetByIdAsync(narrative.Id);
+            validationResult = await NarrativeService.ValidateAsync(narrative!.Id);
+            
+            Snackbar.Add("All sections saved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task SubmitForReview()
+    {
+        if (narrative == null) return;
+
+        try
+        {
+            await NarrativeService.SubmitForReviewAsync(narrative.Id);
+            narrative.Status = NarrativeStatus.PendingReview;
+            Snackbar.Add("Narrative submitted for review", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ApproveNarrative()
+    {
+        if (narrative == null) return;
+
+        try
+        {
+            await UserState.InitializeAsync();
+            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+            
+            await NarrativeService.ApproveAsync(narrative.Id, userId);
+            narrative.Status = NarrativeStatus.Approved;
+            Snackbar.Add("Narrative approved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RequestRevisions()
+    {
+        if (narrative == null) return;
+
+        // TODO: Show dialog for revision notes
+        try
+        {
+            await UserState.InitializeAsync();
+            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+            
+            await NarrativeService.RequestRevisionsAsync(narrative.Id, userId, "Please review and revise the content.");
+            narrative.Status = NarrativeStatus.RevisionRequired;
+            Snackbar.Add("Revisions requested", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private bool CanEdit()
+    {
+        if (narrative == null) return false;
+        return narrative.Status == NarrativeStatus.Draft || 
+               narrative.Status == NarrativeStatus.InProgress || 
+               narrative.Status == NarrativeStatus.RevisionRequired;
+    }
+
+    private bool CanSubmitForReview()
+    {
+        return validationResult?.IsValid == true;
+    }
+
+    private static int CountWords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return 0;
+        var plainText = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]*>", " ");
+        return plainText.Split([' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    private static Color GetStatusColor(NarrativeStatus status) => status switch
+    {
+        NarrativeStatus.Approved => Color.Success,
+        NarrativeStatus.Published => Color.Success,
+        NarrativeStatus.PendingReview => Color.Info,
+        NarrativeStatus.InReview => Color.Info,
+        NarrativeStatus.RevisionRequired => Color.Warning,
+        NarrativeStatus.Draft => Color.Default,
+        NarrativeStatus.InProgress => Color.Primary,
+        _ => Color.Default
+    };
+
+    private static string GetStatusDisplayName(NarrativeStatus status) => status switch
+    {
+        NarrativeStatus.Draft => "Draft",
+        NarrativeStatus.InProgress => "In Progress",
+        NarrativeStatus.PendingReview => "Pending Review",
+        NarrativeStatus.InReview => "In Review",
+        NarrativeStatus.RevisionRequired => "Revision Required",
+        NarrativeStatus.Approved => "Approved",
+        NarrativeStatus.Published => "Published",
+        NarrativeStatus.Superseded => "Superseded",
+        NarrativeStatus.Archived => "Archived",
+        _ => status.ToString()
+    };
+
+    private class NarrativeSection(string name, string displayName, string content, bool isRequired, string helpText, string placeholder)
+    {
+        public string Name { get; } = name;
+        public string DisplayName { get; } = displayName;
+        public string Content { get; set; } = content;
+        public bool IsRequired { get; } = isRequired;
+        public string HelpText { get; } = helpText;
+        public string Placeholder { get; } = placeholder;
+    }
+}

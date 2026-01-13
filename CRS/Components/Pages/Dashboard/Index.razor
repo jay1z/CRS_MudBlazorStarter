@@ -929,15 +929,12 @@ private async Task LoadPipelineDataAsync(int tenantId)
                 .OrderByDescending(rs => rs.DateCreated)
                 .ToListAsync();
 
-            // Get study IDs that have pending amendments for this user
+            // Get study IDs that have amendments approved by admin and awaiting HOA acceptance
+            // Only show "Review Amendment" when the study is in AmendmentApproved status (admin has approved)
             var studyIds = hoaUserStudies.Select(s => s.Id).ToList();
-            pendingAmendmentStudyIds = (await context.ScopeComparisons
-                .AsNoTracking()
-                .Where(sc => sc.TenantId == TenantContext.TenantId.Value 
-                    && sc.Status == CRS.Models.Workflow.ScopeComparisonStatus.AmendmentPending
-                    && studyIds.Contains(sc.ReserveStudyId))
-                .Select(sc => sc.ReserveStudyId)
-                .ToListAsync())
+            pendingAmendmentStudyIds = hoaUserStudies
+                .Where(s => s.StudyRequest?.CurrentStatus == CRS.Models.Workflow.StudyStatus.AmendmentApproved)
+                .Select(s => s.Id)
                 .ToHashSet();
         }
         catch (Exception)
@@ -966,9 +963,9 @@ private async Task LoadPipelineDataAsync(int tenantId)
     private string GetStudyStatusText(ReserveStudy study)
     {
         if (study == null) return "Unknown";
-        
+
         if (study.IsComplete) return "Complete";
-        
+
         return study.CurrentStatus switch
         {
             StudyStatus.RequestCreated => "New Request",
@@ -986,7 +983,8 @@ private async Task LoadPipelineDataAsync(int tenantId)
             StudyStatus.SiteVisitPending => "Site Visit Pending",
             StudyStatus.SiteVisitScheduled => "Visit Scheduled",
             StudyStatus.SiteVisitCompleted => "Visit Complete",
-            StudyStatus.AmendmentPending => "Amendment Review Required",
+            StudyStatus.AmendmentPending => "In Progress", // Admin is reviewing - HOA doesn't need to act yet
+            StudyStatus.AmendmentApproved => "Amendment Review Required", // Admin approved - HOA needs to review
             StudyStatus.ReportComplete => "Report Ready",
             StudyStatus.RequestCompleted => "Complete",
             StudyStatus.RequestCancelled => "Cancelled",

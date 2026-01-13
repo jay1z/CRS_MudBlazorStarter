@@ -15,6 +15,7 @@ using CRS.Services.MultiTenancy;
 using CRS.Models.Workflow; // Added for workflow example
 using CRS.Services.License; // add
 using CRS.Services.Billing; // added billing services
+using CRS.Services.NarrativeReport; // narrative template services
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
@@ -169,6 +170,15 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.Interfaces.IStudyNoteService, CRS.Services.StudyNoteService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IGeneratedReportService, CRS.Services.GeneratedReportService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IReportGenerationService, CRS.Services.ReportGenerationService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.INarrativeService, CRS.Services.NarrativeService>();
+
+    // Narrative HTML Template Services
+    builder.Services.AddScoped<IPlaceholderResolver, PlaceholderResolver>();
+    builder.Services.AddScoped<CRS.Services.NarrativeReport.INarrativeHtmlSanitizer, CRS.Services.NarrativeReport.NarrativeHtmlSanitizer>();
+    builder.Services.AddScoped<IReserveStudyHtmlComposer, ReserveStudyHtmlComposer>();
+    builder.Services.AddScoped<INarrativeTemplateService, NarrativeTemplateService>();
+    builder.Services.AddScoped<IReportContextBuilder, ReportContextBuilder>();
+    builder.Services.AddSingleton<IPdfConverter, PuppeteerPdfConverter>(); // PuppeteerSharp HTML to PDF converter
     
     // Scope Comparison Service (for tracking scope variance after site visits)
     builder.Services.AddScoped<CRS.Services.Interfaces.IScopeComparisonService, CRS.Services.Workflow.ScopeComparisonService>();

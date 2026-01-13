@@ -154,12 +154,16 @@ public class ProposalAcceptanceService : IProposalAcceptanceService
 
     public async Task<AcceptanceTermsTemplate?> GetActiveTermsTemplateAsync(TermsType type = TermsType.ProposalAcceptance, CancellationToken ct = default)
     {
+        if (!_tenantContext.TenantId.HasValue)
+            return null;
+            
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         var now = DateTime.UtcNow;
 
-        // First try to get tenant-specific template
+        // Get tenant-specific template
         var template = await db.AcceptanceTermsTemplates
             .AsNoTracking()
+            .Where(t => t.TenantId == _tenantContext.TenantId.Value)
             .Where(t => t.Type == type && t.IsActive && t.EffectiveDate <= now)
             .Where(t => t.ExpirationDate == null || t.ExpirationDate > now)
             .OrderByDescending(t => t.IsDefault)
@@ -171,10 +175,14 @@ public class ProposalAcceptanceService : IProposalAcceptanceService
 
     public async Task<AcceptanceTermsTemplate?> GetDefaultTermsTemplateAsync(TermsType type = TermsType.ProposalAcceptance, CancellationToken ct = default)
     {
+        if (!_tenantContext.TenantId.HasValue)
+            return null;
+            
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
         return await db.AcceptanceTermsTemplates
             .AsNoTracking()
+            .Where(t => t.TenantId == _tenantContext.TenantId.Value)
             .Where(t => t.Type == type && t.IsActive && t.IsDefault)
             .FirstOrDefaultAsync(ct);
     }
@@ -296,8 +304,9 @@ public class ProposalAcceptanceService : IProposalAcceptanceService
 
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
+        // Check if this tenant already has templates
         var hasTemplates = await db.AcceptanceTermsTemplates
-            .AnyAsync(t => t.Type == TermsType.ProposalAcceptance, ct);
+            .AnyAsync(t => t.TenantId == _tenantContext.TenantId.Value && t.Type == TermsType.ProposalAcceptance, ct);
 
         if (hasTemplates)
             return;

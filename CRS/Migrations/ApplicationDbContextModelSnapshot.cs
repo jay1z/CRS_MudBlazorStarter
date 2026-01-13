@@ -1729,6 +1729,124 @@ namespace CRS.Migrations
                     b.ToTable("Messages");
                 });
 
+            modelBuilder.Entity("CRS.Models.Narrative", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AdditionalNotes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("AuthorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CompletedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Conclusion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExecutiveSummary")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Findings")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FundingAnalysis")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Introduction")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Methodology")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PropertyDescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Recommendations")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TemplateUsed")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalWordCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("CompletedByUserId");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_Narrative_Tenant");
+
+                    b.HasIndex("TenantId", "AuthorUserId")
+                        .HasDatabaseName("IX_Narrative_Tenant_Author")
+                        .HasFilter("[AuthorUserId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "ReserveStudyId")
+                        .HasDatabaseName("IX_Narrative_Tenant_Study");
+
+                    b.HasIndex("TenantId", "ReserveStudyId", "Status")
+                        .HasDatabaseName("IX_Narrative_Tenant_Study_Status")
+                        .HasFilter("[DateDeleted] IS NULL");
+
+                    b.ToTable("Narratives", (string)null);
+                });
+
             modelBuilder.Entity("CRS.Models.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4219,6 +4337,38 @@ namespace CRS.Migrations
                     b.Navigation("ReviewedBy");
 
                     b.Navigation("SupersedesReport");
+                });
+
+            modelBuilder.Entity("CRS.Models.Narrative", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("CRS.Data.ApplicationUser", "CompletedBy")
+                        .WithMany()
+                        .HasForeignKey("CompletedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Data.ApplicationUser", "ReviewedBy")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Author");
+
+                    b.Navigation("CompletedBy");
+
+                    b.Navigation("ReserveStudy");
+
+                    b.Navigation("ReviewedBy");
                 });
 
             modelBuilder.Entity("CRS.Models.Notification", b =>

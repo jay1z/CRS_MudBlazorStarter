@@ -64,13 +64,34 @@
             </Authorized>
         </AuthorizeView>
         <AuthorizeView Context="auth">
-            <MudText Typo="Typo.body1">@auth.User.Identity?.Name</MudText>
+            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <ActivatorContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="cursor-pointer">
+                        <MudText Typo="Typo.body2">@auth.User.Identity?.Name</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small" />
+                    </MudStack>
+                </ActivatorContent>
+                <ChildContent>
+                    <MudStack Class="pa-3" Spacing="0" Style="min-width: 220px;">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">@(UserState.CurrentUser?.FullName ?? auth.User.Identity?.Name)</MudText>
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">@(UserState.CurrentUser?.Email ?? auth.User.Identity?.Name)</MudText>
+                        @if (TenantContext?.TenantName != null)
+                        {
+                            <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);">@TenantContext.TenantName</MudText>
+                        }
+                    </MudStack>
+                    <MudDivider />
+                    <MudMenuItem Href="/Account/Manage" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary">Profile</MudMenuItem>
+                    <MudMenuItem Href="/Settings" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Primary">Settings</MudMenuItem>
+                    <MudMenuItem Href="/messages/inbox" Icon="@Icons.Material.Filled.Email" IconColor="Color.Primary">Messages</MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem OnClick="@ToggleTheme" Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" IconColor="Color.Secondary">@(_isDarkMode ? "Light Mode" : "Dark Mode")</MudMenuItem>
+                    <MudMenuItem Href="/help" Icon="@Icons.Material.Filled.Help" IconColor="Color.Info">Help</MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Href="/Account/Logout" Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error">Logout</MudMenuItem>
+                </ChildContent>
+            </MudMenu>
         </AuthorizeView>
-        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-            <MudMenuItem Href="/Account/Manage" Icon="@Icons.Material.Filled.ManageAccounts" IconColor="Color.Primary">Profile</MudMenuItem>
-            <MudMenuItem Href="/Settings" Icon="@Icons.Material.Filled.Settings" IconColor="Color.Primary">Settings</MudMenuItem>
-            <MudMenuItem Href="/Account/Logout" Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error">Logout</MudMenuItem>
-        </MudMenu>
     </MudAppBar>
 
     @if (!_hideNav) {
@@ -126,6 +147,13 @@
     private bool _hideNav = false;
     private bool _isAuthenticated = false;
     private string? _tenantLogoUrl;
+    private bool _isDarkMode = false;
+
+    private void ToggleTheme()
+    {
+        _isDarkMode = !_isDarkMode;
+        ThemeService.ToggleDarkMode(_isDarkMode);
+    }
 
     protected override async Task OnInitializedAsync() {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);

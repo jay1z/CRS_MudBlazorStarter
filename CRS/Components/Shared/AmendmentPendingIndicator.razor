@@ -1,8 +1,13 @@
 ﻿@using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+@using CRS.Data
+@using CRS.Models.Workflow
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
 
-@inject IScopeComparisonService ScopeComparisonService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
 @inject AuthenticationStateProvider AuthStateProvider
 
 @if (isLoading)
@@ -29,7 +34,7 @@ else if (pendingAmendments.Count > 0)
                     }
                 </MudText>
             </MudStack>
-            
+
             @foreach (var amendment in pendingAmendments.Take(3))
             {
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -47,7 +52,7 @@ else if (pendingAmendments.Count > 0)
                     </MudButton>
                 </MudStack>
             }
-            
+
             @if (pendingAmendments.Count > 3)
             {
                 <MudText Typo="Typo.caption">
@@ -76,9 +81,27 @@ else if (pendingAmendments.Count > 0)
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
 
-            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId) && TenantContext.TenantId.HasValue)
             {
-                pendingAmendments = await ScopeComparisonService.GetPendingAmendmentsForUserAsync(userId);
+                // Only show amendments that are APPROVED by admin and awaiting HOA acceptance
+                // This checks the StudyRequest.CurrentStatus == AmendmentApproved
+                await using var context = await DbFactory.CreateDbContextAsync();
+
+                pendingAmendments = await context.ScopeComparisons
+                    .AsNoTracking()
+                    .Include(sc => sc.ReserveStudy)
+                        .ThenInclude(rs => rs!.Community)
+                    .Include(sc => sc.ReserveStudy)
+                        .ThenInclude(rs => rs!.StudyRequest)
+                    .Include(sc => sc.AmendmentProposal)
+                    .Where(sc => sc.TenantId == TenantContext.TenantId.Value 
+                        && sc.Status == ScopeComparisonStatus.AmendmentPending
+                        && sc.ReserveStudy != null
+                        && sc.ReserveStudy.StudyRequest != null
+                        && sc.ReserveStudy.StudyRequest.CurrentStatus == StudyStatus.AmendmentApproved // Admin has approved
+                        && (sc.ReserveStudy.RequestedByUserId == userId 
+                            || sc.ReserveStudy.ApplicationUserId == userId))
+                    .ToListAsync();
             }
         }
         catch

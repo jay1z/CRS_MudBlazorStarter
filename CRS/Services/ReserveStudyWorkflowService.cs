@@ -130,6 +130,26 @@ namespace CRS.Services {
                     throw;
                 }
                 
+                // Transition workflow to AmendmentPending via scope comparison
+                // Find the most recent scope comparison for this study
+                var scopeComparison = await db.ScopeComparisons
+                    .Where(sc => sc.ReserveStudyId == reserveStudyId)
+                    .OrderByDescending(sc => sc.ComparedAt)
+                    .FirstOrDefaultAsync();
+                
+                if (scopeComparison != null) {
+                    try {
+                        await _scopeComparisonService.MarkAmendmentSentAsync(scopeComparison.Id, proposal.Id, GetActor());
+                        _logger.LogInformation("Transitioned study {StudyId} to AmendmentPending via scope comparison {ScopeComparisonId}", 
+                            reserveStudyId, scopeComparison.Id);
+                    } catch (Exception ex) {
+                        _logger.LogError(ex, "Error transitioning to AmendmentPending for study {StudyId}", reserveStudyId);
+                        // Don't throw - the amendment was saved, we just couldn't transition
+                    }
+                } else {
+                    _logger.LogWarning("No scope comparison found for amendment on study {StudyId}", reserveStudyId);
+                }
+                
                 // Reload study with new proposal for event
                 study = await db.ReserveStudies
                     .Include(s => s.CurrentProposal)
