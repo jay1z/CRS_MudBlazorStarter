@@ -17,7 +17,7 @@ namespace CRS.Services {
     public class ReserveStudyService : IReserveStudyService {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
         private readonly IDispatcher _dispatcher;
-        private readonly string _baseUrl;
+        private readonly IConfiguration _configuration;
         private readonly ITenantContext _tenantContext;
         private readonly IFeatureGuardService _featureGuard;
         private readonly ILogger<ReserveStudyService> _logger;
@@ -25,7 +25,7 @@ namespace CRS.Services {
         public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext, IFeatureGuardService featureGuard, ILogger<ReserveStudyService> logger) {
             _dbFactory = dbFactory;
             _dispatcher = dispatcher;
-            _baseUrl = configuration["Application:BaseUrl"] ?? "https://yourdomain.com";
+            _configuration = configuration;
             _tenantContext = tenantContext;
             _featureGuard = featureGuard;
             _logger = logger;
@@ -718,14 +718,92 @@ namespace CRS.Services {
         }
 
         /// <summary>
-        /// Maps reserve study data to an email model
+        /// Maps reserve study data to an email model with tenant-specific base URL and branding
         /// </summary>
-        public ReserveStudyEmail MapToReserveStudyEmail(ReserveStudy reserveStudy, string message) {
+        public async Task<ReserveStudyEmail> MapToReserveStudyEmailAsync(ReserveStudy reserveStudy, string message) {
+            // Build tenant-specific base URL
+            var baseUrl = await BuildTenantBaseUrlAsync(reserveStudy.TenantId);
+            
+            // Get tenant email info for branding
+            var tenantInfo = await GetTenantEmailInfoAsync(reserveStudy.TenantId);
+
             return new ReserveStudyEmail {
                 ReserveStudy = reserveStudy,
-                BaseUrl = _baseUrl,
-                AdditionalMessage = message
+                BaseUrl = baseUrl,
+                AdditionalMessage = message,
+                TenantInfo = tenantInfo
             };
+        }
+
+        /// <summary>
+        /// Gets tenant-specific email branding and contact information
+        /// </summary>
+        public async Task<TenantEmailInfo> GetTenantEmailInfoAsync(int tenantId) {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var tenant = await context.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId);
+
+            if (tenant == null) {
+                _logger.LogWarning("Could not find tenant {TenantId} for email info", tenantId);
+                return TenantEmailInfo.CreateDefault();
+            }
+
+            var tenantInfo = new TenantEmailInfo {
+                CompanyName = tenant.Name,
+                Subdomain = tenant.Subdomain
+            };
+
+            // Parse branding JSON to extract company contact info
+            if (!string.IsNullOrWhiteSpace(tenant.BrandingJson)) {
+                try {
+                    var payload = System.Text.Json.JsonSerializer.Deserialize<ThemeService.BrandingPayload>(tenant.BrandingJson);
+                    if (payload != null) {
+                        tenantInfo.FromEmail = payload.CompanyEmail;
+                        tenantInfo.FromName = tenant.Name;
+                        tenantInfo.Phone = payload.CompanyPhone;
+                        tenantInfo.Website = payload.CompanyWebsite;
+                        tenantInfo.Address = payload.CompanyAddress;
+                        tenantInfo.Tagline = payload.CompanyTagline;
+                        tenantInfo.LogoUrl = payload.CompanyLogoUrl;
+                        tenantInfo.PrimaryColor = payload.Primary ?? "#667eea";
+                        tenantInfo.SecondaryColor = payload.Secondary ?? "#764ba2";
+                    }
+                } catch (Exception ex) {
+                    _logger.LogWarning(ex, "Failed to parse branding JSON for tenant {TenantId}", tenantId);
+                }
+            }
+
+            // Build logo URL if not explicitly set
+            if (string.IsNullOrWhiteSpace(tenantInfo.LogoUrl)) {
+                var rootDomain = _configuration["App:RootDomain"]?.Trim().Trim('.');
+                if (!string.IsNullOrWhiteSpace(rootDomain) && !string.IsNullOrWhiteSpace(tenant.Subdomain)) {
+                    // Try to use tenant logo from storage
+                    tenantInfo.LogoUrl = $"https://{tenant.Subdomain}.{rootDomain}/api/logos/{tenantId}";
+                }
+            }
+
+            return tenantInfo;
+        }
+
+        /// <summary>
+        /// Builds the base URL for a tenant using their subdomain
+        /// </summary>
+        private async Task<string> BuildTenantBaseUrlAsync(int tenantId) {
+            var rootDomain = _configuration["App:RootDomain"]?.Trim().Trim('.');
+
+            if (string.IsNullOrWhiteSpace(rootDomain)) {
+                // Fallback to configured base URL if root domain is not set
+                return _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://localhost";
+            }
+
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var tenant = await context.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId);
+
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.Subdomain)) {
+                _logger.LogWarning("Could not find tenant {TenantId} or subdomain is empty for email URL", tenantId);
+                return _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://localhost";
+            }
+
+            return $"https://{tenant.Subdomain}.{rootDomain}";
         }
 
         /// <summary>

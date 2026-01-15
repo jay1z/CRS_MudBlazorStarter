@@ -3,6 +3,7 @@ using CRS.Models;
 using CRS.Models.NarrativeTemplates;
 using CRS.Services.Interfaces;
 using CRS.Services.ReserveCalculator;
+using CRS.Services.Storage;
 using CRS.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -18,6 +19,7 @@ public class ReportContextBuilder : IReportContextBuilder
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
     private readonly ISiteVisitPhotoService _photoService;
+    private readonly IPhotoStorageService _photoStorageService;
     private readonly IReserveStudyCalculatorService _calculatorService;
     private readonly ILogger<ReportContextBuilder> _logger;
 
@@ -25,12 +27,14 @@ public class ReportContextBuilder : IReportContextBuilder
         IDbContextFactory<ApplicationDbContext> dbFactory,
         ITenantContext tenantContext,
         ISiteVisitPhotoService photoService,
+        IPhotoStorageService photoStorageService,
         IReserveStudyCalculatorService calculatorService,
         ILogger<ReportContextBuilder> logger)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
         _photoService = photoService;
+        _photoStorageService = photoStorageService;
         _calculatorService = calculatorService;
         _logger = logger;
     }
@@ -85,6 +89,27 @@ public class ReportContextBuilder : IReportContextBuilder
                 .FirstOrDefaultAsync(t => t.Id == _tenantContext.TenantId.Value, cancellationToken);
         }
 
+        // Log source data for debugging
+        _logger.LogDebug("Building context for study {StudyId}", reserveStudyId);
+        _logger.LogDebug("  Community: {Name}", study.Community?.Name ?? "NULL");
+        _logger.LogDebug("  FinancialInfo: {HasData}", study.FinancialInfo != null ? "Present" : "NULL");
+        if (study.FinancialInfo != null)
+        {
+            _logger.LogDebug("    JanuaryFirstReserveBalance: {Value}", study.FinancialInfo.JanuaryFirstReserveBalance);
+            _logger.LogDebug("    BudgetedContributionCurrentYear: {Value}", study.FinancialInfo.BudgetedContributionCurrentYear);
+            _logger.LogDebug("    TotalNumberOfUnits: {Value}", study.FinancialInfo.TotalNumberOfUnits);
+            _logger.LogDebug("    InterestRateOnReserveFunds: {Value}", study.FinancialInfo.InterestRateOnReserveFunds);
+        }
+        _logger.LogDebug("  StudyRequest: {HasData}", study.StudyRequest != null ? "Present" : "NULL");
+        if (study.StudyRequest != null)
+        {
+            _logger.LogDebug("    SiteVisitCompletedAt: {Value}", study.StudyRequest.SiteVisitCompletedAt);
+            _logger.LogDebug("    CurrentStatus: {Value}", study.StudyRequest.CurrentStatus);
+        }
+        _logger.LogDebug("  CurrentProposal: {HasData}", study.CurrentProposal != null ? "Present" : "NULL");
+        _logger.LogDebug("  Specialist: {Name}", study.Specialist?.FullName ?? "NULL");
+        _logger.LogDebug("  Tenant: {Name}", tenant?.Name ?? "NULL");
+
         // Build the context
         var reportContext = new ReserveStudyReportContext
         {
@@ -99,6 +124,7 @@ public class ReportContextBuilder : IReportContextBuilder
         if (options.IncludePhotos)
         {
             reportContext.Photos = await BuildPhotosAsync(reserveStudyId, cancellationToken);
+            _logger.LogDebug("  Photos loaded: {Count}", reportContext.Photos.Count);
         }
 
         // Add vendors if requested
@@ -117,6 +143,13 @@ public class ReportContextBuilder : IReportContextBuilder
         if (options.IncludeCalculatedOutputs)
         {
             reportContext.CalculatedOutputs = await BuildCalculatedOutputsAsync(study, cancellationToken);
+            _logger.LogDebug("  Calculated outputs:");
+            _logger.LogDebug("    FundStatusLabel: {Value}", reportContext.CalculatedOutputs.FundStatusLabel);
+            _logger.LogDebug("    PercentFunded: {Value}", reportContext.CalculatedOutputs.PercentFunded);
+            _logger.LogDebug("    IdealBalance: {Value}", reportContext.CalculatedOutputs.IdealBalance);
+            _logger.LogDebug("    FirstYear.StartingBalance: {Value}", reportContext.CalculatedOutputs.FirstYear.StartingBalance);
+            _logger.LogDebug("    FirstYear.Contribution: {Value}", reportContext.CalculatedOutputs.FirstYear.Contribution);
+            _logger.LogDebug("    FirstYear.EndingBalance: {Value}", reportContext.CalculatedOutputs.FirstYear.EndingBalance);
         }
 
         // Add info furnished items
@@ -150,17 +183,26 @@ public class ReportContextBuilder : IReportContextBuilder
     {
         var proposal = study.CurrentProposal;
         var financialInfo = study.FinancialInfo;
+        var studyRequest = study.StudyRequest;
         var fiscalStartMonth = financialInfo?.FiscalYearStartMonth ?? 1;
+
+        // Determine inspection date from multiple sources
+        // Priority 1: StudyRequest.SiteVisitCompletedAt (actual site visit date)
+        // Priority 2: Proposal approval date as fallback
+        // Priority 3: Study creation date as last resort
+        DateTime? inspectionDate = studyRequest?.SiteVisitCompletedAt 
+            ?? proposal?.DateApproved 
+            ?? study.DateCreated;
 
         return new StudyInfo
         {
             StudyType = proposal?.ServiceLevel, // Use ServiceLevel as study type indicator
             ReportTitle = options.ReportTitleOverride ?? $"Reserve Study for {study.Community?.Name ?? "Community"}",
-            InspectionDate = proposal?.DateApproved, // Use approval date as proxy for inspection
-            EffectiveDate = proposal?.ProposalDate,
+            InspectionDate = inspectionDate,
+            EffectiveDate = proposal?.ProposalDate ?? DateTime.UtcNow,
             FiscalYearStart = GetFiscalYearStart(fiscalStartMonth),
             FiscalYearEnd = GetFiscalYearEnd(fiscalStartMonth),
-            PreparedBy = study.Specialist?.FullName ?? study.Specialist?.Email,
+            PreparedBy = study.Specialist?.FullName ?? study.Specialist?.Email ?? study.PreparedBy,
             ReportDate = options.ReportDateOverride ?? DateTime.UtcNow,
             ProjectionYears = 30 // Standard projection period
         };
@@ -255,10 +297,19 @@ public class ReportContextBuilder : IReportContextBuilder
         try
         {
             var photos = await _photoService.GetForReportAsync(studyId, ct);
+
+            // Generate SAS URLs for each photo (valid for 24 hours for PDF generation)
+            var sasValidity = TimeSpan.FromHours(24);
+
             return photos.Select(p => new PhotoItem
             {
-                Url = p.StorageUrl ?? string.Empty,
-                ThumbnailUrl = p.ThumbnailUrl,
+                // Use SAS URL for actual access instead of raw storage URL
+                Url = !string.IsNullOrEmpty(p.StorageUrl) 
+                    ? _photoStorageService.GetSasUrl(p.StorageUrl, sasValidity) 
+                    : string.Empty,
+                ThumbnailUrl = !string.IsNullOrEmpty(p.ThumbnailUrl)
+                    ? _photoStorageService.GetSasUrl(p.ThumbnailUrl, sasValidity)
+                    : null,
                 Caption = p.Caption,
                 Category = p.Category.ToString(),
                 Condition = p.Condition.ToString(),

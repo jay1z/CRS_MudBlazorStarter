@@ -22,40 +22,49 @@
             </MudText>
             <AuthorizeView Policy="RequireTenantStaff">
                 <Authorized>
-                    @if (canGenerateReports)
-                    {
-                        <MudButton Variant="Variant.Filled" 
-                                   Color="Color.Primary" 
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
                                    Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Add"
-                                   OnClick="OpenGenerateDialog"
-                                   Disabled="@isGenerating">
-                            @if (isGenerating)
-                            {
-                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                <span>Generating...</span>
-                            }
-                            else
-                            {
-                                <span>Generate Report</span>
-                            }
+                                   StartIcon="@Icons.Material.Filled.Preview"
+                                   OnClick="OpenPreviewDialog">
+                            Preview Narrative
                         </MudButton>
-                    }
-                    else
-                    {
-                        <MudTooltip Text="@workflowGateMessage">
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="Color.Default" 
-                                       Size="Size.Small"
-                                       StartIcon="@Icons.Material.Filled.Lock"
-                                       Disabled="true">
-                                Generate Report
-                            </MudButton>
-                        </MudTooltip>
-                    }
-                </Authorized>
-            </AuthorizeView>
-        </MudStack>
+                        @if (canGenerateReports)
+                        {
+                                                <MudButton Variant="Variant.Filled" 
+                                                           Color="Color.Primary" 
+                                                           Size="Size.Small"
+                                                           StartIcon="@Icons.Material.Filled.Add"
+                                                           OnClick="OpenGenerateDialog"
+                                                           Disabled="@isGenerating">
+                                                    @if (isGenerating)
+                                                    {
+                                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                                        <span>Generating...</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>Generate Report</span>
+                                                    }
+                                                </MudButton>
+                                            }
+                                            else
+                                            {
+                                                <MudTooltip Text="@workflowGateMessage">
+                                                    <MudButton Variant="Variant.Filled" 
+                                                               Color="Color.Default" 
+                                                               Size="Size.Small"
+                                                               StartIcon="@Icons.Material.Filled.Lock"
+                                                               Disabled="true">
+                                                        Generate Report
+                                                    </MudButton>
+                                                </MudTooltip>
+                                            }
+                                        </MudStack>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </MudStack>
 
         <!-- Workflow Gate Warning -->
         @if (!canGenerateReports && !isLoading && validationResult != null)
@@ -530,28 +539,55 @@
             <MudSelect T="ReportType" @bind-Value="newReportType" Label="Report Type" Variant="Variant.Outlined" Required="true">
                 <MudSelectItem T="ReportType" Value="ReportType.FundingPlan">Funding Plan</MudSelectItem>
                 <MudSelectItem T="ReportType" Value="ReportType.ExecutiveSummary">Executive Summary</MudSelectItem>
-                <MudSelectItem T="ReportType" Value="ReportType.FullReport">Full Report</MudSelectItem>
+                <MudSelectItem T="ReportType" Value="ReportType.FullReport">Full Narrative Report</MudSelectItem>
                 <MudSelectItem T="ReportType" Value="ReportType.Draft">Draft</MudSelectItem>
             </MudSelect>
-            
-            <MudText Typo="Typo.subtitle2">Output Formats</MudText>
-            <MudStack Row="true" Spacing="4">
-                <MudCheckBox T="bool" @bind-Value="generatePdf" Label="PDF" Color="Color.Primary" />
-                <MudCheckBox T="bool" @bind-Value="generateExcel" Label="Excel" Color="Color.Primary" />
-            </MudStack>
-            
+
+            @if (newReportType == ReportType.FullReport)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                    <MudText Typo="Typo.body2">
+                        <strong>Full Narrative Report</strong> generates a complete PDF document using your narrative templates including cover page, executive summary, narrative sections, photos, charts, and appendices.
+                    </MudText>
+                </MudAlert>
+
+                <MudText Typo="Typo.subtitle2">Include Sections</MudText>
+                <MudStack Row="true" Spacing="4">
+                    <MudCheckBox T="bool" @bind-Value="includePhotos" Label="Photos" Color="Color.Primary" />
+                    <MudCheckBox T="bool" @bind-Value="includeCharts" Label="Charts" Color="Color.Primary" />
+                    <MudCheckBox T="bool" @bind-Value="includeTables" Label="Tables" Color="Color.Primary" />
+                </MudStack>
+            }
+            else
+            {
+                <MudText Typo="Typo.subtitle2">Output Formats</MudText>
+                <MudStack Row="true" Spacing="4">
+                    <MudCheckBox T="bool" @bind-Value="generatePdf" Label="PDF" Color="Color.Primary" />
+                    <MudCheckBox T="bool" @bind-Value="generateExcel" Label="Excel" Color="Color.Primary" />
+                </MudStack>
+            }
+
             <MudTextField @bind-Value="newReportNotes" 
                           Label="Notes (optional)" 
                           Variant="Variant.Outlined"
                           Lines="3" />
-            
+
             <MudAlert Severity="Severity.Info" Variant="Variant.Text">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.body2">
                         <strong>This will:</strong>
                     </MudText>
-                    <MudText Typo="Typo.body2">• Run the funding plan calculator</MudText>
-                    <MudText Typo="Typo.body2">• Generate report files (@(generatePdf && generateExcel ? "PDF & Excel" : generatePdf ? "PDF" : "Excel"))</MudText>
+                    @if (newReportType == ReportType.FullReport)
+                    {
+                        <MudText Typo="Typo.body2">• Compose narrative from templates</MudText>
+                        <MudText Typo="Typo.body2">• Include photos, tables, and charts</MudText>
+                        <MudText Typo="Typo.body2">• Generate a professional PDF document</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">• Run the funding plan calculator</MudText>
+                        <MudText Typo="Typo.body2">• Generate report files (@(generatePdf && generateExcel ? "PDF & Excel" : generatePdf ? "PDF" : "Excel"))</MudText>
+                    }
                     <MudText Typo="Typo.body2">• Create a draft report for review</MudText>
                 </MudStack>
             </MudAlert>
@@ -562,7 +598,7 @@
         <MudButton Variant="Variant.Filled" 
                    Color="Color.Primary" 
                    OnClick="GenerateReport"
-                   Disabled="@(!generatePdf && !generateExcel)">
+                   Disabled="@(newReportType != ReportType.FullReport && !generatePdf && !generateExcel)">
             <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-1" />
             Generate
         </MudButton>
@@ -592,6 +628,11 @@
     private bool generatePdf = true;
     private bool generateExcel = true;
     private bool showAllElementData = false;
+
+    // Narrative report options
+    private bool includePhotos = true;
+    private bool includeCharts = true;
+    private bool includeTables = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -652,7 +693,27 @@
         newReportNotes = "";
         generatePdf = true;
         generateExcel = true;
+        includePhotos = true;
+        includeCharts = true;
+        includeTables = true;
         showGenerateDialog = true;
+    }
+
+    private async Task OpenPreviewDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["ReserveStudyId"] = ReserveStudyId
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.ExtraLarge,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<NarrativePreviewDialog>("Narrative Preview", parameters, options);
     }
 
     private void CloseGenerateDialog()
@@ -677,20 +738,38 @@
             await UserState.InitializeAsync();
             var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
 
-            var options = new ReportGenerationOptions
-            {
-                ReportType = newReportType,
-                Notes = newReportNotes,
-                GeneratePdf = generatePdf,
-                GenerateExcel = generateExcel
-            };
+            ReportGenerationResult result;
 
-            var result = await GenerationService.GenerateReportAsync(ReserveStudyId, userId, options);
+            // Use different generation path for Full Narrative Report
+            if (newReportType == ReportType.FullReport)
+            {
+                var narrativeOptions = new NarrativeReportOptions
+                {
+                    IncludePhotos = includePhotos,
+                    IncludeCharts = includeCharts,
+                    IncludeCalculationTables = includeTables,
+                    Notes = newReportNotes
+                };
+
+                result = await GenerationService.GenerateNarrativeReportAsync(ReserveStudyId, userId, narrativeOptions);
+            }
+            else
+            {
+                var options = new ReportGenerationOptions
+                {
+                    ReportType = newReportType,
+                    Notes = newReportNotes,
+                    GeneratePdf = generatePdf,
+                    GenerateExcel = generateExcel
+                };
+
+                result = await GenerationService.GenerateReportAsync(ReserveStudyId, userId, options);
+            }
 
             if (result.IsSuccess)
             {
                 Snackbar.Add("Report generated successfully!", Severity.Success);
-                
+
                 // Show warnings if any
                 foreach (var warning in result.Warnings)
                 {

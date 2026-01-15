@@ -187,11 +187,80 @@ public interface IReportGenerationService
         Guid reportId,
         Guid regeneratedByUserId);
 
+        /// <summary>
+        /// Gets the current calculation result for a study without generating a report.
+        /// Useful for previewing before generation.
+        /// </summary>
+        /// <param name="studyId">The reserve study ID.</param>
+        /// <returns>The calculation result or null if not available.</returns>
+        Task<ReserveStudyResult?> PreviewCalculationAsync(Guid studyId);
+
+        /// <summary>
+        /// Generates a full narrative report PDF using HTML templates.
+        /// This creates a complete reserve study document with narrative sections,
+        /// photos, charts, and all appendices.
+        /// </summary>
+        /// <param name="studyId">The reserve study ID.</param>
+        /// <param name="generatedByUserId">The user generating the report.</param>
+        /// <param name="options">Narrative generation options.</param>
+        /// <returns>The generation result with report record.</returns>
+        Task<ReportGenerationResult> GenerateNarrativeReportAsync(
+            Guid studyId,
+            Guid generatedByUserId,
+            NarrativeReportOptions? options = null);
+
+        /// <summary>
+        /// Previews the narrative HTML without generating a PDF.
+        /// Useful for on-screen preview before export.
+        /// </summary>
+        /// <param name="studyId">The reserve study ID.</param>
+        /// <param name="sectionKey">Optional section key to preview only one section.</param>
+        /// <returns>HTML content as a string.</returns>
+        Task<string> PreviewNarrativeHtmlAsync(Guid studyId, string? sectionKey = null);
+    }
+
     /// <summary>
-    /// Gets the current calculation result for a study without generating a report.
-    /// Useful for previewing before generation.
+    /// Options for narrative report generation.
     /// </summary>
-    /// <param name="studyId">The reserve study ID.</param>
-    /// <returns>The calculation result or null if not available.</returns>
-    Task<ReserveStudyResult?> PreviewCalculationAsync(Guid studyId);
-}
+    public class NarrativeReportOptions
+    {
+        /// <summary>
+        /// Custom report title override.
+        /// </summary>
+        public string? Title { get; set; }
+
+        /// <summary>
+        /// Sections to exclude from the report.
+        /// </summary>
+        public HashSet<string>? ExcludedSections { get; set; }
+
+        /// <summary>
+        /// Whether to include photo exhibits. Default is true.
+        /// </summary>
+        public bool IncludePhotos { get; set; } = true;
+
+        /// <summary>
+        /// Whether to include calculation tables. Default is true.
+        /// </summary>
+        public bool IncludeCalculationTables { get; set; } = true;
+
+        /// <summary>
+        /// Whether to include charts. Default is true.
+        /// </summary>
+        public bool IncludeCharts { get; set; } = true;
+
+        /// <summary>
+        /// Optional notes to attach to the report record.
+        /// </summary>
+        public string? Notes { get; set; }
+
+        /// <summary>
+        /// Page size for PDF. Default is "Letter".
+        /// </summary>
+        public string PageSize { get; set; } = "Letter";
+
+        /// <summary>
+        /// Whether to generate in landscape orientation. Default is false (portrait).
+        /// </summary>
+        public bool Landscape { get; set; } = false;
+    }

@@ -1,10 +1,12 @@
 ﻿
+
 using Coravel.Events.Interfaces;
 using Coravel.Mailer.Mail;
 using Coravel.Mailer.Mail.Interfaces;
 
 using CRS.Models;
 using CRS.Models.Emails;
+using CRS.Services.Email;
 using CRS.Services.Interfaces;
 
 namespace CRS.EventsAndListeners {
@@ -42,24 +44,35 @@ namespace CRS.EventsAndListeners {
             #endregion
 
             #region Send Email
-            var subject = $"Reserve Study Request for {reserveStudy?.Community?.Name}";
-            var additionalMessage = $"A reserve study request has been shared with you. You can view the details online or contact the assigned specialist for more information.";
-            var emailRecipients = new List<string> { "emailme@jasonzurowski.com" }; // GetEmailRecipients(reserveStudy);
-
-            if (reserveStudy?.Specialist?.Email != null) {
-                //emailRecipients.Add(reserveStudy.Specialist.Email);
+            var reserveStudyEmail = await _reserveStudyService.MapToReserveStudyEmailAsync(reserveStudy!, 
+                "A reserve study request has been shared with you. You can view the details online or contact the assigned specialist for more information.");
+            
+            // Build subject with tenant company name
+            var companyName = reserveStudyEmail.TenantInfo?.CompanyName ?? "ALX Reserve Cloud";
+            var subject = $"[{companyName}] Reserve Study Request for {reserveStudy?.Community?.Name}";
+            
+            var emailRecipients = new List<string>();
+            
+            // Add specialist if assigned
+            if (!string.IsNullOrEmpty(reserveStudy?.Specialist?.Email)) {
+                emailRecipients.Add(reserveStudy.Specialist.Email);
             }
 
-            if (reserveStudy.PointOfContact?.Email != null) {
-                //emailRecipients.Add(reserveStudy.PointOfContact.Email);
+            // Add point of contact
+            if (!string.IsNullOrEmpty(reserveStudy?.PointOfContact?.Email)) {
+                emailRecipients.Add(reserveStudy.PointOfContact.Email);
             }
-
-            var reserveStudyEmail = _reserveStudyService.MapToReserveStudyEmail(reserveStudy, additionalMessage);
+            
+            // Fallback if no recipients
+            if (emailRecipients.Count == 0) {
+                emailRecipients.Add("emailme@jasonzurowski.com"); // TODO: Configure default admin email
+            }
 
             await _mailer.SendAsync(
                 Mailable.AsInline<ReserveStudyEmail>()
                     .To(emailRecipients.ToArray())
                     .Subject(subject)
+                    .ReplyToTenant(reserveStudyEmail.TenantInfo)
                     .View("~/Components/EmailTemplates/ReserveStudyCreate.cshtml", reserveStudyEmail)
             );
             #endregion

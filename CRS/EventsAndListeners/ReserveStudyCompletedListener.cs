@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 using Coravel.Events.Interfaces;
 using Coravel.Mailer.Mail;
@@ -6,6 +6,7 @@ using Coravel.Mailer.Mail.Interfaces;
 
 using CRS.Models;
 using CRS.Models.Emails;
+using CRS.Services.Email;
 using CRS.Services.Interfaces;
 
 namespace CRS.EventsAndListeners {
@@ -20,16 +21,44 @@ namespace CRS.EventsAndListeners {
 
         public async Task HandleAsync(ReserveStudyCompletedEvent broadcasted) {
             var study = broadcasted.ReserveStudy;
-            var subject = $"Reserve Study Complete for {study.Community?.Name}";
-            var message = "Your reserve study is complete.";
-            var recipients = new List<string> { "emailme@jasonzurowski.com" };
-            var email = _reserveStudyService.MapToReserveStudyEmail(study, message);
+            
+            var email = await _reserveStudyService.MapToReserveStudyEmailAsync(study, 
+                "Your reserve study has been completed! You can now access your full reserve study report online.");
+            
+            // Build subject with tenant company name
+            var companyName = email.TenantInfo?.CompanyName ?? "ALX Reserve Cloud";
+            var subject = $"[{companyName}] Reserve Study Complete - {study.Community?.Name}";
+            
+            var recipients = new List<string>();
+            
+            // Add study owner
+            if (!string.IsNullOrEmpty(study.User?.Email)) {
+                recipients.Add(study.User.Email);
+            }
+            
+            // Add point of contact
+            if (!string.IsNullOrEmpty(study.PointOfContact?.Email) && 
+                !recipients.Contains(study.PointOfContact.Email, StringComparer.OrdinalIgnoreCase)) {
+                recipients.Add(study.PointOfContact.Email);
+            }
+            
+            // Add contact
+            if (!string.IsNullOrEmpty(study.Contact?.Email) && 
+                !recipients.Contains(study.Contact.Email, StringComparer.OrdinalIgnoreCase)) {
+                recipients.Add(study.Contact.Email);
+            }
+            
+            // Fallback
+            if (recipients.Count == 0) {
+                recipients.Add("emailme@jasonzurowski.com"); // TODO: Configure default
+            }
 
             await _mailer.SendAsync(
-            Mailable.AsInline<ReserveStudyEmail>()
-            .To(recipients.ToArray())
-            .Subject(subject)
-            .View("~/Components/EmailTemplates/ReserveStudyCompleted.cshtml", email)
+                Mailable.AsInline<ReserveStudyEmail>()
+                    .To(recipients.ToArray())
+                    .Subject(subject)
+                    .ReplyToTenant(email.TenantInfo)
+                    .View("~/Components/EmailTemplates/ReserveStudyCompleted.cshtml", email)
             );
         }
     }

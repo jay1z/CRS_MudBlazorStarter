@@ -1847,6 +1847,222 @@ namespace CRS.Migrations
                     b.ToTable("Narratives", (string)null);
                 });
 
+            modelBuilder.Entity("CRS.Models.NarrativeTemplates.NarrativeInsert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AppliesWhenJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("HtmlTemplate")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InsertAfterBlockKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("InsertKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TargetSectionKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_NarrativeInsert_Tenant");
+
+                    b.HasIndex("TenantId", "InsertKey")
+                        .HasDatabaseName("IX_NarrativeInsert_Tenant_Key");
+
+                    b.HasIndex("TenantId", "IsEnabled", "TargetSectionKey")
+                        .HasDatabaseName("IX_NarrativeInsert_Tenant_Enabled_Section");
+
+                    b.ToTable("NarrativeInserts", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.NarrativeTemplates.NarrativeTemplateBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AppliesWhenJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BlockKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CssClass")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("HtmlTemplate")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid?>("SectionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SectionKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SectionId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_NarrativeTemplateBlock_Tenant");
+
+                    b.HasIndex("TenantId", "SectionKey", "BlockKey")
+                        .HasDatabaseName("IX_NarrativeTemplateBlock_Tenant_Section_Block");
+
+                    b.HasIndex("TenantId", "SectionKey", "IsEnabled", "SortOrder")
+                        .HasDatabaseName("IX_NarrativeTemplateBlock_Tenant_Section_Enabled_Order");
+
+                    b.ToTable("NarrativeTemplateBlocks", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.NarrativeTemplates.NarrativeTemplateSection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CssClass")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("PageBreakBefore")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SectionKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_NarrativeTemplateSection_Tenant");
+
+                    b.HasIndex("TenantId", "SectionKey")
+                        .HasDatabaseName("IX_NarrativeTemplateSection_Tenant_Key");
+
+                    b.HasIndex("TenantId", "IsEnabled", "SortOrder")
+                        .HasDatabaseName("IX_NarrativeTemplateSection_Tenant_Enabled_Order");
+
+                    b.ToTable("NarrativeTemplateSections", (string)null);
+                });
+
             modelBuilder.Entity("CRS.Models.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4371,6 +4587,16 @@ namespace CRS.Migrations
                     b.Navigation("ReviewedBy");
                 });
 
+            modelBuilder.Entity("CRS.Models.NarrativeTemplates.NarrativeTemplateBlock", b =>
+                {
+                    b.HasOne("CRS.Models.NarrativeTemplates.NarrativeTemplateSection", "Section")
+                        .WithMany("Blocks")
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Section");
+                });
+
             modelBuilder.Entity("CRS.Models.Notification", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", "User")
@@ -4912,6 +5138,11 @@ namespace CRS.Migrations
             modelBuilder.Entity("CRS.Models.CommonElement", b =>
                 {
                     b.Navigation("ReserveStudyCommonElements");
+                });
+
+            modelBuilder.Entity("CRS.Models.NarrativeTemplates.NarrativeTemplateSection", b =>
+                {
+                    b.Navigation("Blocks");
                 });
 
             modelBuilder.Entity("CRS.Models.Proposal", b =>

@@ -4,6 +4,7 @@ using Coravel.Mailer.Mail;
 using Coravel.Mailer.Mail.Interfaces;
 using CRS.Models;
 using CRS.Models.Emails;
+using CRS.Services.Email;
 using CRS.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -30,8 +31,12 @@ namespace CRS.EventsAndListeners
             var study = broadcasted.ReserveStudy;
             var proposal = broadcasted.Proposal;
             
-            var subject = $"Reserve Study Proposal for {study.Community?.Name}";
-            var message = $"A proposal has been prepared for your reserve study. Please review the proposal details and accept it to proceed.";
+            var email = await _reserveStudyService.MapToReserveStudyEmailAsync(study, 
+                "A proposal has been prepared for your reserve study. Please review the proposal details and accept it to proceed.");
+            
+            // Build subject with tenant company name
+            var companyName = email.TenantInfo?.CompanyName ?? "ALX Reserve Cloud";
+            var subject = $"[{companyName}] Reserve Study Proposal for {study.Community?.Name}";
             
             var recipients = new List<string>();
             
@@ -59,15 +64,14 @@ namespace CRS.EventsAndListeners
             
             _logger.LogInformation("Sending proposal email to {Count} recipient(s) for study {StudyId}", 
                 recipients.Count, study.Id);
-            
-            var email = _reserveStudyService.MapToReserveStudyEmail(study, message);
-            
+
             try
             {
                 await _mailer.SendAsync(
                     Mailable.AsInline<ReserveStudyEmail>()
                         .To(recipients.ToArray())
                         .Subject(subject)
+                        .ReplyToTenant(email.TenantInfo)
                         .View("~/Components/EmailTemplates/ReserveStudyProposalSent.cshtml", email)
                 );
                 

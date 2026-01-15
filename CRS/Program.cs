@@ -173,6 +173,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.Interfaces.INarrativeService, CRS.Services.NarrativeService>();
 
     // Narrative HTML Template Services
+    builder.Services.AddScoped<ITokenRenderer, DefaultTokenRenderer>();
     builder.Services.AddScoped<IPlaceholderResolver, PlaceholderResolver>();
     builder.Services.AddScoped<CRS.Services.NarrativeReport.INarrativeHtmlSanitizer, CRS.Services.NarrativeReport.NarrativeHtmlSanitizer>();
     builder.Services.AddScoped<IReserveStudyHtmlComposer, ReserveStudyHtmlComposer>();
@@ -265,13 +266,15 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // CORS for subdomains (SignalR/JS interop scenarios)
     builder.Services.AddCors(o => {
         o.AddPolicy("AllowSubdomains", policy => {
-            var root = builder.Configuration["App:RootDomain"]; // e.g., example.com
+            var root = builder.Configuration["App:RootDomain"]; // e.g., localhost:7056 or example.com
             policy.SetIsOriginAllowed(origin => {
                 if (string.IsNullOrEmpty(root)) return true; // allow all if not configured
                 try {
                     var u = new Uri(origin);
+                    // Extract root domain without port for comparison (Uri.Host excludes port)
+                    var rootHost = root.Contains(':') ? root.Split(':')[0] : root;
                     var h = u.Host;
-                    return h.Equals(root, StringComparison.OrdinalIgnoreCase) || h.EndsWith("." + root, StringComparison.OrdinalIgnoreCase);
+                    return h.Equals(rootHost, StringComparison.OrdinalIgnoreCase) || h.EndsWith("." + rootHost, StringComparison.OrdinalIgnoreCase);
                 } catch { return false; }
             })
             .AllowAnyHeader()

@@ -5,26 +5,31 @@ using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CRS.Services;
 
 /// <summary>
 /// Service for managing generated reports for reserve studies.
+/// Includes workflow automation for advancing study status based on report lifecycle.
 /// </summary>
 public class GeneratedReportService : IGeneratedReportService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
     private readonly IReserveStudyWorkflowService _workflowService;
+    private readonly ILogger<GeneratedReportService> _logger;
 
     public GeneratedReportService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
         ITenantContext tenantContext,
-        IReserveStudyWorkflowService workflowService)
+        IReserveStudyWorkflowService workflowService,
+        ILogger<GeneratedReportService> logger)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
         _workflowService = workflowService;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<GeneratedReport>> GetByReserveStudyAsync(Guid reserveStudyId, CancellationToken ct = default)
@@ -221,13 +226,37 @@ public class GeneratedReportService : IGeneratedReportService
 
         await context.SaveChangesAsync(ct);
 
-        // Auto-advance workflow when FundingPlan report is approved
-        if (report.Type == ReportType.FundingPlan)
-        {
-            await _workflowService.TryTransitionStudyAsync(report.ReserveStudyId, StudyStatus.FundingPlanComplete);
-        }
+        // Workflow automation based on report type
+        await AdvanceWorkflowOnApprovalAsync(report);
 
         return true;
+    }
+
+    /// <summary>
+    /// Advances workflow when a report is approved.
+    /// </summary>
+    private async Task AdvanceWorkflowOnApprovalAsync(GeneratedReport report)
+    {
+        try
+        {
+            if (report.Type == ReportType.FundingPlan)
+            {
+                // FundingPlan approval → FundingPlanComplete
+                await _workflowService.TryTransitionStudyAsync(report.ReserveStudyId, StudyStatus.FundingPlanComplete);
+                _logger.LogInformation("Advanced study {StudyId} to FundingPlanComplete on FundingPlan approval", report.ReserveStudyId);
+            }
+            else if (report.Type == ReportType.FullReport)
+            {
+                // FullReport (Narrative) approval → NarrativePackaged
+                // First ensure we're at NarrativePrintReady, then advance to NarrativePackaged
+                await TryAdvanceToStatusAsync(report.ReserveStudyId, StudyStatus.NarrativePackaged);
+                _logger.LogInformation("Advanced study {StudyId} to NarrativePackaged on FullReport approval", report.ReserveStudyId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to advance workflow on report approval for study {StudyId}", report.ReserveStudyId);
+        }
     }
 
     public async Task<bool> RequestRevisionsAsync(Guid id, Guid reviewedByUserId, string? notes = null, CancellationToken ct = default)
@@ -261,7 +290,7 @@ public class GeneratedReportService : IGeneratedReportService
         if (!_tenantContext.TenantId.HasValue) return false;
 
         await using var context = await _dbFactory.CreateDbContextAsync(ct);
-        
+
         var report = await context.GeneratedReports
             .FirstOrDefaultAsync(r => r.Id == id && r.DateDeleted == null, ct);
 
@@ -274,7 +303,31 @@ public class GeneratedReportService : IGeneratedReportService
         report.DateModified = DateTime.UtcNow;
 
         await context.SaveChangesAsync(ct);
+
+        // Workflow automation: Published → NarrativeSent
+        await AdvanceWorkflowOnPublishAsync(report);
+
         return true;
+    }
+
+    /// <summary>
+    /// Advances workflow when a report is published to the client.
+    /// </summary>
+    private async Task AdvanceWorkflowOnPublishAsync(GeneratedReport report)
+    {
+        try
+        {
+            if (report.Type == ReportType.FullReport)
+            {
+                // Publishing the full narrative report → NarrativeSent
+                await TryAdvanceToStatusAsync(report.ReserveStudyId, StudyStatus.NarrativeSent);
+                _logger.LogInformation("Advanced study {StudyId} to NarrativeSent on FullReport publish", report.ReserveStudyId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to advance workflow on report publish for study {StudyId}", report.ReserveStudyId);
+        }
     }
 
     public async Task<bool> MarkSentToClientAsync(Guid id, string email, CancellationToken ct = default)
@@ -282,7 +335,7 @@ public class GeneratedReportService : IGeneratedReportService
         if (!_tenantContext.TenantId.HasValue) return false;
 
         await using var context = await _dbFactory.CreateDbContextAsync(ct);
-        
+
         var report = await context.GeneratedReports
             .FirstOrDefaultAsync(r => r.Id == id && r.DateDeleted == null, ct);
 
@@ -293,6 +346,21 @@ public class GeneratedReportService : IGeneratedReportService
         report.DateModified = DateTime.UtcNow;
 
         await context.SaveChangesAsync(ct);
+
+        // Workflow automation: Sent to client → NarrativeSent (if not already)
+        if (report.Type == ReportType.FullReport)
+        {
+            try
+            {
+                await TryAdvanceToStatusAsync(report.ReserveStudyId, StudyStatus.NarrativeSent);
+                _logger.LogInformation("Advanced study {StudyId} to NarrativeSent on report sent to client", report.ReserveStudyId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to advance workflow on report sent for study {StudyId}", report.ReserveStudyId);
+            }
+        }
+
         return true;
     }
 
@@ -301,16 +369,33 @@ public class GeneratedReportService : IGeneratedReportService
         if (!_tenantContext.TenantId.HasValue) return false;
 
         await using var context = await _dbFactory.CreateDbContextAsync(ct);
-        
+
         var report = await context.GeneratedReports
             .FirstOrDefaultAsync(r => r.Id == id && r.DateDeleted == null, ct);
 
         if (report == null) return false;
 
+        var isFirstDownload = report.DownloadCount == 0;
+
         report.DownloadCount++;
         report.LastDownloadedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync(ct);
+
+        // Workflow automation: First client download → ReportReady (client has received the report)
+        if (isFirstDownload && report.IsPublishedToClient && report.Type == ReportType.FullReport)
+        {
+            try
+            {
+                await TryAdvanceToStatusAsync(report.ReserveStudyId, StudyStatus.ReportReady);
+                _logger.LogInformation("Advanced study {StudyId} to ReportReady on first client download", report.ReserveStudyId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to advance workflow on first download for study {StudyId}", report.ReserveStudyId);
+            }
+        }
+
         return true;
     }
 
@@ -402,12 +487,219 @@ public class GeneratedReportService : IGeneratedReportService
             .ToListAsync(ct);
     }
 
-    public async Task<int> GetCountAsync(Guid reserveStudyId, CancellationToken ct = default)
-    {
-        if (!_tenantContext.TenantId.HasValue) return 0;
+        public async Task<int> GetCountAsync(Guid reserveStudyId, CancellationToken ct = default)
+        {
+            if (!_tenantContext.TenantId.HasValue) return 0;
 
-        await using var context = await _dbFactory.CreateDbContextAsync(ct);
-        return await context.GeneratedReports
-            .CountAsync(r => r.ReserveStudyId == reserveStudyId && r.DateDeleted == null, ct);
+            await using var context = await _dbFactory.CreateDbContextAsync(ct);
+            return await context.GeneratedReports
+                .CountAsync(r => r.ReserveStudyId == reserveStudyId && r.DateDeleted == null, ct);
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> MarkClientFeedbackReceivedAsync(Guid reserveStudyId, string? feedbackNotes = null, CancellationToken ct = default)
+        {
+            if (!_tenantContext.TenantId.HasValue) return false;
+
+            try
+            {
+                // Record feedback on the latest published report
+                await using var context = await _dbFactory.CreateDbContextAsync(ct);
+                var report = await context.GeneratedReports
+                    .Where(r => r.ReserveStudyId == reserveStudyId && 
+                               r.Type == ReportType.FullReport && 
+                               r.IsPublishedToClient &&
+                               r.DateDeleted == null)
+                    .OrderByDescending(r => r.PublishedAt)
+                    .FirstOrDefaultAsync(ct);
+
+                if (report != null && !string.IsNullOrEmpty(feedbackNotes))
+                {
+                    report.InternalNotes = string.IsNullOrEmpty(report.InternalNotes)
+                        ? $"[Client Feedback]: {feedbackNotes}"
+                        : $"{report.InternalNotes}\n\n[Client Feedback]: {feedbackNotes}";
+                    report.DateModified = DateTime.UtcNow;
+                    await context.SaveChangesAsync(ct);
+                }
+
+                // Advance workflow to ReportInProcess (handling client feedback/questions)
+                await TryAdvanceToStatusAsync(reserveStudyId, StudyStatus.ReportInProcess);
+                _logger.LogInformation("Advanced study {StudyId} to ReportInProcess on client feedback", reserveStudyId);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process client feedback for study {StudyId}", reserveStudyId);
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> MarkRevisionsCompleteAsync(Guid reserveStudyId, CancellationToken ct = default)
+        {
+            if (!_tenantContext.TenantId.HasValue) return false;
+
+            try
+            {
+                // Advance workflow to ReportComplete (all revisions done, client accepted)
+                await TryAdvanceToStatusAsync(reserveStudyId, StudyStatus.ReportComplete);
+                _logger.LogInformation("Advanced study {StudyId} to ReportComplete", reserveStudyId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to mark revisions complete for study {StudyId}", reserveStudyId);
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> CompleteStudyAsync(Guid reserveStudyId, CancellationToken ct = default)
+        {
+            if (!_tenantContext.TenantId.HasValue) return false;
+
+            try
+            {
+                // Advance workflow to RequestCompleted (study finished successfully)
+                await TryAdvanceToStatusAsync(reserveStudyId, StudyStatus.RequestCompleted);
+                _logger.LogInformation("Study {StudyId} marked as completed", reserveStudyId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to complete study {StudyId}", reserveStudyId);
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> ArchiveStudyAsync(Guid reserveStudyId, CancellationToken ct = default)
+        {
+            if (!_tenantContext.TenantId.HasValue) return false;
+
+            try
+            {
+                // Archive all reports for this study
+                await using var context = await _dbFactory.CreateDbContextAsync(ct);
+                var reports = await context.GeneratedReports
+                    .Where(r => r.ReserveStudyId == reserveStudyId && r.DateDeleted == null)
+                    .ToListAsync(ct);
+
+                foreach (var report in reports)
+                {
+                    report.Status = ReportStatus.Archived;
+                    report.DateModified = DateTime.UtcNow;
+                }
+
+                await context.SaveChangesAsync(ct);
+
+                // Advance workflow to RequestArchived
+                await _workflowService.TryTransitionStudyAsync(reserveStudyId, StudyStatus.RequestArchived);
+                _logger.LogInformation("Study {StudyId} archived with {Count} reports", reserveStudyId, reports.Count);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to archive study {StudyId}", reserveStudyId);
+                return false;
+            }
+        }
+
+        #region Workflow Helpers
+
+        /// <summary>
+        /// Attempts to advance the workflow to a target status by executing
+        /// the necessary intermediate transitions.
+        /// </summary>
+        private async Task TryAdvanceToStatusAsync(Guid studyId, StudyStatus targetStatus)
+        {
+            // Get current status
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var studyRequest = await context.StudyRequests.FirstOrDefaultAsync(r => r.Id == studyId);
+
+            if (studyRequest == null)
+            {
+                _logger.LogWarning("No StudyRequest found for study {StudyId}", studyId);
+                return;
+            }
+
+            var currentStatus = studyRequest.CurrentStatus;
+
+            // If already at or past target, nothing to do
+            if ((int)currentStatus >= (int)targetStatus)
+            {
+                _logger.LogDebug("Study {StudyId} already at status {Status}, target was {Target}", 
+                    studyId, currentStatus, targetStatus);
+                return;
+            }
+
+            // Get the transition path
+            var path = GetTransitionPath(currentStatus, targetStatus);
+
+            if (path.Count == 0)
+            {
+                _logger.LogWarning("No valid transition path from {From} to {To} for study {StudyId}", 
+                    currentStatus, targetStatus, studyId);
+                return;
+            }
+
+            // Execute each transition
+            foreach (var nextStatus in path)
+            {
+                var success = await _workflowService.TryTransitionStudyAsync(studyId, nextStatus);
+                if (!success)
+                {
+                    _logger.LogWarning("Failed to transition study {StudyId} to {Status}", studyId, nextStatus);
+                    break;
+                }
+                _logger.LogDebug("Transitioned study {StudyId} to {Status}", studyId, nextStatus);
+            }
+        }
+
+        /// <summary>
+        /// Gets the sequence of transitions needed to move from current to target status.
+        /// </summary>
+        private static List<StudyStatus> GetTransitionPath(StudyStatus current, StudyStatus target)
+        {
+            var path = new List<StudyStatus>();
+
+            // Define the ordered workflow for narrative/report phase
+            var workflowOrder = new[]
+            {
+                StudyStatus.FundingPlanReady,
+                StudyStatus.FundingPlanInProcess,
+                StudyStatus.FundingPlanComplete,
+                StudyStatus.NarrativeReady,
+                StudyStatus.NarrativeInProcess,
+                StudyStatus.NarrativeComplete,
+                StudyStatus.NarrativePrintReady,
+                StudyStatus.NarrativePackaged,
+                StudyStatus.NarrativeSent,
+                StudyStatus.ReportReady,
+                StudyStatus.ReportInProcess,
+                StudyStatus.ReportComplete,
+                StudyStatus.RequestCompleted,
+                StudyStatus.RequestArchived
+            };
+
+            var currentIndex = Array.IndexOf(workflowOrder, current);
+            var targetIndex = Array.IndexOf(workflowOrder, target);
+
+            // If statuses aren't in our workflow order, can't compute path
+            if (currentIndex < 0 || targetIndex < 0 || currentIndex >= targetIndex)
+            {
+                return path;
+            }
+
+            // Add each intermediate status
+            for (int i = currentIndex + 1; i <= targetIndex; i++)
+            {
+                path.Add(workflowOrder[i]);
+            }
+
+            return path;
+        }
+
+        #endregion
     }
-}

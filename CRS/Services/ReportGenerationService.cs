@@ -3,8 +3,10 @@ using CRS.Data;
 using CRS.Models;
 using CRS.Models.Workflow;
 using CRS.Services.Interfaces;
+using CRS.Services.NarrativeReport;
 using CRS.Services.ReserveCalculator;
 using CRS.Services.Storage;
+using CRS.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRS.Services;
@@ -23,6 +25,11 @@ public class ReportGenerationService : IReportGenerationService
     private readonly IGeneratedReportService _reportService;
     private readonly IReserveStudyWorkflowService _workflowService;
     private readonly INarrativeService _narrativeService;
+    private readonly IReportContextBuilder _contextBuilder;
+    private readonly IReserveStudyHtmlComposer _htmlComposer;
+    private readonly IPdfConverter _pdfConverter;
+    private readonly ITenantContext _tenantContext;
+    private readonly ILogger<ReportGenerationService> _logger;
 
     public ReportGenerationService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
@@ -32,17 +39,27 @@ public class ReportGenerationService : IReportGenerationService
         IDocumentStorageService storageService,
         IGeneratedReportService reportService,
         IReserveStudyWorkflowService workflowService,
-            INarrativeService narrativeService)
-        {
-            _dbFactory = dbFactory;
-            _calculatorService = calculatorService;
-            _pdfService = pdfService;
-            _excelService = excelService;
-            _storageService = storageService;
-            _reportService = reportService;
-            _workflowService = workflowService;
-            _narrativeService = narrativeService;
-        }
+        INarrativeService narrativeService,
+        IReportContextBuilder contextBuilder,
+        IReserveStudyHtmlComposer htmlComposer,
+        IPdfConverter pdfConverter,
+        ITenantContext tenantContext,
+        ILogger<ReportGenerationService> logger)
+    {
+        _dbFactory = dbFactory;
+        _calculatorService = calculatorService;
+        _pdfService = pdfService;
+        _excelService = excelService;
+        _storageService = storageService;
+        _reportService = reportService;
+        _workflowService = workflowService;
+        _narrativeService = narrativeService;
+        _contextBuilder = contextBuilder;
+        _htmlComposer = htmlComposer;
+        _pdfConverter = pdfConverter;
+        _tenantContext = tenantContext;
+        _logger = logger;
+    }
 
     /// <inheritdoc />
     public StudyStatus MinimumRequiredStatus => StudyStatus.FundingPlanReady;
@@ -473,17 +490,293 @@ public class ReportGenerationService : IReportGenerationService
         }
     }
 
-    private static string GetReportTypeDisplayName(ReportType type) => type switch
-    {
-        ReportType.Draft => "Draft Report",
-        ReportType.Final => "Final Report",
-        ReportType.FundingPlan => "Funding Plan",
-        ReportType.ExecutiveSummary => "Executive Summary",
-        ReportType.FullReport => "Full Report",
-        ReportType.ComponentInventory => "Component Inventory",
-        ReportType.UpdateReport => "Update Report",
-        ReportType.Addendum => "Addendum",
-        ReportType.CorrectionNotice => "Correction Notice",
-        _ => type.ToString()
-    };
-}
+        private static string GetReportTypeDisplayName(ReportType type) => type switch
+        {
+            ReportType.Draft => "Draft Report",
+            ReportType.Final => "Final Report",
+            ReportType.FundingPlan => "Funding Plan",
+            ReportType.ExecutiveSummary => "Executive Summary",
+            ReportType.FullReport => "Full Report",
+            ReportType.ComponentInventory => "Component Inventory",
+            ReportType.UpdateReport => "Update Report",
+            ReportType.Addendum => "Addendum",
+            ReportType.CorrectionNotice => "Correction Notice",
+            _ => type.ToString()
+        };
+
+        /// <inheritdoc />
+        public async Task<ReportGenerationResult> GenerateNarrativeReportAsync(
+            Guid studyId,
+            Guid generatedByUserId,
+            NarrativeReportOptions? options = null)
+        {
+            options ??= new NarrativeReportOptions();
+
+            try
+            {
+                _logger.LogInformation("Generating narrative report for study {StudyId}", studyId);
+
+                // Step 1: Validate study data
+                var validation = await ValidateStudyDataAsync(studyId);
+                if (!validation.IsReady)
+                {
+                    var errorMessage = string.Join("; ", validation.Errors);
+                    return ReportGenerationResult.Failure($"Study data is incomplete: {errorMessage}");
+                }
+
+                // Step 2: Build the report context (aggregates all data)
+                var contextOptions = new ReportContextOptions
+                {
+                    IncludePhotos = options.IncludePhotos,
+                    IncludeCalculatedOutputs = options.IncludeCalculationTables,
+                    ReportTitleOverride = options.Title
+                };
+
+                var context = await _contextBuilder.BuildContextAsync(studyId, contextOptions);
+
+                // Step 3: Compose the HTML document
+                var compositionOptions = new NarrativeCompositionOptions
+                {
+                    IncludeDocumentWrapper = true,
+                    IncludePrintCss = true,
+                    IncludePageBreaks = true,
+                    ExcludedSections = options.ExcludedSections
+                };
+
+                var html = await _htmlComposer.ComposeAsync(
+                    context,
+                    _tenantContext.TenantId,
+                    compositionOptions);
+
+                _logger.LogDebug("Composed HTML: {Length} characters", html.Length);
+
+                // Step 4: Convert HTML to PDF
+                var pdfOptions = new PdfConversionOptions
+                {
+                    PageSize = options.PageSize,
+                    Orientation = options.Landscape ? PdfOrientation.Landscape : PdfOrientation.Portrait,
+                    Title = options.Title ?? $"Reserve Study - {context.Association.Name}",
+                    Author = context.Branding.CompanyName,
+                    ShowPageNumbers = true
+                };
+
+                var pdfBytes = await _pdfConverter.ConvertToPdfAsync(html, pdfOptions);
+
+                _logger.LogInformation("Generated PDF: {Size} bytes", pdfBytes.Length);
+
+                // Step 5: Upload to storage
+                await using var dbContext = await _dbFactory.CreateDbContextAsync();
+                var study = await dbContext.ReserveStudies.FindAsync(studyId);
+                if (study == null)
+                {
+                    return ReportGenerationResult.Failure("Reserve study not found.");
+                }
+
+                var fileName = $"NarrativeReport_{context.Association.Name?.Replace(" ", "_") ?? studyId.ToString()}_{DateTime.UtcNow:yyyyMMdd}.pdf";
+                var uploadResult = await _storageService.UploadAsync(
+                    study.TenantId,
+                    studyId,
+                    fileName,
+                    "application/pdf",
+                    pdfBytes);
+
+                // Step 6: Determine version
+                var existingReports = await _reportService.GetByTypeAsync(studyId, ReportType.FullReport);
+                var maxVersion = existingReports.Any()
+                    ? existingReports.Max(r => int.TryParse(r.Version, out var v) ? v : 0)
+                    : 0;
+                var nextVersion = (maxVersion + 1).ToString();
+
+                // Step 7: Create report record
+                var report = new GeneratedReport
+                {
+                    TenantId = study.TenantId,
+                    ReserveStudyId = studyId,
+                    Type = ReportType.FullReport,
+                    Status = ReportStatus.Draft,
+                    Version = nextVersion,
+                    Title = options.Title ?? $"Full Narrative Report v{nextVersion}",
+                    StorageUrl = uploadResult.StorageUrl,
+                    ContentType = "application/pdf",
+                    FileSizeBytes = uploadResult.FileSizeBytes,
+                    PageCount = EstimatePageCount(pdfBytes.Length),
+                    GeneratedByUserId = generatedByUserId,
+                    GeneratedAt = DateTime.UtcNow,
+                    TemplateUsed = "NarrativeTemplate",
+                    OutputFormat = "PDF",
+                    Notes = options.Notes
+                };
+
+                var savedReport = await _reportService.CreateAsync(report);
+
+                _logger.LogInformation("Narrative report created: {ReportId}", savedReport.Id);
+
+                // Step 8: Advance workflow status
+                // Progress through narrative workflow stages
+                await AdvanceNarrativeWorkflowAsync(studyId);
+
+                // Get calculation result for the response
+                var calcResult = await _calculatorService.CalculateFromStudyAsync(studyId);
+
+                return ReportGenerationResult.Success(savedReport, calcResult);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate narrative report for study {StudyId}", studyId);
+                return ReportGenerationResult.Failure($"Narrative report generation failed: {ex.Message}");
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<string> PreviewNarrativeHtmlAsync(Guid studyId, string? sectionKey = null)
+        {
+            try
+            {
+                // Build context
+                var context = await _contextBuilder.BuildContextAsync(studyId);
+
+                if (!string.IsNullOrEmpty(sectionKey))
+                {
+                    // Render single section
+                    return await _htmlComposer.ComposeSectionAsync(
+                        sectionKey,
+                        context,
+                        _tenantContext.TenantId);
+                }
+
+                // Render full document with preview flag
+                var options = new NarrativeCompositionOptions
+                {
+                    IncludeDocumentWrapper = true,
+                    IncludePrintCss = true,
+                    IsPreview = true
+                };
+
+                return await _htmlComposer.ComposeAsync(
+                    context,
+                    _tenantContext.TenantId,
+                    options);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to preview narrative HTML for study {StudyId}", studyId);
+                throw;
+            }
+        }
+
+            private static int EstimatePageCount(int pdfSizeBytes)
+            {
+                // Rough estimate: ~3-5KB per page for text-heavy PDFs
+                // With images it could be much larger per page
+                return Math.Max(1, pdfSizeBytes / 4000);
+            }
+
+                /// <summary>
+                /// Advances the workflow through narrative-related stages when a narrative report is generated.
+                /// Follows the proper state machine transitions.
+                /// </summary>
+                private async Task AdvanceNarrativeWorkflowAsync(Guid studyId)
+                {
+                    try
+                    {
+                        // Get current status
+                        await using var context = await _dbFactory.CreateDbContextAsync();
+                        var studyRequest = await context.StudyRequests.FirstOrDefaultAsync(r => r.Id == studyId);
+
+                        if (studyRequest == null)
+                        {
+                            _logger.LogWarning("No StudyRequest found for study {StudyId}, cannot advance workflow", studyId);
+                            return;
+                        }
+
+                        var currentStatus = studyRequest.CurrentStatus;
+                        _logger.LogInformation("Current workflow status for study {StudyId}: {Status}", studyId, currentStatus);
+
+                        // Define the sequence of transitions needed to reach NarrativeComplete
+                        // based on current status. We advance one step at a time following the state machine.
+                        var transitionPath = GetTransitionPathToNarrativeComplete(currentStatus);
+
+                        if (transitionPath.Count == 0)
+                        {
+                            _logger.LogDebug("No workflow advancement needed for study {StudyId} at status {Status}", 
+                                studyId, currentStatus);
+                            return;
+                        }
+
+                        // Execute each transition in sequence
+                        foreach (var targetStatus in transitionPath)
+                        {
+                            var success = await _workflowService.TryTransitionStudyAsync(studyId, targetStatus);
+                            if (success)
+                            {
+                                _logger.LogInformation("Advanced workflow for study {StudyId} to {Status}", 
+                                    studyId, targetStatus);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Failed to advance workflow for study {StudyId} to {Status}, stopping advancement", 
+                                    studyId, targetStatus);
+                                break;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Don't fail the report generation if workflow update fails
+                        _logger.LogError(ex, "Error advancing workflow for study {StudyId}", studyId);
+                    }
+                }
+
+                /// <summary>
+                /// Gets the sequence of workflow transitions needed to reach NarrativeComplete from the current status.
+                /// </summary>
+                private static List<StudyStatus> GetTransitionPathToNarrativeComplete(StudyStatus currentStatus)
+                {
+                    var path = new List<StudyStatus>();
+
+                    // Map current status to the path needed
+                    switch (currentStatus)
+                    {
+                        case StudyStatus.FundingPlanReady:
+                            path.Add(StudyStatus.FundingPlanInProcess);
+                            path.Add(StudyStatus.FundingPlanComplete);
+                            path.Add(StudyStatus.NarrativeReady);
+                            path.Add(StudyStatus.NarrativeInProcess);
+                            path.Add(StudyStatus.NarrativeComplete);
+                            break;
+
+                        case StudyStatus.FundingPlanInProcess:
+                            path.Add(StudyStatus.FundingPlanComplete);
+                            path.Add(StudyStatus.NarrativeReady);
+                            path.Add(StudyStatus.NarrativeInProcess);
+                            path.Add(StudyStatus.NarrativeComplete);
+                            break;
+
+                        case StudyStatus.FundingPlanComplete:
+                            path.Add(StudyStatus.NarrativeReady);
+                            path.Add(StudyStatus.NarrativeInProcess);
+                            path.Add(StudyStatus.NarrativeComplete);
+                            break;
+
+                        case StudyStatus.NarrativeReady:
+                            path.Add(StudyStatus.NarrativeInProcess);
+                            path.Add(StudyStatus.NarrativeComplete);
+                            break;
+
+                        case StudyStatus.NarrativeInProcess:
+                            path.Add(StudyStatus.NarrativeComplete);
+                            break;
+
+                        case StudyStatus.NarrativeComplete:
+                            // Already at target, advance to print ready
+                            path.Add(StudyStatus.NarrativePrintReady);
+                            break;
+
+                        // Already past narrative completion - no advancement needed
+                        default:
+                            break;
+                    }
+
+                    return path;
+                }
+            }

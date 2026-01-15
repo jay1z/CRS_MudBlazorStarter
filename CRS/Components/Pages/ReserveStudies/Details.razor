@@ -451,6 +451,31 @@
                                         </MudPaper>
                                     }
 
+                                    <!-- Proposal Details -->
+                                    <!-- Show proposal details only before initial acceptance, or during amendment workflow -->
+                                    @if (reserveStudy?.CurrentProposal != null) {
+                                        var proposal = reserveStudy.CurrentProposal;
+                                        var proposalSent = proposal.DateSent.HasValue;
+                                        var proposalStatus = GetCurrentStatus();
+                                        // Show proposal if not yet accepted, OR if it's an amendment awaiting acceptance
+                                        var showProposalDetails = proposalStatus < StudyStatus.ProposalAccepted || 
+                                                                  (proposal.IsAmendment && (proposalStatus == StudyStatus.AmendmentPending || proposalStatus == StudyStatus.AmendmentApproved));
+
+                                        @if (showProposalDetails) {
+                                            @* Show to staff always, or to HOA users only after proposal is sent *@
+                                            <AuthorizeView Policy="RequireTenantStaff">
+                                                <Authorized>
+                                                    @RenderProposalDetails(proposal)
+                                                </Authorized>
+                                                <NotAuthorized>
+                                                    @if (proposalSent) {
+                                                        @RenderProposalDetails(proposal)
+                                                    }
+                                                </NotAuthorized>
+                                            </AuthorizeView>
+                                        }
+                                    }
+
                                     <!-- Action Buttons -->
                                     @{
                                         var currentStatus = GetCurrentStatus();
@@ -675,13 +700,17 @@
                                             @* HOA user button to submit financial info when requested *@
                                             @if (currentStatus == StudyStatus.FinancialInfoRequested || 
                                                  currentStatus == StudyStatus.FinancialInfoInProgress) {
-                                                <MudButton Variant="Variant.Filled"
-                                                           Color="Color.Success"
-                                                           Size="Size.Large"
-                                                           StartIcon="@Icons.Material.Filled.Description"
-                                                           Href="@($"/ReserveStudies/{Id}/FinancialInfo")">
-                                                    Submit Financial Information
-                                                </MudButton>
+                                                <AuthorizeView Policy="RequireHOAUser">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled"
+                                                                   Color="Color.Success"
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.Description"
+                                                                   Href="@($"/ReserveStudies/{Id}/FinancialInfo")">
+                                                            Submit Financial Information
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
                                             }
                                             
                                             @* Site visit workflow *@
@@ -899,36 +928,6 @@
                                         </MudStack>
                                     }
 
-
-                                    @* Proposal Details - only show before financial info stage *@
-                                    @if (reserveStudy?.CurrentProposal != null && currentStatus < StudyStatus.FinancialInfoRequested) {
-                                        <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px; border-left: 4px solid #10b981;">
-                                            <MudCardContent>
-                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Success" Size="Size.Large" />
-                                                    <MudText Typo="Typo.h6" Style="font-weight: 600;">Proposal Details</MudText>
-                                                </MudStack>
-                                                <MudGrid Spacing="3">
-                                                    <MudItem xs="12" md="6">
-                                                        <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Scope</MudText>
-                                                        <MudText Typo="Typo.body1">@reserveStudy.CurrentProposal.ProposalScope</MudText>
-                                                    </MudItem>
-                                                    <MudItem xs="12" md="6">
-                                                        <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Estimated Cost</MudText>
-                                                        <MudText Typo="Typo.h5" Style="color: #10b981; font-weight: 700;">
-                                                            $@reserveStudy.CurrentProposal.EstimatedCost.ToString("N2")
-                                                        </MudText>
-                                                    </MudItem>
-                                                    @if (!string.IsNullOrEmpty(reserveStudy.CurrentProposal.Comments)) {
-                                                        <MudItem xs="12">
-                                                            <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">Comments</MudText>
-                                                            <MudText Typo="Typo.body2">@reserveStudy.CurrentProposal.Comments</MudText>
-                                                        </MudItem>
-                                                    }
-                                                </MudGrid>
-                                            </MudCardContent>
-                                            </MudCard>
-                                        }
 
                                         @* Financial Information - only show until status 13 (FinancialInfoReceived) *@
                                         @* After that, users should use the dedicated FinancialInfo page to view *@
@@ -1169,10 +1168,13 @@
                                                             </MudAvatar>
                                                             <div>
                                                                 <MudText Typo="Typo.caption" Style="color: #8b5cf6; font-weight: 600; text-transform: uppercase;">
-                                                                    Scheduled Date
+                                                                    Scheduled Date & Time
                                                                 </MudText>
                                                                 <MudText Typo="Typo.h5" Style="font-weight: 700; color: #5b21b6;">
                                                                     @reserveStudy.SiteVisitDate.Value.ToString("dddd, MMMM dd, yyyy")
+                                                                </MudText>
+                                                                <MudText Typo="Typo.body1" Style="font-weight: 600; color: #7c3aed;">
+                                                                    @reserveStudy.SiteVisitDate.Value.ToString("h:mm tt")
                                                                 </MudText>
                                                             </div>
                                                         </MudStack>
@@ -2146,30 +2148,158 @@
     }
 
     private NextActionInfo? GetNextActionInfo() => GetCurrentStatus() switch {
+        // Request Phase
         StudyStatus.RequestCreated => new NextActionInfo { ActionText = "Approve Request", ActorText = "Awaiting staff review", ActorIcon = Icons.Material.Filled.RateReview },
-        StudyStatus.RequestApproved => new NextActionInfo { ActionText = reserveStudy?.SpecialistUserId == null ? "Assign Specialist" : "Create Proposal", ActorText = "Awaiting action", ActorIcon = Icons.Material.Filled.PersonAdd },
-        StudyStatus.ProposalSent => new NextActionInfo { ActionText = "Accept Proposal", ActorText = "Awaiting client", ActorIcon = Icons.Material.Filled.Business },
+        StudyStatus.RequestApproved => new NextActionInfo { ActionText = reserveStudy?.SpecialistUserId == null ? "Assign Specialist" : "Create Proposal", ActorText = "Awaiting staff action", ActorIcon = Icons.Material.Filled.PersonAdd },
+        
+        // Proposal Phase
+        StudyStatus.ProposalCreated => new NextActionInfo { ActionText = "Review Proposal", ActorText = "Awaiting internal review", ActorIcon = Icons.Material.Filled.RateReview },
+        StudyStatus.ProposalReviewed => new NextActionInfo { ActionText = "Approve Proposal", ActorText = "Awaiting approval", ActorIcon = Icons.Material.Filled.Approval },
+        StudyStatus.ProposalUpdated => new NextActionInfo { ActionText = "Re-review Proposal", ActorText = "Awaiting internal review", ActorIcon = Icons.Material.Filled.RateReview },
+        StudyStatus.ProposalApproved => new NextActionInfo { ActionText = "Send Proposal", ActorText = "Ready to send to client", ActorIcon = Icons.Material.Filled.Send },
+        StudyStatus.ProposalSent => new NextActionInfo { ActionText = "Accept Proposal", ActorText = "Awaiting client response", ActorIcon = Icons.Material.Filled.Business },
+        StudyStatus.ProposalAccepted => new NextActionInfo { ActionText = "Request Financial Info", ActorText = "Awaiting staff action", ActorIcon = Icons.Material.Filled.RequestQuote },
+        
+        // Data Collection Phase
+        StudyStatus.ServiceContactsRequested => new NextActionInfo { ActionText = "Provide Service Contacts", ActorText = "Awaiting client response", ActorIcon = Icons.Material.Filled.Contacts },
+        StudyStatus.FinancialInfoRequested => new NextActionInfo { ActionText = "Submit Financial Info", ActorText = "Awaiting client response", ActorIcon = Icons.Material.Filled.AccountBalance },
+        StudyStatus.FinancialInfoInProgress => new NextActionInfo { ActionText = "Complete Financial Info", ActorText = "Client is entering data", ActorIcon = Icons.Material.Filled.Edit },
+        StudyStatus.FinancialInfoSubmitted => new NextActionInfo { ActionText = "Review Financial Info", ActorText = "Awaiting staff review", ActorIcon = Icons.Material.Filled.FactCheck },
+        StudyStatus.FinancialInfoReviewed => new NextActionInfo { ActionText = "Approve Financial Info", ActorText = "Awaiting staff approval", ActorIcon = Icons.Material.Filled.Approval },
+        StudyStatus.FinancialInfoReceived => new NextActionInfo { ActionText = "Schedule Site Visit", ActorText = "Ready to schedule", ActorIcon = Icons.Material.Filled.CalendarMonth },
+        
+        // Site Visit Phase
         StudyStatus.SiteVisitPending => new NextActionInfo { ActionText = "Schedule Site Visit", ActorText = "Action required by specialist", ActorIcon = Icons.Material.Filled.CalendarMonth },
+        StudyStatus.SiteVisitScheduled => new NextActionInfo { ActionText = "Complete Site Visit", ActorText = "Awaiting site visit date", ActorIcon = Icons.Material.Filled.LocationOn },
+        StudyStatus.SiteVisitCompleted => new NextActionInfo { ActionText = "Enter Site Visit Data", ActorText = "Awaiting data entry", ActorIcon = Icons.Material.Filled.Storage },
+        StudyStatus.SiteVisitDataEntered => new NextActionInfo { ActionText = "Begin Funding Plan", ActorText = "Ready to proceed", ActorIcon = Icons.Material.Filled.PlayArrow },
+        
+        // Amendment Phase
         StudyStatus.AmendmentPending => new NextActionInfo { ActionText = "Approve Amendment", ActorText = "Awaiting admin approval", ActorIcon = Icons.Material.Filled.RateReview },
         StudyStatus.AmendmentApproved => new NextActionInfo { ActionText = "Accept Amendment", ActorText = "Awaiting client acceptance", ActorIcon = Icons.Material.Filled.Business },
+        
+        // Funding Plan Phase
+        StudyStatus.FundingPlanReady => new NextActionInfo { ActionText = "Create Funding Plan", ActorText = "Ready to begin", ActorIcon = Icons.Material.Filled.Assessment },
+        StudyStatus.FundingPlanInProcess => new NextActionInfo { ActionText = "Complete Funding Plan", ActorText = "Work in progress", ActorIcon = Icons.Material.Filled.TrendingUp },
+        StudyStatus.FundingPlanComplete => new NextActionInfo { ActionText = "Begin Narrative", ActorText = "Ready for narrative phase", ActorIcon = Icons.Material.Filled.Article },
+        
+        // Narrative Phase
+        StudyStatus.NarrativeReady => new NextActionInfo { ActionText = "Write Narrative", ActorText = "Ready to begin", ActorIcon = Icons.Material.Filled.EditNote },
+        StudyStatus.NarrativeInProcess => new NextActionInfo { ActionText = "Complete Narrative", ActorText = "Work in progress", ActorIcon = Icons.Material.Filled.Create },
+        StudyStatus.NarrativeComplete => new NextActionInfo { ActionText = "Prepare for Print", ActorText = "Ready for print preparation", ActorIcon = Icons.Material.Filled.Print },
+        StudyStatus.NarrativePrintReady => new NextActionInfo { ActionText = "Package Report", ActorText = "Ready for packaging", ActorIcon = Icons.Material.Filled.Inventory2 },
+        StudyStatus.NarrativePackaged => new NextActionInfo { ActionText = "Send to Client", ActorText = "Ready to send", ActorIcon = Icons.Material.Filled.Send },
+        StudyStatus.NarrativeSent => new NextActionInfo { ActionText = "Finalize Report", ActorText = "Narrative delivered", ActorIcon = Icons.Material.Filled.MarkEmailRead },
+        
+        // Final Report Phase
+        StudyStatus.ReportReady => new NextActionInfo { ActionText = "Finalize Report", ActorText = "Ready for final review", ActorIcon = Icons.Material.Filled.Summarize },
+        StudyStatus.ReportInProcess => new NextActionInfo { ActionText = "Complete Report", ActorText = "Finalizing report", ActorIcon = Icons.Material.Filled.AutoStories },
+        StudyStatus.ReportComplete => new NextActionInfo { ActionText = "Mark Complete", ActorText = "Ready to close", ActorIcon = Icons.Material.Filled.CheckCircle },
+        
+        // Terminal States
         StudyStatus.RequestCompleted => null,
+        StudyStatus.RequestCancelled => null,
+        StudyStatus.RequestArchived => null,
+        
         _ => new NextActionInfo { ActionText = "Processing...", ActorText = "In progress", ActorIcon = Icons.Material.Filled.HourglassEmpty }
     };
 
     private string GetCurrentStepDescription() => GetCurrentStatus() switch {
-        StudyStatus.RequestCreated => "Your reserve study request has been received and is being reviewed.",
-        StudyStatus.ProposalSent => "We've sent you a proposal. Please review and accept to proceed.",
-        StudyStatus.SiteVisitScheduled => "Your site visit has been scheduled.",
-        StudyStatus.AmendmentPending => "The site visit revealed scope changes that require an amendment. Awaiting administrative approval.",
-        StudyStatus.AmendmentApproved => "The amendment has been approved and sent to the client for acceptance.",
-        StudyStatus.FundingPlanReady => "Ready to create the funding plan. Go to the Reports tab to generate a Funding Plan report.",
-        StudyStatus.FundingPlanInProcess => "The funding plan is being developed. Use the Reports tab to generate and review reports.",
-        StudyStatus.FundingPlanComplete => "The funding plan has been completed. Proceeding to narrative phase.",
-        StudyStatus.RequestCompleted => "Your reserve study has been completed.",
-        _ => "Your reserve study is in progress."
+        // Request Phase
+        StudyStatus.RequestCreated => "Your reserve study request has been received and is being reviewed by our team.",
+        StudyStatus.RequestApproved => "Your request has been approved. A specialist will be assigned and a proposal will be prepared for you.",
+        
+        // Proposal Phase
+        StudyStatus.ProposalCreated => "A proposal is being prepared for your reserve study.",
+        StudyStatus.ProposalReviewed => "The proposal is undergoing internal review to ensure accuracy.",
+        StudyStatus.ProposalUpdated => "The proposal has been updated and is being reviewed again.",
+        StudyStatus.ProposalApproved => "The proposal has been approved and will be sent to you shortly.",
+        StudyStatus.ProposalSent => "We've sent you a proposal. Please review the details and accept it to proceed with your reserve study.",
+        StudyStatus.ProposalAccepted => "Thank you for accepting the proposal! We'll now request some financial information to proceed.",
+        
+        // Data Collection Phase
+        StudyStatus.ServiceContactsRequested => "Please provide contact information for your service providers (maintenance companies, contractors, etc.).",
+        StudyStatus.FinancialInfoRequested => "Please submit your community's financial information to help us prepare an accurate reserve study.",
+        StudyStatus.FinancialInfoInProgress => "We see you've started entering financial information. Please complete and submit when ready.",
+        StudyStatus.FinancialInfoSubmitted => "Thank you for submitting your financial information. Our team is reviewing it now.",
+        StudyStatus.FinancialInfoReviewed => "Your financial information has been reviewed and is being processed.",
+        StudyStatus.FinancialInfoReceived => "All required information has been received. We're ready to schedule your site visit.",
+        
+        // Site Visit Phase
+        StudyStatus.SiteVisitPending => "We're ready to schedule a site visit. Our specialist will coordinate a convenient time with you.",
+        StudyStatus.SiteVisitScheduled => $"Your site visit has been scheduled{(reserveStudy?.SiteVisitDate.HasValue == true ? $" for {reserveStudy.SiteVisitDate.Value:MMMM dd, yyyy}" : "")}. Our specialist will inspect the property.",
+        StudyStatus.SiteVisitCompleted => "The site visit has been completed. Our specialist is now documenting the findings.",
+        StudyStatus.SiteVisitDataEntered => "Site visit data has been recorded. We're preparing to create your funding plan.",
+        
+        // Amendment Phase
+        StudyStatus.AmendmentPending => "The site visit revealed scope changes that require an amendment to the original proposal. This is awaiting administrative approval.",
+        StudyStatus.AmendmentApproved => "An amendment has been prepared based on site visit findings and sent for your review and acceptance.",
+        
+        // Funding Plan Phase
+        StudyStatus.FundingPlanReady => "We're ready to create your funding plan. This will outline recommended reserve contributions over the study period.",
+        StudyStatus.FundingPlanInProcess => "Your funding plan is being developed. This includes analysis of all property components and their replacement costs.",
+        StudyStatus.FundingPlanComplete => "Your funding plan has been completed! We're now preparing the narrative section of your report.",
+        
+        // Narrative Phase
+        StudyStatus.NarrativeReady => "We're ready to write the narrative portion of your reserve study report.",
+        StudyStatus.NarrativeInProcess => "The narrative section is being written. This includes detailed explanations of our findings and recommendations.",
+        StudyStatus.NarrativeComplete => "The narrative has been completed and is being prepared for final formatting.",
+        StudyStatus.NarrativePrintReady => "Your report is ready for printing and final assembly.",
+        StudyStatus.NarrativePackaged => "Your report has been packaged and is ready to be delivered.",
+        StudyStatus.NarrativeSent => "The narrative portion of your report has been sent. Final report preparation is underway.",
+        
+        // Final Report Phase
+        StudyStatus.ReportReady => "Your final report is being prepared for delivery.",
+        StudyStatus.ReportInProcess => "We're putting the finishing touches on your complete reserve study report.",
+        StudyStatus.ReportComplete => "Your reserve study report is complete and has been delivered.",
+        
+        // Terminal States
+        StudyStatus.RequestCompleted => "Congratulations! Your reserve study has been completed. You can access your reports and documents anytime.",
+        StudyStatus.RequestCancelled => "This reserve study request has been cancelled.",
+        StudyStatus.RequestArchived => "This reserve study has been archived for your records.",
+        
+        _ => "Your reserve study is in progress. Check back soon for updates."
     };
 
-    private string GetNextStepDescription() => GetNextStatus()?.ToString() ?? "";
+    private string GetNextStepDescription() => GetNextStatus() switch {
+        // Request Phase
+        StudyStatus.RequestApproved => "Once approved, a specialist will be assigned to your project.",
+        
+        // Proposal Phase
+        StudyStatus.ProposalCreated => "A detailed proposal will be prepared outlining the scope and cost of your reserve study.",
+        StudyStatus.ProposalReviewed => "The proposal will be reviewed for accuracy before being sent to you.",
+        StudyStatus.ProposalApproved => "After internal approval, the proposal will be sent to you for review.",
+        StudyStatus.ProposalSent => "You'll receive a proposal to review and accept.",
+        StudyStatus.ProposalAccepted => "Once you accept the proposal, we'll begin gathering information for your study.",
+        
+        // Data Collection Phase
+        StudyStatus.ServiceContactsRequested => "You'll be asked to provide contact information for service providers.",
+        StudyStatus.FinancialInfoRequested => "You'll need to provide financial information about your community's reserves.",
+        StudyStatus.FinancialInfoSubmitted => "After you submit, our team will review your financial information.",
+        StudyStatus.FinancialInfoReceived => "Once reviewed, we'll schedule a site visit to inspect the property.",
+        
+        // Site Visit Phase
+        StudyStatus.SiteVisitPending => "A site visit will be scheduled to inspect your property.",
+        StudyStatus.SiteVisitScheduled => "Our specialist will conduct an on-site inspection of all common elements.",
+        StudyStatus.SiteVisitCompleted => "After the visit, all findings will be documented and analyzed.",
+        StudyStatus.SiteVisitDataEntered => "Site data will be entered into our system for analysis.",
+        
+        // Funding Plan Phase
+        StudyStatus.FundingPlanReady => "We'll begin creating your customized funding plan.",
+        StudyStatus.FundingPlanInProcess => "Your funding plan will be developed based on component analysis.",
+        StudyStatus.FundingPlanComplete => "Once complete, the narrative report will be prepared.",
+        
+        // Narrative Phase
+        StudyStatus.NarrativeReady => "The narrative section of your report will be written.",
+        StudyStatus.NarrativeComplete => "Your report will be formatted and prepared for delivery.",
+        StudyStatus.NarrativeSent => "You'll receive the narrative portion of your report.",
+        
+        // Final Report Phase
+        StudyStatus.ReportComplete => "Your complete reserve study will be finalized and delivered.",
+        StudyStatus.RequestCompleted => "Your reserve study will be marked complete and available for download.",
+        
+        _ => "The next phase of your reserve study will begin soon."
+    };
 
     private static Color GetRemainingLifeColor(string? remainingLife) {
         if (string.IsNullOrEmpty(remainingLife)) return Color.Default;
@@ -2202,6 +2332,137 @@
                !string.IsNullOrWhiteSpace(contact.Phone) ||
                !string.IsNullOrWhiteSpace(contact.Email);
     }
+
+    private RenderFragment RenderProposalDetails(CRS.Models.Proposal proposal) => __builder => {
+        <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: #fff; border-radius: 12px; border-left: 4px solid #10b981;">
+            <MudStack Spacing="3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Style="color: #10b981;" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle2" Style="font-weight: 600; color: #10b981;">
+                        @(proposal.IsAmendment ? $"Amendment #{proposal.AmendmentNumber} Details" : "Proposal Details")
+                    </MudText>
+                    @if (proposal.IsApproved) {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Accepted</MudChip>
+                    } else if (proposal.DateSent.HasValue) {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">Sent</MudChip>
+                    } else if (proposal.DateApproved.HasValue) {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">Approved</MudChip>
+                    } else {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Draft</MudChip>
+                    }
+                </MudStack>
+                
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" md="8">
+                        <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Scope</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #333; white-space: pre-wrap;">
+                            @(string.IsNullOrEmpty(proposal.ProposalScope) ? "No scope defined" : proposal.ProposalScope)
+                        </MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Estimated Cost</MudText>
+                        <MudText Typo="Typo.h5" Style="color: #10b981; font-weight: 700;">
+                            @proposal.EstimatedCost.ToString("C")
+                        </MudText>
+                    </MudItem>
+                </MudGrid>
+                
+                @if (!string.IsNullOrEmpty(proposal.ServiceLevel) || !string.IsNullOrEmpty(proposal.DeliveryTimeframe)) {
+                    <MudDivider Class="my-2" />
+                    <MudGrid Spacing="2">
+                        @if (!string.IsNullOrEmpty(proposal.ServiceLevel)) {
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Service Level</MudText>
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@proposal.ServiceLevel</MudText>
+                            </MudItem>
+                        }
+                        @if (!string.IsNullOrEmpty(proposal.DeliveryTimeframe)) {
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Delivery Timeframe</MudText>
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@proposal.DeliveryTimeframe</MudText>
+                            </MudItem>
+                        }
+                        @if (!string.IsNullOrEmpty(proposal.PaymentTerms)) {
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Payment Terms</MudText>
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@proposal.PaymentTerms</MudText>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                
+                @if (proposal.IncludePrepaymentDiscount || proposal.IncludeDigitalDelivery || proposal.IncludeComponentInventory || proposal.IncludeFundingPlans) {
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Included Services</MudText>
+                    <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                        @if (proposal.IncludePrepaymentDiscount) {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Discount">Prepayment Discount</MudChip>
+                        }
+                        @if (proposal.IncludeDigitalDelivery) {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.CloudDownload">Digital Delivery</MudChip>
+                        }
+                        @if (proposal.IncludeComponentInventory) {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Inventory">Component Inventory</MudChip>
+                        }
+                        @if (proposal.IncludeFundingPlans) {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.TrendingUp">Funding Plans</MudChip>
+                        }
+                    </MudStack>
+                }
+                
+                @if (!string.IsNullOrEmpty(proposal.Comments)) {
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Comments</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666; white-space: pre-wrap;">@proposal.Comments</MudText>
+                }
+                
+                @if (proposal.IsAmendment && !string.IsNullOrEmpty(proposal.AmendmentReason)) {
+                    <MudDivider Class="my-2" />
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+                        <MudText Typo="Typo.caption" Style="font-weight: 600;">Amendment Reason</MudText>
+                        <MudText Typo="Typo.body2">@proposal.AmendmentReason</MudText>
+                    </MudAlert>
+                }
+                
+                <!-- Proposal Timeline -->
+                <MudDivider Class="my-2" />
+                <MudStack Row="true" Spacing="4" Style="flex-wrap: wrap;">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.caption" Style="color: #888;">Created</MudText>
+                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@proposal.ProposalDate.ToString("MMM dd, yyyy")</MudText>
+                    </MudStack>
+                    @if (proposal.DateSent.HasValue) {
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.caption" Style="color: #888;">Sent</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@proposal.DateSent.Value.ToString("MMM dd, yyyy")</MudText>
+                        </MudStack>
+                    }
+                    @if (proposal.IsApproved && proposal.DateApproved.HasValue) {
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.caption" Style="color: #888;">Accepted</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@proposal.DateApproved.Value.ToString("MMM dd, yyyy")</MudText>
+                        </MudStack>
+                    }
+                </MudStack>
+                
+                <!-- Edit Proposal Button for Staff -->
+                @if (GetCurrentStatus() < StudyStatus.ProposalSent) {
+                    <AuthorizeView Policy="RequireTenantStaff">
+                        <Authorized>
+                            <MudDivider Class="my-2" />
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Edit"
+                                       Href="@($"/ReserveStudies/{Id}/Proposal")">
+                                Edit Proposal
+                            </MudButton>
+                        </Authorized>
+                    </AuthorizeView>
+                }
+            </MudStack>
+        </MudPaper>
+    };
 
     private class TimelineItemInfo { public StudyStatus Status { get; set; } public DateTime? DateValue { get; set; } public string? Title { get; set; } }
     private class MilestoneInfo { public StudyStatus Status { get; set; } public string Title { get; set; } = ""; public DateTime? Date { get; set; } public bool IsCompleted { get; set; } public bool IsCurrent { get; set; } }

@@ -1,0 +1,145 @@
+﻿@using CRS.Services.Interfaces
+@using CRS.Services.NarrativeReport
+@using CRS.Models.NarrativeTemplates
+
+@inject IReportGenerationService ReportGenerationService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Preview" Class="mr-2" />
+                Narrative Preview
+            </MudText>
+            <MudStack Row="true" Spacing="2">
+                <MudSelect T="string" @bind-Value="_selectedSection" Label="Section" Variant="Variant.Outlined" Dense="true" Style="width: 200px;">
+                    <MudSelectItem T="string" Value="@((string?)null)">All Sections</MudSelectItem>
+                    <MudSelectItem T="string" Value="@NarrativeSectionKeys.Cover">Cover Page</MudSelectItem>
+                    <MudSelectItem T="string" Value="@NarrativeSectionKeys.ExecutiveSummary">Executive Summary</MudSelectItem>
+                    <MudSelectItem T="string" Value="@NarrativeSectionKeys.FundingSummary">Funding Summary</MudSelectItem>
+                    <MudSelectItem T="string" Value="@NarrativeSectionKeys.SignaturePage">Signature Page</MudSelectItem>
+                    <MudSelectItem T="string" Value="@NarrativeSectionKeys.NarrativeEvaluation">Evaluation</MudSelectItem>
+                    <MudSelectItem T="string" Value="@NarrativeSectionKeys.NarrativeAssumptions">Assumptions</MudSelectItem>
+                    <MudSelectItem T="string" Value="@NarrativeSectionKeys.NarrativeConclusion">Conclusion</MudSelectItem>
+                    <MudSelectItem T="string" Value="@NarrativeSectionKeys.ExhibitPhotos">Photos</MudSelectItem>
+                </MudSelect>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                               OnClick="LoadPreview" 
+                               Disabled="@_isLoading"
+                               Title="Refresh Preview" />
+            </MudStack>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_isLoading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="min-height: 400px;">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.body1">Loading preview...</MudText>
+            </MudStack>
+        }
+        else if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+        }
+        else if (!string.IsNullOrEmpty(_htmlContent))
+        {
+            <MudPaper Elevation="1" Class="pa-4" Style="max-height: 70vh; overflow-y: auto; background: white;">
+                @((MarkupString)_htmlContent)
+            </MudPaper>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">No content to preview. Click refresh to load.</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+        <MudButton Variant="Variant.Outlined" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.OpenInNew"
+                   OnClick="OpenInNewTab"
+                   Disabled="@(string.IsNullOrEmpty(_htmlContent))">
+            Open in New Tab
+        </MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Print"
+                   OnClick="PrintPreview"
+                   Disabled="@(string.IsNullOrEmpty(_htmlContent))">
+            Print
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    private string? _selectedSection;
+    private string? _htmlContent;
+    private string? _errorMessage;
+    private bool _isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPreview();
+    }
+
+    private async Task LoadPreview()
+    {
+        try
+        {
+            _isLoading = true;
+            _errorMessage = null;
+            StateHasChanged();
+
+            _htmlContent = await ReportGenerationService.PreviewNarrativeHtmlAsync(ReserveStudyId, _selectedSection);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load preview: {ex.Message}";
+            Snackbar.Add(_errorMessage, Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenInNewTab()
+    {
+        if (string.IsNullOrEmpty(_htmlContent)) return;
+
+        // Create a data URL with the HTML content
+        var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(_htmlContent));
+        var dataUrl = $"data:text/html;base64,{base64}";
+
+        await JSRuntime.InvokeVoidAsync("open", dataUrl, "_blank");
+    }
+
+    private async Task PrintPreview()
+    {
+        if (string.IsNullOrEmpty(_htmlContent)) return;
+
+        // Open in new window and trigger print
+        await JSRuntime.InvokeVoidAsync("eval", $@"
+            var win = window.open('', '_blank');
+            win.document.write(`{_htmlContent.Replace("`", "\\`").Replace("$", "\\$")}`);
+            win.document.close();
+            win.focus();
+            setTimeout(function() {{ win.print(); }}, 500);
+        ");
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+}

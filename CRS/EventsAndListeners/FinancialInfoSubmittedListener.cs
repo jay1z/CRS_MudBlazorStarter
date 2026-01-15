@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 using Coravel.Events.Interfaces;
 using Coravel.Mailer.Mail;
@@ -6,6 +6,7 @@ using Coravel.Mailer.Mail.Interfaces;
 
 using CRS.Models;
 using CRS.Models.Emails;
+using CRS.Services.Email;
 using CRS.Services.Interfaces;
 
 namespace CRS.EventsAndListeners {
@@ -20,16 +21,38 @@ namespace CRS.EventsAndListeners {
 
         public async Task HandleAsync(FinancialInfoSubmittedEvent broadcasted) {
             var study = broadcasted.ReserveStudy;
-            var subject = $"Financial Info Submitted for {study.Community?.Name}";
-            var message = "Financial documents were submitted.";
-            var recipients = new List<string> { "emailme@jasonzurowski.com" };
-            var email = _reserveStudyService.MapToReserveStudyEmail(study, message);
+            
+            var email = await _reserveStudyService.MapToReserveStudyEmailAsync(study, 
+                "Financial documents have been submitted for review. Our team will process them and proceed with scheduling your site visit.");
+            
+            // Build subject with tenant company name
+            var companyName = email.TenantInfo?.CompanyName ?? "ALX Reserve Cloud";
+            var subject = $"[{companyName}] Financial Information Received - {study.Community?.Name}";
+            
+            var recipients = new List<string>();
+            
+            // Notify the specialist
+            if (!string.IsNullOrEmpty(study.Specialist?.Email)) {
+                recipients.Add(study.Specialist.Email);
+            }
+            
+            // Also notify the study owner as confirmation
+            if (!string.IsNullOrEmpty(study.User?.Email) && 
+                !recipients.Contains(study.User.Email, StringComparer.OrdinalIgnoreCase)) {
+                recipients.Add(study.User.Email);
+            }
+            
+            // Fallback
+            if (recipients.Count == 0) {
+                recipients.Add("emailme@jasonzurowski.com"); // TODO: Configure default
+            }
 
             await _mailer.SendAsync(
-            Mailable.AsInline<ReserveStudyEmail>()
-            .To(recipients.ToArray())
-            .Subject(subject)
-            .View("~/Components/EmailTemplates/ReserveStudyFinancialInfoSubmitted.cshtml", email)
+                Mailable.AsInline<ReserveStudyEmail>()
+                    .To(recipients.ToArray())
+                    .Subject(subject)
+                    .ReplyToTenant(email.TenantInfo)
+                    .View("~/Components/EmailTemplates/ReserveStudyFinancialInfoSubmitted.cshtml", email)
             );
         }
     }

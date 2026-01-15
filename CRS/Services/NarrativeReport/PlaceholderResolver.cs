@@ -5,6 +5,8 @@ using System.Web;
 
 using CRS.Models.NarrativeTemplates;
 
+using Microsoft.Extensions.Logging;
+
 namespace CRS.Services.NarrativeReport;
 
 /// <summary>
@@ -13,6 +15,14 @@ namespace CRS.Services.NarrativeReport;
 public partial class PlaceholderResolver : IPlaceholderResolver
 {
     private static readonly CultureInfo UsCulture = CultureInfo.GetCultureInfo("en-US");
+    private readonly ILogger<PlaceholderResolver> _logger;
+    private readonly ITokenRenderer _tokenRenderer;
+
+    public PlaceholderResolver(ILogger<PlaceholderResolver> logger, ITokenRenderer tokenRenderer)
+    {
+        _logger = logger;
+        _tokenRenderer = tokenRenderer;
+    }
 
     // Regex for {PlaceholderName} syntax
     [GeneratedRegex(@"\{([A-Za-z0-9_]+)\}", RegexOptions.Compiled)]
@@ -74,37 +84,76 @@ public partial class PlaceholderResolver : IPlaceholderResolver
         dict["StartingBalance"] = FormatMoney(context.CalculatedOutputs.FirstYear.StartingBalance);
         dict["StartingReserveBalance"] = FormatMoney(context.CalculatedOutputs.FirstYear.StartingBalance);
         dict["FirstYearContribution"] = FormatMoney(context.CalculatedOutputs.FirstYear.Contribution);
-        dict["FirstYearInterest"] = FormatMoney(context.CalculatedOutputs.FirstYear.Interest);
-        dict["FirstYearExpenditures"] = FormatMoney(context.CalculatedOutputs.FirstYear.Expenditures);
-        dict["EndingBalance"] = FormatMoney(context.CalculatedOutputs.FirstYear.EndingBalance);
+            dict["FirstYearInterest"] = FormatMoney(context.CalculatedOutputs.FirstYear.Interest);
+            dict["FirstYearExpenditures"] = FormatMoney(context.CalculatedOutputs.FirstYear.Expenditures);
+            dict["EndingBalance"] = FormatMoney(context.CalculatedOutputs.FirstYear.EndingBalance);
 
-        // Branding
-        dict["CompanyName"] = context.Branding.CompanyName ?? string.Empty;
-        dict["CompanyPhone"] = context.Branding.Phone ?? string.Empty;
-        dict["CompanyEmail"] = context.Branding.Email ?? string.Empty;
-        dict["CompanyWebsite"] = context.Branding.Website ?? string.Empty;
-        dict["CompanyAddress"] = context.Branding.Address ?? string.Empty;
-        dict["LogoUrl"] = context.Branding.LogoUrl ?? string.Empty;
-        dict["CoverImageUrl"] = context.Branding.CoverImageUrl ?? string.Empty;
-        dict["FooterText"] = context.Branding.FooterText ?? string.Empty;
-        dict["Tagline"] = context.Branding.Tagline ?? string.Empty;
+            // Branding
+            dict["CompanyName"] = context.Branding.CompanyName ?? string.Empty;
+            dict["CompanyPhone"] = context.Branding.Phone ?? string.Empty;
+            dict["CompanyEmail"] = context.Branding.Email ?? string.Empty;
+            dict["CompanyWebsite"] = context.Branding.Website ?? string.Empty;
+            dict["CompanyAddress"] = context.Branding.Address ?? string.Empty;
+            dict["LogoUrl"] = context.Branding.LogoUrl ?? string.Empty;
+            dict["CoverImageUrl"] = context.Branding.CoverImageUrl ?? string.Empty;
+            dict["FooterText"] = context.Branding.FooterText ?? string.Empty;
+            dict["Tagline"] = context.Branding.Tagline ?? string.Empty;
 
-        // Current date helpers
-        dict["CurrentDate"] = FormatDate(DateTime.Now);
-        dict["CurrentYear"] = DateTime.Now.Year.ToString();
+            // Branding aliases for templates
+            dict["PreparedByCompany"] = context.Branding.CompanyName ?? string.Empty;
+            dict["PreparedByPhone"] = context.Branding.Phone ?? string.Empty;
+            dict["PreparedByEmail"] = context.Branding.Email ?? string.Empty;
+            dict["PreparedByWebsite"] = context.Branding.Website ?? string.Empty;
+            dict["PreparedByAddress"] = context.Branding.Address ?? string.Empty;
 
-        return dict;
-    }
+            // Property location aliases
+            dict["PropertyCity"] = context.Association.City ?? string.Empty;
+            dict["PropertyState"] = context.Association.State ?? string.Empty;
 
-    /// <inheritdoc />
-    public string ReplacePlaceholders(string htmlTemplate, ReserveStudyReportContext context)
-    {
-        if (string.IsNullOrEmpty(htmlTemplate)) return string.Empty;
+            // Computed study info
+            dict["StudyYear"] = context.Study.EffectiveDate?.Year.ToString() ?? context.Study.FiscalYearStart?.Year.ToString() ?? DateTime.Now.Year.ToString();
+            dict["StudyTypeUpper"] = (context.Study.StudyType ?? string.Empty).ToUpperInvariant();
+            dict["EstablishedYearSentence"] = context.Association.EstablishedYear.HasValue 
+                ? $", established in {context.Association.EstablishedYear}" 
+                : string.Empty;
+            dict["StartingReserveBalanceAsOfDate"] = FormatDate(context.Study.FiscalYearStart ?? context.Study.EffectiveDate);
 
-        var placeholders = Resolve(context);
+            // Contribution schedule year helpers
+            var schedule = context.CalculatedOutputs.ContributionSchedule;
+            dict["Year1"] = schedule.Count > 0 ? schedule[0].Year.ToString() : string.Empty;
+            dict["Year2"] = schedule.Count > 1 ? schedule[1].Year.ToString() : string.Empty;
+            dict["ContributionYear1"] = schedule.Count > 0 ? FormatMoney(schedule[0].Amount) : string.Empty;
+            dict["ContributionYear2"] = schedule.Count > 1 ? FormatMoney(schedule[1].Amount) : string.Empty;
 
-        return PlaceholderRegex().Replace(htmlTemplate, match =>
+            // Current date helpers
+            dict["CurrentDate"] = FormatDate(DateTime.Now);
+            dict["CurrentYear"] = DateTime.Now.Year.ToString();
+
+            // Log key placeholder values for debugging
+            _logger.LogDebug("Placeholder values resolved:");
+            _logger.LogDebug("  AssociationName: {Value}", dict["AssociationName"]);
+            _logger.LogDebug("  InspectionDate: {Value}", dict["InspectionDate"]);
+            _logger.LogDebug("  FundStatusLabel: {Value}", dict["FundStatusLabel"]);
+            _logger.LogDebug("  PercentFunded: {Value}", dict["PercentFunded"]);
+            _logger.LogDebug("  StartingBalance: {Value}", dict["StartingBalance"]);
+            _logger.LogDebug("  FirstYearContribution: {Value}", dict["FirstYearContribution"]);
+            _logger.LogDebug("  EndingBalance: {Value}", dict["EndingBalance"]);
+            _logger.LogDebug("  IdealBalance: {Value}", dict["IdealBalance"]);
+            _logger.LogDebug("  UnitCount: {Value}", dict["UnitCount"]);
+            _logger.LogDebug("  CompanyName: {Value}", dict["CompanyName"]);
+
+            return dict;
+        }
+
+        /// <inheritdoc />
+        public string ReplacePlaceholders(string htmlTemplate, ReserveStudyReportContext context)
         {
+            if (string.IsNullOrEmpty(htmlTemplate)) return string.Empty;
+
+            var placeholders = Resolve(context);
+
+            return PlaceholderRegex().Replace(htmlTemplate, match =>
+            {
             var placeholderName = match.Groups[1].Value;
             if (placeholders.TryGetValue(placeholderName, out var value))
             {
@@ -124,24 +173,22 @@ public partial class PlaceholderResolver : IPlaceholderResolver
     /// <inheritdoc />
     public string ReplaceTokens(string html, ReserveStudyReportContext context)
     {
+        return ReplaceTokens(html, context, TokenRenderOptions.Default);
+    }
+
+    /// <summary>
+    /// Replaces tokens with rendered content using specified options.
+    /// </summary>
+    /// <param name="html">The HTML containing tokens.</param>
+    /// <param name="context">The report context.</param>
+    /// <param name="options">Token rendering options.</param>
+    /// <returns>HTML with tokens replaced.</returns>
+    public string ReplaceTokens(string html, ReserveStudyReportContext context, TokenRenderOptions options)
+    {
         if (string.IsNullOrEmpty(html)) return string.Empty;
 
-        return TokenRegex().Replace(html, match =>
-        {
-            var token = match.Groups[1].Value;
-            var param = match.Groups[2].Success ? match.Groups[2].Value : null;
-
-            return token switch
-            {
-                "PAGE_BREAK" => GeneratePageBreak(),
-                "TABLE" => GenerateTable(param, context),
-                "SIGNATURES" => GenerateSignatures(context),
-                "PHOTOS" => GeneratePhotoGallery(context),
-                "VENDORS" => GenerateVendorList(context),
-                "GLOSSARY" => GenerateGlossary(context),
-                _ => string.Empty // Unknown token
-            };
-        });
+        // Delegate to the token renderer for all token replacement
+        return _tokenRenderer.ReplaceAllTokens(html, context, options);
     }
 
     // ═══════════════════════════════════════════════════════════════

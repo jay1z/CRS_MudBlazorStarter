@@ -13,7 +13,8 @@ namespace CRS.Services.Interfaces {
         Task<List<ReserveStudy>> GetOwnedReserveStudiesAsync(Guid userId);
         Task<List<ReserveStudy>> GetUserReserveStudiesAsync(ApplicationUser currentUser, IList<string> userRoles);
         IEnumerable<ReserveStudy> FilterReserveStudies(IEnumerable<ReserveStudy> reserveStudies, string searchString);
-        ReserveStudyEmail MapToReserveStudyEmail(ReserveStudy reserveStudy, string message);
+        Task<ReserveStudyEmail> MapToReserveStudyEmailAsync(ReserveStudy reserveStudy, string message);
+        Task<TenantEmailInfo> GetTenantEmailInfoAsync(int tenantId);
         Task<ReserveStudy?> GetStudyByTokenAsync(string tokenStr);
         Task<Guid> GenerateAccessTokenAsync(Guid requestId);
         Task<Guid?> ValidateAccessTokenAsync(Guid token);

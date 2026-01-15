@@ -4,6 +4,7 @@ using Coravel.Mailer.Mail.Interfaces;
 
 using CRS.Models;
 using CRS.Models.Emails;
+using CRS.Services.Email;
 using CRS.Services.Interfaces;
 
 namespace CRS.EventsAndListeners {
@@ -29,14 +30,26 @@ namespace CRS.EventsAndListeners {
             }
 
             var siteVisitDate = broadcasted.SiteVisitDate;
-            var subject = $"Site Visit Scheduled - {study.Community?.Name}";
             var message = $"Your site visit has been scheduled for {siteVisitDate:dddd, MMMM dd, yyyy} at {siteVisitDate:h:mm tt}. " +
                           $"Our specialist will visit {study.Community?.Name} to assess the property's common elements and building components.";
+
+            var email = await _reserveStudyService.MapToReserveStudyEmailAsync(study, message);
+            email.SiteVisitDate = siteVisitDate;
+            
+            // Build subject with tenant company name
+            var companyName = email.TenantInfo?.CompanyName ?? "ALX Reserve Cloud";
+            var subject = $"[{companyName}] Site Visit Scheduled - {study.Community?.Name}";
 
             // Get recipient email - use contact email or HOA user email
             var recipients = new List<string>();
             if (!string.IsNullOrEmpty(study.Contact?.Email)) {
                 recipients.Add(study.Contact.Email);
+            }
+            
+            // Also notify study owner
+            if (!string.IsNullOrEmpty(study.User?.Email) && 
+                !recipients.Contains(study.User.Email, StringComparer.OrdinalIgnoreCase)) {
+                recipients.Add(study.User.Email);
             }
 
             if (!recipients.Any()) {
@@ -44,14 +57,12 @@ namespace CRS.EventsAndListeners {
                 return;
             }
 
-            var email = _reserveStudyService.MapToReserveStudyEmail(study, message);
-            email.SiteVisitDate = siteVisitDate;
-
             try {
                 await _mailer.SendAsync(
                     Mailable.AsInline<ReserveStudyEmail>()
                         .To(recipients.ToArray())
                         .Subject(subject)
+                        .ReplyToTenant(email.TenantInfo)
                         .View("~/Components/EmailTemplates/SiteVisitScheduled.cshtml", email)
                 );
 

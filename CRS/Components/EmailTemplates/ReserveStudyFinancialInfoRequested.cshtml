@@ -6,6 +6,18 @@
     var detailsUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/Details";
     var financialInfoUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/FinancialInfo";
     var communityName = Model.ReserveStudy?.Community?.Name ?? "Your Community";
+    
+    // Tenant branding
+    var tenant = Model.TenantInfo;
+    var companyName = tenant?.CompanyName ?? "ALX Reserve Cloud";
+    var companyPhone = tenant?.Phone;
+    var companyEmail = tenant?.FromEmail;
+    var companyWebsite = tenant?.Website;
+    var companyAddress = tenant?.Address;
+    var companyTagline = tenant?.Tagline;
+    var logoUrl = tenant?.LogoUrl;
+    var primaryColor = tenant?.PrimaryColor ?? "#3b82f6";
+    var secondaryColor = tenant?.SecondaryColor ?? "#1d4ed8";
 }
 
 <!DOCTYPE html>
@@ -22,9 +34,31 @@
             <td align="center" style="padding: 40px 20px;">
                 <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%;">
                     
+                    <!-- Company Logo/Name Banner -->
+                    @if (!string.IsNullOrEmpty(logoUrl) || !string.IsNullOrEmpty(companyName)) {
+                        <tr>
+                            <td style="background-color: #ffffff; padding: 20px 40px; border-radius: 16px 16px 0 0; border: 1px solid #e5e7eb; border-bottom: none;">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td align="center">
+                                            @if (!string.IsNullOrEmpty(logoUrl)) {
+                                                <img src="@logoUrl" alt="@companyName" style="max-height: 60px; max-width: 200px; margin-bottom: 8px;" />
+                                            } else {
+                                                <h2 style="margin: 0; color: @primaryColor; font-size: 24px; font-weight: 700;">@companyName</h2>
+                                            }
+                                            @if (!string.IsNullOrEmpty(companyTagline)) {
+                                                <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">@companyTagline</p>
+                                            }
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    }
+                    
                     <!-- Header with Gradient -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 16px 16px 0 0; padding: 40px; text-align: center;">
+                        <td style="background: linear-gradient(135deg, @primaryColor 0%, @secondaryColor 100%); @(string.IsNullOrEmpty(logoUrl) && string.IsNullOrEmpty(companyName) ? "border-radius: 16px 16px 0 0;" : "") padding: 40px; text-align: center;">
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                                 <tr>
                                     <td align="center">
@@ -236,11 +270,27 @@
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                                 <tr>
                                     <td align="center">
+                                        @if (!string.IsNullOrEmpty(companyPhone) || !string.IsNullOrEmpty(companyEmail)) {
+                                            <p style="margin: 0 0 8px 0; color: #374151; font-size: 14px; font-weight: 600;">
+                                                @companyName
+                                            </p>
+                                            <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">
+                                                @if (!string.IsNullOrEmpty(companyPhone)) {
+                                                    <span>📞 @companyPhone</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(companyPhone) && !string.IsNullOrEmpty(companyEmail)) {
+                                                    <span> | </span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(companyEmail)) {
+                                                    <span>✉️ <a href="mailto:@companyEmail" style="color: @primaryColor; text-decoration: none;">@companyEmail</a></span>
+                                                }
+                                            </p>
+                                        }
                                         <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">
                                             Need help? Reply to this email or contact your specialist directly.
                                         </p>
                                         <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                                            © @DateTime.Now.Year ALX Reserve Cloud. All rights reserved.
+                                            © @DateTime.Now.Year @companyName. All rights reserved.
                                         </p>
                                     </td>
                                 </tr>

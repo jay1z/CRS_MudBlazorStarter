@@ -10,7 +10,7 @@ namespace CRS.Services.NarrativeReport;
 public class PuppeteerPdfConverter : IPdfConverter, IAsyncDisposable
 {
     private readonly ILogger<PuppeteerPdfConverter> _logger;
-    private readonly SemaphoreSlim _browserLock = new(1, 1);
+    private readonly SemaphoreSlim _initLock = new(1, 1);
     private IBrowser? _browser;
     private bool _browserDownloaded;
     private bool _disposed;
@@ -30,20 +30,35 @@ public class PuppeteerPdfConverter : IPdfConverter, IAsyncDisposable
     {
         options ??= new PdfConversionOptions();
 
-        var browser = await GetOrCreateBrowserAsync(cancellationToken);
-        await using var page = await browser.NewPageAsync();
+        _logger.LogDebug("Starting PDF conversion, HTML length: {Length} chars", html.Length);
 
         try
         {
+            var browser = await GetOrCreateBrowserAsync(cancellationToken);
+            _logger.LogDebug("Browser acquired, creating new page");
+
+            await using var page = await browser.NewPageAsync();
+            _logger.LogDebug("Page created, setting content");
+
             // Set content with timeout
             await page.SetContentAsync(html, new NavigationOptions
             {
-                WaitUntil = [WaitUntilNavigation.Networkidle0],
+                WaitUntil = [WaitUntilNavigation.Load], // Changed from Networkidle0 for faster processing
                 Timeout = options.TimeoutSeconds * 1000
             });
+            _logger.LogDebug("Content set, waiting for fonts");
 
-            // Wait for any web fonts or images to load
-            await page.EvaluateExpressionAsync("document.fonts.ready");
+            // Wait for any web fonts to load (with timeout)
+            try
+            {
+                await page.EvaluateExpressionAsync("document.fonts.ready");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Font loading check failed, continuing anyway");
+            }
+
+            _logger.LogDebug("Generating PDF");
 
             // Configure PDF options
             var pdfOptions = new PdfOptions
@@ -72,7 +87,7 @@ public class PuppeteerPdfConverter : IPdfConverter, IAsyncDisposable
 
             var pdfBytes = await page.PdfDataAsync(pdfOptions);
 
-            _logger.LogDebug("Generated PDF: {Size} bytes", pdfBytes.Length);
+            _logger.LogInformation("Generated PDF: {Size} bytes", pdfBytes.Length);
             return pdfBytes;
         }
         catch (Exception ex)
@@ -87,7 +102,6 @@ public class PuppeteerPdfConverter : IPdfConverter, IAsyncDisposable
     {
         try
         {
-            await EnsureBrowserDownloadedAsync();
             var browser = await GetOrCreateBrowserAsync(cancellationToken);
             return browser != null && !browser.IsClosed;
         }
@@ -103,21 +117,29 @@ public class PuppeteerPdfConverter : IPdfConverter, IAsyncDisposable
         if (_browser != null && !_browser.IsClosed)
             return _browser;
 
-        await _browserLock.WaitAsync(cancellationToken);
+        await _initLock.WaitAsync(cancellationToken);
         try
         {
             if (_browser != null && !_browser.IsClosed)
                 return _browser;
 
-            await EnsureBrowserDownloadedAsync();
+            // Download browser if needed (inside lock to prevent concurrent downloads)
+            if (!_browserDownloaded)
+            {
+                _logger.LogInformation("Downloading Chromium browser (first-time setup)...");
+                var browserFetcher = new BrowserFetcher();
+                var installedBrowser = await browserFetcher.DownloadAsync();
+                _logger.LogInformation("Chromium downloaded to: {Path}", installedBrowser.GetExecutablePath());
+                _browserDownloaded = true;
+            }
 
             _logger.LogInformation("Launching Chromium browser for PDF generation");
-            
+
             _browser = await Puppeteer.LaunchAsync(new LaunchOptions
             {
                 Headless = true,
-                Args = new[]
-                {
+                Args =
+                [
                     "--no-sandbox",
                     "--disable-setuid-sandbox",
                     "--disable-dev-shm-usage",
@@ -130,36 +152,20 @@ public class PuppeteerPdfConverter : IPdfConverter, IAsyncDisposable
                     "--mute-audio",
                     "--no-first-run",
                     "--safebrowsing-disable-auto-update"
-                }
+                ]
             });
 
-            _logger.LogInformation("Chromium browser launched successfully");
+            _logger.LogInformation("Chromium browser launched successfully (PID: {Pid})", _browser.Process?.Id);
             return _browser;
         }
-        finally
+        catch (Exception ex)
         {
-            _browserLock.Release();
-        }
-    }
-
-    private async Task EnsureBrowserDownloadedAsync()
-    {
-        if (_browserDownloaded) return;
-
-        await _browserLock.WaitAsync();
-        try
-        {
-            if (_browserDownloaded) return;
-
-            _logger.LogInformation("Downloading Chromium browser...");
-            var browserFetcher = new BrowserFetcher();
-            await browserFetcher.DownloadAsync();
-            _browserDownloaded = true;
-            _logger.LogInformation("Chromium browser downloaded successfully");
+            _logger.LogError(ex, "Failed to launch Chromium browser");
+            throw;
         }
         finally
         {
-            _browserLock.Release();
+            _initLock.Release();
         }
     }
 
@@ -206,18 +212,18 @@ public class PuppeteerPdfConverter : IPdfConverter, IAsyncDisposable
 
         if (_browser != null)
         {
-            try
-            {
-                await _browser.CloseAsync();
-                _browser.Dispose();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error disposing browser");
-            }
-        }
+                        try
+                        {
+                            await _browser.CloseAsync();
+                            _browser.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Error disposing browser");
+                        }
+                    }
 
-        _browserLock.Dispose();
-        GC.SuppressFinalize(this);
-    }
-}
+                    _initLock.Dispose();
+                    GC.SuppressFinalize(this);
+                }
+            }

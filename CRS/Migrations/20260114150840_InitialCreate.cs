@@ -255,6 +255,54 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "NarrativeInserts",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    InsertKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    HtmlTemplate = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    AppliesWhenJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    TargetSectionKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    InsertAfterBlockKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NarrativeInserts", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "NarrativeTemplateSections",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    SectionKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    IsEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    PageBreakBefore = table.Column<bool>(type: "bit", nullable: false),
+                    CssClass = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NarrativeTemplateSections", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Roles",
                 columns: table => new
                 {
@@ -854,6 +902,38 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "NarrativeTemplateBlocks",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    SectionKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    BlockKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    HtmlTemplate = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    AppliesWhenJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CssClass = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    SectionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NarrativeTemplateBlocks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_NarrativeTemplateBlocks_NarrativeTemplateSections_SectionId",
+                        column: x => x.SectionId,
+                        principalTable: "NarrativeTemplateSections",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DemoSessions",
                 columns: table => new
                 {
@@ -1248,6 +1328,58 @@ namespace CRS.Migrations
                         name: "FK_GeneratedReports_GeneratedReports_SupersedesReportId",
                         column: x => x.SupersedesReportId,
                         principalTable: "GeneratedReports",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Narratives",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Version = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    ExecutiveSummary = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Introduction = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PropertyDescription = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Methodology = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Findings = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FundingAnalysis = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Recommendations = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Conclusion = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AdditionalNotes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TemplateUsed = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    AuthorUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReviewedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReviewedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReviewNotes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    TotalWordCount = table.Column<int>(type: "int", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Narratives", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Narratives_AspNetUsers_AuthorUserId",
+                        column: x => x.AuthorUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Narratives_AspNetUsers_CompletedByUserId",
+                        column: x => x.CompletedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Narratives_AspNetUsers_ReviewedByUserId",
+                        column: x => x.ReviewedByUserId,
+                        principalTable: "AspNetUsers",
                         principalColumn: "Id");
                 });
 
@@ -2269,6 +2401,98 @@ namespace CRS.Migrations
                 column: "SupersedesReportId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_NarrativeInsert_Tenant",
+                table: "NarrativeInserts",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NarrativeInsert_Tenant_Enabled_Section",
+                table: "NarrativeInserts",
+                columns: new[] { "TenantId", "IsEnabled", "TargetSectionKey" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NarrativeInsert_Tenant_Key",
+                table: "NarrativeInserts",
+                columns: new[] { "TenantId", "InsertKey" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Narrative_Tenant",
+                table: "Narratives",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Narrative_Tenant_Author",
+                table: "Narratives",
+                columns: new[] { "TenantId", "AuthorUserId" },
+                filter: "[AuthorUserId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Narrative_Tenant_Study",
+                table: "Narratives",
+                columns: new[] { "TenantId", "ReserveStudyId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Narrative_Tenant_Study_Status",
+                table: "Narratives",
+                columns: new[] { "TenantId", "ReserveStudyId", "Status" },
+                filter: "[DateDeleted] IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Narratives_AuthorUserId",
+                table: "Narratives",
+                column: "AuthorUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Narratives_CompletedByUserId",
+                table: "Narratives",
+                column: "CompletedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Narratives_ReserveStudyId",
+                table: "Narratives",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Narratives_ReviewedByUserId",
+                table: "Narratives",
+                column: "ReviewedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NarrativeTemplateBlock_Tenant",
+                table: "NarrativeTemplateBlocks",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NarrativeTemplateBlock_Tenant_Section_Block",
+                table: "NarrativeTemplateBlocks",
+                columns: new[] { "TenantId", "SectionKey", "BlockKey" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NarrativeTemplateBlock_Tenant_Section_Enabled_Order",
+                table: "NarrativeTemplateBlocks",
+                columns: new[] { "TenantId", "SectionKey", "IsEnabled", "SortOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NarrativeTemplateBlocks_SectionId",
+                table: "NarrativeTemplateBlocks",
+                column: "SectionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NarrativeTemplateSection_Tenant",
+                table: "NarrativeTemplateSections",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NarrativeTemplateSection_Tenant_Enabled_Order",
+                table: "NarrativeTemplateSections",
+                columns: new[] { "TenantId", "IsEnabled", "SortOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NarrativeTemplateSection_Tenant_Key",
+                table: "NarrativeTemplateSections",
+                columns: new[] { "TenantId", "SectionKey" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Notification_Tenant",
                 table: "Notifications",
                 column: "TenantId");
@@ -2870,6 +3094,14 @@ namespace CRS.Migrations
                 onDelete: ReferentialAction.Cascade);
 
             migrationBuilder.AddForeignKey(
+                name: "FK_Narratives_ReserveStudies_ReserveStudyId",
+                table: "Narratives",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
                 name: "FK_ProposalAcceptances_Proposals_ProposalId",
                 table: "ProposalAcceptances",
                 column: "ProposalId",
@@ -2975,6 +3207,15 @@ namespace CRS.Migrations
                 name: "Messages");
 
             migrationBuilder.DropTable(
+                name: "NarrativeInserts");
+
+            migrationBuilder.DropTable(
+                name: "Narratives");
+
+            migrationBuilder.DropTable(
+                name: "NarrativeTemplateBlocks");
+
+            migrationBuilder.DropTable(
                 name: "Notifications");
 
             migrationBuilder.DropTable(
@@ -3039,6 +3280,9 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "ContactGroups");
+
+            migrationBuilder.DropTable(
+                name: "NarrativeTemplateSections");
 
             migrationBuilder.DropTable(
                 name: "AcceptanceTermsTemplates");

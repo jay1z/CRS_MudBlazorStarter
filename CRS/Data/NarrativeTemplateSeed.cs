@@ -358,21 +358,22 @@ public static class NarrativeTemplateSeed
                 SortOrder = 20
             },
 
-            // ═══════════════════════════════════════════════════════════════
-            // SIGNATURE PAGE
-            // ═══════════════════════════════════════════════════════════════
-            new()
-            {
-                TenantId = 0,
-                SectionKey = NarrativeSectionKeys.SignaturePage,
-                BlockKey = NarrativeBlockKeys.SignatureIntro,
-                Title = "Signature Introduction",
-                HtmlTemplate = @"<h2>Certification</h2>
-<p>We certify that the findings and recommendations presented in this Reserve Study were prepared in accordance with the standards and guidelines established by the Community Associations Institute (CAI) and applicable state regulations.</p>
-<p>This study represents our professional opinion based on the information provided and our on-site observations. Actual costs may vary from the estimates provided herein.</p>",
-                IsEnabled = true,
-                SortOrder = 10
-            },
+                        // ═══════════════════════════════════════════════════════════════
+                        // SIGNATURE PAGE
+                        // ═══════════════════════════════════════════════════════════════
+                        new()
+                        {
+                            TenantId = 0,
+                            SectionKey = NarrativeSectionKeys.SignaturePage,
+                            BlockKey = NarrativeBlockKeys.SignatureIntro,
+                            Title = "Signature Introduction",
+                            HtmlTemplate = @"[[PAGE_BREAK]]
+            <h2>Certification</h2>
+            <p>We certify that the findings and recommendations presented in this Reserve Study were prepared in accordance with the standards and guidelines established by the Community Associations Institute (CAI) and applicable state regulations.</p>
+            <p>This study represents our professional opinion based on the information provided and our on-site observations. Actual costs may vary from the estimates provided herein.</p>",
+                            IsEnabled = true,
+                            SortOrder = 10
+                        },
             new()
             {
                 TenantId = 0,
@@ -556,21 +557,22 @@ public static class NarrativeTemplateSeed
                 SortOrder = 10
             },
 
-            // ═══════════════════════════════════════════════════════════════
-            // EXHIBIT - PHOTOS
-            // ═══════════════════════════════════════════════════════════════
-            new()
-            {
-                TenantId = 0,
-                SectionKey = NarrativeSectionKeys.ExhibitPhotos,
-                BlockKey = NarrativeBlockKeys.PhotoGallery,
-                Title = "Photo Gallery",
-                HtmlTemplate = @"<h2>Site Visit Photographs</h2>
-<p>The following photographs were taken during our on-site inspection on {InspectionDate}:</p>
-[[PHOTOS]]",
-                IsEnabled = true,
-                SortOrder = 10
-            },
+                        // ═══════════════════════════════════════════════════════════════
+                        // EXHIBIT - PHOTOS
+                        // ═══════════════════════════════════════════════════════════════
+                        new()
+                        {
+                            TenantId = 0,
+                            SectionKey = NarrativeSectionKeys.ExhibitPhotos,
+                            BlockKey = NarrativeBlockKeys.PhotoGallery,
+                            Title = "Photo Gallery",
+                            HtmlTemplate = @"[[PAGE_BREAK]]
+            <h2>Site Visit Photographs</h2>
+            <p>The following photographs were taken during our on-site inspection on {InspectionDate}:</p>
+            [[PHOTOS]]",
+                            IsEnabled = true,
+                            SortOrder = 10
+                        },
 
             // ═══════════════════════════════════════════════════════════════
             // EXHIBIT - DISCLOSURES

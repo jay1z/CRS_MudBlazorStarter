@@ -87,28 +87,65 @@ public interface IGeneratedReportService
     /// </summary>
     Task<bool> RecordDownloadAsync(Guid id, CancellationToken ct = default);
 
-    /// <summary>
-    /// Creates a new version of an existing report.
-    /// </summary>
-    Task<GeneratedReport> CreateNewVersionAsync(Guid existingReportId, GeneratedReport newVersion, CancellationToken ct = default);
+        /// <summary>
+        /// Creates a new version of an existing report.
+        /// </summary>
+        Task<GeneratedReport> CreateNewVersionAsync(Guid existingReportId, GeneratedReport newVersion, CancellationToken ct = default);
 
-    /// <summary>
-    /// Archives a report.
-    /// </summary>
-    Task<bool> ArchiveAsync(Guid id, CancellationToken ct = default);
+        /// <summary>
+        /// Archives a report.
+        /// </summary>
+        Task<bool> ArchiveAsync(Guid id, CancellationToken ct = default);
 
-    /// <summary>
-    /// Gets the version history for a report.
-    /// </summary>
-    Task<IReadOnlyList<GeneratedReport>> GetVersionHistoryAsync(Guid reportId, CancellationToken ct = default);
+        /// <summary>
+        /// Gets the version history for a report.
+        /// </summary>
+        Task<IReadOnlyList<GeneratedReport>> GetVersionHistoryAsync(Guid reportId, CancellationToken ct = default);
 
-    /// <summary>
-    /// Gets recent reports for the current tenant.
-    /// </summary>
-    Task<IReadOnlyList<GeneratedReport>> GetRecentAsync(int count = 20, CancellationToken ct = default);
+        /// <summary>
+        /// Gets recent reports for the current tenant.
+        /// </summary>
+        Task<IReadOnlyList<GeneratedReport>> GetRecentAsync(int count = 20, CancellationToken ct = default);
 
-    /// <summary>
-    /// Gets the count of reports for a reserve study.
-    /// </summary>
-    Task<int> GetCountAsync(Guid reserveStudyId, CancellationToken ct = default);
-}
+        /// <summary>
+        /// Gets the count of reports for a reserve study.
+        /// </summary>
+        Task<int> GetCountAsync(Guid reserveStudyId, CancellationToken ct = default);
+
+        // ═══════════════════════════════════════════════════════════════
+        // WORKFLOW AUTOMATION METHODS
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Records that client feedback/questions have been received.
+        /// Advances workflow to ReportInProcess.
+        /// </summary>
+        /// <param name="reserveStudyId">The reserve study ID.</param>
+        /// <param name="feedbackNotes">Optional notes about the feedback.</param>
+        /// <param name="ct">Cancellation token.</param>
+        Task<bool> MarkClientFeedbackReceivedAsync(Guid reserveStudyId, string? feedbackNotes = null, CancellationToken ct = default);
+
+        /// <summary>
+        /// Marks that all client revisions have been addressed and the client has accepted.
+        /// Advances workflow to ReportComplete.
+        /// </summary>
+        /// <param name="reserveStudyId">The reserve study ID.</param>
+        /// <param name="ct">Cancellation token.</param>
+        Task<bool> MarkRevisionsCompleteAsync(Guid reserveStudyId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Completes the study (marks as successfully finished).
+        /// Advances workflow to RequestCompleted.
+        /// </summary>
+        /// <param name="reserveStudyId">The reserve study ID.</param>
+        /// <param name="ct">Cancellation token.</param>
+        Task<bool> CompleteStudyAsync(Guid reserveStudyId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Archives a completed study and all its reports.
+        /// Advances workflow to RequestArchived.
+        /// </summary>
+        /// <param name="reserveStudyId">The reserve study ID.</param>
+        /// <param name="ct">Cancellation token.</param>
+        Task<bool> ArchiveStudyAsync(Guid reserveStudyId, CancellationToken ct = default);
+    }
