@@ -99,6 +99,7 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
     {
         // Load study with all related elements
         var study = await _context.ReserveStudies
+            .Include(s => s.FinancialInfo)
             .Include(s => s.ReserveStudyBuildingElements!)
                 .ThenInclude(e => e.BuildingElement)
             .Include(s => s.ReserveStudyBuildingElements!)
@@ -151,6 +152,7 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
 
         // Load study with elements to create scenario
         var study = await _context.ReserveStudies
+            .Include(s => s.FinancialInfo)
             .Include(s => s.ReserveStudyBuildingElements!)
                 .ThenInclude(e => e.BuildingElement)
             .Include(s => s.ReserveStudyBuildingElements!)

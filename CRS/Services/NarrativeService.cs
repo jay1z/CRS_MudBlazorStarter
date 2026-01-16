@@ -424,40 +424,40 @@ public class NarrativeService : INarrativeService
             {
                 Name = "Standard HOA",
                 Description = "Standard template for homeowner association reserve studies",
-                ExecutiveSummary = "<p>This Reserve Study has been prepared for [COMMUNITY_NAME] to provide a comprehensive analysis of the association's reserve fund requirements. The study examines the current condition of major components, estimates their remaining useful life, and projects the funding needed to maintain the community's assets over a 30-year period.</p>",
-                Introduction = "<p>[COMMUNITY_NAME] engaged [COMPANY_NAME] to prepare this Reserve Study in accordance with state requirements and industry standards. The purpose of this study is to:</p><ul><li>Identify and evaluate the major components that the association is responsible for maintaining</li><li>Estimate the remaining useful life and replacement cost of each component</li><li>Develop a funding plan that ensures adequate reserves are available when needed</li></ul>",
-                PropertyDescription = "<p>[COMMUNITY_NAME] is a [COMMUNITY_TYPE] community located in [CITY], [STATE]. The community was built in [YEAR_BUILT] and consists of [UNIT_COUNT] units.</p><p>Key features include:</p><ul><li>[FEATURE_1]</li><li>[FEATURE_2]</li><li>[FEATURE_3]</li></ul>",
-                Methodology = "<p>This Reserve Study was conducted using the Component Method in accordance with national standards. Our methodology included:</p><ol><li><strong>Site Visit:</strong> A thorough inspection of all common area components was performed on [SITE_VISIT_DATE].</li><li><strong>Document Review:</strong> Financial records, prior studies, and maintenance history were analyzed.</li><li><strong>Cost Research:</strong> Current replacement costs were obtained from local contractors and industry databases.</li><li><strong>Financial Projections:</strong> A 30-year cash flow analysis was prepared using the association's current funding levels and projected expenditures.</li></ol>",
-                Findings = "<p>Based on our site visit and analysis, we have identified [COMPONENT_COUNT] reserve components. Key findings include:</p><ul><li><strong>Overall Condition:</strong> The property is in [CONDITION] condition for its age.</li><li><strong>Immediate Concerns:</strong> [IMMEDIATE_CONCERNS]</li><li><strong>Upcoming Major Expenses:</strong> [UPCOMING_EXPENSES]</li></ul>",
-                FundingAnalysis = "<p>Our analysis of the association's reserve fund indicates the following:</p><ul><li><strong>Current Reserve Balance:</strong> $[CURRENT_BALANCE]</li><li><strong>Recommended Annual Contribution:</strong> $[RECOMMENDED_CONTRIBUTION]</li><li><strong>Percent Funded:</strong> [PERCENT_FUNDED]%</li></ul><p>The funding plan presented in this study is designed to maintain adequate reserves while minimizing the risk of special assessments.</p>",
-                Recommendations = "<p>Based on our analysis, we recommend the following:</p><ol><li><strong>Funding:</strong> Adjust annual reserve contributions to $[RECOMMENDED_CONTRIBUTION] per year.</li><li><strong>Maintenance:</strong> Implement a preventive maintenance program for [COMPONENTS].</li><li><strong>Updates:</strong> Update this Reserve Study in [UPDATE_FREQUENCY] years.</li></ol>",
-                Conclusion = "<p>This Reserve Study provides [COMMUNITY_NAME] with a roadmap for maintaining its physical assets and ensuring long-term financial stability. By following the funding recommendations in this study, the association can avoid special assessments and maintain property values.</p><p>We appreciate the opportunity to prepare this study and remain available to answer any questions.</p>"
+                ExecutiveSummary = "<p>This Reserve Study has been prepared for {AssociationName} to provide a comprehensive analysis of the association's reserve fund requirements. The study examines the current condition of major components, estimates their remaining useful life, and projects the funding needed to maintain the community's assets over a {ProjectionYears}-year period.</p>",
+                Introduction = "<p>{AssociationName} engaged {CompanyName} to prepare this Reserve Study in accordance with state requirements and industry standards. The purpose of this study is to:</p><ul><li>Identify and evaluate the major components that the association is responsible for maintaining</li><li>Estimate the remaining useful life and replacement cost of each component</li><li>Develop a funding plan that ensures adequate reserves are available when needed</li></ul>",
+                PropertyDescription = "<p>{AssociationName} is a {CommunityType} community located in {CityState}. The community was established in {EstablishedYear} and consists of {UnitCount} units.</p>",
+                Methodology = "<p>This Reserve Study was conducted using the Component Method in accordance with national standards. Our methodology included:</p><ol><li><strong>Site Visit:</strong> A thorough inspection of all common area components was performed on {InspectionDate}.</li><li><strong>Document Review:</strong> Financial records, prior studies, and maintenance history were analyzed.</li><li><strong>Cost Research:</strong> Current replacement costs were obtained from local contractors and industry databases.</li><li><strong>Financial Projections:</strong> A {ProjectionYears}-year cash flow analysis was prepared using the association's current funding levels and projected expenditures.</li></ol>",
+                Findings = "<p>Based on our site visit and analysis, we have identified the reserve components for {AssociationName}. Key findings include:</p><ul><li><strong>Current Fund Status:</strong> {FundStatusLabel} ({PercentFunded} funded)</li><li><strong>Starting Reserve Balance:</strong> {StartingReserveBalance}</li><li><strong>Recommended First Year Contribution:</strong> {FirstYearContribution}</li></ul>",
+                FundingAnalysis = "<p>Our analysis of the association's reserve fund indicates the following:</p><ul><li><strong>Current Reserve Balance:</strong> {StartingReserveBalance}</li><li><strong>Ideal (Fully Funded) Balance:</strong> {IdealBalance}</li><li><strong>Percent Funded:</strong> {PercentFunded}</li><li><strong>Fund Status:</strong> {FundStatusLabel}</li></ul><p>The funding plan presented in this study is designed to maintain adequate reserves while minimizing the risk of special assessments.</p>",
+                Recommendations = "<p>Based on our analysis, we recommend the following:</p><ol><li><strong>Funding:</strong> Adopt the recommended contribution schedule outlined in this study.</li><li><strong>Maintenance:</strong> Implement a preventive maintenance program for major components.</li><li><strong>Updates:</strong> Update this Reserve Study every 3-5 years or sooner if significant changes occur.</li></ol>",
+                Conclusion = "<p>This Reserve Study provides {AssociationName} with a roadmap for maintaining its physical assets and ensuring long-term financial stability. By following the funding recommendations in this study, the association can avoid special assessments and maintain property values.</p><p>We appreciate the opportunity to prepare this study and remain available to answer any questions.</p>"
             },
             new NarrativeTemplate
             {
                 Name = "Condominium",
                 Description = "Template designed for condominium associations with building components",
-                ExecutiveSummary = "<p>This Reserve Study analyzes the major building and site components for [COMMUNITY_NAME] Condominium Association. Our findings indicate that [KEY_FINDING] and we recommend [KEY_RECOMMENDATION].</p>",
-                Introduction = "<p>In accordance with state condominium statutes, [COMMUNITY_NAME] Condominium Association has commissioned this Reserve Study to evaluate the long-term capital needs of the property.</p>",
-                PropertyDescription = "<p>[COMMUNITY_NAME] is a [STORY_COUNT]-story condominium building containing [UNIT_COUNT] residential units. The building was constructed in [YEAR_BUILT] and features [CONSTRUCTION_TYPE] construction.</p>",
-                Methodology = "<p>Our reserve study methodology followed the Component Method approach, including a comprehensive site inspection, review of association documents, and analysis of component conditions and costs.</p>",
-                Findings = "<p>The building inspection revealed [FINDING_SUMMARY]. Major systems including [SYSTEMS_LIST] were evaluated for current condition and remaining useful life.</p>",
-                FundingAnalysis = "<p>The current reserve fund stands at $[CURRENT_BALANCE], representing [PERCENT_FUNDED]% of the fully-funded balance. Our analysis projects the funding requirements over a 30-year horizon.</p>",
-                Recommendations = "<p>We recommend the association [RECOMMENDATIONS]. These steps will help ensure adequate funding for future capital expenditures.</p>",
+                ExecutiveSummary = "<p>This Reserve Study analyzes the major building and site components for {AssociationName}. The current fund status is {FundStatusLabel} with {PercentFunded} funded. We recommend adopting the funding plan outlined in this study.</p>",
+                Introduction = "<p>In accordance with state condominium statutes, {AssociationName} has commissioned this Reserve Study to evaluate the long-term capital needs of the property.</p>",
+                PropertyDescription = "<p>{AssociationName} is a {CommunityType} community located in {CityState}. The community was established in {EstablishedYear} and contains {UnitCount} units.</p>",
+                Methodology = "<p>Our reserve study methodology followed the Component Method approach, including a comprehensive site inspection on {InspectionDate}, review of association documents, and analysis of component conditions and costs.</p>",
+                Findings = "<p>The site inspection was conducted on {InspectionDate}. Major building systems and common area components were evaluated for current condition and remaining useful life.</p>",
+                FundingAnalysis = "<p>The current reserve fund balance is {StartingReserveBalance}, representing {PercentFunded} of the fully-funded balance of {IdealBalance}. Our analysis projects the funding requirements over a {ProjectionYears}-year horizon.</p>",
+                Recommendations = "<p>We recommend the association adopt the funding plan presented in this study. The recommended first year contribution is {FirstYearContribution}. These steps will help ensure adequate funding for future capital expenditures.</p>",
                 Conclusion = "<p>This Reserve Study provides a foundation for sound financial planning. We recommend the Board review these findings with the membership and implement the recommended funding plan.</p>"
             },
             new NarrativeTemplate
             {
                 Name = "Minimal",
-                Description = "Minimal template with basic section headers",
-                ExecutiveSummary = "<p>Executive summary to be completed.</p>",
-                Introduction = "<p>Introduction to be completed.</p>",
-                PropertyDescription = "<p>Property description to be completed.</p>",
-                Methodology = "<p>Methodology to be completed.</p>",
-                Findings = "<p>Findings to be completed.</p>",
-                FundingAnalysis = "<p>Funding analysis to be completed.</p>",
-                Recommendations = "<p>Recommendations to be completed.</p>",
-                Conclusion = "<p>Conclusion to be completed.</p>"
+                Description = "Minimal template with basic section headers - fill in your own content",
+                ExecutiveSummary = "<p>Executive summary for {AssociationName} reserve study.</p>",
+                Introduction = "<p>Introduction for {AssociationName} located in {CityState}.</p>",
+                PropertyDescription = "<p>Property description for {AssociationName}.</p>",
+                Methodology = "<p>Site inspection conducted on {InspectionDate}.</p>",
+                Findings = "<p>Findings for {AssociationName}.</p>",
+                FundingAnalysis = "<p>Current reserve balance: {StartingReserveBalance}. Percent funded: {PercentFunded}.</p>",
+                Recommendations = "<p>Recommendations for {AssociationName}.</p>",
+                Conclusion = "<p>Conclusion for {AssociationName} reserve study.</p>"
             }
         ];
     }

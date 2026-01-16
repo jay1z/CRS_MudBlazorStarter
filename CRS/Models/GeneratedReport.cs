@@ -31,13 +31,17 @@ public class GeneratedReport : BaseModel, ITenantScoped
     [MaxLength(256)]
     public string? Title { get; set; }
 
-    // File storage
+    // File storage - PDF
     [Required]
     [MaxLength(2048)]
     public string StorageUrl { get; set; } = string.Empty;
 
     [MaxLength(100)]
     public string? ContentType { get; set; }
+
+    // File storage - Excel (optional, for reports that include Excel output)
+    [MaxLength(2048)]
+    public string? ExcelStorageUrl { get; set; }
 
     public long FileSizeBytes { get; set; }
 

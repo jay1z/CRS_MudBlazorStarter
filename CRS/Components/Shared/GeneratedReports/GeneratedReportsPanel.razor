@@ -325,12 +325,19 @@
                                         <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(displayStatus)" Variant="Variant.Filled">
                                             @GetStatusDisplayName(displayStatus)
                                         </MudChip>
-                                        
+
                                         <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
                                             <MudMenuItem Icon="@Icons.Material.Filled.Download"
                                                          OnClick="@(() => DownloadReport(report))">
-                                                Download
+                                                @(string.IsNullOrEmpty(report.ExcelStorageUrl) ? "Download" : "Download PDF")
                                             </MudMenuItem>
+                                            @if (!string.IsNullOrEmpty(report.ExcelStorageUrl))
+                                            {
+                                                <MudMenuItem Icon="@Icons.Material.Filled.TableChart"
+                                                             OnClick="@(() => DownloadExcel(report))">
+                                                    Download Excel
+                                                </MudMenuItem>
+                                            }
                                             @if (!string.IsNullOrEmpty(report.StorageUrl))
                                             {
                                                 <MudMenuItem Icon="@Icons.Material.Filled.OpenInNew"
@@ -911,13 +918,35 @@
         {
             var url = DocumentStorage.GetSasUrl(report.StorageUrl, TimeSpan.FromHours(1));
             NavigationManager.NavigateTo(url, forceLoad: true);
-            
+
             // Increment download count
             _ = ReportService.RecordDownloadAsync(report.Id);
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error downloading report: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void DownloadExcel(GeneratedReport report)
+    {
+        if (string.IsNullOrEmpty(report.ExcelStorageUrl))
+        {
+            Snackbar.Add("Excel file not available for download", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var url = DocumentStorage.GetSasUrl(report.ExcelStorageUrl, TimeSpan.FromHours(1));
+            NavigationManager.NavigateTo(url, forceLoad: true);
+
+            // Increment download count
+            _ = ReportService.RecordDownloadAsync(report.Id);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error downloading Excel: {ex.Message}", Severity.Error);
         }
     }
 

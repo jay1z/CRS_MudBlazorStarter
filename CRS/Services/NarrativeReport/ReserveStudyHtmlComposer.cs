@@ -238,35 +238,51 @@ public class ReserveStudyHtmlComposer : IReserveStudyHtmlComposer
             result[insert.InsertKey] = insert; // Override
         }
 
-        return result.Values.ToList();
-    }
-
-    private string RenderBlock(NarrativeTemplateBlock block, ReserveStudyReportContext context)
-    {
-        try
-        {
-            // Sanitize the template HTML
-            var sanitizedHtml = _htmlSanitizer.Sanitize(block.HtmlTemplate);
-
-            // Replace placeholders
-            var processedHtml = _placeholderResolver.ReplacePlaceholders(sanitizedHtml, context);
-
-            // Replace tokens
-            processedHtml = _placeholderResolver.ReplaceTokens(processedHtml, context);
-
-            // Wrap in block container
-            var blockClass = $"block block-{block.BlockKey.ToLowerInvariant()}";
-            if (!string.IsNullOrEmpty(block.CssClass))
-                blockClass += $" {block.CssClass}";
-
-            return $"<div class=\"{blockClass}\" data-block=\"{block.BlockKey}\">{processedHtml}</div>";
+            return result.Values.ToList();
         }
-        catch (Exception ex)
+
+        private string RenderBlock(NarrativeTemplateBlock block, ReserveStudyReportContext context)
         {
-            _logger.LogError(ex, "Error rendering block {BlockKey}", block.BlockKey);
-            return $"<!-- Error rendering block: {block.BlockKey} -->";
+            try
+            {
+                string processedHtml;
+
+                // Check if user-edited content exists for this block
+                var userContent = context.UserNarrative?.GetContentForBlock(block.BlockKey);
+
+                if (!string.IsNullOrWhiteSpace(userContent))
+                {
+                    // Use user-edited content - sanitize first, then apply placeholder replacement
+                    var sanitizedHtml = _htmlSanitizer.Sanitize(userContent);
+
+                    // Apply placeholder and token replacement to user content too
+                    // This allows users to use placeholders like {AssociationName} in their content
+                    processedHtml = _placeholderResolver.ReplacePlaceholders(sanitizedHtml, context);
+                    processedHtml = _placeholderResolver.ReplaceTokens(processedHtml, context);
+
+                    _logger.LogDebug("Using user-edited content for block {BlockKey}", block.BlockKey);
+                }
+                else
+                {
+                    // Fall back to template with placeholder replacement
+                    var sanitizedHtml = _htmlSanitizer.Sanitize(block.HtmlTemplate);
+                    processedHtml = _placeholderResolver.ReplacePlaceholders(sanitizedHtml, context);
+                    processedHtml = _placeholderResolver.ReplaceTokens(processedHtml, context);
+                }
+
+                // Wrap in block container
+                var blockClass = $"block block-{block.BlockKey.ToLowerInvariant()}";
+                if (!string.IsNullOrEmpty(block.CssClass))
+                    blockClass += $" {block.CssClass}";
+
+                return $"<div class=\"{blockClass}\" data-block=\"{block.BlockKey}\">{processedHtml}</div>";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rendering block {BlockKey}", block.BlockKey);
+                return $"<!-- Error rendering block: {block.BlockKey} -->";
+            }
         }
-    }
 
     private string RenderInsert(NarrativeInsert insert, ReserveStudyReportContext context)
     {

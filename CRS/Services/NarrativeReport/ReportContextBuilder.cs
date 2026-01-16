@@ -21,6 +21,8 @@ public class ReportContextBuilder : IReportContextBuilder
     private readonly ISiteVisitPhotoService _photoService;
     private readonly IPhotoStorageService _photoStorageService;
     private readonly IReserveStudyCalculatorService _calculatorService;
+    private readonly ILogoStorageService _logoStorageService;
+    private readonly INarrativeService _narrativeService;
     private readonly ILogger<ReportContextBuilder> _logger;
 
     public ReportContextBuilder(
@@ -29,6 +31,8 @@ public class ReportContextBuilder : IReportContextBuilder
         ISiteVisitPhotoService photoService,
         IPhotoStorageService photoStorageService,
         IReserveStudyCalculatorService calculatorService,
+        ILogoStorageService logoStorageService,
+        INarrativeService narrativeService,
         ILogger<ReportContextBuilder> logger)
     {
         _dbFactory = dbFactory;
@@ -36,6 +40,8 @@ public class ReportContextBuilder : IReportContextBuilder
         _photoService = photoService;
         _photoStorageService = photoStorageService;
         _calculatorService = calculatorService;
+        _logoStorageService = logoStorageService;
+        _narrativeService = narrativeService;
         _logger = logger;
     }
 
@@ -116,7 +122,7 @@ public class ReportContextBuilder : IReportContextBuilder
             Association = BuildAssociationInfo(study),
             Study = BuildStudyInfo(study, options),
             FinancialAssumptions = BuildFinancialAssumptions(study),
-            Branding = BuildBrandingInfo(tenant),
+            Branding = await BuildBrandingInfoAsync(tenant, cancellationToken),
             Signatories = BuildSignatories(study)
         };
 
@@ -152,12 +158,19 @@ public class ReportContextBuilder : IReportContextBuilder
             _logger.LogDebug("    FirstYear.EndingBalance: {Value}", reportContext.CalculatedOutputs.FirstYear.EndingBalance);
         }
 
-        // Add info furnished items
-        reportContext.InfoFurnished = BuildInfoFurnished(study);
+            // Add info furnished items
+            reportContext.InfoFurnished = BuildInfoFurnished(study);
 
-        _logger.LogDebug("Built report context for study {StudyId}", reserveStudyId);
-        return reportContext;
-    }
+            // Load user-edited narrative content if available
+            reportContext.UserNarrative = await BuildNarrativeContentAsync(reserveStudyId, cancellationToken);
+            if (reportContext.UserNarrative?.HasUserContent == true)
+            {
+                _logger.LogDebug("  User narrative content loaded for study {StudyId}", reserveStudyId);
+            }
+
+            _logger.LogDebug("Built report context for study {StudyId}", reserveStudyId);
+            return reportContext;
+        }
 
     private static AssociationInfo BuildAssociationInfo(ReserveStudy study)
     {
@@ -234,7 +247,7 @@ public class ReportContextBuilder : IReportContextBuilder
         };
     }
 
-    private BrandingInfo BuildBrandingInfo(Models.Tenant? tenant)
+    private async Task<BrandingInfo> BuildBrandingInfoAsync(Models.Tenant? tenant, CancellationToken cancellationToken)
     {
         if (tenant == null)
         {
@@ -259,21 +272,88 @@ public class ReportContextBuilder : IReportContextBuilder
             }
         }
 
-        return new BrandingInfo
+        // Get logo URL from blob storage (this is where tenant logos are actually stored)
+        string? logoUrl = null;
+        try
         {
-            CompanyName = tenant.Name,
-            Phone = brandingData?.Phone,
-            Email = brandingData?.Email,
-            Website = brandingData?.Website,
-            Address = brandingData?.Address,
-            LogoUrl = brandingData?.LogoUrl,
-            CoverImageUrl = brandingData?.CoverImageUrl,
-            FooterText = brandingData?.FooterText,
-            Tagline = brandingData?.Tagline
-        };
-    }
+            logoUrl = await _logoStorageService.GetLogoUrlAsync(tenant.Id, cancellationToken);
+            _logger.LogDebug("Retrieved logo URL for tenant {TenantId}: {LogoUrl}", tenant.Id, logoUrl ?? "(none)");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve logo URL for tenant {TenantId}", tenant.Id);
+        }
 
-    private static List<SignatoryInfo> BuildSignatories(ReserveStudy study)
+        // Fallback to branding JSON if logo not found in storage
+        logoUrl ??= brandingData?.LogoUrl ?? brandingData?.CompanyLogoUrl;
+
+            return new BrandingInfo
+            {
+                CompanyName = tenant.Name,
+                Phone = brandingData?.CompanyPhone ?? brandingData?.Phone,
+                Email = brandingData?.CompanyEmail ?? brandingData?.Email,
+                Website = brandingData?.CompanyWebsite ?? brandingData?.Website,
+                Address = brandingData?.CompanyAddress ?? brandingData?.Address,
+                LogoUrl = logoUrl,
+                CoverImageUrl = brandingData?.CoverImageUrl,
+                FooterText = brandingData?.FooterText,
+                Tagline = brandingData?.CompanyTagline ?? brandingData?.Tagline
+            };
+        }
+
+        private async Task<NarrativeContent?> BuildNarrativeContentAsync(Guid reserveStudyId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var narrative = await _narrativeService.GetByStudyIdAsync(reserveStudyId, cancellationToken);
+
+                if (narrative == null)
+                {
+                    _logger.LogDebug("No narrative found for study {StudyId}", reserveStudyId);
+                    return null;
+                }
+
+                // Check if narrative has any meaningful content
+                var hasContent = !string.IsNullOrWhiteSpace(narrative.ExecutiveSummary) ||
+                                 !string.IsNullOrWhiteSpace(narrative.Introduction) ||
+                                 !string.IsNullOrWhiteSpace(narrative.PropertyDescription) ||
+                                 !string.IsNullOrWhiteSpace(narrative.Methodology) ||
+                                 !string.IsNullOrWhiteSpace(narrative.Findings) ||
+                                 !string.IsNullOrWhiteSpace(narrative.FundingAnalysis) ||
+                                 !string.IsNullOrWhiteSpace(narrative.Recommendations) ||
+                                 !string.IsNullOrWhiteSpace(narrative.Conclusion);
+
+                if (!hasContent)
+                {
+                    _logger.LogDebug("Narrative for study {StudyId} exists but has no content", reserveStudyId);
+                    return new NarrativeContent { HasUserContent = false };
+                }
+
+                _logger.LogDebug("Loading user narrative content for study {StudyId}, status: {Status}", 
+                    reserveStudyId, narrative.Status);
+
+                return new NarrativeContent
+                {
+                    HasUserContent = true,
+                    ExecutiveSummary = narrative.ExecutiveSummary,
+                    Introduction = narrative.Introduction,
+                    PropertyDescription = narrative.PropertyDescription,
+                    Methodology = narrative.Methodology,
+                    Findings = narrative.Findings,
+                    FundingAnalysis = narrative.FundingAnalysis,
+                    Recommendations = narrative.Recommendations,
+                    Conclusion = narrative.Conclusion,
+                    AdditionalNotes = narrative.AdditionalNotes
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load narrative content for study {StudyId}", reserveStudyId);
+                return null;
+            }
+        }
+
+        private static List<SignatoryInfo> BuildSignatories(ReserveStudy study)
     {
         var signatories = new List<SignatoryInfo>();
 
@@ -542,18 +622,28 @@ public class ReportContextBuilder : IReportContextBuilder
         return items;
     }
 
-    /// <summary>
-    /// Helper class for parsing tenant branding JSON.
-    /// </summary>
-    private sealed class BrandingData
-    {
-        public string? Phone { get; set; }
-        public string? Email { get; set; }
-        public string? Website { get; set; }
-        public string? Address { get; set; }
-        public string? LogoUrl { get; set; }
-        public string? CoverImageUrl { get; set; }
-        public string? FooterText { get; set; }
-        public string? Tagline { get; set; }
+        /// <summary>
+        /// Helper class for parsing tenant branding JSON.
+        /// Supports both legacy property names and BrandingPayload property names.
+        /// </summary>
+        private sealed class BrandingData
+        {
+            // Legacy property names
+            public string? Phone { get; set; }
+            public string? Email { get; set; }
+            public string? Website { get; set; }
+            public string? Address { get; set; }
+            public string? LogoUrl { get; set; }
+            public string? CoverImageUrl { get; set; }
+            public string? FooterText { get; set; }
+            public string? Tagline { get; set; }
+
+            // BrandingPayload property names (from ThemeService)
+            public string? CompanyPhone { get; set; }
+            public string? CompanyEmail { get; set; }
+            public string? CompanyWebsite { get; set; }
+            public string? CompanyAddress { get; set; }
+            public string? CompanyLogoUrl { get; set; }
+            public string? CompanyTagline { get; set; }
+        }
     }
-}

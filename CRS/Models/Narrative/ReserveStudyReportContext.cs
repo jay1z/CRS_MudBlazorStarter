@@ -36,6 +36,9 @@ public class ReserveStudyReportContext
     /// <summary>Information furnished by management items.</summary>
     public List<InfoFurnishedItem> InfoFurnished { get; set; } = [];
 
+    /// <summary>User-edited narrative content (overrides templates when present).</summary>
+    public NarrativeContent? UserNarrative { get; set; }
+
     // ═══════════════════════════════════════════════════════════════
     // COMPUTED HELPERS
     // ═══════════════════════════════════════════════════════════════
@@ -235,4 +238,144 @@ public class InfoFurnishedItem
     public string? Value { get; set; }
     public string? Source { get; set; }
     public int SortOrder { get; set; }
+}
+
+/// <summary>
+/// User-edited narrative content from the narrative editor.
+/// When populated, these sections override template-generated content.
+/// </summary>
+public class NarrativeContent
+{
+    /// <summary>Whether user-edited content exists and should be used.</summary>
+    public bool HasUserContent { get; set; }
+
+    /// <summary>Executive summary section.</summary>
+    public string? ExecutiveSummary { get; set; }
+
+    /// <summary>Introduction section.</summary>
+    public string? Introduction { get; set; }
+
+    /// <summary>Property description section.</summary>
+    public string? PropertyDescription { get; set; }
+
+    /// <summary>Methodology section.</summary>
+    public string? Methodology { get; set; }
+
+    /// <summary>Findings section.</summary>
+    public string? Findings { get; set; }
+
+    /// <summary>Funding analysis section.</summary>
+    public string? FundingAnalysis { get; set; }
+
+    /// <summary>Recommendations section.</summary>
+    public string? Recommendations { get; set; }
+
+    /// <summary>Conclusion section.</summary>
+    public string? Conclusion { get; set; }
+
+    /// <summary>Additional notes section.</summary>
+    public string? AdditionalNotes { get; set; }
+
+    /// <summary>
+    /// Gets user content for a specific section key, if available.
+    /// Returns null if no user content exists for that section.
+    /// </summary>
+    public string? GetContentForSection(string sectionKey)
+    {
+        if (!HasUserContent) return null;
+
+        return sectionKey switch
+        {
+            "ExecutiveSummary" => ExecutiveSummary,
+            "NarrativeEvaluation" => CombineEvaluationContent(),
+            "NarrativeConclusion" => Conclusion,
+            "NarrativeSources" => Methodology,
+            "FundingSummary" => FundingAnalysis,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Gets user content for a specific block key, if available.
+    /// Maps editor sections to template blocks.
+    /// </summary>
+    /// <remarks>
+    /// Block Key Mapping:
+    /// - ExecSummaryIntro → ExecutiveSummary (full executive summary)
+    /// - ExecSummaryRecommendations → Recommendations (user recommendations)
+    /// - EvaluationIntro → Introduction (property evaluation intro)
+    /// - EvaluationDetails → PropertyDescription (property details)
+    /// - SourcesDescription → Methodology (data sources and methodology)
+    /// - ComponentsIntro → Findings (component observations)
+    /// - FundStatusSummary → FundingAnalysis (funding explanation, but keep table)
+    /// - ConclusionText → Conclusion (closing remarks)
+    /// 
+    /// Blocks that should remain template-generated (data-driven):
+    /// - CoverLogo, CoverTitle, CoverAssociationInfo, CoverCompanyInfo (auto from data)
+    /// - ExecSummaryFindings (calculated values like PercentFunded)
+    /// - ContributionScheduleTable (calculated table)
+    /// - SignatureIntro, SignatureBlocks (auto-generated)
+    /// - AssumptionsInflation, AssumptionsInterest (from financial data)
+    /// - OperatingVsReservesGuidance (standard boilerplate)
+    /// - ComponentsFourPartTest (standard boilerplate)
+    /// - InfoFurnishedTable, DefinitionsGlossary (auto tables)
+    /// - PhotoGallery, VendorCredentials (auto from data)
+    /// </remarks>
+    public string? GetContentForBlock(string blockKey)
+    {
+        if (!HasUserContent) return null;
+
+        return blockKey switch
+        {
+            // Executive Summary section
+            "ExecSummaryIntro" => ExecutiveSummary,
+            "ExecSummaryRecommendations" => !string.IsNullOrWhiteSpace(Recommendations) 
+                ? $"<h3>Recommendations</h3>\n{Recommendations}" 
+                : null,
+
+            // Evaluation section
+            "EvaluationIntro" => !string.IsNullOrWhiteSpace(Introduction)
+                ? $"<h2>Property Evaluation</h2>\n{Introduction}"
+                : null,
+            "EvaluationDetails" => PropertyDescription,
+
+            // Sources/Methodology section
+            "SourcesDescription" => !string.IsNullOrWhiteSpace(Methodology)
+                ? $"<h2>Methodology & Sources</h2>\n{Methodology}"
+                : null,
+
+            // Components section - use Findings for component observations
+            "ComponentsIntro" => !string.IsNullOrWhiteSpace(Findings)
+                ? $"<h2>Reserve Components</h2>\n{Findings}"
+                : null,
+
+            // Conclusion section
+            "ConclusionText" => !string.IsNullOrWhiteSpace(Conclusion)
+                ? $"<h2>Conclusion</h2>\n{Conclusion}"
+                : null,
+
+            // Additional notes can go into disclosures if provided
+            "DisclosuresLaws" => AdditionalNotes,
+
+            // Let these blocks use template with data-driven content:
+            // CoverLogo, CoverTitle, CoverAssociationInfo, CoverCompanyInfo
+            // ExecSummaryFindings (needs calculated values)
+            // FundStatusSummary, ContributionScheduleTable (needs calculated tables)
+            // SignatureIntro, SignatureBlocks
+            // AssumptionsInflation, AssumptionsInterest
+            // OperatingVsReservesGuidance, ComponentsFourPartTest
+            // InfoFurnishedTable, DefinitionsGlossary
+            // PhotoGallery, VendorCredentials
+            _ => null
+        };
+    }
+
+    private string? CombineEvaluationContent()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(Introduction)) parts.Add(Introduction);
+        if (!string.IsNullOrWhiteSpace(PropertyDescription)) parts.Add(PropertyDescription);
+        if (!string.IsNullOrWhiteSpace(Findings)) parts.Add(Findings);
+        return parts.Count > 0 ? string.Join("\n", parts) : null;
+    }
 }

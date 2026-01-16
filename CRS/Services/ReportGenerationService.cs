@@ -409,6 +409,7 @@ public class ReportGenerationService : IReportGenerationService
                 Version = nextVersion,
                 Title = options.CustomTitle ?? $"{GetReportTypeDisplayName(options.ReportType)} v{nextVersion}",
                 StorageUrl = pdfStorageUrl ?? excelStorageUrl ?? string.Empty,
+                ExcelStorageUrl = excelStorageUrl,
                 ContentType = options.GeneratePdf ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 FileSizeBytes = totalFileSize,
                 PageCount = pageCount,

@@ -311,19 +311,19 @@
                                              HelperText="Normally found in the policy declarations pages"
                                              Disabled="@isReadOnly" />
                         </MudItem>
-                        <MudItem xs="12" md="6">
-                            <MudNumericField Label="Interest Rate on Reserve Funds (%)"
-                                             @bind-Value="financialInfo.InterestRateOnReserveFunds"
-                                             Format="N2"
-                                             Variant="Variant.Outlined"
-                                             Adornment="Adornment.End"
-                                             AdornmentText="%"
-                                             Min="0"
-                                             Max="100"
-                                             HelperText="% of interest being earned on reserve funds (if any)"
-                                             Disabled="@isReadOnly" />
-                        </MudItem>
-                    </MudGrid>
+                            <MudItem xs="12" md="6">
+                                <MudNumericField Label="Interest Rate on Reserve Funds (%)"
+                                                 @bind-Value="interestRateDisplay"
+                                                 Format="N2"
+                                                 Variant="Variant.Outlined"
+                                                 Adornment="Adornment.End"
+                                                 AdornmentText="%"
+                                                 Min="0"
+                                                 Max="100"
+                                                 HelperText="% of interest being earned on reserve funds (if any)"
+                                                 Disabled="@isReadOnly" />
+                            </MudItem>
+                        </MudGrid>
 
                     <!-- Building Component Information -->
                     <MudText Typo="Typo.h6" Class="mb-3 mt-6">
@@ -497,6 +497,18 @@
 
     private ReserveStudy? reserveStudy;
     private Models.FinancialInfo financialInfo = new();
+
+    // Display value for interest rate - shows as percentage (e.g., 5 for 5%)
+    // Model stores as decimal (e.g., 0.05 for 5%)
+    private decimal? interestRateDisplay
+    {
+        get => financialInfo.InterestRateOnReserveFunds.HasValue 
+            ? financialInfo.InterestRateOnReserveFunds.Value * 100m 
+            : null;
+        set => financialInfo.InterestRateOnReserveFunds = value.HasValue 
+            ? value.Value / 100m 
+            : null;
+    }
 
     protected override async Task OnInitializedAsync() {
         await CheckUserRole();

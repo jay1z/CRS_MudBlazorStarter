@@ -22,24 +22,43 @@ public class ReserveStudyAdapter
         ReserveStudy study,
         TenantReserveSettings tenantSettings)
     {
+        // Get financial info - primary source of financial data
+        var financialInfo = study.FinancialInfo;
+
+        // Starting balance: prefer FinancialInfo.JanuaryFirstReserveBalance, fallback to study.CurrentReserveFunds
+        var startingBalance = financialInfo?.JanuaryFirstReserveBalance 
+            ?? study.CurrentReserveFunds 
+            ?? 0m;
+
+        // Annual contribution: prefer FinancialInfo.BudgetedContributionCurrentYear, 
+        // fallback to study.MonthlyReserveContribution * 12
+        var annualContribution = financialInfo?.BudgetedContributionCurrentYear 
+            ?? (study.MonthlyReserveContribution ?? 0m) * 12m;
+
+        // Interest rate: prefer FinancialInfo.InterestRateOnReserveFunds, fallback to study/tenant
+        // NOTE: All rate sources now store in decimal form (e.g., 0.05 for 5%)
+        var interestRate = financialInfo?.InterestRateOnReserveFunds 
+            ?? study.AnnualInterestRate 
+            ?? tenantSettings.DefaultInterestRateAnnual;
+
         var input = new ReserveStudyInput
         {
             // Use study date or current year
             StartYear = study.StudyDate?.Year ?? DateTime.UtcNow.Year,
-            
+
             // Projection years from tenant settings
             ProjectionYears = tenantSettings.DefaultProjectionYears,
-            
-            // Starting balance from study's current reserve funds
-            StartingBalance = study.CurrentReserveFunds ?? 0m,
-            
-            // Rates from study or tenant defaults
+
+            // Starting balance from FinancialInfo or study
+            StartingBalance = startingBalance,
+
+            // Rates
             InflationRateDefault = study.AnnualInflationRate ?? tenantSettings.DefaultInflationRate,
-            InterestRateAnnual = study.AnnualInterestRate ?? tenantSettings.DefaultInterestRateAnnual,
-            
-            // Contribution from monthly value (annualized)
-            InitialAnnualContribution = (study.MonthlyReserveContribution ?? 0m) * 12m,
-            
+            InterestRateAnnual = interestRate,
+
+            // Annual contribution from FinancialInfo or study
+            InitialAnnualContribution = annualContribution,
+
             // Use tenant defaults for other settings
             InterestModel = tenantSettings.DefaultInterestModel,
             ContributionFrequency = tenantSettings.DefaultContributionFrequency,
@@ -48,7 +67,7 @@ public class ReserveStudyAdapter
             RoundingPolicy = tenantSettings.DefaultRoundingPolicy,
             ContributionStrategy = tenantSettings.DefaultContributionStrategy,
             ContributionEscalationRate = tenantSettings.DefaultContributionEscalationRate,
-            
+
             // Convert elements to components
             Components = ConvertElementsToComponents(study)
         };
