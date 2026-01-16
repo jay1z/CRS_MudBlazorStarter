@@ -1,0 +1,308 @@
+﻿@page "/MyInvoices"
+@attribute [Authorize(Policy = "RequireHOAUser")]
+
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
+@inject IInvoicePdfService PdfService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>My Invoices</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
+    <!-- Header -->
+    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Receipt" Style="color: white; font-size: 40px;" />
+                <div>
+                    <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">My Invoices</MudText>
+                    <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.8);">
+                        View and pay invoices for your reserve studies
+                    </MudText>
+                </div>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    }
+    else
+    {
+        <!-- Summary Cards -->
+        <MudGrid Spacing="3" Class="mb-4">
+            <MudItem xs="6" sm="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; text-align: center; border-top: 4px solid #3b82f6;">
+                    <MudText Typo="Typo.h4" Style="font-weight: 700; color: #3b82f6;">@_invoices.Count</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">Total Invoices</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; text-align: center; border-top: 4px solid #f59e0b;">
+                    <MudText Typo="Typo.h4" Style="font-weight: 700; color: #f59e0b;">@_totalBalance.ToString("C0")</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">Balance Due</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; text-align: center; border-top: 4px solid #10b981;">
+                    <MudText Typo="Typo.h4" Style="font-weight: 700; color: #10b981;">@_invoices.Count(i => i.Status == InvoiceStatus.Paid)</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">Paid</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; text-align: center; border-top: 4px solid #ef4444;">
+                    <MudText Typo="Typo.h4" Style="font-weight: 700; color: #ef4444;">@_invoices.Count(i => i.Status == InvoiceStatus.Overdue)</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">Overdue</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Status Filter Tabs -->
+        <MudPaper Elevation="2" Class="pa-2 mb-4" Style="border-radius: 12px;">
+            <MudChipSet T="string" @bind-SelectedValue="_selectedFilter" SelectionMode="SelectionMode.SingleSelection" CheckMark="false">
+                <MudChip Value="@("all")" Style="@GetFilterStyle("all")">All (@_invoices.Count)</MudChip>
+                <MudChip Value="@("unpaid")" Style="@GetFilterStyle("unpaid")">Unpaid (@_invoices.Count(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Voided))</MudChip>
+                <MudChip Value="@("paid")" Style="@GetFilterStyle("paid")">Paid (@_invoices.Count(i => i.Status == InvoiceStatus.Paid))</MudChip>
+            </MudChipSet>
+        </MudPaper>
+
+        <!-- Invoices List -->
+        @if (!FilteredInvoices.Any())
+        {
+            <MudPaper Elevation="0" Class="pa-8" Style="border: 2px dashed #e0e0e0; border-radius: 12px; text-align: center; background: #fafafa;">
+                <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Style="font-size: 64px; color: #ccc;" />
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">No invoices found</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        @if (_selectedFilter == "all")
+                        {
+                            <text>You don't have any invoices yet.</text>
+                        }
+                        else
+                        {
+                            <text>No invoices match the selected filter.</text>
+                        }
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                @foreach (var invoice in FilteredInvoices.OrderByDescending(i => i.InvoiceDate))
+                {
+                    <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+                        <MudGrid>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.h6" Style="font-weight: 600;">@invoice.InvoiceNumber</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(invoice.Status)" Variant="Variant.Filled">
+                                        @invoice.Status
+                                    </MudChip>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.caption" Style="color: #666;">Property</MudText>
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500;">@(invoice.ReserveStudy?.Community?.Name ?? "N/A")</MudText>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="2">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.caption" Style="color: #666;">Invoice Date</MudText>
+                                    <MudText Typo="Typo.body2">@invoice.InvoiceDate.ToString("MMM d, yyyy")</MudText>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="2">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.caption" Style="color: #666;">Due Date</MudText>
+                                    <MudText Typo="Typo.body2" Style="@(invoice.Status == InvoiceStatus.Overdue ? "color: #ef4444; font-weight: 600;" : "")">
+                                        @invoice.DueDate.ToString("MMM d, yyyy")
+                                    </MudText>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="12" sm="4" md="2">
+                                <MudStack Spacing="0" Style="text-align: right;">
+                                    <MudText Typo="Typo.caption" Style="color: #666;">Amount</MudText>
+                                    <MudText Typo="Typo.h6" Style="font-weight: 700;">@invoice.TotalAmount.ToString("C")</MudText>
+                                    @if (invoice.AmountPaid > 0 && invoice.Status != InvoiceStatus.Paid)
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: #10b981;">
+                                            Paid: @invoice.AmountPaid.ToString("C")
+                                        </MudText>
+                                    }
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                        
+                        <MudDivider Class="my-3" />
+                        
+                        <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                                       OnClick="@(() => DownloadPdfAsync(invoice))"
+                                       Style="text-transform: none;">
+                                Download PDF
+                            </MudButton>
+                            @if (invoice.Status != InvoiceStatus.Paid && invoice.Status != InvoiceStatus.Voided)
+                            {
+                                @if (!string.IsNullOrEmpty(invoice.AccessToken))
+                                {
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Success"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.CreditCard"
+                                               Href="@($"/invoice/{invoice.AccessToken}")"
+                                               Style="text-transform: none;">
+                                        Pay @invoice.BalanceDue.ToString("C")
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Style="color: #666; align-self: center;">
+                                        Contact us to pay this invoice
+                                    </MudText>
+                                }
+                            }
+                            @if (invoice.Status == InvoiceStatus.Paid)
+                            {
+                                <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Icon="@Icons.Material.Filled.CheckCircle">
+                                    Paid on @(invoice.PaidAt?.ToString("MMM d, yyyy") ?? "N/A")
+                                </MudChip>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudStack>
+        }
+    }
+</MudContainer>
+
+@code {
+    private List<Invoice> _invoices = new();
+    private decimal _totalBalance = 0;
+    private bool _isLoading = true;
+    private string _selectedFilter = "all";
+    private Guid? _currentUserId;
+
+    private IEnumerable<Invoice> FilteredInvoices => _selectedFilter switch
+    {
+        "unpaid" => _invoices.Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Voided),
+        "paid" => _invoices.Where(i => i.Status == InvoiceStatus.Paid),
+        _ => _invoices
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+        {
+            _currentUserId = userId;
+        }
+
+        await LoadInvoicesAsync();
+    }
+
+    private async Task LoadInvoicesAsync()
+    {
+        try
+        {
+            _isLoading = true;
+
+            if (!_currentUserId.HasValue || !TenantContext.TenantId.HasValue)
+            {
+                return;
+            }
+
+            await using var context = await DbFactory.CreateDbContextAsync();
+
+            // Get all reserve studies for this HOA user
+            var userStudyIds = await context.ReserveStudies
+                .Where(rs => rs.ApplicationUserId == _currentUserId.Value && 
+                            rs.IsActive &&
+                            rs.TenantId == TenantContext.TenantId.Value)
+                .Select(rs => rs.Id)
+                .ToListAsync();
+
+            // Get invoices for those studies (exclude drafts)
+            _invoices = await context.Invoices
+                .Include(i => i.ReserveStudy)
+                    .ThenInclude(rs => rs!.Community)
+                .Where(i => userStudyIds.Contains(i.ReserveStudyId) &&
+                           i.DateDeleted == null &&
+                           i.Status != InvoiceStatus.Draft)
+                .OrderByDescending(i => i.InvoiceDate)
+                .ToListAsync();
+
+            _totalBalance = _invoices
+                .Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Voided)
+                .Sum(i => i.BalanceDue);
+        }
+        catch (Exception)
+        {
+            _invoices = new List<Invoice>();
+            _totalBalance = 0;
+            Snackbar.Add("Error loading invoices", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task DownloadPdfAsync(Invoice invoice)
+    {
+        try
+        {
+            var pdfBytes = await PdfService.GeneratePdfAsync(invoice.Id);
+            var fileName = $"Invoice_{invoice.InvoiceNumber}.pdf";
+            
+            var base64 = Convert.ToBase64String(pdfBytes);
+            await JS.InvokeVoidAsync("downloadFileFromBase64", base64, fileName, "application/pdf");
+            
+            Snackbar.Add("PDF downloaded successfully", Severity.Success);
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Error downloading PDF", Severity.Error);
+        }
+    }
+
+    private Color GetStatusColor(InvoiceStatus status)
+    {
+        return status switch
+        {
+            InvoiceStatus.Draft => Color.Default,
+            InvoiceStatus.Finalized => Color.Info,
+            InvoiceStatus.Sent => Color.Primary,
+            InvoiceStatus.Viewed => Color.Primary,
+            InvoiceStatus.PartiallyPaid => Color.Warning,
+            InvoiceStatus.Paid => Color.Success,
+            InvoiceStatus.Overdue => Color.Error,
+            InvoiceStatus.Voided => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private string GetFilterStyle(string filter)
+    {
+        var isSelected = _selectedFilter == filter;
+        return isSelected 
+            ? "background: #667eea; color: white; font-weight: 600;" 
+            : "background: #f5f5f5; color: #666;";
+    }
+}

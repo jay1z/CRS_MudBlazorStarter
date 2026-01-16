@@ -1,0 +1,559 @@
+﻿@page "/Invoices"
+@attribute [Authorize(Policy = "RequireTenantStaff")]
+
+@using CRS.Models
+@using CRS.Models.Emails
+@using CRS.Models.Email
+@using CRS.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using System.Globalization
+@using Coravel.Mailer.Mail.Interfaces
+
+@inject IInvoiceService InvoiceService
+@inject IInvoicePdfService PdfService
+@inject IMailer Mailer
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+
+<PageTitle>Invoices</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
+    <!-- Header -->
+    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Receipt" Style="color: white; font-size: 40px;" />
+                <div>
+                    <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">Invoices</MudText>
+                    <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.8);">
+                        Manage all invoices across reserve studies
+                    </MudText>
+                </div>
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                @if (_selectedInvoices.Any())
+                {
+                    <MudButton Variant="Variant.Filled"
+                               StartIcon="@Icons.Material.Filled.NotificationsActive"
+                               OnClick="BulkSendRemindersAsync"
+                               Disabled="@_isBulkProcessing"
+                               Style="background: #f59e0b; color: white;">
+                        Send Reminders (@_selectedInvoices.Count)
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                               OnClick="BulkExportPdfAsync"
+                               Disabled="@_isBulkProcessing"
+                               Style="background: #3b82f6; color: white;">
+                        Export PDFs (@_selectedInvoices.Count)
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               StartIcon="@Icons.Material.Filled.Cancel"
+                               OnClick="BulkVoidAsync"
+                               Disabled="@_isBulkProcessing"
+                               Style="background: #ef4444; color: white;">
+                        Void (@_selectedInvoices.Count)
+                    </MudButton>
+                    <MudButton Variant="Variant.Text"
+                               StartIcon="@Icons.Material.Filled.Clear"
+                               OnClick="ClearSelection"
+                               Style="color: white;">
+                        Clear
+                    </MudButton>
+                }
+                <MudButton Variant="Variant.Filled"
+                           StartIcon="@Icons.Material.Filled.Download"
+                           OnClick="ExportToCsvAsync"
+                           Style="background: rgba(255,255,255,0.2); color: white;">
+                    Export CSV
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    <!-- Summary Cards -->
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; text-align: center; border-top: 4px solid #3b82f6;">
+                <MudText Typo="Typo.h4" Style="font-weight: 700; color: #3b82f6;">@_summary.TotalCount</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Total Invoices</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; text-align: center; border-top: 4px solid #10b981;">
+                <MudText Typo="Typo.h4" Style="font-weight: 700; color: #10b981;">@_summary.TotalPaid.ToString("C0")</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Collected</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; text-align: center; border-top: 4px solid #f59e0b;">
+                <MudText Typo="Typo.h4" Style="font-weight: 700; color: #f59e0b;">@_summary.TotalOutstanding.ToString("C0")</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Outstanding</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; text-align: center; border-top: 4px solid #ef4444;">
+                <MudText Typo="Typo.h4" Style="font-weight: 700; color: #ef4444;">@_summary.OverdueCount</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Overdue</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Filters -->
+    <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius: 12px;">
+        <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Center" Style="flex-wrap: wrap;">
+            <MudTextField @bind-Value="_searchText"
+                          Placeholder="Search invoices..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          DebounceInterval="300"
+                          Style="max-width: 300px;" />
+            
+            <MudSelect T="InvoiceStatus?" @bind-Value="_statusFilter" Label="Status" Style="min-width: 150px;" Clearable="true">
+                @foreach (var status in Enum.GetValues<InvoiceStatus>())
+                {
+                    <MudSelectItem Value="@((InvoiceStatus?)status)">@status</MudSelectItem>
+                }
+            </MudSelect>
+            
+            <MudSpacer />
+            
+            <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+                <MudButton OnClick="@(() => SetDateFilter("all"))" 
+                           Color="@(_dateFilter == "all" ? Color.Primary : Color.Default)">All</MudButton>
+                <MudButton OnClick="@(() => SetDateFilter("30"))"
+                           Color="@(_dateFilter == "30" ? Color.Primary : Color.Default)">30 Days</MudButton>
+                <MudButton OnClick="@(() => SetDateFilter("90"))"
+                           Color="@(_dateFilter == "90" ? Color.Primary : Color.Default)">90 Days</MudButton>
+                <MudButton OnClick="@(() => SetDateFilter("year"))"
+                           Color="@(_dateFilter == "year" ? Color.Primary : Color.Default)">This Year</MudButton>
+            </MudButtonGroup>
+        </MudStack>
+    </MudPaper>
+
+    <!-- Invoices Table -->
+    <MudPaper Elevation="2" Style="border-radius: 12px; overflow: hidden;">
+        @if (_isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+
+        <MudTable Items="@FilteredInvoices" 
+                  Dense="true" 
+                  Hover="true" 
+                  Loading="@_isLoading"
+                  MultiSelection="true"
+                  @bind-SelectedItems="_selectedInvoices"
+                  SortLabel="Sort By"
+                  Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<Invoice, object>(x => x.InvoiceNumber)">Invoice #</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Invoice, object>(x => x.BillToName ?? string.Empty)">Client</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Invoice, object>(x => x.InvoiceDate)">Date</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Invoice, object>(x => x.DueDate)">Due Date</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Invoice, object>(x => x.TotalAmount)">Amount</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Invoice, object>(x => x.Status)">Status</MudTableSortLabel></MudTh>
+                <MudTh Style="width: 120px;">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Invoice #">
+                    <MudLink Href="@($"/Invoices/{context.Id}")" Style="font-weight: 600;">
+                        @context.InvoiceNumber
+                    </MudLink>
+                </MudTd>
+                <MudTd DataLabel="Client">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.BillToName</MudText>
+                        @if (context.ReserveStudy?.Community != null)
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #666;">@context.ReserveStudy.Community.Name</MudText>
+                        }
+                    </MudStack>
+                </MudTd>
+                <MudTd DataLabel="Date">@context.InvoiceDate.ToString("MMM d, yyyy")</MudTd>
+                <MudTd DataLabel="Due Date">
+                    <span style="@(IsOverdue(context) ? "color: #ef4444; font-weight: 600;" : "")">
+                        @context.DueDate.ToString("MMM d, yyyy")
+                    </span>
+                </MudTd>
+                <MudTd DataLabel="Amount">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">@context.TotalAmount.ToString("C")</MudText>
+                        @if (context.AmountPaid > 0 && context.Status != InvoiceStatus.Paid)
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #10b981;">
+                                Paid: @context.AmountPaid.ToString("C")
+                            </MudText>
+                        }
+                    </MudStack>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled">
+                        @context.Status
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudStack Row="true" Spacing="1">
+                        <MudTooltip Text="View Details">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                           Size="Size.Small"
+                                           Href="@($"/Invoices/{context.Id}")" />
+                        </MudTooltip>
+                        <MudTooltip Text="Download PDF">
+                            <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf"
+                                           Size="Size.Small"
+                                           Color="Color.Error"
+                                           OnClick="@(() => DownloadPdfAsync(context))" />
+                        </MudTooltip>
+                        @if (context.ReserveStudyId != Guid.Empty)
+                        {
+                            <MudTooltip Text="View Study">
+                                <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                               Size="Size.Small"
+                                               Color="Color.Primary"
+                                               Href="@($"/ReserveStudies/{context.ReserveStudyId}/Details")" />
+                            </MudTooltip>
+                        }
+                    </MudStack>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Typo="Typo.body1" Class="pa-4" Style="color: #666;">No invoices found</MudText>
+                        </NoRecordsContent>
+                        <PagerContent>
+                            <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+                        </PagerContent>
+                    </MudTable>
+                </MudPaper>
+            </MudContainer>
+
+            @code {
+                private List<Invoice> _invoices = [];
+                private HashSet<Invoice> _selectedInvoices = [];
+                private bool _isLoading = true;
+                private bool _isBulkProcessing = false;
+                private string _searchText = "";
+                private InvoiceStatus? _statusFilter;
+                private string _dateFilter = "all";
+                private InvoiceSummary _summary = new();
+
+                protected override async Task OnInitializedAsync()
+                {
+                    await LoadInvoicesAsync();
+                }
+
+                private async Task LoadInvoicesAsync()
+                {
+                    _isLoading = true;
+                    try
+                    {
+            // Get all unpaid invoices + recent paid ones
+            var unpaid = await InvoiceService.GetUnpaidAsync();
+            var paid = await InvoiceService.GetByStatusAsync(InvoiceStatus.Paid);
+            
+            _invoices = unpaid.Concat(paid).OrderByDescending(i => i.InvoiceDate).ToList();
+            CalculateSummary();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void CalculateSummary()
+    {
+        _summary = new InvoiceSummary
+        {
+            TotalCount = _invoices.Count,
+            TotalPaid = _invoices.Where(i => i.Status == InvoiceStatus.Paid).Sum(i => i.TotalAmount),
+            TotalOutstanding = _invoices.Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Voided)
+                                        .Sum(i => i.TotalAmount - i.AmountPaid),
+            OverdueCount = _invoices.Count(i => i.Status == InvoiceStatus.Overdue)
+        };
+    }
+
+    private IEnumerable<Invoice> FilteredInvoices
+    {
+        get
+        {
+            var result = _invoices.AsEnumerable();
+
+            // Status filter
+            if (_statusFilter.HasValue)
+                result = result.Where(i => i.Status == _statusFilter.Value);
+
+            // Date filter
+            result = _dateFilter switch
+            {
+                "30" => result.Where(i => i.InvoiceDate >= DateTime.UtcNow.AddDays(-30)),
+                "90" => result.Where(i => i.InvoiceDate >= DateTime.UtcNow.AddDays(-90)),
+                "year" => result.Where(i => i.InvoiceDate.Year == DateTime.UtcNow.Year),
+                _ => result
+            };
+
+            // Search filter
+            if (!string.IsNullOrWhiteSpace(_searchText))
+            {
+                var search = _searchText.ToLowerInvariant();
+                result = result.Where(i =>
+                    (i.InvoiceNumber?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (i.BillToName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (i.BillToEmail?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (i.ReserveStudy?.Community?.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+
+            return result;
+        }
+    }
+
+    private void SetDateFilter(string filter)
+    {
+        _dateFilter = filter;
+    }
+
+    private async Task DownloadPdfAsync(Invoice invoice)
+    {
+        try
+        {
+            var pdfBytes = await PdfService.GeneratePdfAsync(invoice.Id);
+            var filename = PdfService.GetPdfFilename(invoice);
+            var base64 = Convert.ToBase64String(pdfBytes);
+            await JS.InvokeVoidAsync("downloadFileFromBase64", filename, base64, "application/pdf");
+            Snackbar.Add($"Downloaded {filename}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to download PDF: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ExportToCsvAsync()
+    {
+        try
+        {
+            var csv = new System.Text.StringBuilder();
+            
+            // Header row - QuickBooks compatible format
+            csv.AppendLine("InvoiceNo,Customer,InvoiceDate,DueDate,Amount,AmountPaid,Status,Email,Project");
+
+            foreach (var invoice in FilteredInvoices)
+            {
+                csv.AppendLine($"\"{invoice.InvoiceNumber}\"," +
+                              $"\"{EscapeCsv(invoice.BillToName)}\"," +
+                              $"\"{invoice.InvoiceDate:yyyy-MM-dd}\"," +
+                              $"\"{invoice.DueDate:yyyy-MM-dd}\"," +
+                              $"\"{invoice.TotalAmount:F2}\"," +
+                              $"\"{invoice.AmountPaid:F2}\"," +
+                              $"\"{invoice.Status}\"," +
+                              $"\"{EscapeCsv(invoice.BillToEmail)}\"," +
+                              $"\"{EscapeCsv(invoice.ReserveStudy?.Community?.Name)}\"");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+            var base64 = Convert.ToBase64String(bytes);
+            var filename = $"invoices-export-{DateTime.Now:yyyy-MM-dd}.csv";
+            
+            await JS.InvokeVoidAsync("downloadFileFromBase64", filename, base64, "text/csv");
+            Snackbar.Add($"Exported {FilteredInvoices.Count()} invoices", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return value.Replace("\"", "\"\"");
+    }
+
+    private static bool IsOverdue(Invoice invoice) =>
+        invoice.DueDate < DateTime.UtcNow.Date &&
+        invoice.Status != InvoiceStatus.Paid &&
+        invoice.Status != InvoiceStatus.Voided;
+
+        private static Color GetStatusColor(InvoiceStatus status) => status switch
+        {
+            InvoiceStatus.Draft => Color.Default,
+            InvoiceStatus.Finalized => Color.Info,
+            InvoiceStatus.Sent => Color.Primary,
+            InvoiceStatus.Viewed => Color.Secondary,
+            InvoiceStatus.PartiallyPaid => Color.Warning,
+            InvoiceStatus.Paid => Color.Success,
+            InvoiceStatus.Overdue => Color.Error,
+            InvoiceStatus.Voided => Color.Dark,
+            _ => Color.Default
+        };
+
+        private void ClearSelection()
+        {
+            _selectedInvoices.Clear();
+        }
+
+        private async Task BulkSendRemindersAsync()
+        {
+            if (!_selectedInvoices.Any()) return;
+
+            var eligibleInvoices = _selectedInvoices
+                .Where(i => i.Status != InvoiceStatus.Paid && 
+                           i.Status != InvoiceStatus.Voided && 
+                           !string.IsNullOrEmpty(i.BillToEmail))
+                .ToList();
+
+            if (!eligibleInvoices.Any())
+            {
+                Snackbar.Add("No eligible invoices for reminders", Severity.Warning);
+                return;
+            }
+
+            var confirm = await DialogService.ShowMessageBox(
+                "Send Bulk Reminders",
+                $"Send payment reminders to {eligibleInvoices.Count} invoice(s)?",
+                yesText: "Send All",
+                cancelText: "Cancel");
+
+            if (confirm != true) return;
+
+            _isBulkProcessing = true;
+            try
+            {
+                var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
+                var successCount = 0;
+
+                foreach (var invoice in eligibleInvoices)
+                {
+                    try
+                    {
+                        var daysOverdue = invoice.DueDate < DateTime.UtcNow.Date 
+                            ? (DateTime.UtcNow.Date - invoice.DueDate).Days 
+                            : 0;
+
+                        var emailModel = new InvoiceEmail
+                        {
+                            Invoice = invoice,
+                            ReserveStudy = invoice.ReserveStudy,
+                            BaseUrl = baseUrl,
+                            InvoiceViewUrl = $"{baseUrl}/Invoices/{invoice.Id}",
+                            IsReminder = true,
+                            DaysPastDue = daysOverdue
+                        };
+
+                        var mailable = new InvoiceMailable(emailModel, invoice.BillToEmail!);
+                        await Mailer.SendAsync(mailable);
+                        await InvoiceService.RecordReminderSentAsync(invoice.Id);
+                        successCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Snackbar.Add($"Failed for {invoice.InvoiceNumber}: {ex.Message}", Severity.Error);
+                    }
+                }
+
+                Snackbar.Add($"Sent {successCount} reminder(s)", Severity.Success);
+                _selectedInvoices.Clear();
+                await LoadInvoicesAsync();
+            }
+            finally
+            {
+                _isBulkProcessing = false;
+            }
+        }
+
+        private async Task BulkExportPdfAsync()
+        {
+            if (!_selectedInvoices.Any()) return;
+
+            _isBulkProcessing = true;
+            try
+            {
+                // For now, download each PDF individually
+                // TODO: Consider creating a ZIP file with all PDFs
+                foreach (var invoice in _selectedInvoices)
+                {
+                    try
+                    {
+                        var pdfBytes = await PdfService.GeneratePdfAsync(invoice.Id);
+                        var filename = PdfService.GetPdfFilename(invoice);
+                        var base64 = Convert.ToBase64String(pdfBytes);
+                        await JS.InvokeVoidAsync("downloadFileFromBase64", filename, base64, "application/pdf");
+                        await Task.Delay(100); // Small delay between downloads
+                    }
+                    catch (Exception ex)
+                    {
+                        Snackbar.Add($"Failed for {invoice.InvoiceNumber}: {ex.Message}", Severity.Error);
+                    }
+                }
+
+                Snackbar.Add($"Downloaded {_selectedInvoices.Count} PDF(s)", Severity.Success);
+                _selectedInvoices.Clear();
+            }
+            finally
+            {
+                _isBulkProcessing = false;
+            }
+        }
+
+        private async Task BulkVoidAsync()
+        {
+            if (!_selectedInvoices.Any()) return;
+
+            var eligibleInvoices = _selectedInvoices
+                .Where(i => i.Status != InvoiceStatus.Paid && 
+                           i.Status != InvoiceStatus.Voided && 
+                           i.Status != InvoiceStatus.Draft)
+                .ToList();
+
+            if (!eligibleInvoices.Any())
+            {
+                Snackbar.Add("No eligible invoices to void", Severity.Warning);
+                return;
+            }
+
+            var confirm = await DialogService.ShowMessageBox(
+                "Void Invoices",
+                $"Are you sure you want to void {eligibleInvoices.Count} invoice(s)? This action cannot be undone.",
+                yesText: "Void All",
+                cancelText: "Cancel");
+
+            if (confirm != true) return;
+
+            _isBulkProcessing = true;
+            try
+            {
+                var successCount = 0;
+
+                foreach (var invoice in eligibleInvoices)
+                {
+                    try
+                    {
+                        await InvoiceService.VoidAsync(invoice.Id, "Bulk void operation");
+                        successCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Snackbar.Add($"Failed for {invoice.InvoiceNumber}: {ex.Message}", Severity.Error);
+                    }
+                }
+
+                Snackbar.Add($"Voided {successCount} invoice(s)", Severity.Success);
+                _selectedInvoices.Clear();
+                await LoadInvoicesAsync();
+            }
+            finally
+            {
+                _isBulkProcessing = false;
+            }
+        }
+
+        private class InvoiceSummary
+        {
+            public int TotalCount { get; set; }
+            public decimal TotalPaid { get; set; }
+            public decimal TotalOutstanding { get; set; }
+            public int OverdueCount { get; set; }
+        }
+    }

@@ -52,6 +52,18 @@ app.Services.UseScheduler(scheduler =>
         .Schedule<CRS.Jobs.TenantLifecycleJob>()
         .DailyAtHour(2)
         .PreventOverlapping(nameof(CRS.Jobs.TenantLifecycleJob));
+
+    // Run late interest calculation daily at 3 AM
+    scheduler
+        .Schedule<CRS.Jobs.LateInterestInvocable>()
+        .DailyAtHour(3)
+        .PreventOverlapping(nameof(CRS.Jobs.LateInterestInvocable));
+
+    // Run automated invoice reminders daily at 8 AM
+    scheduler
+        .Schedule<CRS.Jobs.InvoiceReminderInvocable>()
+        .DailyAtHour(8)
+        .PreventOverlapping(nameof(CRS.Jobs.InvoiceReminderInvocable));
 });
 
 var provider = app.Services;
@@ -180,13 +192,20 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<INarrativeTemplateService, NarrativeTemplateService>();
     builder.Services.AddScoped<IReportContextBuilder, ReportContextBuilder>();
     builder.Services.AddSingleton<IPdfConverter, PuppeteerPdfConverter>(); // PuppeteerSharp HTML to PDF converter
-    
+
     // Scope Comparison Service (for tracking scope variance after site visits)
     builder.Services.AddScoped<CRS.Services.Interfaces.IScopeComparisonService, CRS.Services.Workflow.ScopeComparisonService>();
-    
+
     // Click-Wrap Agreement Services
     builder.Services.AddScoped<CRS.Services.Interfaces.IProposalAcceptanceService, CRS.Services.ProposalAcceptanceService>();
-    
+
+    // Invoicing Services
+    builder.Services.AddScoped<CRS.Services.Interfaces.IInvoiceService, CRS.Services.InvoiceService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.IInvoicePdfService, CRS.Services.InvoicePdfService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.IInvoicePaymentService, CRS.Services.InvoicePaymentService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.ICreditMemoService, CRS.Services.CreditMemoService>();
+    builder.Services.AddScoped<CRS.Services.ICreditMemoPdfService, CRS.Services.CreditMemoPdfService>();
+
     // System-wide settings
     builder.Services.AddScoped<CRS.Services.Interfaces.ISystemSettingsService, CRS.Services.SystemSettingsService>();
 
@@ -224,7 +243,11 @@ void ConfigureServices(WebApplicationBuilder builder) {
     
     // Register lifecycle job
     builder.Services.AddScoped<CRS.Jobs.TenantLifecycleJob>();
-    
+
+    // Register invoice jobs
+    builder.Services.AddScoped<CRS.Jobs.LateInterestInvocable>();
+    builder.Services.AddScoped<CRS.Jobs.InvoiceReminderInvocable>();
+
     // Phase 1: Register audit log archiving background service
     builder.Services.AddHostedService<AuditLogArchiveService>();
 

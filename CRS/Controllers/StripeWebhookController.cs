@@ -12,6 +12,8 @@ using CRS.Services.Email; // BasicMailable (unused here but kept if needed later
 using CRS.Services.Provisioning; // owner provisioning service
 using CRS.Models; // for SubscriptionStatus enum
 
+using CRS.Services.Interfaces;
+
 namespace CRS.Controllers {
     [ApiController]
     [Route("api/stripe/webhook")]
@@ -23,8 +25,9 @@ namespace CRS.Controllers {
         private readonly IMailer _mailer;
         private readonly IOwnerProvisioningService _ownerProvisioning;
         private readonly IStripeClientFactory _stripeClientFactory;
+        private readonly IInvoicePaymentService _invoicePaymentService;
 
-        public StripeWebhookController(ILogger<StripeWebhookController> logger, ApplicationDbContext db, IBillingService billingService, IOptions<StripeOptions> stripeOptions, IMailer mailer, IOwnerProvisioningService ownerProvisioning, IStripeClientFactory stripeClientFactory) {
+        public StripeWebhookController(ILogger<StripeWebhookController> logger, ApplicationDbContext db, IBillingService billingService, IOptions<StripeOptions> stripeOptions, IMailer mailer, IOwnerProvisioningService ownerProvisioning, IStripeClientFactory stripeClientFactory, IInvoicePaymentService invoicePaymentService) {
             _logger = logger;
             _db = db;
             _billingService = billingService;
@@ -32,6 +35,7 @@ namespace CRS.Controllers {
             _mailer = mailer;
             _ownerProvisioning = ownerProvisioning;
             _stripeClientFactory = stripeClientFactory;
+            _invoicePaymentService = invoicePaymentService;
         }
 
         [HttpPost]
@@ -81,6 +85,9 @@ namespace CRS.Controllers {
                             break;
                         case "invoice.payment_failed":
                             await HandleInvoicePaymentAsync(stripeEvent, false, ct);
+                            break;
+                        case "payment_intent.succeeded":
+                            await HandlePaymentIntentSucceededAsync(stripeEvent, ct);
                             break;
                         default:
                             _logger.LogInformation("Unhandled Stripe event type {Type}; ignoring", stripeEvent.Type);
@@ -380,15 +387,15 @@ namespace CRS.Controllers {
             // TODO: Send suspension notification email
             // await _emailService.SendSuspensionNoticeAsync(tenant);
             
-            await _db.SaveChangesAsync(ct);
-        }
-
-        private async Task HandleInvoicePaymentAsync(Event stripeEvent, bool succeeded, CancellationToken ct) {
-            var invoice = stripeEvent.Data.Object as Invoice;
-            if (invoice == null) {
-                _logger.LogWarning("Invoice is null for event {EventId}", stripeEvent.Id);
-                return;
+                await _db.SaveChangesAsync(ct);
             }
+
+            private async Task HandleInvoicePaymentAsync(Event stripeEvent, bool succeeded, CancellationToken ct) {
+                var invoice = stripeEvent.Data.Object as Stripe.Invoice;
+                if (invoice == null) {
+                    _logger.LogWarning("Invoice is null for event {EventId}", stripeEvent.Id);
+                    return;
+                }
             
             var customerId = invoice.CustomerId;
             if (string.IsNullOrWhiteSpace(customerId)) {
@@ -445,17 +452,84 @@ namespace CRS.Controllers {
                 }
             }
             
-            await _db.SaveChangesAsync(ct);
-        }
+                        await _db.SaveChangesAsync(ct);
+                    }
 
-        private static CRS.Models.SubscriptionStatus MapStatus(string? stripeStatus) => stripeStatus switch {
-            "active" => CRS.Models.SubscriptionStatus.Active,
-            "trialing" => CRS.Models.SubscriptionStatus.Trialing,
-            "past_due" => CRS.Models.SubscriptionStatus.PastDue,
-            "canceled" => CRS.Models.SubscriptionStatus.Canceled,
-            "unpaid" => CRS.Models.SubscriptionStatus.Unpaid,
-            "incomplete" => CRS.Models.SubscriptionStatus.Incomplete,
-            _ => CRS.Models.SubscriptionStatus.None
-        };
-    }
-}
+                    /// <summary>
+                    /// Handles payment_intent.succeeded events for invoice payments.
+                    /// </summary>
+                    private async Task HandlePaymentIntentSucceededAsync(Event stripeEvent, CancellationToken ct) {
+                        var paymentIntent = stripeEvent.Data.Object as Stripe.PaymentIntent;
+                        if (paymentIntent == null) {
+                            _logger.LogWarning("PaymentIntent is null for event {EventId}", stripeEvent.Id);
+                            return;
+                        }
+
+                        // Check if this payment is for an invoice (has invoice_id in metadata)
+                        if (!paymentIntent.Metadata.TryGetValue("invoice_id", out var invoiceIdStr)) {
+                            _logger.LogInformation("PaymentIntent {PaymentIntentId} has no invoice_id metadata, skipping", paymentIntent.Id);
+                            return;
+                        }
+
+                        if (!Guid.TryParse(invoiceIdStr, out var invoiceId)) {
+                                            _logger.LogWarning("PaymentIntent {PaymentIntentId} has invalid invoice_id: {InvoiceId}", paymentIntent.Id, invoiceIdStr);
+                                            return;
+                                        }
+
+                                        _logger.LogInformation("Processing invoice payment for invoice {InvoiceId} amount {Amount}", invoiceId, paymentIntent.Amount);
+
+                                        // Find the invoice by ID and update payment
+                                        var invoice = await _db.Invoices.FirstOrDefaultAsync(i => i.Id == invoiceId && i.DateDeleted == null, ct);
+                                        if (invoice == null) {
+                                            _logger.LogWarning("Invoice {InvoiceId} not found for payment intent {PaymentIntentId}", invoiceId, paymentIntent.Id);
+                                            return;
+                                        }
+
+                                        var amountPaid = paymentIntent.Amount / 100m; // Convert from cents
+
+                                        // Create payment record for audit trail
+                                        var paymentRecord = new CRS.Models.PaymentRecord
+                                        {
+                                            TenantId = invoice.TenantId,
+                                            InvoiceId = invoiceId,
+                                            Amount = amountPaid,
+                                            PaymentDate = DateTime.UtcNow,
+                                            PaymentMethod = "Stripe",
+                                            ReferenceNumber = paymentIntent.Id,
+                                            StripePaymentIntentId = paymentIntent.Id,
+                                            IsAutomatic = true,
+                                            Notes = "Payment via Stripe Checkout"
+                                        };
+                                        _db.PaymentRecords.Add(paymentRecord);
+
+                                        invoice.AmountPaid += amountPaid;
+                                        invoice.StripePaymentIntentId = paymentIntent.Id;
+                                        invoice.PaymentMethod = "Stripe";
+                                        invoice.PaymentReference = paymentIntent.Id;
+                                        invoice.DateModified = DateTime.UtcNow;
+
+                                        // Update status based on payment
+                                        if (invoice.AmountPaid >= invoice.TotalAmount) {
+                                            invoice.Status = CRS.Models.InvoiceStatus.Paid;
+                                        } else if (invoice.AmountPaid > 0) {
+                                            invoice.Status = CRS.Models.InvoiceStatus.PartiallyPaid;
+                                        }
+
+                                        await _db.SaveChangesAsync(ct);
+
+                                        _logger.LogInformation(
+                                            "Recorded Stripe payment for invoice {InvoiceNumber}: {Amount:C} via PaymentIntent {PaymentIntent}",
+                                            invoice.InvoiceNumber, amountPaid, paymentIntent.Id);
+                                    }
+
+                                    private static CRS.Models.SubscriptionStatus MapStatus(string? stripeStatus) => stripeStatus switch {
+                                        "active" => CRS.Models.SubscriptionStatus.Active,
+                                        "trialing" => CRS.Models.SubscriptionStatus.Trialing,
+                                        "past_due" => CRS.Models.SubscriptionStatus.PastDue,
+                                        "canceled" => CRS.Models.SubscriptionStatus.Canceled,
+                                        "unpaid" => CRS.Models.SubscriptionStatus.Unpaid,
+                                        "incomplete" => CRS.Models.SubscriptionStatus.Incomplete,
+                                        _ => CRS.Models.SubscriptionStatus.None
+                                    };
+                                }
+                            }

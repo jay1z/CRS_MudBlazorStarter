@@ -1,0 +1,43 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="@_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div style="min-height: 100vh; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);">
+    <!-- Simple Header -->
+    <MudAppBar Elevation="1" Dense="true" Style="background: white;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" />
+            <MudText Typo="Typo.h6" Style="font-weight: 600; color: #667eea;">Invoice Portal</MudText>
+        </MudStack>
+    </MudAppBar>
+
+    <!-- Main Content -->
+    <main style="padding-top: 64px;">
+        @Body
+    </main>
+
+    <!-- Simple Footer -->
+    <MudPaper Elevation="0" Class="pa-4 mt-8" Style="text-align: center; background: transparent;">
+        <MudText Typo="Typo.caption" Style="color: #999;">
+            Secure invoice portal • Powered by Reserve Cloud
+        </MudText>
+    </MudPaper>
+</div>
+
+@code {
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#667eea",
+            Secondary = "#764ba2",
+            Success = "#10b981",
+            Warning = "#f59e0b",
+            Error = "#ef4444",
+            Info = "#3b82f6"
+        }
+    };
+}

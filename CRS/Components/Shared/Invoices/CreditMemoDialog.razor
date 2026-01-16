@@ -1,0 +1,156 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+
+@inject ICreditMemoService CreditMemoService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Success" />
+            <MudText Typo="Typo.h6">Issue Credit Memo</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isValid">
+            <MudStack Spacing="3">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    <MudText Typo="Typo.body2">
+                        Creating credit memo for Invoice <strong>@Invoice.InvoiceNumber</strong>
+                    </MudText>
+                    <MudText Typo="Typo.caption">
+                        Invoice Total: @Invoice.TotalAmount.ToString("C") | 
+                        Balance Due: @Invoice.BalanceDue.ToString("C")
+                    </MudText>
+                </MudAlert>
+
+                <MudNumericField T="decimal"
+                                 @bind-Value="_model.Amount"
+                                 Label="Credit Amount"
+                                 Adornment="Adornment.Start"
+                                 AdornmentText="$"
+                                 Format="N2"
+                                 Min="0.01M"
+                                 Max="@Invoice.BalanceDue"
+                                 Required="true"
+                                 RequiredError="Amount is required"
+                                 Validation="@(new Func<decimal, string?>(ValidateAmount))" />
+
+                <MudSelect T="CreditMemoReason"
+                           @bind-Value="_model.Reason"
+                           Label="Reason"
+                           Required="true">
+                    @foreach (CreditMemoReason reason in Enum.GetValues<CreditMemoReason>())
+                    {
+                        <MudSelectItem Value="@reason">@reason.ToString().Replace("_", " ")</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudTextField @bind-Value="_model.Description"
+                              Label="Description"
+                              Placeholder="Explain the reason for this credit..."
+                              Lines="3" />
+
+                <MudCheckBox @bind-Value="_applyImmediately"
+                             Label="Apply immediately to invoice"
+                             Color="Color.Primary" />
+
+                @if (_applyImmediately)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Text" Dense="true">
+                        <MudText Typo="Typo.caption">
+                            The credit will be applied immediately and reduce the invoice balance.
+                        </MudText>
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="Submit"
+                   Variant="Variant.Filled"
+                   Color="Color.Success"
+                   Disabled="@(!_isValid || _isSubmitting)">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Creating...</span>
+            }
+            else
+            {
+                <span>Issue Credit Memo</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Invoice Invoice { get; set; } = null!;
+
+    [Parameter]
+    public Guid CurrentUserId { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _isSubmitting;
+    private bool _applyImmediately = true;
+
+    private CreditMemo _model = new()
+    {
+        Reason = CreditMemoReason.Other
+    };
+
+    private string? ValidateAmount(decimal amount)
+    {
+        if (amount <= 0)
+            return "Amount must be greater than zero";
+        if (amount > Invoice.BalanceDue)
+            return $"Amount cannot exceed balance due ({Invoice.BalanceDue:C})";
+        return null;
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (!_isValid) return;
+
+        _isSubmitting = true;
+        try
+        {
+            _model.InvoiceId = Invoice.Id;
+            _model.CreatedByUserId = CurrentUserId;
+
+            var creditMemo = await CreditMemoService.CreateAsync(_model);
+
+            if (_applyImmediately)
+            {
+                await CreditMemoService.ApplyAsync(creditMemo.Id, CurrentUserId);
+                Snackbar.Add($"Credit memo {creditMemo.CreditMemoNumber} created and applied", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Credit memo {creditMemo.CreditMemoNumber} created as draft", Severity.Success);
+            }
+
+            MudDialog.Close(DialogResult.Ok(creditMemo));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create credit memo: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

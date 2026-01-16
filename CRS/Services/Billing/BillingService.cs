@@ -36,9 +36,9 @@ namespace CRS.Services.Billing {
             var tenant = await _db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, ct);
             if (tenant == null || string.IsNullOrWhiteSpace(tenant.StripeCustomerId)) return Array.Empty<InvoiceDto>();
             var client = _clientFactory.CreateClient();
-            var invoiceService = new InvoiceService(client);
+            var stripeInvoiceService = new Stripe.InvoiceService(client);
             var options = new InvoiceListOptions { Limit = max, Customer = tenant.StripeCustomerId };
-            var list = await invoiceService.ListAsync(options, null, ct);
+            var list = await stripeInvoiceService.ListAsync(options, null, ct);
             var results = new List<InvoiceDto>(list.Data.Count);
             foreach (var i in list.Data) {
                 long amount = 0L;

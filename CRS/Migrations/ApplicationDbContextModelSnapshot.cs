@@ -965,6 +965,109 @@ namespace CRS.Migrations
                     b.ToTable("ContactXContactGroups");
                 });
 
+            modelBuilder.Entity("CRS.Models.CreditMemo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("AppliedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BillToEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("BillToName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreditMemoNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("InternalNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsRefunded")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("IssueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StripeRefundId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppliedByUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.ToTable("CreditMemos");
+                });
+
             modelBuilder.Entity("CRS.Models.CustomerAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1639,6 +1742,282 @@ namespace CRS.Migrations
                     b.ToTable("GeneratedReports", (string)null);
                 });
 
+            modelBuilder.Entity("CRS.Models.Invoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccessToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("AccessTokenExpires")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BillToAddress")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("BillToEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("BillToName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("BillToPhone")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DiscountDescription")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("EarlyPaymentDiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("EarlyPaymentDiscountDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("EarlyPaymentDiscountPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("InternalNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("InvoiceDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("LastInterestCalculationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastReminderSent")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("LateInterestAccrued")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("LateInterestStartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("LatePaymentInterestRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("MilestoneDescription")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal?>("MilestonePercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<int?>("MilestoneType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PaymentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("PaymentUrlExpires")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ReminderCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ReserveStudyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("SentByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StripeCheckoutSessionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("StripePaymentIntentId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Terms")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ReserveStudyId");
+
+                    b.HasIndex("SentByUserId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_Invoice_Tenant");
+
+                    b.HasIndex("TenantId", "InvoiceNumber")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Invoice_Tenant_Number_Unique")
+                        .HasFilter("[DateDeleted] IS NULL");
+
+                    b.HasIndex("TenantId", "ReserveStudyId")
+                        .HasDatabaseName("IX_Invoice_Tenant_Study");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("IX_Invoice_Tenant_Status");
+
+                    b.HasIndex("TenantId", "DueDate", "Status")
+                        .HasDatabaseName("IX_Invoice_Tenant_DueDate_Status");
+
+                    b.ToTable("Invoices", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.InvoiceLineItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("IX_InvoiceLineItem_Tenant");
+
+                    b.HasIndex("TenantId", "InvoiceId", "SortOrder")
+                        .HasDatabaseName("IX_InvoiceLineItem_Tenant_Invoice_Order");
+
+                    b.ToTable("InvoiceLineItems", (string)null);
+                });
+
             modelBuilder.Entity("CRS.Models.KanbanTask", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2141,6 +2520,71 @@ namespace CRS.Migrations
                     b.ToTable("Notifications", (string)null);
                 });
 
+            modelBuilder.Entity("CRS.Models.PaymentRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsAutomatic")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid?>("RecordedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("StripePaymentIntentId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("RecordedByUserId");
+
+                    b.ToTable("PaymentRecords");
+                });
+
             modelBuilder.Entity("CRS.Models.Profile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2259,6 +2703,10 @@ namespace CRS.Migrations
                     b.Property<string>("Comments")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal?>("CustomDepositPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
                     b.Property<DateTime?>("DateApproved")
                         .HasColumnType("datetime2");
 
@@ -2276,6 +2724,13 @@ namespace CRS.Migrations
 
                     b.Property<string>("DeliveryTimeframe")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("EarlyPaymentDiscountDays")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("EarlyPaymentDiscountPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<decimal>("EstimatedCost")
                         .HasPrecision(18, 2)
@@ -2299,11 +2754,35 @@ namespace CRS.Migrations
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsDepositNonRefundable")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LatePaymentGracePeriodDays")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("LatePaymentInterestRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal?>("MinimumDepositAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<Guid?>("OriginalProposalId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("PaymentDueDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PaymentSchedule")
+                        .HasColumnType("int");
+
                     b.Property<string>("PaymentTerms")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("PrepaymentDiscountPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<DateTime>("ProposalDate")
                         .HasColumnType("datetime2");
@@ -3909,6 +4388,177 @@ namespace CRS.Migrations
                     b.ToTable("TenantHomepages", (string)null);
                 });
 
+            modelBuilder.Entity("CRS.Models.TenantInvoiceSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AutoGenerateNextMilestone")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AutoSendOnCreate")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CompanyAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CompanyEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CompanyName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CompanyPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CompanyWebsite")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CreditMemoPrefix")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DefaultEarlyPaymentDays")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DefaultEarlyPaymentDiscount")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<int>("DefaultGracePeriodDays")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DefaultLateInterestRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<int>("DefaultNetDays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DefaultNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<decimal>("DefaultTaxRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("DefaultTerms")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("EnableAutoReminders")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("FirstReminderDays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FooterText")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("InvoiceNumberFormat")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("InvoicePrefix")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("LastInvoiceMonth")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LastInvoiceYear")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("MaxAutoReminders")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NextCreditMemoNumber")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NextInvoiceNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NotificationEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("NotifyOnAutoGenerate")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("NumberPadding")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaymentInstructions")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("PrimaryColor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("ResetFrequency")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SecondaryColor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("ShowPaidWatermark")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Tagline")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TaxLabel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("UseTenantBranding")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TenantInvoiceSettings");
+                });
+
             modelBuilder.Entity("CRS.Models.TicketComment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4463,6 +5113,35 @@ namespace CRS.Migrations
                     b.Navigation("ContactGroup");
                 });
 
+            modelBuilder.Entity("CRS.Models.CreditMemo", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "AppliedBy")
+                        .WithMany()
+                        .HasForeignKey("AppliedByUserId");
+
+                    b.HasOne("CRS.Data.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId");
+
+                    b.HasOne("CRS.Models.Invoice", "Invoice")
+                        .WithMany("CreditMemos")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId");
+
+                    b.Navigation("AppliedBy");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("ReserveStudy");
+                });
+
             modelBuilder.Entity("CRS.Models.Demo.DemoSession", b =>
                 {
                     b.HasOne("CRS.Models.Tenant", "DemoTenant")
@@ -4555,6 +5234,42 @@ namespace CRS.Migrations
                     b.Navigation("SupersedesReport");
                 });
 
+            modelBuilder.Entity("CRS.Models.Invoice", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("CRS.Models.ReserveStudy", "ReserveStudy")
+                        .WithMany()
+                        .HasForeignKey("ReserveStudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Data.ApplicationUser", "SentBy")
+                        .WithMany()
+                        .HasForeignKey("SentByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("ReserveStudy");
+
+                    b.Navigation("SentBy");
+                });
+
+            modelBuilder.Entity("CRS.Models.InvoiceLineItem", b =>
+                {
+                    b.HasOne("CRS.Models.Invoice", "Invoice")
+                        .WithMany("LineItems")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Invoice");
+                });
+
             modelBuilder.Entity("CRS.Models.Narrative", b =>
                 {
                     b.HasOne("CRS.Data.ApplicationUser", "Author")
@@ -4606,6 +5321,23 @@ namespace CRS.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CRS.Models.PaymentRecord", b =>
+                {
+                    b.HasOne("CRS.Models.Invoice", "Invoice")
+                        .WithMany("PaymentRecords")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Data.ApplicationUser", "RecordedBy")
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId");
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("RecordedBy");
                 });
 
             modelBuilder.Entity("CRS.Models.Profile", b =>
@@ -5138,6 +5870,15 @@ namespace CRS.Migrations
             modelBuilder.Entity("CRS.Models.CommonElement", b =>
                 {
                     b.Navigation("ReserveStudyCommonElements");
+                });
+
+            modelBuilder.Entity("CRS.Models.Invoice", b =>
+                {
+                    b.Navigation("CreditMemos");
+
+                    b.Navigation("LineItems");
+
+                    b.Navigation("PaymentRecords");
                 });
 
             modelBuilder.Entity("CRS.Models.NarrativeTemplates.NarrativeTemplateSection", b =>

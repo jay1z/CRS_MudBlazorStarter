@@ -748,6 +748,48 @@ namespace CRS.Data {
                             .HasDatabaseName("IX_AcceptanceTermsTemplate_Tenant_Active_Effective");
                     });
 
+                    // Invoice entity configuration
+                    builder.Entity<Invoice>(entity => {
+                        entity.ToTable("Invoices");
+                        entity.HasIndex(e => e.TenantId)
+                            .HasDatabaseName("IX_Invoice_Tenant");
+                        entity.HasIndex(e => new { e.TenantId, e.ReserveStudyId })
+                            .HasDatabaseName("IX_Invoice_Tenant_Study");
+                        entity.HasIndex(e => new { e.TenantId, e.Status })
+                            .HasDatabaseName("IX_Invoice_Tenant_Status");
+                        entity.HasIndex(e => new { e.TenantId, e.InvoiceNumber })
+                            .IsUnique()
+                            .HasFilter("[DateDeleted] IS NULL")
+                            .HasDatabaseName("IX_Invoice_Tenant_Number_Unique");
+                        entity.HasIndex(e => new { e.TenantId, e.DueDate, e.Status })
+                            .HasDatabaseName("IX_Invoice_Tenant_DueDate_Status");
+                        entity.HasOne(i => i.ReserveStudy)
+                            .WithMany()
+                            .HasForeignKey(i => i.ReserveStudyId)
+                            .OnDelete(DeleteBehavior.Cascade);
+                        entity.HasOne(i => i.CreatedBy)
+                            .WithMany()
+                            .HasForeignKey(i => i.CreatedByUserId)
+                            .OnDelete(DeleteBehavior.NoAction);
+                        entity.HasOne(i => i.SentBy)
+                            .WithMany()
+                            .HasForeignKey(i => i.SentByUserId)
+                            .OnDelete(DeleteBehavior.NoAction);
+                        entity.HasMany(i => i.LineItems)
+                            .WithOne(li => li.Invoice)
+                            .HasForeignKey(li => li.InvoiceId)
+                            .OnDelete(DeleteBehavior.Cascade);
+                    });
+
+                    // InvoiceLineItem entity configuration
+                    builder.Entity<InvoiceLineItem>(entity => {
+                        entity.ToTable("InvoiceLineItems");
+                        entity.HasIndex(e => e.TenantId)
+                            .HasDatabaseName("IX_InvoiceLineItem_Tenant");
+                        entity.HasIndex(e => new { e.TenantId, e.InvoiceId, e.SortOrder })
+                            .HasDatabaseName("IX_InvoiceLineItem_Tenant_Invoice_Order");
+                    });
+
                     // Reserve Study Calculator entities
                     builder.Entity<TenantReserveSettings>(entity => {
                         entity.ToTable("TenantReserveSettings");
@@ -962,6 +1004,13 @@ namespace CRS.Data {
         public DbSet<NarrativeTemplateSection> NarrativeTemplateSections { get; set; }
         public DbSet<NarrativeTemplateBlock> NarrativeTemplateBlocks { get; set; }
         public DbSet<NarrativeInsert> NarrativeInserts { get; set; }
+
+        // Invoicing
+        public DbSet<Invoice> Invoices { get; set; }
+        public DbSet<InvoiceLineItem> InvoiceLineItems { get; set; }
+        public DbSet<PaymentRecord> PaymentRecords { get; set; }
+        public DbSet<CreditMemo> CreditMemos { get; set; }
+        public DbSet<TenantInvoiceSettings> TenantInvoiceSettings { get; set; }
         #endregion
 
         #region Seed Data

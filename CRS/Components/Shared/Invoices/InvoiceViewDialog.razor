@@ -1,0 +1,287 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+
+@inject IInvoiceService InvoiceService
+
+<MudDialog>
+    <DialogContent>
+        @if (_isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (_invoice == null)
+        {
+            <MudAlert Severity="Severity.Error">Invoice not found</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="4">
+                <!-- Status Badge -->
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudChip T="string"
+                             Size="Size.Medium"
+                             Color="@GetStatusColor(_invoice.Status)"
+                             Variant="Variant.Filled">
+                        @_invoice.Status
+                    </MudChip>
+                    @if (_invoice.SentAt.HasValue)
+                    {
+                        <MudText Typo="Typo.caption" Style="color: #666;">
+                            Sent: @_invoice.SentAt.Value.ToString("MMM d, yyyy h:mm tt")
+                        </MudText>
+                    }
+                </MudStack>
+
+                <!-- Bill To / Dates -->
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Elevation="0" Class="pa-3" Style="background-color: #f5f5f5; border-radius: 8px;">
+                            <MudText Typo="Typo.overline" Style="color: #666;">Bill To</MudText>
+                            <MudText Typo="Typo.body1"><strong>@_invoice.BillToName</strong></MudText>
+                            @if (!string.IsNullOrEmpty(_invoice.BillToEmail))
+                            {
+                                <MudText Typo="Typo.body2">@_invoice.BillToEmail</MudText>
+                            }
+                            @if (!string.IsNullOrEmpty(_invoice.BillToPhone))
+                            {
+                                <MudText Typo="Typo.body2">@_invoice.BillToPhone</MudText>
+                            }
+                            @if (!string.IsNullOrEmpty(_invoice.BillToAddress))
+                            {
+                                <MudText Typo="Typo.body2">@_invoice.BillToAddress</MudText>
+                            }
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Elevation="0" Class="pa-3" Style="background-color: #f5f5f5; border-radius: 8px;">
+                            <MudStack Spacing="2">
+                                <div>
+                                    <MudText Typo="Typo.overline" Style="color: #666;">Invoice Date</MudText>
+                                    <MudText Typo="Typo.body1">@_invoice.InvoiceDate.ToString("MMMM d, yyyy")</MudText>
+                                </div>
+                                <div>
+                                    <MudText Typo="Typo.overline" Style="color: #666;">Due Date</MudText>
+                                    <MudText Typo="Typo.body1" Style="@(IsOverdue ? "color: #dc2626; font-weight: 600;" : "")">
+                                        @_invoice.DueDate.ToString("MMMM d, yyyy")
+                                        @if (IsOverdue)
+                                        {
+                                            <span> (Overdue)</span>
+                                        }
+                                    </MudText>
+                                </div>
+                            </MudStack>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Line Items -->
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Line Items</MudText>
+                <MudTable Items="_invoice.LineItems.OrderBy(li => li.SortOrder)" Dense="true" Elevation="0" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                    <HeaderContent>
+                        <MudTh>Description</MudTh>
+                        <MudTh Style="width: 80px;">Qty</MudTh>
+                        <MudTh Style="width: 100px;">Unit Price</MudTh>
+                        <MudTh Style="width: 100px;">Total</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.Description</MudTd>
+                        <MudTd>@context.Quantity.ToString("N2")</MudTd>
+                        <MudTd>@context.UnitPrice.ToString("C")</MudTd>
+                        <MudTd><strong>@context.LineTotal.ToString("C")</strong></MudTd>
+                    </RowTemplate>
+                </MudTable>
+
+                <!-- Totals -->
+                <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f5f5f5; border-radius: 8px;">
+                    <MudGrid>
+                        <MudItem xs="6"></MudItem>
+                        <MudItem xs="6">
+                            <MudStack Spacing="1">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText>Subtotal:</MudText>
+                                    <MudText>@_invoice.Subtotal.ToString("C")</MudText>
+                                </MudStack>
+                                @if (_invoice.DiscountAmount > 0)
+                                {
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Color="Color.Success">@(_invoice.DiscountDescription ?? "Discount"):</MudText>
+                                        <MudText Color="Color.Success">-@_invoice.DiscountAmount.ToString("C")</MudText>
+                                    </MudStack>
+                                }
+                                @if (_invoice.TaxAmount > 0)
+                                {
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText>Tax (@_invoice.TaxRate%):</MudText>
+                                        <MudText>@_invoice.TaxAmount.ToString("C")</MudText>
+                                    </MudStack>
+                                }
+                                <MudDivider Class="my-2" />
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.h6">Total:</MudText>
+                                    <MudText Typo="Typo.h6">@_invoice.TotalAmount.ToString("C")</MudText>
+                                </MudStack>
+                                @if (_invoice.AmountPaid > 0)
+                                {
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Color="Color.Success">Paid:</MudText>
+                                        <MudText Color="Color.Success">-@_invoice.AmountPaid.ToString("C")</MudText>
+                                    </MudStack>
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Typo="Typo.h6" Color="Color.Primary">Balance Due:</MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Primary">@_invoice.BalanceDue.ToString("C")</MudText>
+                                    </MudStack>
+                                }
+                            </MudStack>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <!-- Notes -->
+                @if (!string.IsNullOrEmpty(_invoice.Notes))
+                {
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">Notes</MudText>
+                        <MudText Typo="Typo.body2">@_invoice.Notes</MudText>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(_invoice.Terms))
+                {
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">Payment Terms</MudText>
+                        <MudText Typo="Typo.body2">@_invoice.Terms</MudText>
+                    </div>
+                }
+
+                <!-- Early Payment Discount -->
+                @if (_invoice.IsEarlyPaymentDiscountAvailable)
+                {
+                    <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Dense="true" Icon="@Icons.Material.Filled.Discount">
+                        <MudStack>
+                            <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">
+                                Early Payment Discount Available!
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                Pay by <strong>@_invoice.EarlyPaymentDiscountDate?.ToString("MMMM d, yyyy")</strong> to save 
+                                <strong>@_invoice.EarlyPaymentDiscountAmount.ToString("C")</strong> 
+                                (@_invoice.EarlyPaymentDiscountPercentage% discount)
+                            </MudText>
+                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.body2">Pay only:</MudText>
+                                <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                                    @_invoice.EarlyPaymentAmount.ToString("C")
+                                </MudChip>
+                            </MudStack>
+                        </MudStack>
+                    </MudAlert>
+                }
+
+                <!-- Late Interest Warning -->
+                @if (_invoice.LatePaymentInterestRate > 0 && _invoice.Status != InvoiceStatus.Paid && _invoice.Status != InvoiceStatus.Voided)
+                {
+                    @if (_invoice.LateInterestAccrued > 0)
+                    {
+                        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Icon="@Icons.Material.Filled.Warning">
+                            <MudStack>
+                                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">
+                                    Late Interest Accrued
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    <strong>@_invoice.LateInterestAccrued.ToString("C")</strong> in late fees has been added 
+                                    (@_invoice.LatePaymentInterestRate% monthly rate)
+                                </MudText>
+                            </MudStack>
+                        </MudAlert>
+                    }
+                    else if (_invoice.LateInterestStartDate.HasValue && _invoice.LateInterestStartDate.Value > DateTime.UtcNow)
+                    {
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Icon="@Icons.Material.Filled.Info">
+                            <MudText Typo="Typo.body2">
+                                Late interest of <strong>@_invoice.LatePaymentInterestRate%</strong> per month will apply 
+                                after <strong>@_invoice.LateInterestStartDate.Value.ToString("MMMM d, yyyy")</strong>
+                            </MudText>
+                        </MudAlert>
+                    }
+                }
+
+                @if (!string.IsNullOrEmpty(_invoice.InternalNotes))
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                        <MudText Typo="Typo.caption"><strong>Internal Notes:</strong> @_invoice.InternalNotes</MudText>
+                    </MudAlert>
+                }
+
+                <!-- Payment Info -->
+                @if (_invoice.PaidAt.HasValue)
+                {
+                    <MudAlert Severity="Severity.Success" Variant="Variant.Filled">
+                        <MudStack Row="true" Spacing="4">
+                            <div>
+                                <strong>Paid:</strong> @_invoice.PaidAt.Value.ToString("MMMM d, yyyy")
+                            </div>
+                            @if (!string.IsNullOrEmpty(_invoice.PaymentMethod))
+                            {
+                                <div>
+                                    <strong>Method:</strong> @_invoice.PaymentMethod
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(_invoice.PaymentReference))
+                            {
+                                <div>
+                                    <strong>Reference:</strong> @_invoice.PaymentReference
+                                </div>
+                            }
+                        </MudStack>
+                    </MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public Guid InvoiceId { get; set; }
+
+    private Invoice? _invoice;
+    private bool _isLoading = true;
+
+    private bool IsOverdue => _invoice != null &&
+                              _invoice.DueDate < DateTime.UtcNow.Date &&
+                              _invoice.Status != InvoiceStatus.Paid &&
+                              _invoice.Status != InvoiceStatus.Voided;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _invoice = await InvoiceService.GetByIdAsync(InvoiceId);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static Color GetStatusColor(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Draft => Color.Default,
+        InvoiceStatus.Finalized => Color.Info,
+        InvoiceStatus.Sent => Color.Primary,
+        InvoiceStatus.Viewed => Color.Secondary,
+        InvoiceStatus.PartiallyPaid => Color.Warning,
+        InvoiceStatus.Paid => Color.Success,
+        InvoiceStatus.Overdue => Color.Error,
+        InvoiceStatus.Voided => Color.Dark,
+        _ => Color.Default
+    };
+
+    private void Close() => MudDialog?.Close();
+}

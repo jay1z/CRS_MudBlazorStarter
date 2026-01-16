@@ -1744,6 +1744,23 @@
                         <MudTabPanel Text="Reports" Icon="@Icons.Material.Filled.Description">
                             <CRS.Components.Shared.GeneratedReports.GeneratedReportsPanel ReserveStudyId="@Id" />
                         </MudTabPanel>
+                        <!-- Invoicing Tab -->
+                        <MudTabPanel Text="Invoicing" Icon="@Icons.Material.Filled.Receipt">
+                            <AuthorizeView Policy="RequireTenantStaff">
+                                <Authorized>
+                                    <CRS.Components.Shared.Invoices.InvoicePanel 
+                                        ReserveStudyId="@Id" 
+                                        CommunityName="@reserveStudy?.Community?.Name" />
+                                </Authorized>
+                                <NotAuthorized>
+                                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                                        <MudText Typo="Typo.body2">
+                                            Invoicing is managed by your reserve study specialist. You will receive invoices via email.
+                                        </MudText>
+                                    </MudAlert>
+                                </NotAuthorized>
+                            </AuthorizeView>
+                        </MudTabPanel>
                         <!-- Narrative Tab -->
                         <MudTabPanel Text="Narrative" Icon="@Icons.Material.Filled.Article">
                             <AuthorizeView Policy="RequireTenantStaff">

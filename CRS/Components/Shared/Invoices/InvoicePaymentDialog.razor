@@ -1,0 +1,137 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+
+@inject IInvoiceService InvoiceService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <span>Invoice Total:</span>
+                    <strong>@Invoice.TotalAmount.ToString("C")</strong>
+                </MudStack>
+                @if (Invoice.AmountPaid > 0)
+                {
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <span>Already Paid:</span>
+                        <span>@Invoice.AmountPaid.ToString("C")</span>
+                    </MudStack>
+                }
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <span>Balance Due:</span>
+                    <strong>@Invoice.BalanceDue.ToString("C")</strong>
+                </MudStack>
+            </MudAlert>
+
+            <MudNumericField @bind-Value="_paymentAmount"
+                             Label="Payment Amount"
+                             Variant="Variant.Outlined"
+                             Adornment="Adornment.Start"
+                             AdornmentText="$"
+                             Format="N2"
+                             Min="0.01m"
+                             Max="@Invoice.BalanceDue"
+                             Required="true"
+                             RequiredError="Payment amount is required" />
+
+            <MudSelect @bind-Value="_paymentMethod"
+                       Label="Payment Method"
+                       Variant="Variant.Outlined">
+                <MudSelectItem Value="@("Check")">Check</MudSelectItem>
+                <MudSelectItem Value="@("ACH/Bank Transfer")">ACH/Bank Transfer</MudSelectItem>
+                <MudSelectItem Value="@("Credit Card")">Credit Card</MudSelectItem>
+                <MudSelectItem Value="@("Cash")">Cash</MudSelectItem>
+                <MudSelectItem Value="@("Wire Transfer")">Wire Transfer</MudSelectItem>
+                <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+            </MudSelect>
+
+            <MudTextField @bind-Value="_paymentReference"
+                          Label="Reference/Check Number (optional)"
+                          Variant="Variant.Outlined"
+                          Placeholder="e.g., Check #1234" />
+
+            @if (_paymentAmount > 0 && _paymentAmount < Invoice.BalanceDue)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                    This will be recorded as a partial payment. Remaining balance: @((Invoice.BalanceDue - _paymentAmount).ToString("C"))
+                </MudAlert>
+            }
+            @if (_paymentAmount >= Invoice.BalanceDue)
+            {
+                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Dense="true">
+                    This will mark the invoice as fully paid.
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="RecordPaymentAsync"
+                   Disabled="_isLoading || _paymentAmount <= 0">
+            @if (_isLoading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Record Payment
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public required Invoice Invoice { get; set; }
+
+    private decimal _paymentAmount;
+    private string _paymentMethod = "Check";
+    private string? _paymentReference;
+    private bool _isLoading;
+
+    protected override void OnInitialized()
+    {
+        // Default to full balance
+        _paymentAmount = Invoice.BalanceDue;
+    }
+
+    private async Task RecordPaymentAsync()
+    {
+        if (_paymentAmount <= 0)
+        {
+            Snackbar.Add("Payment amount must be greater than zero", Severity.Warning);
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            await InvoiceService.RecordPaymentAsync(
+                Invoice.Id,
+                _paymentAmount,
+                _paymentMethod,
+                _paymentReference);
+
+            var message = _paymentAmount >= Invoice.BalanceDue
+                ? "Payment recorded - Invoice marked as paid"
+                : $"Partial payment of {_paymentAmount:C} recorded";
+
+            Snackbar.Add(message, Severity.Success);
+            MudDialog?.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to record payment: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+}

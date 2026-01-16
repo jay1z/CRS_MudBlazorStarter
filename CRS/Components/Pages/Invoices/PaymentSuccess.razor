@@ -1,0 +1,114 @@
+﻿@page "/Invoices/PaymentSuccess"
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+
+@inject IInvoiceService InvoiceService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Payment Successful</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="py-8">
+    <MudPaper Elevation="3" Class="pa-8" Style="border-radius: 16px; text-align: center;">
+        @if (_isLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Class="mt-4">Processing your payment...</MudText>
+        }
+        else if (_invoice != null && _invoice.Status == InvoiceStatus.Paid)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                     Style="color: #10b981; font-size: 80px;" />
+            <MudText Typo="Typo.h4" Class="mt-4" Style="font-weight: 700; color: #10b981;">
+                Payment Successful!
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mt-2" Style="color: #666;">
+                Thank you for your payment of @_invoice.AmountPaid.ToString("C")
+            </MudText>
+            <MudText Typo="Typo.body2" Class="mt-1" Style="color: #999;">
+                Invoice #@_invoice.InvoiceNumber has been marked as paid.
+            </MudText>
+            
+            <MudDivider Class="my-6" />
+            
+            <MudStack Row="true" Justify="Justify.Center" Spacing="3">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Receipt"
+                           Href="@($"/Invoices/{_invoice.Id}")">
+                    View Invoice
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           Href="/Dashboard">
+                    Go to Dashboard
+                </MudButton>
+            </MudStack>
+        }
+        else if (_invoice != null)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Pending" 
+                     Style="color: #f59e0b; font-size: 80px;" />
+            <MudText Typo="Typo.h4" Class="mt-4" Style="font-weight: 700; color: #f59e0b;">
+                Payment Processing
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mt-2" Style="color: #666;">
+                Your payment is being processed. This may take a few moments.
+            </MudText>
+            
+            <MudDivider Class="my-6" />
+            
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Receipt"
+                       Href="@($"/Invoices/{_invoice.Id}")">
+                View Invoice
+            </MudButton>
+        }
+        else
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Info" 
+                     Style="color: #3b82f6; font-size: 80px;" />
+            <MudText Typo="Typo.h4" Class="mt-4" Style="font-weight: 700;">
+                Payment Complete
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mt-2" Style="color: #666;">
+                Thank you for your payment!
+            </MudText>
+            
+            <MudDivider Class="my-6" />
+            
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Home"
+                       Href="/Dashboard">
+                Go to Dashboard
+            </MudButton>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery]
+    public Guid? invoice_id { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? session_id { get; set; }
+
+    private Invoice? _invoice;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(1500); // Give Stripe webhook time to process
+
+        if (invoice_id.HasValue)
+        {
+            _invoice = await InvoiceService.GetByIdAsync(invoice_id.Value);
+        }
+
+        _isLoading = false;
+    }
+}

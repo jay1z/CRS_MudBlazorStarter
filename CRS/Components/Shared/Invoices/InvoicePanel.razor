@@ -1,0 +1,547 @@
+﻿@using CRS.Models
+@using CRS.Models.Email
+@using CRS.Models.Emails
+@using CRS.Services
+@using CRS.Services.Interfaces
+@using CRS.Services.Email
+@using CRS.Services.Tenant
+@using Coravel.Mailer.Mail.Interfaces
+@using Microsoft.JSInterop
+
+@inject IInvoiceService InvoiceService
+@inject IInvoicePdfService PdfService
+@inject IMailer Mailer
+@inject ITenantContext TenantContext
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<MudPaper Elevation="0" Class="pa-4">
+    <MudStack Spacing="3">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" Style="vertical-align: middle;" />
+                Invoices
+            </MudText>
+            <AuthorizeView Policy="RequireTenantStaff">
+                <Authorized>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenCreateDialog">
+                        Create Invoice
+                    </MudButton>
+                </Authorized>
+            </AuthorizeView>
+        </MudStack>
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (!_invoices.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                <MudStack Spacing="1">
+                    <MudText>No invoices have been created for this study.</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        Create an invoice to request payment before delivering the narrative report.
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
+        else
+        {
+            <MudTable Items="_invoices" Dense="true" Hover="true" Elevation="0" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                <HeaderContent>
+                    <MudTh>Invoice #</MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Due Date</MudTh>
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh Style="width: 150px;">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudLink OnClick="@(() => OpenViewDialog(context))" Style="cursor: pointer;">
+                            @context.InvoiceNumber
+                        </MudLink>
+                    </MudTd>
+                    <MudTd>@context.InvoiceDate.ToString("MMM d, yyyy")</MudTd>
+                    <MudTd>
+                        <span style="@(IsOverdue(context) ? "color: #dc2626; font-weight: 600;" : "")">
+                            @context.DueDate.ToString("MMM d, yyyy")
+                        </span>
+                    </MudTd>
+                    <MudTd>
+                        <strong>@context.TotalAmount.ToString("C")</strong>
+                        @if (context.AmountPaid > 0 && context.Status != InvoiceStatus.Paid)
+                        {
+                            <br />
+                            <MudText Typo="Typo.caption" Color="Color.Success">
+                                Paid: @context.AmountPaid.ToString("C")
+                            </MudText>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" 
+                                 Size="Size.Small" 
+                                 Color="@GetStatusColor(context.Status)"
+                                 Variant="Variant.Filled">
+                            @GetStatusText(context.Status)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudStack Row="true" Spacing="1">
+                            <MudTooltip Text="View Invoice">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                               Size="Size.Small"
+                                               OnClick="@(() => OpenViewDialog(context))" />
+                            </MudTooltip>
+                            <MudTooltip Text="Download PDF">
+                                <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf"
+                                               Size="Size.Small"
+                                               Color="Color.Error"
+                                               OnClick="@(() => DownloadPdfAsync(context))" />
+                            </MudTooltip>
+                            @if (context.Status == InvoiceStatus.Draft)
+                            {
+                                <MudTooltip Text="Edit Invoice">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="@(() => OpenEditDialog(context))" />
+                                </MudTooltip>
+                            }
+                            @if (context.Status == InvoiceStatus.Draft || context.Status == InvoiceStatus.Finalized)
+                            {
+                                <MudTooltip Text="Send Invoice">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Send"
+                                                   Size="Size.Small"
+                                                   Color="Color.Success"
+                                                   OnClick="@(() => SendInvoiceAsync(context))" />
+                                </MudTooltip>
+                            }
+                            @if (context.Status == InvoiceStatus.Sent || 
+                                 context.Status == InvoiceStatus.Viewed || 
+                                 context.Status == InvoiceStatus.Overdue ||
+                                 context.Status == InvoiceStatus.PartiallyPaid)
+                            {
+                                <MudTooltip Text="@($"Send Reminder ({context.ReminderCount} sent)")">
+                                    <MudIconButton Icon="@Icons.Material.Filled.NotificationsActive"
+                                                   Size="Size.Small"
+                                                   Color="Color.Warning"
+                                                   OnClick="@(() => SendReminderAsync(context))" />
+                                </MudTooltip>
+                            }
+                                @if (context.Status != InvoiceStatus.Paid && context.Status != InvoiceStatus.Voided)
+                                {
+                                    <MudTooltip Text="Record Payment">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Payment"
+                                                       Size="Size.Small"
+                                                       Color="Color.Info"
+                                                       OnClick="@(() => OpenPaymentDialog(context))" />
+                                    </MudTooltip>
+                                }
+                                @if (context.Status != InvoiceStatus.Voided)
+                                {
+                                    <MudTooltip Text="Duplicate Invoice">
+                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                       Size="Size.Small"
+                                                       Color="Color.Secondary"
+                                                       OnClick="@(() => DuplicateInvoiceAsync(context))" />
+                                    </MudTooltip>
+                                }
+                                @if (context.Status == InvoiceStatus.Draft)
+                                {
+                                    <MudTooltip Text="Delete Invoice">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                       Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => DeleteInvoiceAsync(context))" />
+                                    </MudTooltip>
+                                }
+                                @if (context.Status != InvoiceStatus.Draft && 
+                                     context.Status != InvoiceStatus.Paid && 
+                                     context.Status != InvoiceStatus.Voided)
+                                {
+                                    <MudTooltip Text="Void Invoice">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Cancel"
+                                                       Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => VoidInvoiceAsync(context))" />
+                                    </MudTooltip>
+                                }
+                            </MudStack>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    [Parameter]
+    public string? CommunityName { get; set; }
+
+    [Parameter]
+    public EventCallback OnInvoiceChanged { get; set; }
+
+    private List<Invoice> _invoices = [];
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInvoicesAsync();
+    }
+
+    private async Task LoadInvoicesAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var invoices = await InvoiceService.GetByReserveStudyAsync(ReserveStudyId);
+            _invoices = [.. invoices];
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<InvoiceDialog>
+        {
+            { x => x.ReserveStudyId, ReserveStudyId },
+            { x => x.CommunityName, CommunityName },
+            { x => x.IsNew, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<InvoiceDialog>("Create Invoice", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            await LoadInvoicesAsync();
+            await OnInvoiceChanged.InvokeAsync();
+        }
+    }
+
+    private async Task OpenEditDialog(Invoice invoice)
+    {
+        var parameters = new DialogParameters<InvoiceDialog>
+        {
+            { x => x.ReserveStudyId, ReserveStudyId },
+            { x => x.CommunityName, CommunityName },
+            { x => x.InvoiceId, invoice.Id },
+            { x => x.IsNew, false }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<InvoiceDialog>("Edit Invoice", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            await LoadInvoicesAsync();
+            await OnInvoiceChanged.InvokeAsync();
+        }
+    }
+
+    private async Task OpenViewDialog(Invoice invoice)
+    {
+        var parameters = new DialogParameters<InvoiceViewDialog>
+        {
+            { x => x.InvoiceId, invoice.Id }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogService.ShowAsync<InvoiceViewDialog>($"Invoice #{invoice.InvoiceNumber}", parameters, options);
+    }
+
+    private async Task SendInvoiceAsync(Invoice invoice)
+    {
+        if (string.IsNullOrWhiteSpace(invoice.BillToEmail))
+        {
+            Snackbar.Add("Invoice has no recipient email address", Severity.Warning);
+            return;
+        }
+
+        var confirm = await DialogService.ShowMessageBox(
+            "Send Invoice",
+            $"Send invoice #{invoice.InvoiceNumber} to {invoice.BillToEmail}?",
+            yesText: "Send",
+            cancelText: "Cancel");
+
+        if (confirm != true) return;
+
+        try
+        {
+            var userId = UserState.CurrentUser?.Id;
+            if (!userId.HasValue)
+            {
+                Snackbar.Add("User not authenticated", Severity.Error);
+                return;
+            }
+
+            // Mark as sent in database
+            await InvoiceService.MarkSentAsync(invoice.Id, userId.Value);
+
+            // Load full invoice for email
+            var fullInvoice = await InvoiceService.GetByIdAsync(invoice.Id);
+            if (fullInvoice == null)
+            {
+                Snackbar.Add("Failed to load invoice", Severity.Error);
+                return;
+            }
+
+            // Send email
+            var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
+            var emailModel = new InvoiceEmail
+            {
+                Invoice = fullInvoice,
+                ReserveStudy = fullInvoice.ReserveStudy,
+                BaseUrl = baseUrl,
+                InvoiceViewUrl = $"{baseUrl}/Invoices/{fullInvoice.Id}"
+            };
+
+            // Note: TenantInfo would be populated from tenant context in production
+            var mailable = new InvoiceMailable(emailModel, invoice.BillToEmail);
+            await Mailer.SendAsync(mailable);
+
+            Snackbar.Add($"Invoice sent to {invoice.BillToEmail}", Severity.Success);
+                    await LoadInvoicesAsync();
+                    await OnInvoiceChanged.InvokeAsync();
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Failed to send invoice: {ex.Message}", Severity.Error);
+                }
+            }
+
+            private async Task SendReminderAsync(Invoice invoice)
+            {
+                if (string.IsNullOrWhiteSpace(invoice.BillToEmail))
+                {
+                    Snackbar.Add("Invoice has no recipient email address", Severity.Warning);
+                    return;
+                }
+
+                var daysOverdue = invoice.DueDate < DateTime.UtcNow.Date 
+                    ? (DateTime.UtcNow.Date - invoice.DueDate).Days 
+                    : 0;
+
+                var message = daysOverdue > 0
+                    ? $"Send payment reminder for invoice #{invoice.InvoiceNumber} to {invoice.BillToEmail}?\n\nThis invoice is {daysOverdue} days overdue."
+                    : $"Send payment reminder for invoice #{invoice.InvoiceNumber} to {invoice.BillToEmail}?";
+
+                var confirm = await DialogService.ShowMessageBox(
+                    "Send Payment Reminder",
+                    message,
+                    yesText: "Send Reminder",
+                    cancelText: "Cancel");
+
+                if (confirm != true) return;
+
+                try
+                {
+                    // Load full invoice for email
+                    var fullInvoice = await InvoiceService.GetByIdAsync(invoice.Id);
+                    if (fullInvoice == null)
+                    {
+                        Snackbar.Add("Failed to load invoice", Severity.Error);
+                        return;
+                    }
+
+                    // Send reminder email
+                    var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
+                    var emailModel = new InvoiceEmail
+                    {
+                        Invoice = fullInvoice,
+                        ReserveStudy = fullInvoice.ReserveStudy,
+                        BaseUrl = baseUrl,
+                        InvoiceViewUrl = $"{baseUrl}/Invoices/{fullInvoice.Id}",
+                        IsReminder = true,
+                        DaysPastDue = daysOverdue
+                    };
+
+                    var mailable = new InvoiceMailable(emailModel, invoice.BillToEmail);
+                    await Mailer.SendAsync(mailable);
+
+                    // Record that reminder was sent
+                    await InvoiceService.RecordReminderSentAsync(invoice.Id);
+
+                    Snackbar.Add($"Reminder sent to {invoice.BillToEmail}", Severity.Success);
+                    await LoadInvoicesAsync();
+                    await OnInvoiceChanged.InvokeAsync();
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Failed to send reminder: {ex.Message}", Severity.Error);
+                }
+            }
+
+            private async Task OpenPaymentDialog(Invoice invoice)
+    {
+        var parameters = new DialogParameters<InvoicePaymentDialog>
+        {
+            { x => x.Invoice, invoice }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<InvoicePaymentDialog>("Record Payment", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false })
+        {
+            await LoadInvoicesAsync();
+            await OnInvoiceChanged.InvokeAsync();
+        }
+    }
+
+    private async Task DeleteInvoiceAsync(Invoice invoice)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Invoice",
+            $"Are you sure you want to delete invoice #{invoice.InvoiceNumber}? This action cannot be undone.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm != true) return;
+
+        try
+        {
+            await InvoiceService.DeleteAsync(invoice.Id);
+            Snackbar.Add("Invoice deleted", Severity.Success);
+            await LoadInvoicesAsync();
+            await OnInvoiceChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to delete invoice: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task VoidInvoiceAsync(Invoice invoice)
+    {
+        var reason = await DialogService.ShowMessageBox(
+            "Void Invoice",
+            $"Are you sure you want to void invoice #{invoice.InvoiceNumber}? The invoice will remain in records but will be marked as cancelled.",
+            yesText: "Void Invoice",
+            cancelText: "Cancel");
+
+        if (reason != true) return;
+
+        try
+        {
+            await InvoiceService.VoidAsync(invoice.Id, "Voided by user");
+            Snackbar.Add($"Invoice #{invoice.InvoiceNumber} has been voided", Severity.Success);
+            await LoadInvoicesAsync();
+            await OnInvoiceChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to void invoice: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DuplicateInvoiceAsync(Invoice invoice)
+    {
+        try
+        {
+            var duplicate = await InvoiceService.DuplicateAsync(invoice.Id);
+            Snackbar.Add($"Created duplicate invoice #{duplicate.InvoiceNumber}", Severity.Success);
+            await LoadInvoicesAsync();
+            await OnInvoiceChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to duplicate invoice: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DownloadPdfAsync(Invoice invoice)
+    {
+        try
+        {
+            var pdfBytes = await PdfService.GeneratePdfAsync(invoice.Id);
+            var filename = PdfService.GetPdfFilename(invoice);
+            var base64 = Convert.ToBase64String(pdfBytes);
+
+            // Trigger browser download via JS interop
+            await JS.InvokeVoidAsync("downloadFileFromBase64", filename, base64, "application/pdf");
+
+            Snackbar.Add($"Downloaded {filename}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to generate PDF: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static bool IsOverdue(Invoice invoice)
+    {
+        return invoice.DueDate < DateTime.UtcNow.Date &&
+               invoice.Status != InvoiceStatus.Paid &&
+               invoice.Status != InvoiceStatus.Voided;
+    }
+
+    private static Color GetStatusColor(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Draft => Color.Default,
+        InvoiceStatus.Finalized => Color.Info,
+        InvoiceStatus.Sent => Color.Primary,
+        InvoiceStatus.Viewed => Color.Secondary,
+        InvoiceStatus.PartiallyPaid => Color.Warning,
+        InvoiceStatus.Paid => Color.Success,
+        InvoiceStatus.Overdue => Color.Error,
+        InvoiceStatus.Voided => Color.Dark,
+        _ => Color.Default
+    };
+
+    private static string GetStatusText(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Draft => "Draft",
+        InvoiceStatus.Finalized => "Finalized",
+        InvoiceStatus.Sent => "Sent",
+        InvoiceStatus.Viewed => "Viewed",
+        InvoiceStatus.PartiallyPaid => "Partial",
+        InvoiceStatus.Paid => "Paid",
+        InvoiceStatus.Overdue => "Overdue",
+        InvoiceStatus.Voided => "Voided",
+        _ => status.ToString()
+    };
+}

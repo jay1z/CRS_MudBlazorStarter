@@ -1,0 +1,438 @@
+﻿@page "/Settings/Invoices"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+
+@inject IInvoiceService InvoiceService
+@inject ISnackbar Snackbar
+
+<PageTitle>Invoice Settings</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
+    <!-- Header -->
+    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px;">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Style="color: white; font-size: 40px;" />
+            <div>
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">Invoice Settings</MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.8);">
+                    Configure invoice numbering, defaults, and automation
+                </MudText>
+            </div>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_settings != null)
+    {
+        <MudForm @ref="_form" @bind-IsValid="@_isValid">
+            <MudGrid Spacing="3">
+                <!-- Invoice Numbering -->
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                        <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Numbers" Class="mr-2" />
+                            Invoice Numbering
+                        </MudText>
+
+                        <MudStack Spacing="3">
+                            <MudTextField @bind-Value="_settings.InvoicePrefix"
+                                          Label="Invoice Prefix"
+                                          Placeholder="INV"
+                                          HelperText="Prefix for invoice numbers (e.g., INV, INVOICE)"
+                                          MaxLength="20"
+                                          Immediate="true"
+                                          OnKeyUp="UpdatePreview" />
+
+                            <MudSelect T="string" @bind-Value="_settings.InvoiceNumberFormat"
+                                       Label="Number Format"
+                                       HelperText="How invoice numbers are formatted">
+                                <MudSelectItem Value="@("{PREFIX}-{YEAR}-{NUMBER}")">{PREFIX}-{YEAR}-{NUMBER} (e.g., INV-2025-00001)</MudSelectItem>
+                                <MudSelectItem Value="@("{PREFIX}{YEAR}{NUMBER}")">{PREFIX}{YEAR}{NUMBER} (e.g., INV202500001)</MudSelectItem>
+                                <MudSelectItem Value="@("{PREFIX}-{YEAR}{MONTH}-{NUMBER}")">{PREFIX}-{YEAR}{MONTH}-{NUMBER} (e.g., INV-202501-00001)</MudSelectItem>
+                                <MudSelectItem Value="@("{PREFIX}-{NUMBER}")">{PREFIX}-{NUMBER} (e.g., INV-00001)</MudSelectItem>
+                                <MudSelectItem Value="@("{NUMBER}")">{NUMBER} only (e.g., 00001)</MudSelectItem>
+                            </MudSelect>
+
+                            <MudNumericField T="int" @bind-Value="_settings.NumberPadding"
+                                             Label="Number Padding"
+                                             Min="3" Max="10"
+                                             HelperText="Number of digits (e.g., 5 = 00001)"
+                                             Immediate="true"
+                                             OnKeyUp="UpdatePreview" />
+
+                            <MudSelect T="NumberResetFrequency" @bind-Value="_settings.ResetFrequency"
+                                       Label="Reset Sequence"
+                                       HelperText="When to reset the sequential number">
+                                <MudSelectItem Value="NumberResetFrequency.Never">Never (continuous)</MudSelectItem>
+                                <MudSelectItem Value="NumberResetFrequency.Yearly">Yearly (Jan 1)</MudSelectItem>
+                                <MudSelectItem Value="NumberResetFrequency.Monthly">Monthly</MudSelectItem>
+                            </MudSelect>
+
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                                <MudText Typo="Typo.caption">Preview: <strong>@_numberPreview</strong></MudText>
+                                <MudText Typo="Typo.caption">Next number will be: @_settings.NextInvoiceNumber</MudText>
+                            </MudAlert>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Payment Terms Defaults -->
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                        <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Payment" Class="mr-2" />
+                            Default Payment Terms
+                        </MudText>
+
+                        <MudStack Spacing="3">
+                            <MudNumericField T="int" @bind-Value="_settings.DefaultNetDays"
+                                             Label="Net Days"
+                                             Min="0" Max="365"
+                                             HelperText="Default days until payment is due" />
+
+                            <MudNumericField T="decimal" @bind-Value="_settings.DefaultEarlyPaymentDiscount"
+                                             Label="Early Payment Discount %"
+                                             Min="0" Max="100" Step="0.5M"
+                                             Format="N2"
+                                             HelperText="Discount for paying early (e.g., 2 for 2%)" />
+
+                            <MudNumericField T="int" @bind-Value="_settings.DefaultEarlyPaymentDays"
+                                             Label="Early Payment Days"
+                                             Min="0" Max="60"
+                                             HelperText="Days within which discount applies" />
+
+                            <MudNumericField T="decimal" @bind-Value="_settings.DefaultLateInterestRate"
+                                             Label="Late Interest Rate % (Monthly)"
+                                             Min="0" Max="100" Step="0.5M"
+                                             Format="N2"
+                                             HelperText="Monthly interest on overdue invoices" />
+
+                            <MudNumericField T="int" @bind-Value="_settings.DefaultGracePeriodDays"
+                                             Label="Grace Period Days"
+                                             Min="0" Max="30"
+                                             HelperText="Days after due before interest accrues" />
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Tax Defaults -->
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                        <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" />
+                            Tax Settings
+                        </MudText>
+
+                        <MudStack Spacing="3">
+                            <MudNumericField T="decimal" @bind-Value="_settings.DefaultTaxRate"
+                                             Label="Default Tax Rate %"
+                                             Min="0" Max="100" Step="0.25M"
+                                             Format="N2"
+                                             HelperText="Default tax rate for new invoices" />
+
+                            <MudTextField @bind-Value="_settings.TaxLabel"
+                                          Label="Tax Label"
+                                          Placeholder="Tax"
+                                          HelperText="Label shown on invoices (e.g., Sales Tax, VAT)"
+                                          MaxLength="50" />
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Automation Settings -->
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                        <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.AutoMode" Class="mr-2" />
+                            Automation
+                        </MudText>
+
+                        <MudStack Spacing="3">
+                            <MudSwitch T="bool" @bind-Value="_settings.AutoGenerateNextMilestone"
+                                       Label="Auto-generate next milestone invoice"
+                                       Color="Color.Primary" />
+                            <MudText Typo="Typo.caption" Style="color: #666; margin-top: -8px;">
+                                Automatically create the next milestone invoice when current is paid
+                            </MudText>
+
+                            @if (_settings.AutoGenerateNextMilestone)
+                            {
+                                <MudSwitch T="bool" @bind-Value="_settings.NotifyOnAutoGenerate"
+                                           Label="Send notification when auto-generated"
+                                           Color="Color.Primary" />
+
+                                <MudTextField @bind-Value="_settings.NotificationEmail"
+                                              Label="Notification Email"
+                                              Placeholder="Leave empty to use current user"
+                                              HelperText="Email to notify when invoices are auto-generated"
+                                              InputType="InputType.Email" />
+                            }
+
+                            <MudDivider Class="my-2" />
+
+                            <MudSwitch T="bool" @bind-Value="_settings.AutoSendOnCreate"
+                                       Label="Auto-send invoices when created"
+                                       Color="Color.Primary" />
+                            <MudText Typo="Typo.caption" Style="color: #666; margin-top: -8px;">
+                                Automatically email invoices to clients when generated from proposals
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Reminder Settings -->
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                        <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" Class="mr-2" />
+                            Reminder Settings
+                        </MudText>
+
+                        <MudStack Spacing="3">
+                            <MudSwitch T="bool" @bind-Value="_settings.EnableAutoReminders"
+                                       Label="Enable automated reminders"
+                                       Color="Color.Primary" />
+
+                            @if (_settings.EnableAutoReminders)
+                            {
+                                <MudNumericField T="int" @bind-Value="_settings.MaxAutoReminders"
+                                                 Label="Max Auto Reminders"
+                                                 Min="1" Max="10"
+                                                 HelperText="Maximum automated reminders per invoice" />
+
+                                <MudNumericField T="int" @bind-Value="_settings.FirstReminderDays"
+                                                 Label="First Reminder (days from due)"
+                                                 Min="-30" Max="30"
+                                                 HelperText="Negative = before due, positive = after" />
+                            }
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Credit Memo Settings -->
+                <MudItem xs="12" md="6">
+                                        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                                            <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                                                <MudIcon Icon="@Icons.Material.Filled.CreditCard" Class="mr-2" />
+                                                Credit Memo Settings
+                                            </MudText>
+
+                                            <MudStack Spacing="3">
+                                                <MudTextField @bind-Value="_settings.CreditMemoPrefix"
+                                                              Label="Credit Memo Prefix"
+                                                              Placeholder="CM"
+                                                              HelperText="Prefix for credit memo numbers"
+                                                              MaxLength="20" />
+
+                                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                                                    <MudText Typo="Typo.caption">
+                                                        Next credit memo: <strong>@_settings.CreditMemoPrefix-@DateTime.UtcNow.Year-@_settings.NextCreditMemoNumber.ToString("D5")</strong>
+                                                    </MudText>
+                                                </MudAlert>
+                                            </MudStack>
+                                        </MudPaper>
+                                    </MudItem>
+
+                                    <!-- Branding Section -->
+                                    <MudItem xs="12">
+                                        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+                                            <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">
+                                                <MudIcon Icon="@Icons.Material.Filled.Palette" Class="mr-2" />
+                                                Invoice Branding
+                                            </MudText>
+
+                                            <MudSwitch T="bool" @bind-Value="_settings.UseTenantBranding"
+                                                       Label="Use custom branding on invoices"
+                                                       Color="Color.Primary" />
+
+                                            @if (_settings.UseTenantBranding)
+                                            {
+                                                <MudGrid Spacing="3" Class="mt-4">
+                                                    <!-- Company Info -->
+                                                    <MudItem xs="12" md="6">
+                                                        <MudStack Spacing="3">
+                                                            <MudTextField @bind-Value="_settings.CompanyName"
+                                                                          Label="Company Name"
+                                                                          Placeholder="Leave empty to use tenant name"
+                                                                          HelperText="Name displayed on invoices" />
+
+                                                            <MudTextField @bind-Value="_settings.Tagline"
+                                                                          Label="Tagline"
+                                                                          Placeholder="Professional Reserve Study Services"
+                                                                          HelperText="Shown under company name" />
+
+                                                            <MudTextField @bind-Value="_settings.CompanyAddress"
+                                                                          Label="Company Address"
+                                                                          Lines="2"
+                                                                          HelperText="Address displayed on invoice header" />
+
+                                                            <MudTextField @bind-Value="_settings.CompanyPhone"
+                                                                          Label="Phone"
+                                                                          Placeholder="(555) 123-4567" />
+
+                                                            <MudTextField @bind-Value="_settings.CompanyEmail"
+                                                                          Label="Email"
+                                                                          InputType="InputType.Email" />
+
+                                                            <MudTextField @bind-Value="_settings.CompanyWebsite"
+                                                                          Label="Website"
+                                                                          Placeholder="www.example.com" />
+                                                        </MudStack>
+                                                    </MudItem>
+
+                                                    <!-- Colors and Logo -->
+                                                    <MudItem xs="12" md="6">
+                                                        <MudStack Spacing="3">
+                                                            <MudTextField @bind-Value="_settings.LogoUrl"
+                                                                          Label="Logo URL"
+                                                                          HelperText="URL to company logo image"
+                                                                          Placeholder="https://..." />
+
+                                                            <MudColorPicker @bind-Text="_settings.PrimaryColor"
+                                                                            Label="Primary Color"
+                                                                            ColorPickerView="ColorPickerView.Spectrum"
+                                                                            DisableToolbar="false"
+                                                                            HelperText="Used for headers and accents" />
+
+                                                            <MudColorPicker @bind-Text="_settings.SecondaryColor"
+                                                                            Label="Secondary Color"
+                                                                            ColorPickerView="ColorPickerView.Spectrum"
+                                                                            DisableToolbar="false"
+                                                                            HelperText="Used for secondary accents" />
+
+                                                            <!-- Color Preview -->
+                                                            <MudPaper Elevation="0" Class="pa-3" Style="@($"background: linear-gradient(135deg, {_settings.PrimaryColor} 0%, {_settings.SecondaryColor} 100%); border-radius: 8px;")">
+                                                                <MudText Typo="Typo.body2" Style="color: white; font-weight: 600;">Color Preview</MudText>
+                                                            </MudPaper>
+
+                                                            <MudSwitch T="bool" @bind-Value="_settings.ShowPaidWatermark"
+                                                                       Label="Show PAID watermark on paid invoices"
+                                                                       Color="Color.Primary" />
+                                                        </MudStack>
+                                                    </MudItem>
+
+                                                    <!-- Footer and Terms -->
+                                                    <MudItem xs="12" md="6">
+                                                        <MudTextField @bind-Value="_settings.FooterText"
+                                                                      Label="Footer Text"
+                                                                      HelperText="Text shown at bottom of invoice"
+                                                                      Placeholder="Thank you for your business!" />
+                                                    </MudItem>
+
+                                                    <MudItem xs="12" md="6">
+                                                        <MudTextField @bind-Value="_settings.PaymentInstructions"
+                                                                      Label="Payment Instructions"
+                                                                      Lines="3"
+                                                                      HelperText="Instructions for how to pay (shown on PDF)" />
+                                                    </MudItem>
+
+                                                    <MudItem xs="12" md="6">
+                                                        <MudTextField @bind-Value="_settings.DefaultTerms"
+                                                                      Label="Default Terms & Conditions"
+                                                                      Lines="4"
+                                                                      HelperText="Applied to new invoices" />
+                                                    </MudItem>
+
+                                                    <MudItem xs="12" md="6">
+                                                        <MudTextField @bind-Value="_settings.DefaultNotes"
+                                                                      Label="Default Notes"
+                                                                      Lines="4"
+                                                                      HelperText="Applied to new invoices" />
+                                                    </MudItem>
+                                                </MudGrid>
+                                            }
+                                        </MudPaper>
+                                    </MudItem>
+                                </MudGrid>
+
+                                <!-- Save Button -->
+                                <MudPaper Elevation="2" Class="pa-4 mt-4" Style="border-radius: 12px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudText Typo="Typo.body2" Style="color: #666;">
+                                            Changes will apply to new invoices. Existing invoice numbers are not affected.
+                                        </MudText>
+                                        <MudButton Variant="Variant.Filled"
+                                                   Color="Color.Primary"
+                                                   Size="Size.Large"
+                                                   StartIcon="@Icons.Material.Filled.Save"
+                                                   OnClick="SaveSettingsAsync"
+                                                   Disabled="@_isSaving">
+                                            @if (_isSaving)
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                                <span>Saving...</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Save Settings</span>
+                                            }
+                                        </MudButton>
+                                    </MudStack>
+                                </MudPaper>
+                            </MudForm>
+                        }
+                    </MudContainer>
+
+                    @code {
+                        private TenantInvoiceSettings? _settings;
+                        private MudForm _form = null!;
+                        private bool _isValid;
+                        private bool _isLoading = true;
+                        private bool _isSaving = false;
+                        private string _numberPreview = "";
+
+                        protected override async Task OnInitializedAsync()
+                        {
+        await LoadSettingsAsync();
+    }
+
+    private async Task LoadSettingsAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _settings = await InvoiceService.GetOrCreateInvoiceSettingsAsync();
+            await UpdatePreview();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task UpdatePreview()
+    {
+        if (_settings != null)
+        {
+            _numberPreview = await InvoiceService.PreviewInvoiceNumberAsync(_settings);
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        if (_settings == null) return;
+
+        _isSaving = true;
+        try
+        {
+            await InvoiceService.UpdateInvoiceSettingsAsync(_settings);
+            Snackbar.Add("Invoice settings saved successfully", Severity.Success);
+            await UpdatePreview();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

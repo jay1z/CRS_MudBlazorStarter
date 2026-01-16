@@ -1,0 +1,671 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+
+@inject IInvoiceService InvoiceService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudStack Spacing="4">
+                @if (IsNew && !_invoiceCreated)
+                {
+                    <!-- Initial creation options -->
+                    <MudText Typo="Typo.body1" Class="mb-2">
+                        Create a new invoice for <strong>@CommunityName</strong>
+                    </MudText>
+
+                    @if (_isLoadingMilestones)
+                    {
+                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                    }
+                    else if (_paymentMilestones.Any())
+                    {
+                        <!-- Payment Schedule Info -->
+                        <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f5f5f5; border-radius: 8px;">
+                            <MudStack Spacing="3">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Payments" Color="Color.Primary" />
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">Payment Schedule</MudText>
+                                </MudStack>
+
+                                <!-- Summary -->
+                                <MudGrid Spacing="2">
+                                    <MudItem xs="6" sm="3">
+                                        <MudText Typo="Typo.caption" Style="color: #666;">Total Proposal</MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Primary">@_proposalAmount.ToString("C")</MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" sm="3">
+                                        <MudText Typo="Typo.caption" Style="color: #666;">Invoiced</MudText>
+                                        <MudText Typo="Typo.h6">@_invoicedTotal.ToString("C")</MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" sm="3">
+                                        <MudText Typo="Typo.caption" Style="color: #666;">Paid</MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Success">@_paidTotal.ToString("C")</MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" sm="3">
+                                        <MudText Typo="Typo.caption" Style="color: #666;">Remaining</MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Warning">@((_proposalAmount - _invoicedTotal).ToString("C"))</MudText>
+                                    </MudItem>
+                                </MudGrid>
+
+                                <MudDivider />
+
+                                <!-- Milestone Selection -->
+                                <MudText Typo="Typo.subtitle2">Select Payment Milestone</MudText>
+                                <MudRadioGroup @bind-Value="_selectedMilestoneType">
+                                    @foreach (var milestone in _paymentMilestones)
+                                    {
+                                        <MudRadio Value="milestone.Type" 
+                                                  Disabled="@milestone.IsInvoiced"
+                                                  Color="Color.Primary">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                <MudText>@milestone.Description</MudText>
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                                    @milestone.Amount.ToString("C")
+                                                </MudChip>
+                                                @if (milestone.IsInvoiced)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" 
+                                                             Color="@(milestone.IsPaid ? Color.Success : Color.Info)"
+                                                             Icon="@(milestone.IsPaid ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Receipt)">
+                                                        @(milestone.IsPaid ? "Paid" : "Invoiced")
+                                                    </MudChip>
+                                                }
+                                            </MudStack>
+                                        </MudRadio>
+                                    }
+                                </MudRadioGroup>
+
+                                @if (_hasPrepaymentDiscount)
+                                {
+                                    <MudDivider />
+                                    <MudCheckBox @bind-Value="_applyPrepaymentDiscount" 
+                                                 Color="Color.Success"
+                                                 Label="@($"Apply prepayment discount ({_prepaymentDiscountPercentage}%)")"/>
+                                }
+                            </MudStack>
+                        </MudPaper>
+
+                        <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Receipt"
+                                       OnClick="CreateFromMilestoneAsync"
+                                       Disabled="@(_isLoading || _selectedMilestoneType == null)">
+                                @if (_isLoading)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                }
+                                Create Invoice
+                            </MudButton>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <!-- No payment schedule - show original options -->
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.AutoAwesome"
+                                       OnClick="CreateFromProposalAsync"
+                                       Disabled="_isLoading">
+                                @if (_isLoading)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                }
+                                Create from Proposal
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="CreateBlankAsync"
+                                       Disabled="_isLoading">
+                                Create Blank Invoice
+                            </MudButton>
+                        </MudStack>
+                    }
+
+                    <MudDivider />
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Default" 
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="CreateBlankAsync"
+                               Disabled="_isLoading">
+                        Or create a blank invoice
+                    </MudButton>
+                }
+                else if (_invoice != null)
+                {
+                    <!-- Invoice editing form -->
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_invoice.InvoiceNumber"
+                                          Label="Invoice Number"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true"
+                                          Disabled="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudSelect @bind-Value="_invoice.Status"
+                                       Label="Status"
+                                       Variant="Variant.Outlined"
+                                       Disabled="true">
+                                @foreach (InvoiceStatus status in Enum.GetValues<InvoiceStatus>())
+                                {
+                                    <MudSelectItem Value="status">@status</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Bill To</MudText>
+
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_invoice.BillToName"
+                                          Label="Name"
+                                          Variant="Variant.Outlined"
+                                          Required="true"
+                                          Disabled="!CanEdit" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_invoice.BillToEmail"
+                                          Label="Email"
+                                          Variant="Variant.Outlined"
+                                          InputType="InputType.Email"
+                                          Disabled="!CanEdit" />
+                        </MudItem>
+                        <MudItem xs="12" md="8">
+                            <MudTextField @bind-Value="_invoice.BillToAddress"
+                                          Label="Address"
+                                          Variant="Variant.Outlined"
+                                          Disabled="!CanEdit" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="_invoice.BillToPhone"
+                                          Label="Phone"
+                                          Variant="Variant.Outlined"
+                                          Disabled="!CanEdit" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Dates</MudText>
+
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudDatePicker @bind-Date="_invoiceDate"
+                                           Label="Invoice Date"
+                                           Variant="Variant.Outlined"
+                                           Disabled="!CanEdit" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudDatePicker @bind-Date="_dueDate"
+                                           Label="Due Date"
+                                           Variant="Variant.Outlined"
+                                           Disabled="!CanEdit" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudDivider Class="my-2" />
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">Line Items</MudText>
+                        @if (CanEdit)
+                        {
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="AddLineItem">
+                                Add Item
+                            </MudButton>
+                        }
+                    </MudStack>
+
+                    <MudTable Items="_lineItems" Dense="true" Hover="true" Elevation="0" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                        <HeaderContent>
+                            <MudTh>Description</MudTh>
+                            <MudTh Style="width: 100px;">Qty</MudTh>
+                            <MudTh Style="width: 120px;">Unit Price</MudTh>
+                            <MudTh Style="width: 120px;">Total</MudTh>
+                            @if (CanEdit)
+                            {
+                                <MudTh Style="width: 50px;"></MudTh>
+                            }
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                @if (CanEdit)
+                                {
+                                    <MudTextField @bind-Value="context.Description"
+                                                  Variant="Variant.Text"
+                                                  Margin="Margin.Dense" />
+                                }
+                                else
+                                {
+                                    @context.Description
+                                }
+                            </MudTd>
+                            <MudTd>
+                                @if (CanEdit)
+                                {
+                                    <MudNumericField Value="context.Quantity"
+                                                     ValueChanged="@((decimal val) => OnQuantityChanged(context, val))"
+                                                     Variant="Variant.Text"
+                                                     Margin="Margin.Dense"
+                                                     Min="0.01m"
+                                                     Step="1m"
+                                                     Format="N2" />
+                                }
+                                else
+                                {
+                                    @context.Quantity.ToString("N2")
+                                }
+                            </MudTd>
+                            <MudTd>
+                                @if (CanEdit)
+                                {
+                                    <MudNumericField Value="context.UnitPrice"
+                                                     ValueChanged="@((decimal val) => OnUnitPriceChanged(context, val))"
+                                                     Variant="Variant.Text"
+                                                     Margin="Margin.Dense"
+                                                     Min="0m"
+                                                     Format="C2"
+                                                     Adornment="Adornment.Start"
+                                                     AdornmentText="$" />
+                                }
+                                else
+                                {
+                                    @context.UnitPrice.ToString("C")
+                                }
+                            </MudTd>
+                            <MudTd>
+                                <strong>@context.LineTotal.ToString("C")</strong>
+                            </MudTd>
+                            @if (CanEdit)
+                            {
+                                <MudTd>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Color="Color.Error"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => RemoveLineItem(context))" />
+                                </MudTd>
+                            }
+                        </RowTemplate>
+                    </MudTable>
+
+                    <!-- Totals Section -->
+                    <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f5f5f5; border-radius: 8px;">
+                        <MudGrid>
+                            <MudItem xs="7"></MudItem>
+                            <MudItem xs="5">
+                                <MudStack Spacing="2">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText>Subtotal:</MudText>
+                                        <MudText>@_invoice.Subtotal.ToString("C")</MudText>
+                                    </MudStack>
+
+                                    @if (CanEdit)
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudText>Discount:</MudText>
+                                            <MudNumericField Value="_invoice.DiscountAmount"
+                                                             ValueChanged="@((decimal val) => { _invoice.DiscountAmount = val; RecalculateTotals(); })"
+                                                             Variant="Variant.Outlined"
+                                                             Margin="Margin.Dense"
+                                                             Min="0m"
+                                                             Format="C2"
+                                                             Adornment="Adornment.Start"
+                                                             AdornmentText="$"
+                                                             Style="max-width: 120px;" />
+                                        </MudStack>
+                                    }
+                                    else if (_invoice.DiscountAmount > 0)
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Color="Color.Success">Discount:</MudText>
+                                            <MudText Color="Color.Success">-@_invoice.DiscountAmount.ToString("C")</MudText>
+                                        </MudStack>
+                                    }
+
+                                    @if (_invoice.TaxAmount > 0)
+                                    {
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText>Tax (@_invoice.TaxRate%):</MudText>
+                                            <MudText>@_invoice.TaxAmount.ToString("C")</MudText>
+                                        </MudStack>
+                                    }
+
+                                    <MudDivider />
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Typo="Typo.h6">Total:</MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Primary">@_invoice.TotalAmount.ToString("C")</MudText>
+                                    </MudStack>
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Notes & Terms</MudText>
+
+                    <MudTextField @bind-Value="_invoice.Notes"
+                                  Label="Notes (visible to client)"
+                                  Variant="Variant.Outlined"
+                                  Lines="2"
+                                  Disabled="!CanEdit" />
+
+                    <MudTextField @bind-Value="_invoice.Terms"
+                                  Label="Payment Terms"
+                                  Variant="Variant.Outlined"
+                                  Lines="2"
+                                  Disabled="!CanEdit" />
+
+                    <MudTextField @bind-Value="_invoice.InternalNotes"
+                                  Label="Internal Notes (not visible to client)"
+                                  Variant="Variant.Outlined"
+                                  Lines="2"
+                                  Disabled="!CanEdit" />
+                }
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        @if (_invoice != null && CanEdit)
+        {
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="SaveAsync"
+                       Disabled="_isLoading || !_isValid">
+                @if (_isLoading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Save
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    [Parameter]
+    public string? CommunityName { get; set; }
+
+    [Parameter]
+    public Guid? InvoiceId { get; set; }
+
+    [Parameter]
+    public bool IsNew { get; set; } = true;
+
+    private MudForm? _form;
+    private Invoice? _invoice;
+    private List<InvoiceLineItem> _lineItems = [];
+    private bool _isValid;
+    private bool _isLoading;
+    private bool _invoiceCreated;
+    private DateTime? _invoiceDate;
+    private DateTime? _dueDate;
+
+    // Payment schedule fields
+    private bool _isLoadingMilestones;
+    private List<PaymentMilestone> _paymentMilestones = [];
+    private InvoiceMilestoneType? _selectedMilestoneType;
+    private decimal _proposalAmount;
+    private decimal _invoicedTotal;
+    private decimal _paidTotal;
+    private bool _hasPrepaymentDiscount;
+    private decimal _prepaymentDiscountPercentage;
+    private bool _applyPrepaymentDiscount;
+
+    private bool CanEdit => _invoice?.Status == InvoiceStatus.Draft;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!IsNew && InvoiceId.HasValue)
+        {
+            await LoadInvoiceAsync();
+        }
+        else if (IsNew)
+        {
+            await LoadPaymentMilestonesAsync();
+        }
+    }
+
+    private async Task LoadPaymentMilestonesAsync()
+    {
+        _isLoadingMilestones = true;
+        try
+        {
+            _paymentMilestones = await InvoiceService.GetPaymentMilestonesAsync(ReserveStudyId);
+            _invoicedTotal = await InvoiceService.GetInvoicedTotalAsync(ReserveStudyId);
+            _paidTotal = await InvoiceService.GetPaidTotalAsync(ReserveStudyId);
+            _proposalAmount = _paymentMilestones.Sum(m => m.Amount);
+
+            // Pre-select the first non-invoiced milestone
+            _selectedMilestoneType = _paymentMilestones
+                .FirstOrDefault(m => !m.IsInvoiced)?.Type;
+
+            // Check for prepayment discount (we'll need to get this from the proposal)
+            // For now, we'll set it based on whether any milestone amount differs from expected
+            if (_paymentMilestones.Any())
+            {
+                // We'll load this from the proposal in the service layer
+                // For now, assume 5% discount if available
+                _hasPrepaymentDiscount = true;
+                _prepaymentDiscountPercentage = 5m;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load payment schedule: {ex.Message}", Severity.Warning);
+        }
+        finally
+        {
+            _isLoadingMilestones = false;
+        }
+    }
+
+    private async Task LoadInvoiceAsync()
+    {
+        if (!InvoiceId.HasValue) return;
+
+        _isLoading = true;
+        try
+        {
+            _invoice = await InvoiceService.GetByIdAsync(InvoiceId.Value);
+            if (_invoice != null)
+            {
+                _lineItems = [.. _invoice.LineItems.OrderBy(li => li.SortOrder)];
+                _invoiceDate = _invoice.InvoiceDate;
+                _dueDate = _invoice.DueDate;
+                _invoiceCreated = true;
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CreateFromMilestoneAsync()
+    {
+        if (_selectedMilestoneType == null) return;
+
+        _isLoading = true;
+        try
+        {
+            _invoice = await InvoiceService.CreateFromProposalMilestoneAsync(
+                ReserveStudyId, 
+                _selectedMilestoneType.Value,
+                _applyPrepaymentDiscount);
+            _lineItems = [.. _invoice.LineItems.OrderBy(li => li.SortOrder)];
+            _invoiceDate = _invoice.InvoiceDate;
+            _dueDate = _invoice.DueDate;
+            _invoiceCreated = true;
+
+            var milestoneName = PaymentScheduleCalculator.GetMilestoneDisplayName(_selectedMilestoneType.Value);
+            Snackbar.Add($"Invoice created for {milestoneName}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create invoice: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CreateFromProposalAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _invoice = await InvoiceService.CreateFromProposalAsync(ReserveStudyId);
+            _lineItems = [.. _invoice.LineItems.OrderBy(li => li.SortOrder)];
+            _invoiceDate = _invoice.InvoiceDate;
+            _dueDate = _invoice.DueDate;
+            _invoiceCreated = true;
+            Snackbar.Add("Invoice created from proposal", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create invoice: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CreateBlankAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _invoice = await InvoiceService.CreateAsync(ReserveStudyId);
+            _lineItems = [];
+            _invoiceDate = _invoice.InvoiceDate;
+            _dueDate = _invoice.DueDate;
+            _invoiceCreated = true;
+            Snackbar.Add("Blank invoice created", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create invoice: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void AddLineItem()
+    {
+        var lineItem = new InvoiceLineItem
+        {
+            Description = "",
+            Quantity = 1,
+            UnitPrice = 0,
+            LineTotal = 0,
+            SortOrder = _lineItems.Count
+        };
+        _lineItems.Add(lineItem);
+    }
+
+    private void RemoveLineItem(InvoiceLineItem item)
+    {
+        _lineItems.Remove(item);
+        RecalculateTotals();
+    }
+
+    private void OnQuantityChanged(InvoiceLineItem item, decimal value)
+    {
+        item.Quantity = value;
+        item.RecalculateTotal();
+        RecalculateTotals();
+    }
+
+    private void OnUnitPriceChanged(InvoiceLineItem item, decimal value)
+    {
+        item.UnitPrice = value;
+        item.RecalculateTotal();
+        RecalculateTotals();
+    }
+
+    private void RecalculateTotals()
+    {
+        if (_invoice == null) return;
+        
+        _invoice.Subtotal = _lineItems.Sum(li => li.LineTotal);
+        _invoice.TaxAmount = _invoice.Subtotal * (_invoice.TaxRate / 100);
+        _invoice.TotalAmount = _invoice.Subtotal + _invoice.TaxAmount - _invoice.DiscountAmount;
+        StateHasChanged();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_invoice == null) return;
+
+        _isLoading = true;
+        try
+        {
+            // Update dates
+            _invoice.InvoiceDate = _invoiceDate ?? DateTime.UtcNow;
+            _invoice.DueDate = _dueDate ?? DateTime.UtcNow.AddDays(30);
+
+            // Update invoice
+            await InvoiceService.UpdateAsync(_invoice);
+
+            // Sync line items
+            var existingIds = _invoice.LineItems.Select(li => li.Id).ToHashSet();
+            
+            foreach (var item in _lineItems)
+            {
+                if (item.Id == Guid.Empty || !existingIds.Contains(item.Id))
+                {
+                    // New item
+                    await InvoiceService.AddLineItemAsync(_invoice.Id, item);
+                }
+                else
+                {
+                    // Existing item
+                    await InvoiceService.UpdateLineItemAsync(item);
+                }
+            }
+
+            // Remove deleted items
+            var currentIds = _lineItems.Where(li => li.Id != Guid.Empty).Select(li => li.Id).ToHashSet();
+            foreach (var existingItem in _invoice.LineItems.ToList())
+            {
+                if (!currentIds.Contains(existingItem.Id))
+                {
+                    await InvoiceService.RemoveLineItemAsync(existingItem.Id);
+                }
+            }
+
+            Snackbar.Add("Invoice saved successfully", Severity.Success);
+            MudDialog?.Close(DialogResult.Ok(_invoice));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save invoice: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+}

@@ -1,0 +1,295 @@
+﻿@page "/Reports/Aging"
+@attribute [Authorize(Policy = "RequireTenantStaff")]
+
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+
+@inject IInvoiceService InvoiceService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>Accounts Receivable Aging Report</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
+    <!-- Header -->
+    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 16px;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Assessment" Style="color: white; font-size: 40px;" />
+                <div>
+                    <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">A/R Aging Report</MudText>
+                    <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.8);">
+                        As of @DateTime.Now.ToString("MMMM d, yyyy")
+                    </MudText>
+                </div>
+            </MudStack>
+            <MudButton Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       OnClick="ExportToCsvAsync"
+                       Style="background: rgba(255,255,255,0.2); color: white;">
+                Export CSV
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    }
+    else
+    {
+        <!-- Summary Cards -->
+        <MudGrid Spacing="3" Class="mb-4">
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; border-top: 4px solid #10b981;">
+                    <MudText Typo="Typo.overline" Style="color: #666;">Current (0-30 days)</MudText>
+                    <MudText Typo="Typo.h5" Style="font-weight: 700; color: #10b981;">@_summary.Current.ToString("C0")</MudText>
+                    <MudText Typo="Typo.caption" Style="color: #999;">@_agingBuckets.Current.Count invoices</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; border-top: 4px solid #3b82f6;">
+                    <MudText Typo="Typo.overline" Style="color: #666;">31-60 Days</MudText>
+                    <MudText Typo="Typo.h5" Style="font-weight: 700; color: #3b82f6;">@_summary.Days31To60.ToString("C0")</MudText>
+                    <MudText Typo="Typo.caption" Style="color: #999;">@_agingBuckets.Days31To60.Count invoices</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; border-top: 4px solid #f59e0b;">
+                    <MudText Typo="Typo.overline" Style="color: #666;">61-90 Days</MudText>
+                    <MudText Typo="Typo.h5" Style="font-weight: 700; color: #f59e0b;">@_summary.Days61To90.ToString("C0")</MudText>
+                    <MudText Typo="Typo.caption" Style="color: #999;">@_agingBuckets.Days61To90.Count invoices</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; border-top: 4px solid #ef4444;">
+                    <MudText Typo="Typo.overline" Style="color: #666;">90+ Days</MudText>
+                    <MudText Typo="Typo.h5" Style="font-weight: 700; color: #ef4444;">@_summary.Over90Days.ToString("C0")</MudText>
+                    <MudText Typo="Typo.caption" Style="color: #999;">@_agingBuckets.Over90Days.Count invoices</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; border-top: 4px solid #667eea;">
+                    <MudText Typo="Typo.overline" Style="color: #666;">Total Outstanding</MudText>
+                    <MudText Typo="Typo.h5" Style="font-weight: 700; color: #667eea;">@_summary.TotalOutstanding.ToString("C0")</MudText>
+                    <MudText Typo="Typo.caption" Style="color: #999;">@_allInvoices.Count invoices</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Aging Buckets -->
+        <MudExpansionPanels MultiExpansion="true" Elevation="2" Class="mb-4" Style="border-radius: 12px;">
+            @foreach (var bucket in GetBucketsWithInvoices())
+            {
+                <MudExpansionPanel @key="bucket.Name" IsInitiallyExpanded="@(bucket.Invoices.Any())">
+                    <TitleContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width: 100%;">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudAvatar Size="Size.Small" Style="@($"background: {bucket.Color}; color: white;")">
+                                    @bucket.Invoices.Count
+                                </MudAvatar>
+                                <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@bucket.Name</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.subtitle1" Style="@($"font-weight: 700; color: {bucket.Color};")">
+                                @bucket.Total.ToString("C")
+                            </MudText>
+                        </MudStack>
+                    </TitleContent>
+                    <ChildContent>
+                        @if (bucket.Invoices.Any())
+                        {
+                            <MudSimpleTable Dense="true" Hover="true">
+                                <thead>
+                                    <tr style="background: #f8f9fa;">
+                                        <th>Invoice #</th>
+                                        <th>Client</th>
+                                        <th>Invoice Date</th>
+                                        <th>Due Date</th>
+                                        <th>Days Overdue</th>
+                                        <th style="text-align: right;">Balance Due</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var invoice in bucket.Invoices.OrderByDescending(i => (DateTime.UtcNow.Date - i.DueDate).Days))
+                                    {
+                                        var daysOverdue = (DateTime.UtcNow.Date - invoice.DueDate).Days;
+                                        <tr @onclick="() => NavigateToInvoice(invoice.Id)" style="cursor: pointer;">
+                                            <td>
+                                                <MudLink Typo="Typo.body2" Style="font-weight: 600;">
+                                                    @invoice.InvoiceNumber
+                                                </MudLink>
+                                            </td>
+                                            <td>@invoice.BillToName</td>
+                                            <td>@invoice.InvoiceDate.ToString("MMM d, yyyy")</td>
+                                            <td>@invoice.DueDate.ToString("MMM d, yyyy")</td>
+                                            <td>
+                                                @if (daysOverdue > 0)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="@GetDaysColor(daysOverdue)">
+                                                        @daysOverdue days
+                                                    </MudChip>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.body2" Style="color: #10b981;">Current</MudText>
+                                                }
+                                            </td>
+                                            <td style="text-align: right; font-weight: 600;">
+                                                @((invoice.TotalAmount - invoice.AmountPaid).ToString("C"))
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </MudSimpleTable>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Style="color: #666; padding: 16px;">
+                                No invoices in this aging bucket.
+                            </MudText>
+                        }
+                    </ChildContent>
+                </MudExpansionPanel>
+            }
+        </MudExpansionPanels>
+    }
+</MudContainer>
+
+@code {
+    private List<Invoice> _allInvoices = [];
+    private AgingBuckets _agingBuckets = new();
+    private AgingSummary _summary = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            // Get all unpaid invoices
+            _allInvoices = (await InvoiceService.GetUnpaidAsync()).ToList();
+            CalculateAgingBuckets();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void CalculateAgingBuckets()
+    {
+        var today = DateTime.UtcNow.Date;
+
+        _agingBuckets = new AgingBuckets
+        {
+            Current = _allInvoices.Where(i => (today - i.DueDate).Days <= 30).ToList(),
+            Days31To60 = _allInvoices.Where(i => (today - i.DueDate).Days > 30 && (today - i.DueDate).Days <= 60).ToList(),
+            Days61To90 = _allInvoices.Where(i => (today - i.DueDate).Days > 60 && (today - i.DueDate).Days <= 90).ToList(),
+            Over90Days = _allInvoices.Where(i => (today - i.DueDate).Days > 90).ToList()
+        };
+
+        _summary = new AgingSummary
+        {
+            Current = _agingBuckets.Current.Sum(i => i.TotalAmount - i.AmountPaid),
+            Days31To60 = _agingBuckets.Days31To60.Sum(i => i.TotalAmount - i.AmountPaid),
+            Days61To90 = _agingBuckets.Days61To90.Sum(i => i.TotalAmount - i.AmountPaid),
+            Over90Days = _agingBuckets.Over90Days.Sum(i => i.TotalAmount - i.AmountPaid),
+            TotalOutstanding = _allInvoices.Sum(i => i.TotalAmount - i.AmountPaid)
+        };
+    }
+
+    private IEnumerable<BucketDisplay> GetBucketsWithInvoices()
+    {
+        yield return new BucketDisplay("Current (0-30 Days)", _agingBuckets.Current, "#10b981", _summary.Current);
+        yield return new BucketDisplay("31-60 Days", _agingBuckets.Days31To60, "#3b82f6", _summary.Days31To60);
+        yield return new BucketDisplay("61-90 Days", _agingBuckets.Days61To90, "#f59e0b", _summary.Days61To90);
+        yield return new BucketDisplay("Over 90 Days", _agingBuckets.Over90Days, "#ef4444", _summary.Over90Days);
+    }
+
+    private void NavigateToInvoice(Guid invoiceId)
+    {
+        NavigationManager.NavigateTo($"/Invoices/{invoiceId}");
+    }
+
+    private static Color GetDaysColor(int daysOverdue) => daysOverdue switch
+    {
+        <= 30 => Color.Success,
+        <= 60 => Color.Info,
+        <= 90 => Color.Warning,
+        _ => Color.Error
+    };
+
+    private async Task ExportToCsvAsync()
+    {
+        try
+        {
+            var csv = new System.Text.StringBuilder();
+            csv.AppendLine("InvoiceNo,Client,InvoiceDate,DueDate,DaysOverdue,Amount,AmountPaid,BalanceDue,AgingBucket");
+
+            foreach (var invoice in _allInvoices.OrderByDescending(i => (DateTime.UtcNow.Date - i.DueDate).Days))
+            {
+                var daysOverdue = (DateTime.UtcNow.Date - invoice.DueDate).Days;
+                var bucket = daysOverdue switch
+                {
+                    <= 30 => "Current",
+                    <= 60 => "31-60 Days",
+                    <= 90 => "61-90 Days",
+                    _ => "Over 90 Days"
+                };
+
+                csv.AppendLine($"\"{invoice.InvoiceNumber}\"," +
+                              $"\"{EscapeCsv(invoice.BillToName)}\"," +
+                              $"\"{invoice.InvoiceDate:yyyy-MM-dd}\"," +
+                              $"\"{invoice.DueDate:yyyy-MM-dd}\"," +
+                              $"\"{daysOverdue}\"," +
+                              $"\"{invoice.TotalAmount:F2}\"," +
+                              $"\"{invoice.AmountPaid:F2}\"," +
+                              $"\"{(invoice.TotalAmount - invoice.AmountPaid):F2}\"," +
+                              $"\"{bucket}\"");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+            var base64 = Convert.ToBase64String(bytes);
+            var filename = $"ar-aging-report-{DateTime.Now:yyyy-MM-dd}.csv";
+
+            await JS.InvokeVoidAsync("downloadFileFromBase64", filename, base64, "text/csv");
+            Snackbar.Add($"Exported {_allInvoices.Count} invoices", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return value.Replace("\"", "\"\"");
+    }
+
+    private class AgingBuckets
+    {
+        public List<Invoice> Current { get; set; } = [];
+        public List<Invoice> Days31To60 { get; set; } = [];
+        public List<Invoice> Days61To90 { get; set; } = [];
+        public List<Invoice> Over90Days { get; set; } = [];
+    }
+
+    private class AgingSummary
+    {
+        public decimal Current { get; set; }
+        public decimal Days31To60 { get; set; }
+        public decimal Days61To90 { get; set; }
+        public decimal Over90Days { get; set; }
+        public decimal TotalOutstanding { get; set; }
+    }
+
+    private record BucketDisplay(string Name, List<Invoice> Invoices, string Color, decimal Total);
+}

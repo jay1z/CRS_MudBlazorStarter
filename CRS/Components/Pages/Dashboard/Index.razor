@@ -16,6 +16,8 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IReserveStudyService ReserveStudyService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IInvoiceService InvoiceService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Dashboard - @TenantName</PageTitle>
 
@@ -105,7 +107,7 @@
         @* HOA User Dashboard - Simplified view *@
         <MudGrid Spacing="4" Class="mb-6">
             <!-- My Studies -->
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" sm="6" md="4">
                 <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
                     <MudStack Spacing="3">
                         <div class="d-flex justify-space-between align-center">
@@ -114,7 +116,7 @@
                             </div>
                         </div>
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiActiveStudies</MudText>
+                            <MudText Typo="Typo.h3" Style="font-weight: 700;">@hoaUserStudies.Count</MudText>
                             <MudText Typo="Typo.body2" Style="opacity: 0.9;">My Reserve Studies</MudText>
                         </MudStack>
                     </MudStack>
@@ -122,7 +124,7 @@
             </MudItem>
 
             <!-- Available Reports -->
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" sm="6" md="4">
                 <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
                     <MudStack Spacing="3">
                         <div class="d-flex justify-space-between align-center">
@@ -131,8 +133,29 @@
                             </div>
                         </div>
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiReports</MudText>
+                            <MudText Typo="Typo.h3" Style="font-weight: 700;">@hoaUserStudies.Count(s => s.IsComplete)</MudText>
                             <MudText Typo="Typo.body2" Style="opacity: 0.9;">Available Reports</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Invoice Balance -->
+            <MudItem xs="12" sm="6" md="4">
+                <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="@($"border-radius: 16px; background: linear-gradient(135deg, {(HoaTotalBalance > 0 ? "#f59e0b" : "#10b981")} 0%, {(HoaTotalBalance > 0 ? "#d97706" : "#059669")} 100%); color: white; cursor: pointer;")" @onclick="@(() => NavigationManager.NavigateTo("/MyInvoices"))">
+                    <MudStack Spacing="3">
+                        <div class="d-flex justify-space-between align-center">
+                            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Receipt" Style="font-size: 32px;" />
+                            </div>
+                            @if (HoaTotalBalance > 0)
+                            {
+                                <MudChip T="string" Size="Size.Small" Style="background: rgba(255,255,255,0.3); color: white; font-weight: 600;">Due</MudChip>
+                            }
+                        </div>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h4" Style="font-weight: 700;">@HoaTotalBalance.ToString("C0")</MudText>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">@(HoaTotalBalance > 0 ? "Balance Due" : "All Paid")</MudText>
                         </MudStack>
                     </MudStack>
                 </MudPaper>
@@ -264,6 +287,91 @@
 
             <MudItem xs="12" lg="4">
                 <MudStack Spacing="4">
+                    <!-- My Invoices -->
+                    <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                            <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                                <MudIcon Icon="@Icons.Material.Filled.Receipt" Style="color: #f59e0b;" Class="mr-2" />
+                                My Invoices
+                            </MudText>
+                            <MudButton Variant="Variant.Text" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       Href="/MyInvoices"
+                                       Style="text-transform: none;">
+                                View All
+                            </MudButton>
+                        </MudStack>
+
+                        @if (isLoadingInvoices)
+                        {
+                            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-2" />
+                        }
+                        else if (!hoaUserInvoices.Any())
+                        {
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                                <MudText Typo="Typo.body2">No invoices yet</MudText>
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            var unpaidInvoices = hoaUserInvoices.Where(i => i.Status != InvoiceStatus.Paid).Take(3).ToList();
+                            @if (unpaidInvoices.Any())
+                            {
+                                <MudStack Spacing="2">
+                                    @foreach (var invoice in unpaidInvoices)
+                                    {
+                                        <MudPaper Elevation="0" Class="pa-3" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                            <MudStack Spacing="1">
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                    <MudText Typo="Typo.body2" Style="font-weight: 600;">@invoice.InvoiceNumber</MudText>
+                                                    <MudChip T="string" Size="Size.Small" Color="@GetInvoiceStatusColor(invoice.Status)" Variant="Variant.Filled" Style="font-size: 0.65rem;">
+                                                        @invoice.Status
+                                                    </MudChip>
+                                                </MudStack>
+                                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                                    @(invoice.ReserveStudy?.Community?.Name ?? "N/A") • Due @invoice.DueDate.ToString("MMM d")
+                                                </MudText>
+                                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                    <MudText Typo="Typo.body2" Style="font-weight: 700; color: #f59e0b;">
+                                                        @invoice.BalanceDue.ToString("C")
+                                                    </MudText>
+                                                    @if (!string.IsNullOrEmpty(invoice.AccessToken))
+                                                    {
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Success" 
+                                                                   Size="Size.Small"
+                                                                   Href="@($"/invoice/{invoice.AccessToken}")"
+                                                                   StartIcon="@Icons.Material.Filled.CreditCard"
+                                                                   Style="text-transform: none; font-size: 0.75rem;">
+                                                            Pay Now
+                                                        </MudButton>
+                                                    }
+                                                    else
+                                                    {
+                                                        <MudButton Variant="Variant.Outlined" 
+                                                                   Color="Color.Primary" 
+                                                                   Size="Size.Small"
+                                                                   Href="/MyInvoices"
+                                                                   Style="text-transform: none; font-size: 0.75rem;">
+                                                            View
+                                                        </MudButton>
+                                                    }
+                                                </MudStack>
+                                            </MudStack>
+                                        </MudPaper>
+                                    }
+                                </MudStack>
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Dense="true" Icon="@Icons.Material.Filled.CheckCircle">
+                                    <MudText Typo="Typo.body2">All invoices paid!</MudText>
+                                </MudAlert>
+                            }
+                        }
+                    </MudPaper>
+
                     <!-- Quick Links -->
                     <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
                         <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight: 600;">
@@ -274,6 +382,15 @@
                             <MudButton Variant="Variant.Outlined" 
                                        Color="Color.Primary" 
                                        FullWidth="true"
+                                       Href="/MyInvoices"
+                                       StartIcon="@Icons.Material.Filled.Receipt"
+                                       Style="text-transform: none; justify-content: flex-start; padding: 12px;">
+                                View All Invoices
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary" 
+                                       FullWidth="true"
+                                       Href="/Reports/Download"
                                        StartIcon="@Icons.Material.Filled.Download"
                                        Style="text-transform: none; justify-content: flex-start; padding: 12px;">
                                 Download Latest Report
@@ -281,6 +398,7 @@
                             <MudButton Variant="Variant.Outlined" 
                                        Color="Color.Primary" 
                                        FullWidth="true"
+                                       Href="/Support"
                                        StartIcon="@Icons.Material.Filled.QuestionAnswer"
                                        Style="text-transform: none; justify-content: flex-start; padding: 12px;">
                                 Ask a Question
@@ -300,6 +418,7 @@
                         <MudButton Variant="Variant.Filled" 
                                    Color="Color.Primary" 
                                    FullWidth="true"
+                                   Href="/Support"
                                    StartIcon="@Icons.Material.Filled.Email">
                             Contact Support
                         </MudButton>
@@ -313,7 +432,7 @@
         @* Staff/Admin/Specialist Dashboard - Full view *@
     <MudGrid Class="mb-6" Spacing="4">
         <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; transition: transform 0.3s ease, box-shadow 0.3s ease;">
+            <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                 <MudStack Spacing="3">
                     <div class="d-flex justify-space-between align-center">
                         <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -330,7 +449,7 @@
         </MudItem>
 
         <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; transition: transform 0.3s ease, box-shadow 0.3s ease;">
+            <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
                 <MudStack Spacing="3">
                     <div class="d-flex justify-space-between align-center">
                         <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -347,7 +466,7 @@
         </MudItem>
 
         <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; transition: transform 0.3s ease, box-shadow 0.3s ease;">
+            <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
                 <MudStack Spacing="3">
                     <div class="d-flex justify-space-between align-center">
                         <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -363,25 +482,133 @@
             </MudPaper>
         </MudItem>
 
-        <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-6 kpi-card" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; transition: transform 0.3s ease, box-shadow 0.3s ease;">
-                <MudStack Spacing="3">
-                    <div class="d-flex justify-space-between align-center">
-                        <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                            <MudIcon Icon="@Icons.Material.Filled.People" Style="font-size: 32px;" />
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                    <MudStack Spacing="3">
+                        <div class="d-flex justify-space-between align-center">
+                            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.People" Style="font-size: 32px;" />
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Style="background: rgba(255,255,255,0.2); color: white;">+0%</MudChip>
                         </div>
-                        <MudChip T="string" Size="Size.Small" Style="background: rgba(255,255,255,0.2); color: white;">+0%</MudChip>
-                    </div>
-                    <MudStack Spacing="0">
-                        <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiCustomerAccounts</MudText>
-                        <MudText Typo="Typo.body2" Style="opacity: 0.9;">Customer Accounts</MudText>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h3" Style="font-weight: 700;">@KpiCustomerAccounts</MudText>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">Customer Accounts</MudText>
+                        </MudStack>
                     </MudStack>
-                </MudStack>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
 
-    <!-- PIPELINE & QUICK ACTIONS -->
+        <!-- INVOICE KPIs ROW (Clickable) -->
+        <MudGrid Class="mb-6" Spacing="4">
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-6 kpi-clickable" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;" @onclick="@(() => NavigationManager.NavigateTo("/Invoices"))">
+                    <MudStack Spacing="3">
+                        <div class="d-flex justify-space-between align-center">
+                            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Receipt" Style="font-size: 32px;" />
+                            </div>
+                            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size: 18px;" />
+                            </div>
+                        </div>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h4" Style="font-weight: 700;">@InvoiceOutstanding.ToString("C0")</MudText>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">Outstanding Balance</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-6 kpi-clickable" Elevation="3" Style="@($"border-radius: 16px; background: linear-gradient(135deg, {(InvoiceOverdueCount > 0 ? "#ef4444" : "#10b981")} 0%, {(InvoiceOverdueCount > 0 ? "#dc2626" : "#059669")} 100%); color: white;")" @onclick="@(() => NavigationManager.NavigateTo("/Reports/Aging"))">
+                    <MudStack Spacing="3">
+                        <div class="d-flex justify-space-between align-center">
+                            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@(InvoiceOverdueCount > 0 ? Icons.Material.Filled.Warning : Icons.Material.Filled.CheckCircle)" Style="font-size: 32px;" />
+                            </div>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                @if (InvoiceOverdueCount > 0)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Style="background: rgba(255,255,255,0.3); color: white; font-weight: 600;">@InvoiceOverdueCount</MudChip>
+                                }
+                                <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size: 18px;" />
+                                </div>
+                            </MudStack>
+                        </div>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h4" Style="font-weight: 700;">@InvoiceOverdue.ToString("C0")</MudText>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">@(InvoiceOverdueCount > 0 ? "Overdue Amount" : "No Overdue")</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-6 kpi-clickable" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white;" @onclick="@(() => NavigationManager.NavigateTo("/Reports/Revenue"))">
+                    <MudStack Spacing="3">
+                        <div class="d-flex justify-space-between align-center">
+                            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Style="font-size: 32px;" />
+                            </div>
+                            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size: 18px;" />
+                            </div>
+                        </div>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h4" Style="font-weight: 600;">Revenue</MudText>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">View Dashboard →</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-6 kpi-clickable" Elevation="3" Style="border-radius: 16px; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white;" @onclick="@(() => NavigationManager.NavigateTo("/Reports/Aging"))">
+                    <MudStack Spacing="3">
+                        <div class="d-flex justify-space-between align-center">
+                            <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.Assessment" Style="font-size: 32px;" />
+                            </div>
+                            <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size: 18px;" />
+                            </div>
+                        </div>
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.h4" Style="font-weight: 600;">A/R Aging</MudText>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">View Report →</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- OVERDUE ALERT BANNER -->
+        @if (InvoiceOverdueCount > 0)
+        {
+            <MudAlert Severity="Severity.Warning" 
+                      Variant="Variant.Filled" 
+                      Class="mb-6" 
+                      Style="border-radius: 12px;"
+                      Icon="@Icons.Material.Filled.Warning">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width: 100%;">
+                    <MudText>
+                        <strong>@InvoiceOverdueCount invoice(s)</strong> are overdue totaling <strong>@InvoiceOverdue.ToString("C")</strong>. 
+                        Consider sending reminders or reviewing the A/R aging report.
+                    </MudText>
+                    <MudButton Variant="Variant.Text" 
+                               Style="color: white;" 
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               OnClick="@(() => NavigationManager.NavigateTo("/Reports/Aging"))">
+                        View Details
+                    </MudButton>
+                </MudStack>
+            </MudAlert>
+        }
+
+        <!-- PIPELINE & QUICK ACTIONS -->
     <MudGrid Class="mb-6" Spacing="4">
         <!-- PIPELINE BOARD - Enhanced -->
         <MudItem xs="12" md="8">
@@ -462,24 +689,85 @@
                                    Color="Color.Primary" 
                                    FullWidth="true"
                                    StartIcon="@Icons.Material.Filled.Add"
+                                   Href="/ReserveStudies"
                                    Style="text-transform: none; justify-content: flex-start; padding: 12px;">
                             Create New Study
                         </MudButton>
                         <MudButton Variant="Variant.Outlined" 
                                    Color="Color.Primary" 
                                    FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Upload"
+                                   StartIcon="@Icons.Material.Filled.Receipt"
+                                   Href="/Invoices"
                                    Style="text-transform: none; justify-content: flex-start; padding: 12px;">
-                            Upload Documents
+                            Manage Invoices
                         </MudButton>
                         <MudButton Variant="Variant.Outlined" 
                                    Color="Color.Primary" 
                                    FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                                   StartIcon="@Icons.Material.Filled.TrendingUp"
+                                   Href="/Reports/Revenue"
                                    Style="text-transform: none; justify-content: flex-start; padding: 12px;">
-                            Generate Report
+                            Revenue Dashboard
+                        </MudButton>
+                        @if (RoleService.IsTenantOwner || RoleService.IsPlatformAdmin)
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary" 
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Settings"
+                                       Href="/Settings/Invoices"
+                                       Style="text-transform: none; justify-content: flex-start; padding: 12px;">
+                                Invoice Settings
+                            </MudButton>
+                        }
+                    </MudStack>
+                </MudPaper>
+
+                <!-- Recent Payments -->
+                <MudPaper Class="pa-6" Elevation="3" Style="border-radius: 16px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                        <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Payments" Style="color: #10b981; vertical-align: middle;" Class="mr-2" />
+                            Recent Payments
+                        </MudText>
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Small"
+                                   Href="/Reports/Revenue"
+                                   Style="text-transform: none;">
+                            View All
                         </MudButton>
                     </MudStack>
+                    @if (!RecentPayments.Any())
+                    {
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                            <MudText Typo="Typo.body2">No payments in the last 30 days</MudText>
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudList T="string" Dense="true">
+                            @foreach (var payment in RecentPayments)
+                            {
+                                <MudListItem>
+                                    <MudStack Spacing="0">
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                                                @payment.Amount.ToString("C")
+                                            </MudText>
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled" Style="font-size: 0.7rem;">
+                                                Paid
+                                            </MudChip>
+                                        </MudStack>
+                                        <MudText Typo="Typo.caption" Style="color: #666;">
+                                            @(payment.Invoice?.InvoiceNumber ?? "N/A") • @payment.PaymentDate.ToString("MMM d")
+                                        </MudText>
+                                    </MudStack>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
                 </MudPaper>
 
                 <!-- Helpful Links -->
@@ -696,10 +984,27 @@
 </MudContainer>
 
 <style>
-    .kpi-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 32px rgba(0,0,0,0.15) !important;
+    /* Clickable KPI cards get hover effects */
+    .kpi-clickable {
         cursor: pointer;
+        position: relative;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .kpi-clickable:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 16px 40px rgba(0,0,0,0.2) !important;
+    }
+
+    .kpi-clickable::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 0 0 16px 16px;
     }
 </style>
 
@@ -714,18 +1019,29 @@
     private int KpiReports { get; set; } = 0;
     private int KpiCustomerAccounts { get; set; } = 0;
 
-// Pipeline metrics
-private int PipelineScreening { get; set; } = 0;
-private int PipelineEnrollment { get; set; } = 0;
-private int PipelineComplete { get; set; } = 0;
+    // Invoice Metrics (Admin/Specialist)
+    private decimal InvoiceOutstanding { get; set; } = 0;
+    private decimal InvoiceOverdue { get; set; } = 0;
+    private int InvoiceOverdueCount { get; set; } = 0;
+    private List<PaymentRecord> RecentPayments { get; set; } = new();
 
-private List<PropertyRow> Properties { get; set; } = new();
-private List<ActivityItem> Activity { get; set; } = new();
-private List<TicketItem> Tickets { get; set; } = new();
-private List<ReserveStudy> hoaUserStudies { get; set; } = new();
-private HashSet<Guid> pendingAmendmentStudyIds { get; set; } = new();
-private bool isLoadingStudies = false;
-private Guid? currentUserId = null;
+    // HOA Invoice Data
+    private List<Invoice> hoaUserInvoices { get; set; } = new();
+    private decimal HoaTotalBalance { get; set; } = 0;
+    private bool isLoadingInvoices = false;
+
+    // Pipeline metrics
+    private int PipelineScreening { get; set; } = 0;
+    private int PipelineEnrollment { get; set; } = 0;
+    private int PipelineComplete { get; set; } = 0;
+
+    private List<PropertyRow> Properties { get; set; } = new();
+    private List<ActivityItem> Activity { get; set; } = new();
+    private List<TicketItem> Tickets { get; set; } = new();
+    private List<ReserveStudy> hoaUserStudies { get; set; } = new();
+    private HashSet<Guid> pendingAmendmentStudyIds { get; set; } = new();
+    private bool isLoadingStudies = false;
+    private Guid? currentUserId = null;
 
 protected override async Task OnInitializedAsync()
 {
@@ -734,24 +1050,30 @@ protected override async Task OnInitializedAsync()
         
     // Load global banner from system settings
     globalBanner = await SystemSettingsService.GetGlobalBannerInfoAsync();
-    
-    // Get current user ID for HOA user study checks
-    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-    var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
-    if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
-    {
-        currentUserId = userId;
+
+        // Get current user ID for HOA user study checks
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+        {
+            currentUserId = userId;
+        }
+
+        // Load real code from services based on role and tenant context
+        await LoadDashboardDataAsync();
+
+        // Load HOA user studies and invoices if applicable
+        if ((RoleService.IsHOAUser || RoleService.IsHOAAuditor) && currentUserId.HasValue)
+        {
+            await LoadHOAUserStudiesAsync();
+            await LoadHOAUserInvoicesAsync();
+        }
+        else if (RoleService.IsTenantOwner || RoleService.IsTenantSpecialist || RoleService.IsPlatformAdmin)
+        {
+            // Load invoice data for staff/admin
+            await LoadInvoiceDataAsync();
+        }
     }
-        
-    // Load real code from services based on role and tenant context
-    await LoadDashboardDataAsync();
-    
-    // Load HOA user studies if applicable
-    if ((RoleService.IsHOAUser || RoleService.IsHOAAuditor) && currentUserId.HasValue)
-    {
-        await LoadHOAUserStudiesAsync();
-    }
-}
 
 private async Task LoadDashboardDataAsync()
 {
@@ -844,16 +1166,101 @@ private async Task LoadPipelineDataAsync(int tenantId)
                          !rs.IsComplete &&
                          (int)rs.CurrentStatus >= 6 && (int)rs.CurrentStatus <= 16);
         
-    // Complete = final stage (completed studies)
-    PipelineComplete = await context.ReserveStudies
-        .Include(rs => rs.Community)
-        .CountAsync(rs => rs.Community != null && 
-                         rs.Community.TenantId == tenantId && 
-                         rs.IsActive && 
-                         rs.IsComplete);
-}
+        // Complete = final stage (completed studies)
+        PipelineComplete = await context.ReserveStudies
+            .Include(rs => rs.Community)
+            .CountAsync(rs => rs.Community != null && 
+                             rs.Community.TenantId == tenantId && 
+                             rs.IsActive && 
+                             rs.IsComplete);
+    }
 
-    private string GetUserGreeting()
+    private async Task LoadInvoiceDataAsync()
+    {
+        try
+        {
+            if (!TenantContext.TenantId.HasValue) return;
+
+            await using var context = await DbFactory.CreateDbContextAsync();
+            var tenantId = TenantContext.TenantId.Value;
+
+            // Get unpaid invoices for outstanding amount
+            var unpaidInvoices = await context.Invoices
+                .Where(i => i.TenantId == tenantId && 
+                           i.DateDeleted == null &&
+                           i.Status != InvoiceStatus.Paid && 
+                           i.Status != InvoiceStatus.Voided &&
+                           i.Status != InvoiceStatus.Draft)
+                .ToListAsync();
+
+            InvoiceOutstanding = unpaidInvoices.Sum(i => i.BalanceDue);
+
+            // Get overdue invoices
+            var overdueInvoices = unpaidInvoices.Where(i => i.Status == InvoiceStatus.Overdue).ToList();
+            InvoiceOverdue = overdueInvoices.Sum(i => i.BalanceDue);
+            InvoiceOverdueCount = overdueInvoices.Count;
+
+            // Get recent payments (last 30 days)
+            RecentPayments = await context.PaymentRecords
+                .Include(p => p.Invoice)
+                .Where(p => p.Invoice != null && 
+                           p.Invoice.TenantId == tenantId &&
+                           p.PaymentDate >= DateTime.UtcNow.AddDays(-30))
+                .OrderByDescending(p => p.PaymentDate)
+                .Take(5)
+                .ToListAsync();
+        }
+        catch (Exception)
+        {
+            // Silently fail - dashboard will show zeros
+        }
+    }
+
+    private async Task LoadHOAUserInvoicesAsync()
+    {
+        try
+        {
+            isLoadingInvoices = true;
+
+            if (!currentUserId.HasValue || !TenantContext.TenantId.HasValue) return;
+
+            await using var context = await DbFactory.CreateDbContextAsync();
+
+            // Get all reserve studies for this HOA user
+            var userStudyIds = await context.ReserveStudies
+                .Where(rs => rs.ApplicationUserId == currentUserId.Value && 
+                            rs.IsActive &&
+                            rs.TenantId == TenantContext.TenantId.Value)
+                .Select(rs => rs.Id)
+                .ToListAsync();
+
+            // Get invoices for those studies (exclude drafts and voided)
+            hoaUserInvoices = await context.Invoices
+                .Include(i => i.ReserveStudy)
+                    .ThenInclude(rs => rs!.Community)
+                .Where(i => userStudyIds.Contains(i.ReserveStudyId) &&
+                           i.DateDeleted == null &&
+                           i.Status != InvoiceStatus.Draft &&
+                           i.Status != InvoiceStatus.Voided)
+                .OrderByDescending(i => i.InvoiceDate)
+                .ToListAsync();
+
+            HoaTotalBalance = hoaUserInvoices
+                .Where(i => i.Status != InvoiceStatus.Paid)
+                .Sum(i => i.BalanceDue);
+        }
+        catch (Exception)
+        {
+            hoaUserInvoices = new List<Invoice>();
+            HoaTotalBalance = 0;
+        }
+        finally
+        {
+            isLoadingInvoices = false;
+        }
+    }
+
+        private string GetUserGreeting()
     {
         if (RoleService.IsPlatformAdmin) return "Platform Admin";
         if (RoleService.IsTenantOwner) return "Owner";
@@ -894,6 +1301,22 @@ private async Task LoadPipelineDataAsync(int tenantId)
             "pending" => Color.Warning,
             "inactive" => Color.Default,
             "complete" => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetInvoiceStatusColor(InvoiceStatus status)
+    {
+        return status switch
+        {
+            InvoiceStatus.Draft => Color.Default,
+            InvoiceStatus.Finalized => Color.Info,
+            InvoiceStatus.Sent => Color.Primary,
+            InvoiceStatus.Viewed => Color.Primary,
+            InvoiceStatus.PartiallyPaid => Color.Warning,
+            InvoiceStatus.Paid => Color.Success,
+            InvoiceStatus.Overdue => Color.Error,
+            InvoiceStatus.Voided => Color.Default,
             _ => Color.Default
         };
     }

@@ -452,6 +452,60 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TenantInvoiceSettings",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    InvoicePrefix = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    InvoiceNumberFormat = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    NumberPadding = table.Column<int>(type: "int", nullable: false),
+                    NextInvoiceNumber = table.Column<int>(type: "int", nullable: false),
+                    ResetFrequency = table.Column<int>(type: "int", nullable: false),
+                    LastInvoiceYear = table.Column<int>(type: "int", nullable: false),
+                    LastInvoiceMonth = table.Column<int>(type: "int", nullable: false),
+                    CreditMemoPrefix = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    NextCreditMemoNumber = table.Column<int>(type: "int", nullable: false),
+                    DefaultNetDays = table.Column<int>(type: "int", nullable: false),
+                    DefaultEarlyPaymentDiscount = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
+                    DefaultEarlyPaymentDays = table.Column<int>(type: "int", nullable: false),
+                    DefaultLateInterestRate = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
+                    DefaultGracePeriodDays = table.Column<int>(type: "int", nullable: false),
+                    AutoGenerateNextMilestone = table.Column<bool>(type: "bit", nullable: false),
+                    NotifyOnAutoGenerate = table.Column<bool>(type: "bit", nullable: false),
+                    AutoSendOnCreate = table.Column<bool>(type: "bit", nullable: false),
+                    NotificationEmail = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    EnableAutoReminders = table.Column<bool>(type: "bit", nullable: false),
+                    MaxAutoReminders = table.Column<int>(type: "int", nullable: false),
+                    FirstReminderDays = table.Column<int>(type: "int", nullable: false),
+                    DefaultTaxRate = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
+                    TaxLabel = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    UseTenantBranding = table.Column<bool>(type: "bit", nullable: false),
+                    PrimaryColor = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    SecondaryColor = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    LogoUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CompanyName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    CompanyAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CompanyPhone = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    CompanyEmail = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    CompanyWebsite = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Tagline = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    FooterText = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    DefaultTerms = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    DefaultNotes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    ShowPaidWatermark = table.Column<bool>(type: "bit", nullable: false),
+                    PaymentInstructions = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenantInvoiceSettings", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tenants",
                 columns: table => new
                 {
@@ -1145,6 +1199,51 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CreditMemos",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    CreditMemoNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    InvoiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IssueDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Reason = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AppliedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    VoidedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    VoidReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    StripeRefundId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    IsRefunded = table.Column<bool>(type: "bit", nullable: false),
+                    RefundedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    InternalNotes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    BillToName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    BillToEmail = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    AppliedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CreditMemos", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CreditMemos_AspNetUsers_AppliedByUserId",
+                        column: x => x.AppliedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_CreditMemos_AspNetUsers_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Documents",
                 columns: table => new
                 {
@@ -1332,6 +1431,135 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "InvoiceLineItems",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    InvoiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Unit = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    LineTotal = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_InvoiceLineItems", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Invoices",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    ReserveStudyId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    InvoiceNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    InvoiceDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DueDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PaidAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    VoidedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    BillToName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    BillToEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    BillToAddress = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                    BillToPhone = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Subtotal = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    TaxRate = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    TaxAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    DiscountAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    DiscountDescription = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    AmountPaid = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    EarlyPaymentDiscountPercentage = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
+                    EarlyPaymentDiscountDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EarlyPaymentDiscountAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    LatePaymentInterestRate = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
+                    LateInterestStartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LateInterestAccrued = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    LastInterestCalculationDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PaymentMethod = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    PaymentReference = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    StripePaymentIntentId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    StripeCheckoutSessionId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    PaymentUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    PaymentUrlExpires = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    InternalNotes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    Terms = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    MilestoneType = table.Column<int>(type: "int", nullable: true),
+                    MilestoneDescription = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    MilestonePercentage = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: true),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    SentByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReminderCount = table.Column<int>(type: "int", nullable: false),
+                    LastReminderSent = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AccessToken = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true),
+                    AccessTokenExpires = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Invoices", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Invoices_AspNetUsers_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Invoices_AspNetUsers_SentByUserId",
+                        column: x => x.SentByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PaymentRecords",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    InvoiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PaymentMethod = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ReferenceNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    StripePaymentIntentId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    RecordedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsAutomatic = table.Column<bool>(type: "bit", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentRecords", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PaymentRecords_AspNetUsers_RecordedByUserId",
+                        column: x => x.RecordedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_PaymentRecords_Invoices_InvoiceId",
+                        column: x => x.InvoiceId,
+                        principalTable: "Invoices",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Narratives",
                 columns: table => new
                 {
@@ -1445,6 +1673,16 @@ namespace CRS.Migrations
                     ServiceLevel = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DeliveryTimeframe = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PaymentTerms = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PaymentSchedule = table.Column<int>(type: "int", nullable: false),
+                    CustomDepositPercentage = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: true),
+                    PrepaymentDiscountPercentage = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
+                    PaymentDueDays = table.Column<int>(type: "int", nullable: false),
+                    EarlyPaymentDiscountPercentage = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
+                    EarlyPaymentDiscountDays = table.Column<int>(type: "int", nullable: false),
+                    LatePaymentInterestRate = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false),
+                    LatePaymentGracePeriodDays = table.Column<int>(type: "int", nullable: false),
+                    MinimumDepositAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    IsDepositNonRefundable = table.Column<bool>(type: "bit", nullable: false),
                     IncludePrepaymentDiscount = table.Column<bool>(type: "bit", nullable: false),
                     IncludeDigitalDelivery = table.Column<bool>(type: "bit", nullable: false),
                     IncludeComponentInventory = table.Column<bool>(type: "bit", nullable: false),
@@ -2262,6 +2500,26 @@ namespace CRS.Migrations
                 column: "ContactId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CreditMemos_AppliedByUserId",
+                table: "CreditMemos",
+                column: "AppliedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CreditMemos_CreatedByUserId",
+                table: "CreditMemos",
+                column: "CreatedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CreditMemos_InvoiceId",
+                table: "CreditMemos",
+                column: "InvoiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CreditMemos_ReserveStudyId",
+                table: "CreditMemos",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CustomerAccounts_TenantId",
                 table: "CustomerAccounts",
                 column: "TenantId");
@@ -2401,6 +2659,63 @@ namespace CRS.Migrations
                 column: "SupersedesReportId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_InvoiceLineItem_Tenant",
+                table: "InvoiceLineItems",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_InvoiceLineItem_Tenant_Invoice_Order",
+                table: "InvoiceLineItems",
+                columns: new[] { "TenantId", "InvoiceId", "SortOrder" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_InvoiceLineItems_InvoiceId",
+                table: "InvoiceLineItems",
+                column: "InvoiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoice_Tenant",
+                table: "Invoices",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoice_Tenant_DueDate_Status",
+                table: "Invoices",
+                columns: new[] { "TenantId", "DueDate", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoice_Tenant_Number_Unique",
+                table: "Invoices",
+                columns: new[] { "TenantId", "InvoiceNumber" },
+                unique: true,
+                filter: "[DateDeleted] IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoice_Tenant_Status",
+                table: "Invoices",
+                columns: new[] { "TenantId", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoice_Tenant_Study",
+                table: "Invoices",
+                columns: new[] { "TenantId", "ReserveStudyId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoices_CreatedByUserId",
+                table: "Invoices",
+                column: "CreatedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoices_ReserveStudyId",
+                table: "Invoices",
+                column: "ReserveStudyId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoices_SentByUserId",
+                table: "Invoices",
+                column: "SentByUserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_NarrativeInsert_Tenant",
                 table: "NarrativeInserts",
                 column: "TenantId");
@@ -2511,6 +2826,16 @@ namespace CRS.Migrations
                 name: "IX_Notifications_UserId",
                 table: "Notifications",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentRecords_InvoiceId",
+                table: "PaymentRecords",
+                column: "InvoiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentRecords_RecordedByUserId",
+                table: "PaymentRecords",
+                column: "RecordedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Profiles_ApplicationUserId",
@@ -3064,6 +3389,21 @@ namespace CRS.Migrations
                 onDelete: ReferentialAction.SetNull);
 
             migrationBuilder.AddForeignKey(
+                name: "FK_CreditMemos_Invoices_InvoiceId",
+                table: "CreditMemos",
+                column: "InvoiceId",
+                principalTable: "Invoices",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_CreditMemos_ReserveStudies_ReserveStudyId",
+                table: "CreditMemos",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id");
+
+            migrationBuilder.AddForeignKey(
                 name: "FK_Documents_ReserveStudies_ReserveStudyId",
                 table: "Documents",
                 column: "ReserveStudyId",
@@ -3088,6 +3428,22 @@ namespace CRS.Migrations
             migrationBuilder.AddForeignKey(
                 name: "FK_GeneratedReports_ReserveStudies_ReserveStudyId",
                 table: "GeneratedReports",
+                column: "ReserveStudyId",
+                principalTable: "ReserveStudies",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_InvoiceLineItems_Invoices_InvoiceId",
+                table: "InvoiceLineItems",
+                column: "InvoiceId",
+                principalTable: "Invoices",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Invoices_ReserveStudies_ReserveStudyId",
+                table: "Invoices",
                 column: "ReserveStudyId",
                 principalTable: "ReserveStudies",
                 principalColumn: "Id",
@@ -3183,6 +3539,9 @@ namespace CRS.Migrations
                 name: "ContactXContactGroups");
 
             migrationBuilder.DropTable(
+                name: "CreditMemos");
+
+            migrationBuilder.DropTable(
                 name: "CustomerAccounts");
 
             migrationBuilder.DropTable(
@@ -3201,6 +3560,9 @@ namespace CRS.Migrations
                 name: "GeneratedReports");
 
             migrationBuilder.DropTable(
+                name: "InvoiceLineItems");
+
+            migrationBuilder.DropTable(
                 name: "KanbanTasks");
 
             migrationBuilder.DropTable(
@@ -3217,6 +3579,9 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Notifications");
+
+            migrationBuilder.DropTable(
+                name: "PaymentRecords");
 
             migrationBuilder.DropTable(
                 name: "Profiles");
@@ -3264,6 +3629,9 @@ namespace CRS.Migrations
                 name: "TenantHomepages");
 
             migrationBuilder.DropTable(
+                name: "TenantInvoiceSettings");
+
+            migrationBuilder.DropTable(
                 name: "TenantReserveSettings");
 
             migrationBuilder.DropTable(
@@ -3283,6 +3651,9 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "NarrativeTemplateSections");
+
+            migrationBuilder.DropTable(
+                name: "Invoices");
 
             migrationBuilder.DropTable(
                 name: "AcceptanceTermsTemplates");

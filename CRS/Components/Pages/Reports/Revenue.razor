@@ -1,0 +1,395 @@
+﻿@page "/Reports/Revenue"
+@attribute [Authorize(Policy = "RequireTenantStaff")]
+
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+
+@inject IInvoiceService InvoiceService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Revenue Dashboard</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
+    <!-- Header -->
+    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 16px;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Style="color: white; font-size: 40px;" />
+                <div>
+                    <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">Revenue Dashboard</MudText>
+                    <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.8);">
+                        Financial overview and trends
+                    </MudText>
+                </div>
+            </MudStack>
+            <MudButtonGroup Variant="Variant.Filled" Style="background: rgba(255,255,255,0.2);">
+                <MudButton OnClick="@(() => SetPeriod("month"))" 
+                           Style="@(_selectedPeriod == "month" ? "background: white; color: #059669;" : "color: white;")">
+                    This Month
+                </MudButton>
+                <MudButton OnClick="@(() => SetPeriod("quarter"))"
+                           Style="@(_selectedPeriod == "quarter" ? "background: white; color: #059669;" : "color: white;")">
+                    This Quarter
+                </MudButton>
+                <MudButton OnClick="@(() => SetPeriod("year"))"
+                           Style="@(_selectedPeriod == "year" ? "background: white; color: #059669;" : "color: white;")">
+                    This Year
+                </MudButton>
+                <MudButton OnClick="@(() => SetPeriod("all"))"
+                           Style="@(_selectedPeriod == "all" ? "background: white; color: #059669;" : "color: white;")">
+                    All Time
+                </MudButton>
+            </MudButtonGroup>
+        </MudStack>
+    </MudPaper>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    }
+    else
+    {
+        <!-- Key Metrics -->
+        <MudGrid Spacing="3" Class="mb-4">
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="3" Class="pa-4" Style="border-radius: 12px; border-left: 4px solid #3b82f6;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.overline" Style="color: #666;">Total Invoiced</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 700; color: #3b82f6;">
+                                @_metrics.TotalInvoiced.ToString("C0")
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@_metrics.InvoiceCount invoices</MudText>
+                        </div>
+                        <MudAvatar Style="background: #3b82f6;">
+                            <MudIcon Icon="@Icons.Material.Filled.Receipt" />
+                        </MudAvatar>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="3" Class="pa-4" Style="border-radius: 12px; border-left: 4px solid #10b981;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.overline" Style="color: #666;">Collected</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 700; color: #10b981;">
+                                @_metrics.TotalCollected.ToString("C0")
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">
+                                @((_metrics.TotalInvoiced > 0 ? (_metrics.TotalCollected / _metrics.TotalInvoiced * 100) : 0).ToString("N0"))% collection rate
+                            </MudText>
+                        </div>
+                        <MudAvatar Style="background: #10b981;">
+                            <MudIcon Icon="@Icons.Material.Filled.Payments" />
+                        </MudAvatar>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="3" Class="pa-4" Style="border-radius: 12px; border-left: 4px solid #f59e0b;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.overline" Style="color: #666;">Outstanding</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 700; color: #f59e0b;">
+                                @_metrics.Outstanding.ToString("C0")
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@_metrics.UnpaidCount unpaid invoices</MudText>
+                        </div>
+                        <MudAvatar Style="background: #f59e0b;">
+                            <MudIcon Icon="@Icons.Material.Filled.Schedule" />
+                        </MudAvatar>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="3" Class="pa-4" Style="border-radius: 12px; border-left: 4px solid #ef4444;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div>
+                            <MudText Typo="Typo.overline" Style="color: #666;">Overdue</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 700; color: #ef4444;">
+                                @_metrics.Overdue.ToString("C0")
+                            </MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@_metrics.OverdueCount overdue</MudText>
+                        </div>
+                        <MudAvatar Style="background: #ef4444;">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" />
+                        </MudAvatar>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid Spacing="3">
+            <!-- Revenue by Status Chart -->
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+                    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">Revenue by Status</MudText>
+                    <MudChart ChartType="ChartType.Donut" 
+                              InputData="@_statusChartData" 
+                              InputLabels="@_statusChartLabels"
+                              Width="100%" Height="300px"
+                              ChartOptions="@_chartOptions" />
+                    <MudStack Row="true" Justify="Justify.Center" Spacing="3" Class="mt-4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #10b981;"></div>
+                            <MudText Typo="Typo.caption">Paid</MudText>
+                        </MudStack>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #f59e0b;"></div>
+                            <MudText Typo="Typo.caption">Pending</MudText>
+                        </MudStack>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #ef4444;"></div>
+                            <MudText Typo="Typo.caption">Overdue</MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Monthly Trend -->
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+                    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">Monthly Trend</MudText>
+                    <MudChart ChartType="ChartType.Bar" 
+                              ChartSeries="@_trendSeries" 
+                              XAxisLabels="@_trendLabels"
+                              Width="100%" Height="300px"
+                              ChartOptions="@_barChartOptions" />
+                </MudPaper>
+            </MudItem>
+
+            <!-- Top Clients -->
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+                    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">Top Clients by Revenue</MudText>
+                    @if (_topClients.Any())
+                    {
+                        <MudSimpleTable Dense="true" Hover="true">
+                            <thead>
+                                <tr>
+                                    <th>Client</th>
+                                    <th style="text-align: right;">Total Invoiced</th>
+                                    <th style="text-align: right;">Paid</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var client in _topClients.Take(5))
+                                {
+                                    <tr>
+                                        <td>@client.Name</td>
+                                        <td style="text-align: right; font-weight: 600;">@client.TotalInvoiced.ToString("C0")</td>
+                                        <td style="text-align: right; color: #10b981;">@client.TotalPaid.ToString("C0")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Style="color: #666;">No invoice data available</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- Recent Activity -->
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+                    <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">Recent Payments</MudText>
+                    @if (_recentPayments.Any())
+                    {
+                        <MudTimeline TimelinePosition="TimelinePosition.Start">
+                            @foreach (var invoice in _recentPayments.Take(5))
+                            {
+                                <MudTimelineItem Color="Color.Success" Size="Size.Small">
+                                    <ItemContent>
+                                        <MudStack Spacing="0">
+                                            <MudLink Typo="Typo.body2" Href="@($"/Invoices/{invoice.Id}")" Style="font-weight: 600;">
+                                                @invoice.InvoiceNumber
+                                            </MudLink>
+                                            <MudText Typo="Typo.caption">
+                                                @invoice.BillToName • @invoice.AmountPaid.ToString("C")
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #999;">
+                                                @invoice.PaidAt?.ToString("MMM d, yyyy")
+                                            </MudText>
+                                        </MudStack>
+                                    </ItemContent>
+                                </MudTimelineItem>
+                            }
+                        </MudTimeline>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Style="color: #666;">No recent payments</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private string _selectedPeriod = "year";
+    private List<Invoice> _allInvoices = [];
+    private RevenueMetrics _metrics = new();
+    private List<ClientRevenue> _topClients = [];
+    private List<Invoice> _recentPayments = [];
+
+    // Chart data
+    private double[] _statusChartData = [];
+    private string[] _statusChartLabels = [];
+    private List<ChartSeries> _trendSeries = [];
+    private string[] _trendLabels = [];
+
+    private ChartOptions _chartOptions = new();
+    private ChartOptions _barChartOptions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task SetPeriod(string period)
+    {
+        _selectedPeriod = period;
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            // Get all invoices (paid + unpaid)
+            var unpaid = await InvoiceService.GetUnpaidAsync();
+            var paid = await InvoiceService.GetByStatusAsync(InvoiceStatus.Paid);
+            _allInvoices = unpaid.Concat(paid).ToList();
+
+            // Filter by period
+            var filteredInvoices = FilterByPeriod(_allInvoices);
+            
+            CalculateMetrics(filteredInvoices);
+            CalculateChartData(filteredInvoices);
+            CalculateTopClients(filteredInvoices);
+            GetRecentPayments();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private List<Invoice> FilterByPeriod(List<Invoice> invoices)
+    {
+        var now = DateTime.UtcNow;
+        return _selectedPeriod switch
+        {
+            "month" => invoices.Where(i => i.InvoiceDate >= new DateTime(now.Year, now.Month, 1)).ToList(),
+            "quarter" => invoices.Where(i => i.InvoiceDate >= now.AddMonths(-3)).ToList(),
+            "year" => invoices.Where(i => i.InvoiceDate.Year == now.Year).ToList(),
+            _ => invoices
+        };
+    }
+
+    private void CalculateMetrics(List<Invoice> invoices)
+    {
+        var validInvoices = invoices.Where(i => i.Status != InvoiceStatus.Voided).ToList();
+        
+        _metrics = new RevenueMetrics
+        {
+            TotalInvoiced = validInvoices.Sum(i => i.TotalAmount),
+            TotalCollected = validInvoices.Sum(i => i.AmountPaid),
+            Outstanding = validInvoices.Where(i => i.Status != InvoiceStatus.Paid).Sum(i => i.TotalAmount - i.AmountPaid),
+            Overdue = validInvoices.Where(i => i.Status == InvoiceStatus.Overdue).Sum(i => i.TotalAmount - i.AmountPaid),
+            InvoiceCount = validInvoices.Count,
+            PaidCount = validInvoices.Count(i => i.Status == InvoiceStatus.Paid),
+            UnpaidCount = validInvoices.Count(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Voided),
+            OverdueCount = validInvoices.Count(i => i.Status == InvoiceStatus.Overdue)
+        };
+    }
+
+    private void CalculateChartData(List<Invoice> invoices)
+    {
+        var validInvoices = invoices.Where(i => i.Status != InvoiceStatus.Voided).ToList();
+        
+        var paidAmount = validInvoices.Where(i => i.Status == InvoiceStatus.Paid).Sum(i => i.TotalAmount);
+        var pendingAmount = validInvoices.Where(i => i.Status != InvoiceStatus.Paid && i.Status != InvoiceStatus.Overdue)
+            .Sum(i => i.TotalAmount - i.AmountPaid);
+        var overdueAmount = validInvoices.Where(i => i.Status == InvoiceStatus.Overdue).Sum(i => i.TotalAmount - i.AmountPaid);
+
+        _statusChartData = new[] { (double)paidAmount, (double)pendingAmount, (double)overdueAmount };
+        _statusChartLabels = new[] { "Paid", "Pending", "Overdue" };
+
+        // Monthly trend for last 6 months
+        var now = DateTime.UtcNow;
+        var months = Enumerable.Range(0, 6)
+            .Select(i => now.AddMonths(-5 + i))
+            .ToList();
+
+        _trendLabels = months.Select(m => m.ToString("MMM")).ToArray();
+
+        var invoicedData = months.Select(m => 
+            (double)validInvoices
+                .Where(i => i.InvoiceDate.Year == m.Year && i.InvoiceDate.Month == m.Month)
+                .Sum(i => i.TotalAmount))
+            .ToArray();
+
+        var collectedData = months.Select(m => 
+            (double)validInvoices
+                .Where(i => i.PaidAt.HasValue && i.PaidAt.Value.Year == m.Year && i.PaidAt.Value.Month == m.Month)
+                .Sum(i => i.AmountPaid))
+            .ToArray();
+
+        _trendSeries = new List<ChartSeries>
+        {
+            new() { Name = "Invoiced", Data = invoicedData },
+            new() { Name = "Collected", Data = collectedData }
+        };
+    }
+
+    private void CalculateTopClients(List<Invoice> invoices)
+    {
+        _topClients = invoices
+            .Where(i => i.Status != InvoiceStatus.Voided && !string.IsNullOrEmpty(i.BillToName))
+            .GroupBy(i => i.BillToName)
+            .Select(g => new ClientRevenue
+            {
+                Name = g.Key ?? "Unknown",
+                TotalInvoiced = g.Sum(i => i.TotalAmount),
+                TotalPaid = g.Sum(i => i.AmountPaid)
+            })
+            .OrderByDescending(c => c.TotalInvoiced)
+            .ToList();
+    }
+
+    private void GetRecentPayments()
+    {
+        _recentPayments = _allInvoices
+            .Where(i => i.Status == InvoiceStatus.Paid && i.PaidAt.HasValue)
+            .OrderByDescending(i => i.PaidAt)
+            .Take(5)
+            .ToList();
+    }
+
+    private class RevenueMetrics
+    {
+        public decimal TotalInvoiced { get; set; }
+        public decimal TotalCollected { get; set; }
+        public decimal Outstanding { get; set; }
+        public decimal Overdue { get; set; }
+        public int InvoiceCount { get; set; }
+        public int PaidCount { get; set; }
+        public int UnpaidCount { get; set; }
+        public int OverdueCount { get; set; }
+    }
+
+    private class ClientRevenue
+    {
+        public string Name { get; set; } = string.Empty;
+        public decimal TotalInvoiced { get; set; }
+        public decimal TotalPaid { get; set; }
+    }
+}

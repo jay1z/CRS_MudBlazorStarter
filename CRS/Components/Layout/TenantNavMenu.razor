@@ -32,42 +32,47 @@
                         <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Manage Users</MudNavLink>
                         <MudNavLink Href="/Admin/Settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">Tenant Settings</MudNavLink>
                         <MudNavLink Href="/Settings/ReserveStudy" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Tune">Calculator Defaults</MudNavLink>
-                        <MudNavLink Href="/Admin/EmailLogs" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.MailOutline">Email History</MudNavLink>
-                        <MudNavLink Href="/Reports/Publish" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Publish">Publish Reports</MudNavLink>
-                        <MudNavLink Href="/account/billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing</MudNavLink>
-                        <MudNavLink Href="/Customers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Group">Customers</MudNavLink>
-                    </MudNavGroup>
-                </Authorized>
-            </AuthorizeView>
+                                    <MudNavLink Href="/Admin/EmailLogs" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.MailOutline">Email History</MudNavLink>
+                                    <MudNavLink Href="/Reports/Publish" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Publish">Publish Reports</MudNavLink>
+                                    <MudNavLink Href="/account/billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing</MudNavLink>
+                                    <MudNavLink Href="/Customers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Group">Customers</MudNavLink>
+                                    <MudNavLink Href="/Settings/Invoices" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Tune">Invoice Settings</MudNavLink>
+                                </MudNavGroup>
+                            </Authorized>
+                        </AuthorizeView>
 
-            <!-- TenantSpecialist section -->
-            <AuthorizeView Policy="RequireTenantStaff" Context="tenantStaffAuth">
-                <Authorized>
-                    <MudNavGroup Title="Specialist Tools" Expanded="false">
-                        <MudNavLink Href="/ReserveStudies/Specialist" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AssignmentTurnedIn">My Work</MudNavLink>
-                        <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth">Calendar</MudNavLink>
-                        <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts">Contacts</MudNavLink>
-                    </MudNavGroup>
-                </Authorized>
-            </AuthorizeView>
+                        <!-- TenantSpecialist section -->
+                        <AuthorizeView Policy="RequireTenantStaff" Context="tenantStaffAuth">
+                            <Authorized>
+                                <MudNavGroup Title="Specialist Tools" Expanded="false">
+                                    <MudNavLink Href="/ReserveStudies/Specialist" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AssignmentTurnedIn">My Work</MudNavLink>
+                                    <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth">Calendar</MudNavLink>
+                                    <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts">Contacts</MudNavLink>
+                                    <MudNavLink Href="/Invoices" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">Invoices</MudNavLink>
+                                    <MudNavLink Href="/Reports/Aging" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assessment">A/R Aging</MudNavLink>
+                                    <MudNavLink Href="/Reports/Revenue" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.TrendingUp">Revenue</MudNavLink>
+                                </MudNavGroup>
+                            </Authorized>
+                        </AuthorizeView>
 
-            <!-- Viewer and external links -->
+                        <!-- Viewer and external links -->
             <AuthorizeView Policy="RequireTenantViewer" Context="tenantViewerAuth">
                 <Authorized>
                     <MudNavLink Href="/Reports/View" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Visibility">View Reports</MudNavLink>
                 </Authorized>
             </AuthorizeView>
 
-            <AuthorizeView Policy="RequireHOAUser" Context="hoaAuth">
-                <Authorized>
-                    <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-                    <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Download Final Report</MudNavLink>
-                    <MudNavLink Href="/Support" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
-                </Authorized>
-            </AuthorizeView>
-        </Authorized>
-    </AuthorizeView>
+                        <AuthorizeView Policy="RequireHOAUser" Context="hoaAuth">
+                            <Authorized>
+                                <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+                                <MudNavLink Href="/MyInvoices" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">My Invoices</MudNavLink>
+                                <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Download Final Report</MudNavLink>
+                                <MudNavLink Href="/Support" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
+                            </Authorized>
+                        </AuthorizeView>
+                    </Authorized>
+                </AuthorizeView>
 
-    <MudDivider Class="my-2" />
-    <MudText Typo="Typo.caption" Class="px-4">Tenant mode</MudText>
-</MudNavMenu>
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.caption" Class="px-4">Tenant mode</MudText>
+            </MudNavMenu>
