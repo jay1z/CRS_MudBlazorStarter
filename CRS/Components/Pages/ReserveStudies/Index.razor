@@ -221,7 +221,15 @@
                                 </MudAvatar>
                                 <MudStack Spacing="0">
                                     <MudText Typo="Typo.body2" Style="font-weight: 500;">@study.Community?.Name</MudText>
-                                    <MudText Typo="Typo.caption" Style="color: #999;">@study.Community?.PhysicalAddress?.City, @study.Community?.PhysicalAddress?.State</MudText>
+                                    @{
+                                        var city = study.Community?.PhysicalAddress?.City;
+                                        var state = study.Community?.PhysicalAddress?.State;
+                                        var location = string.Join(", ", new[] { city, state }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(location))
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: #999;">@location</MudText>
+                                    }
                                 </MudStack>
                             </MudStack>
                         </MudTd>

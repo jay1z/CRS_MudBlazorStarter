@@ -58,6 +58,12 @@ app.Services.UseScheduler(scheduler =>
         .Schedule<CRS.Jobs.LateInterestInvocable>()
         .DailyAtHour(3)
         .PreventOverlapping(nameof(CRS.Jobs.LateInterestInvocable));
+        
+    // Run auto-archive job daily at 4 AM
+    scheduler
+        .Schedule<CRS.Jobs.AutoArchiveInvocable>()
+        .DailyAtHour(4)
+        .PreventOverlapping(nameof(CRS.Jobs.AutoArchiveInvocable));
 
     // Run automated invoice reminders daily at 8 AM
     scheduler
@@ -247,6 +253,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Register invoice jobs
     builder.Services.AddScoped<CRS.Jobs.LateInterestInvocable>();
     builder.Services.AddScoped<CRS.Jobs.InvoiceReminderInvocable>();
+    
+    // Register auto-archive job
+    builder.Services.AddScoped<CRS.Jobs.AutoArchiveInvocable>();
 
     // Phase 1: Register audit log archiving background service
     builder.Services.AddHostedService<AuditLogArchiveService>();

@@ -3,8 +3,15 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 
+using Coravel.Mailer.Mail;
+using Coravel.Mailer.Mail.Interfaces;
+
 using CRS.Data;
+using CRS.Models;
+using CRS.Models.Emails;
 using CRS.Models.Workflow;
+using CRS.Services.Email;
+using CRS.Services.Interfaces;
 
 namespace CRS.Services.Workflow {
     /// <summary>
@@ -43,14 +50,20 @@ namespace CRS.Services.Workflow {
     public class NotificationService : INotificationService {
         private readonly WorkflowOptions _options;
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
+        private readonly IMailer _mailer;
+        private readonly IReserveStudyService _reserveStudyService;
         private readonly ILogger<NotificationService> _logger;
 
         public NotificationService(
             IOptions<WorkflowOptions> options,
             IDbContextFactory<ApplicationDbContext> dbFactory,
+            IMailer mailer,
+            IReserveStudyService reserveStudyService,
             ILogger<NotificationService> logger) {
             _options = options.Value ?? new WorkflowOptions();
             _dbFactory = dbFactory;
+            _mailer = mailer;
+            _reserveStudyService = reserveStudyService;
             _logger = logger;
         }
 
@@ -157,11 +170,16 @@ namespace CRS.Services.Workflow {
             try {
                 await using var db = await _dbFactory.CreateDbContextAsync();
                 
+                // Get tenant settings for notification preferences
+                var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == request.TenantId);
+                if (tenant == null) return;
+                
                 // Get the reserve study for more context
                 var study = await db.ReserveStudies
                     .Include(s => s.Community)
                     .Include(s => s.Specialist)
                     .Include(s => s.Contact)
+                    .Include(s => s.User)
                     .FirstOrDefaultAsync(s => s.Id == request.Id);
 
                 if (study == null) return;
@@ -172,12 +190,37 @@ namespace CRS.Services.Workflow {
                     ? config.WaitingMessage 
                     : config.ActionRequiredMessage;
 
-                // Notify HOA contact
-                if (config.NotifyOnEnter.HasFlag(StageActor.HOA) && study.Contact != null) {
-                    _logger.LogInformation(
-                        "[Notify HOA][Contact:{Email}] {Subject}",
-                        study.Contact.Email, subject);
-                    // TODO: Send email to study.Contact.Email
+                // Notify HOA contact - check tenant setting
+                if (config.NotifyOnEnter.HasFlag(StageActor.HOA) && tenant.NotifyClientOnStatusChange) {
+                    // Try contact first, then study owner
+                    var clientEmail = study.Contact?.Email ?? study.User?.Email;
+                    if (!string.IsNullOrEmpty(clientEmail)) {
+                        try {
+                            var email = await _reserveStudyService.MapToReserveStudyEmailAsync(study, message);
+                            var companyName = email.TenantInfo?.CompanyName ?? "ALX Reserve Cloud";
+                            var emailSubject = $"[{companyName}] Status Update: {newState.ToDisplayTitle()} - {communityName}";
+                            
+                            await _mailer.SendAsync(
+                                Mailable.AsInline<ReserveStudyEmail>()
+                                    .To(clientEmail)
+                                    .Subject(emailSubject)
+                                    .ReplyToTenant(email.TenantInfo)
+                                    .View("~/Components/EmailTemplates/ReserveStudyStatusChange.cshtml", email)
+                            );
+                            
+                            _logger.LogInformation(
+                                "[Notify HOA][Email:{Email}][Tenant:{TenantId}] Sent status change notification: {Status}",
+                                clientEmail, request.TenantId, newState.ToDisplayTitle());
+                        } catch (Exception ex) {
+                            _logger.LogWarning(ex, 
+                                "[Notify HOA][Email:{Email}][Tenant:{TenantId}] Failed to send status change notification",
+                                clientEmail, request.TenantId);
+                        }
+                    }
+                } else if (config.NotifyOnEnter.HasFlag(StageActor.HOA) && !tenant.NotifyClientOnStatusChange) {
+                    _logger.LogDebug(
+                        "[Notify HOA skipped - disabled by tenant setting][TenantId:{TenantId}]",
+                        request.TenantId);
                 }
 
                 // Notify Specialist
@@ -185,8 +228,8 @@ namespace CRS.Services.Workflow {
                     await SendToUserAsync(study.Specialist.Id.ToString(), subject, message, request.Id);
                 }
 
-                // Notify Staff - get all TenantOwner users for this tenant
-                if (config.NotifyOnEnter.HasFlag(StageActor.Staff)) {
+                // Notify Staff (Tenant Owner) - check tenant setting
+                if (config.NotifyOnEnter.HasFlag(StageActor.Staff) && tenant.NotifyOwnerOnStatusChange) {
                     var staffUsers = await db.Users
                         .Where(u => u.TenantId == request.TenantId)
                         .ToListAsync();
@@ -194,6 +237,10 @@ namespace CRS.Services.Workflow {
                     foreach (var staffUser in staffUsers.Where(u => u.Roles?.Contains("TenantOwner") == true)) {
                         await SendToUserAsync(staffUser.Id.ToString(), subject, message, request.Id);
                     }
+                } else if (config.NotifyOnEnter.HasFlag(StageActor.Staff) && !tenant.NotifyOwnerOnStatusChange) {
+                    _logger.LogDebug(
+                        "[Notify Owner skipped - disabled by tenant setting][TenantId:{TenantId}]",
+                        request.TenantId);
                 }
 
                 // Notify Admins

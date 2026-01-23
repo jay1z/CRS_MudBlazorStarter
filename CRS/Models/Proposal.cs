@@ -68,6 +68,11 @@ namespace CRS.Models {
         public DateTime ProposalDate { get; set; } = DateTime.UtcNow;
 
         public DateTime? DateSent { get; set; }
+        
+        // Proposal Review (for RequireProposalReview setting)
+        public DateTime? DateReviewed { get; set; }
+        public string? ReviewedBy { get; set; }
+        public bool IsReviewed { get; set; }
 
         public DateTime? DateApproved { get; set; }
 

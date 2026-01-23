@@ -55,6 +55,142 @@ namespace CRS.Models {
         
         // Owner reference for demo cleanup
         public string? OwnerId { get; set; }
+        
+        // Workflow Settings: Auto-accept new reserve study requests
+        /// <summary>
+        /// When enabled, new reserve study requests from HOA users are automatically approved
+        /// without requiring manual review by tenant staff.
+        /// </summary>
+        public bool AutoAcceptStudyRequests { get; set; } = false;
+        
+        // ═══════════════════════════════════════════════════════════════
+        // WORKFLOW SETTINGS - Proposal Phase
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// Default number of days before a proposal expires. Set to 0 for no expiration.
+        /// </summary>
+        public int DefaultProposalExpirationDays { get; set; } = 30;
+        
+        /// <summary>
+        /// When enabled, proposals are automatically sent to clients when internally approved.
+        /// </summary>
+        public bool AutoSendProposalOnApproval { get; set; } = false;
+        
+        /// <summary>
+        /// When enabled, requires a second reviewer before proposal can be sent.
+        /// </summary>
+        public bool RequireProposalReview { get; set; } = false;
+        
+        /// <summary>
+        /// When enabled, skip the proposal step for trusted/repeat clients and proceed directly to engagement.
+        /// </summary>
+        public bool SkipProposalStep { get; set; } = false;
+        
+        // ═══════════════════════════════════════════════════════════════
+        // WORKFLOW SETTINGS - Data Collection Phase
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// When enabled, automatically request financial info after proposal acceptance.
+        /// </summary>
+        public bool AutoRequestFinancialInfo { get; set; } = true;
+        
+        /// <summary>
+        /// Default deadline in days for financial info submission.
+        /// </summary>
+        public int FinancialInfoDueDays { get; set; } = 14;
+        
+        /// <summary>
+        /// When enabled, requires service contact collection during data gathering.
+        /// </summary>
+        public bool RequireServiceContacts { get; set; } = false;
+        
+        /// <summary>
+        /// When enabled, skip financial data collection for certain study types.
+        /// </summary>
+        public bool SkipFinancialInfoStep { get; set; } = false;
+        
+        // ═══════════════════════════════════════════════════════════════
+        // WORKFLOW SETTINGS - Site Visit Phase
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// When enabled, site visits are mandatory before completing a study.
+        /// </summary>
+        public bool RequireSiteVisit { get; set; } = true;
+        
+        /// <summary>
+        /// Default duration in minutes for site visit calendar blocks.
+        /// </summary>
+        public int DefaultSiteVisitDurationMinutes { get; set; } = 120;
+        
+        /// <summary>
+        /// When enabled, allows video/virtual site inspections instead of in-person visits.
+        /// </summary>
+        public bool AllowVirtualSiteVisit { get; set; } = false;
+        
+        // ═══════════════════════════════════════════════════════════════
+        // WORKFLOW SETTINGS - Notifications & Reminders
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// When enabled, automatic reminder emails are sent for pending actions.
+        /// </summary>
+        public bool SendAutomaticReminders { get; set; } = true;
+        
+        /// <summary>
+        /// How often to send reminder emails (in days).
+        /// </summary>
+        public int ReminderFrequencyDays { get; set; } = 7;
+        
+        /// <summary>
+        /// When enabled, tenant owner is notified on major status changes.
+        /// </summary>
+        public bool NotifyOwnerOnStatusChange { get; set; } = true;
+        
+        /// <summary>
+        /// When enabled, HOA client is notified via email on major status changes.
+        /// </summary>
+        public bool NotifyClientOnStatusChange { get; set; } = true;
+        
+        // ═══════════════════════════════════════════════════════════════
+        // WORKFLOW SETTINGS - Invoice Integration
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// When enabled, a draft invoice is automatically created when a proposal is accepted.
+        /// </summary>
+        public bool AutoGenerateInvoiceOnAcceptance { get; set; } = false;
+        
+        /// <summary>
+        /// Default payment terms in days (e.g., 30 = Net 30).
+        /// </summary>
+        public int DefaultPaymentTermsDays { get; set; } = 30;
+        
+        /// <summary>
+        /// When enabled, automatic payment reminder emails are sent for overdue invoices.
+        /// </summary>
+        public bool AutoSendInvoiceReminders { get; set; } = true;
+        
+        // ═══════════════════════════════════════════════════════════════
+        // WORKFLOW SETTINGS - Report & Completion
+        // ═══════════════════════════════════════════════════════════════
+        
+        /// <summary>
+        /// When enabled, requires owner review before marking a study complete.
+        /// </summary>
+        public bool RequireFinalReview { get; set; } = false;
+        
+        /// <summary>
+        /// Number of days after completion before auto-archiving. Set to 0 to disable.
+        /// </summary>
+        public int AutoArchiveAfterDays { get; set; } = 0;
+        
+        /// <summary>
+        /// When enabled, amendments are allowed after a study is completed.
+        /// </summary>
+        public bool AllowAmendmentsAfterCompletion { get; set; } = true;
     }
 
     public enum TenantProvisioningStatus {

@@ -105,6 +105,12 @@
                                         OnClick="@(() => activeTab = 6)">
                                 Acceptance Terms
                             </MudNavLink>
+                            <MudNavLink Icon="@Icons.Material.Filled.AccountTree" 
+                                        IconColor="@(activeTab == 7 ? Color.Primary : Color.Default)"
+                                        Class="@(activeTab == 7 ? "mud-nav-link-active" : "")"
+                                        OnClick="@(() => activeTab = 7)">
+                                Workflow
+                            </MudNavLink>
                         </MudNavMenu>
                 </MudPaper>
             </MudItem>
@@ -1013,6 +1019,378 @@
                                 }
                             </MudStack>
                         }
+                        else if (activeTab == 7)
+                        {
+                            <!-- Workflow Settings -->
+                            <MudStack Spacing="4">
+                                <div>
+                                    <MudText Typo="Typo.h5" Class="fw-bold mb-2">Workflow Settings</MudText>
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        Configure how reserve study requests are processed through each phase
+                                    </MudText>
+                                </div>
+
+                                <MudDivider />
+
+                                <!-- REQUEST PHASE -->
+                                <MudText Typo="Typo.h6" Style="color: #6366f1;">
+                                    <MudIcon Icon="@Icons.Material.Filled.PlayCircle" Class="mr-2" Style="vertical-align: middle;" />
+                                    Request Phase
+                                </MudText>
+
+                                <!-- Auto-Accept Study Requests -->
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Auto-Accept Study Requests</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Automatically approve new requests without manual review
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.AutoAcceptStudyRequests" 
+                                                   Color="@(tenant.AutoAcceptStudyRequests ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudDivider Class="my-2" />
+
+                                <!-- PROPOSAL PHASE -->
+                                <MudText Typo="Typo.h6" Style="color: #8b5cf6;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Description" Class="mr-2" Style="vertical-align: middle;" />
+                                    Proposal Phase
+                                </MudText>
+
+                                <MudGrid Spacing="3">
+                                    <MudItem xs="12" md="6">
+                                        <MudNumericField T="int" @bind-Value="tenant.DefaultProposalExpirationDays"
+                                                         Label="Default Proposal Expiration (days)"
+                                                         Variant="Variant.Outlined"
+                                                         Min="0" Max="365"
+                                                         HelperText="0 = no expiration"
+                                                         Adornment="Adornment.Start"
+                                                         AdornmentIcon="@Icons.Material.Filled.CalendarMonth"
+                                                         @bind-Value:after="MarkAsChanged" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Auto-Send Proposal on Approval</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Automatically send proposals to clients when internally approved
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.AutoSendProposalOnApproval" 
+                                                   Color="@(tenant.AutoSendProposalOnApproval ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Require Proposal Review</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Require a second reviewer before proposal can be sent
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.RequireProposalReview" 
+                                                   Color="@(tenant.RequireProposalReview ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Skip Proposal Step</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                For trusted/repeat clients, skip directly to engagement
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.SkipProposalStep" 
+                                                   Color="@(tenant.SkipProposalStep ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudDivider Class="my-2" />
+
+                                <!-- DATA COLLECTION PHASE -->
+                                <MudText Typo="Typo.h6" Style="color: #f59e0b;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" Style="vertical-align: middle;" />
+                                    Data Collection Phase
+                                </MudText>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Auto-Request Financial Info</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Automatically request financial info after proposal acceptance
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.AutoRequestFinancialInfo" 
+                                                   Color="@(tenant.AutoRequestFinancialInfo ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudGrid Spacing="3">
+                                    <MudItem xs="12" md="6">
+                                        <MudNumericField T="int" @bind-Value="tenant.FinancialInfoDueDays"
+                                                         Label="Financial Info Due (days)"
+                                                         Variant="Variant.Outlined"
+                                                         Min="1" Max="90"
+                                                         HelperText="Deadline for clients to submit financial data"
+                                                         Adornment="Adornment.Start"
+                                                         AdornmentIcon="@Icons.Material.Filled.Schedule"
+                                                         @bind-Value:after="MarkAsChanged" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Require Service Contacts</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Require vendor/service contact collection during data gathering
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.RequireServiceContacts" 
+                                                   Color="@(tenant.RequireServiceContacts ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Skip Financial Info Step</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Skip financial data collection for certain study types
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.SkipFinancialInfoStep" 
+                                                   Color="@(tenant.SkipFinancialInfoStep ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudDivider Class="my-2" />
+
+                                <!-- SITE VISIT PHASE -->
+                                <MudText Typo="Typo.h6" Style="color: #10b981;">
+                                    <MudIcon Icon="@Icons.Material.Filled.DirectionsCar" Class="mr-2" Style="vertical-align: middle;" />
+                                    Site Visit Phase
+                                </MudText>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Require Site Visit</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Site visits are mandatory before completing a study
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.RequireSiteVisit" 
+                                                   Color="@(tenant.RequireSiteVisit ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudGrid Spacing="3">
+                                    <MudItem xs="12" md="6">
+                                        <MudNumericField T="int" @bind-Value="tenant.DefaultSiteVisitDurationMinutes"
+                                                         Label="Default Site Visit Duration (minutes)"
+                                                         Variant="Variant.Outlined"
+                                                         Min="30" Max="480"
+                                                         HelperText="Calendar block duration for site visits"
+                                                         Adornment="Adornment.Start"
+                                                         AdornmentIcon="@Icons.Material.Filled.Timer"
+                                                         @bind-Value:after="MarkAsChanged" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Allow Virtual Site Visit</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Allow video/virtual inspections instead of in-person visits
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.AllowVirtualSiteVisit" 
+                                                   Color="@(tenant.AllowVirtualSiteVisit ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudDivider Class="my-2" />
+
+                                <!-- NOTIFICATIONS -->
+                                <MudText Typo="Typo.h6" Style="color: #3b82f6;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Notifications" Class="mr-2" Style="vertical-align: middle;" />
+                                    Notifications & Reminders
+                                </MudText>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Send Automatic Reminders</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Send reminder emails for pending actions
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.SendAutomaticReminders" 
+                                                   Color="@(tenant.SendAutomaticReminders ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudGrid Spacing="3">
+                                    <MudItem xs="12" md="6">
+                                        <MudNumericField T="int" @bind-Value="tenant.ReminderFrequencyDays"
+                                                         Label="Reminder Frequency (days)"
+                                                         Variant="Variant.Outlined"
+                                                         Min="1" Max="30"
+                                                         HelperText="How often to send reminder emails"
+                                                         Adornment="Adornment.Start"
+                                                         AdornmentIcon="@Icons.Material.Filled.Repeat"
+                                                         Disabled="@(!tenant.SendAutomaticReminders)"
+                                                         @bind-Value:after="MarkAsChanged" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Notify Owner on Status Change</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Email tenant owner on major workflow status changes
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.NotifyOwnerOnStatusChange" 
+                                                   Color="@(tenant.NotifyOwnerOnStatusChange ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Notify Client on Status Change</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Email HOA client on major workflow status changes
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.NotifyClientOnStatusChange" 
+                                                   Color="@(tenant.NotifyClientOnStatusChange ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudDivider Class="my-2" />
+
+                                <!-- INVOICE INTEGRATION -->
+                                <MudText Typo="Typo.h6" Style="color: #ef4444;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" Style="vertical-align: middle;" />
+                                    Invoice Integration
+                                </MudText>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Auto-Generate Invoice on Acceptance</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Automatically create a draft invoice when a proposal is accepted
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.AutoGenerateInvoiceOnAcceptance" 
+                                                   Color="@(tenant.AutoGenerateInvoiceOnAcceptance ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudGrid Spacing="3">
+                                    <MudItem xs="12" md="6">
+                                        <MudNumericField T="int" @bind-Value="tenant.DefaultPaymentTermsDays"
+                                                         Label="Default Payment Terms (days)"
+                                                         Variant="Variant.Outlined"
+                                                         Min="0" Max="90"
+                                                         HelperText="e.g., 30 = Net 30"
+                                                         Adornment="Adornment.Start"
+                                                         AdornmentIcon="@Icons.Material.Filled.CreditCard"
+                                                         @bind-Value:after="MarkAsChanged" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Auto-Send Invoice Reminders</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Send automatic payment reminder emails for overdue invoices
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.AutoSendInvoiceReminders" 
+                                                   Color="@(tenant.AutoSendInvoiceReminders ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudDivider Class="my-2" />
+
+                                <!-- REPORT & COMPLETION -->
+                                <MudText Typo="Typo.h6" Style="color: #06b6d4;">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" Style="vertical-align: middle;" />
+                                    Report & Completion
+                                </MudText>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Require Final Review</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Require owner review before marking a study complete
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.RequireFinalReview" 
+                                                   Color="@(tenant.RequireFinalReview ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudGrid Spacing="3">
+                                    <MudItem xs="12" md="6">
+                                        <MudNumericField T="int" @bind-Value="tenant.AutoArchiveAfterDays"
+                                                         Label="Auto-Archive After (days)"
+                                                         Variant="Variant.Outlined"
+                                                         Min="0" Max="365"
+                                                         HelperText="0 = disabled"
+                                                         Adornment="Adornment.Start"
+                                                         AdornmentIcon="@Icons.Material.Filled.Archive"
+                                                         @bind-Value:after="MarkAsChanged" />
+                                    </MudItem>
+                                </MudGrid>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Allow Amendments After Completion</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Allow scope amendments after a study is completed
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.AllowAmendmentsAfterCompletion" 
+                                                   Color="@(tenant.AllowAmendmentsAfterCompletion ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+                            </MudStack>
+                        }
                     </MudPaper>
 
                 <!-- Action Buttons - Fixed at bottom -->
@@ -1113,7 +1491,8 @@ protected override async Task OnInitializedAsync() {
                     Name = tenant.Name,
                     Subdomain = tenant.Subdomain,
                     IsActive = tenant.IsActive,
-                    BrandingJson = tenant.BrandingJson
+                    BrandingJson = tenant.BrandingJson,
+                    AutoAcceptStudyRequests = tenant.AutoAcceptStudyRequests
                 };
                 
                 ParseBranding();
@@ -1269,6 +1648,39 @@ protected override async Task OnInitializedAsync() {
             existing.Name = tenant.Name;
             existing.IsActive = tenant.IsActive;
             existing.BrandingJson = tenant.BrandingJson;
+            
+            // Workflow Settings - Request Phase
+            existing.AutoAcceptStudyRequests = tenant.AutoAcceptStudyRequests;
+            
+            // Workflow Settings - Proposal Phase
+            existing.DefaultProposalExpirationDays = tenant.DefaultProposalExpirationDays;
+            existing.AutoSendProposalOnApproval = tenant.AutoSendProposalOnApproval;
+            existing.RequireProposalReview = tenant.RequireProposalReview;
+            
+            // Workflow Settings - Data Collection Phase
+            existing.AutoRequestFinancialInfo = tenant.AutoRequestFinancialInfo;
+            existing.FinancialInfoDueDays = tenant.FinancialInfoDueDays;
+            existing.RequireServiceContacts = tenant.RequireServiceContacts;
+            
+            // Workflow Settings - Site Visit Phase
+            existing.RequireSiteVisit = tenant.RequireSiteVisit;
+            existing.DefaultSiteVisitDurationMinutes = tenant.DefaultSiteVisitDurationMinutes;
+            
+            // Workflow Settings - Notifications
+            existing.SendAutomaticReminders = tenant.SendAutomaticReminders;
+            existing.ReminderFrequencyDays = tenant.ReminderFrequencyDays;
+            existing.NotifyOwnerOnStatusChange = tenant.NotifyOwnerOnStatusChange;
+            
+            // Workflow Settings - Invoice Integration
+            existing.AutoGenerateInvoiceOnAcceptance = tenant.AutoGenerateInvoiceOnAcceptance;
+            existing.DefaultPaymentTermsDays = tenant.DefaultPaymentTermsDays;
+            existing.AutoSendInvoiceReminders = tenant.AutoSendInvoiceReminders;
+            
+            // Workflow Settings - Report & Completion
+            existing.RequireFinalReview = tenant.RequireFinalReview;
+            existing.AutoArchiveAfterDays = tenant.AutoArchiveAfterDays;
+            existing.AllowAmendmentsAfterCompletion = tenant.AllowAmendmentsAfterCompletion;
+            
             existing.UpdatedAt = DateTime.UtcNow;
             
             await db.SaveChangesAsync();
@@ -1284,7 +1696,8 @@ protected override async Task OnInitializedAsync() {
                         Name = tenant.Name,
                         Subdomain = tenant.Subdomain,
                         IsActive = tenant.IsActive,
-                        BrandingJson = tenant.BrandingJson
+                        BrandingJson = tenant.BrandingJson,
+                        AutoAcceptStudyRequests = tenant.AutoAcceptStudyRequests
                     };
 
                     // Save acceptance terms if they have content

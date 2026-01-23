@@ -4,6 +4,7 @@ using CRS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260123074007_AddTenantWorkflowSettings")]
+    partial class AddTenantWorkflowSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -4178,9 +4181,6 @@ namespace CRS.Migrations
                     b.Property<bool>("AllowAmendmentsAfterCompletion")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("AllowVirtualSiteVisit")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("AutoAcceptStudyRequests")
                         .HasColumnType("bit");
 
@@ -4257,9 +4257,6 @@ namespace CRS.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("NotifyClientOnStatusChange")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("NotifyOwnerOnStatusChange")
                         .HasColumnType("bit");
 
@@ -4306,12 +4303,6 @@ namespace CRS.Migrations
 
                     b.Property<Guid>("SignupToken")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("SkipFinancialInfoStep")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("SkipProposalStep")
-                        .HasColumnType("bit");
 
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("nvarchar(max)");

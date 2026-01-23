@@ -227,9 +227,16 @@ namespace CRS.Models.Workflow {
 
         /// <summary>
         /// Report finalized and delivered.
-        /// Transitions: → RequestCompleted
+        /// Transitions: → FinalReviewPending (if RequireFinalReview enabled) | RequestCompleted
         /// </summary>
         ReportComplete = 29,
+
+        /// <summary>
+        /// Pending final review by tenant owner before completion.
+        /// Only used when RequireFinalReview tenant setting is enabled.
+        /// Transitions: → RequestCompleted
+        /// </summary>
+        FinalReviewPending = 33,
 
         // ═══════════════════════════════════════════════════════════════
         // TERMINAL STATES

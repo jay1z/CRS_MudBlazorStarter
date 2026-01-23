@@ -632,6 +632,7 @@ namespace CRS.Services {
             return await context.ReserveStudies
                 .AsNoTracking()
                 .Include(rs => rs.Community)
+                    .ThenInclude(c => c.PhysicalAddress)
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
@@ -655,6 +656,7 @@ namespace CRS.Services {
             return await context.ReserveStudies
                 .AsNoTracking()
                 .Include(rs => rs.Community)
+                    .ThenInclude(c => c.PhysicalAddress)
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.Specialist)
@@ -677,6 +679,7 @@ namespace CRS.Services {
             return await context.ReserveStudies
                 .AsNoTracking()
                 .Include(rs => rs.Community)
+                    .ThenInclude(c => c.PhysicalAddress)
                 .Include(rs => rs.Contact)
                 .Include(rs => rs.PropertyManager)
                 .Include(rs => rs.User)

@@ -569,6 +569,20 @@ public static class StageConfiguration
             WaitingMessage = "Your reserve study report is complete!"
         },
 
+        [StudyStatus.FinalReviewPending] = new StageConfig
+        {
+            Status = StudyStatus.FinalReviewPending,
+            DisplayName = "Pending Final Review",
+            Phase = "Final Report",
+            AdvancedBy = StageActor.Staff | StageActor.Admin,
+            AvailableActions = StageAction.Advance,
+            RequiredValidations = Array.Empty<StageValidation>(),
+            DefaultNextStage = StudyStatus.RequestCompleted,
+            NotifyOnEnter = StageActor.Staff | StageActor.Admin,
+            ActionRequiredMessage = "Complete final review before marking study complete.",
+            WaitingMessage = "Awaiting final review by tenant owner."
+        },
+
         // ═══════════════════════════════════════════════════════════════
         // COMPLETION
         // ═══════════════════════════════════════════════════════════════

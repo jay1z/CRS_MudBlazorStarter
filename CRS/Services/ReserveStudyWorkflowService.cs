@@ -66,13 +66,32 @@ namespace CRS.Services {
 
             await using var db = await _dbFactory.CreateDbContextAsync();
             // Ensure StudyRequest exists1:1 (keyed by ReserveStudy.Id)
-            var sr = await db.StudyRequests.AsNoTracking().FirstOrDefaultAsync(x => x.Id == created.Id);
+            var sr = await db.StudyRequests.FirstOrDefaultAsync(x => x.Id == created.Id);
             if (sr == null) {
                 sr = ToStudyRequest(created);
                 await db.StudyRequests.AddAsync(sr);
                 // Initial history entry (creation)
                 await AppendHistoryAsync(db, sr, sr.CurrentStatus, sr.CurrentStatus, GetActor());
                 await db.SaveChangesAsync();
+            }
+
+            // Check if tenant has auto-accept enabled
+            var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == created.TenantId);
+            if (tenant?.AutoAcceptStudyRequests == true) {
+                // Auto-approve the request
+                var from = sr.CurrentStatus;
+                var desired = StudyStatus.RequestApproved;
+                var ok = await _engine.TryTransitionAsync(sr, desired, "System (Auto-Accept)");
+                if (ok) {
+                    // Update DateModified on the ReserveStudy
+                    var studyToUpdate = await db.ReserveStudies.FirstOrDefaultAsync(s => s.Id == created.Id);
+                    if (studyToUpdate != null) {
+                        studyToUpdate.DateModified = DateTime.UtcNow;
+                    }
+                    await AppendHistoryAsync(db, sr, from, desired, "System (Auto-Accept)");
+                    await db.SaveChangesAsync();
+                    _logger.LogInformation("Auto-accepted study request {StudyId} for tenant {TenantId}", created.Id, created.TenantId);
+                }
             }
 
             return created;
@@ -236,11 +255,20 @@ namespace CRS.Services {
             .FirstOrDefaultAsync(p => p.Id == proposalId);
             if (proposal?.ReserveStudy == null) return false;
 
+            var study = proposal.ReserveStudy;
+            
+            // Check if tenant requires proposal review before approval
+            var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == study.TenantId);
+            if (tenant?.RequireProposalReview == true && !proposal.IsReviewed) {
+                _logger.LogWarning(
+                    "Proposal approval blocked for study {StudyId} - tenant requires proposal review first",
+                    study.Id);
+                return false;
+            }
+
             proposal.IsApproved = true;
             proposal.ApprovedBy = approvedBy;
             proposal.DateApproved = DateTime.UtcNow;
-
-            var study = proposal.ReserveStudy;
 
             // Enforce transition -> ProposalApproved => Approved
             var sr = await EnsureStudyRequestAsync(db, study);
@@ -255,6 +283,74 @@ namespace CRS.Services {
             await db.SaveChangesAsync();
 
             await _dispatcher.Broadcast(new ProposalApprovedEvent(study, proposal));
+            
+            // Check tenant setting for auto-send on approval
+            if (tenant?.AutoSendProposalOnApproval == true) {
+                _logger.LogInformation(
+                    "[AutoSendProposalOnApproval] Auto-sending proposal for study {StudyId} after approval",
+                    study.Id);
+                
+                // Auto-transition to ProposalSent
+                var sendFrom = sr.CurrentStatus;
+                var sendOk = await _engine.TryTransitionAsync(sr, StudyStatus.ProposalSent, approvedBy);
+                if (sendOk) {
+                    proposal.DateSent = DateTime.UtcNow;
+                    study.DateModified = DateTime.UtcNow;
+                    await AppendHistoryAsync(db, sr, sendFrom, StudyStatus.ProposalSent, approvedBy);
+                    await db.SaveChangesAsync();
+                    
+                    // Fire the ProposalSent event for email notification
+                    await _dispatcher.Broadcast(new ProposalSentEvent(study, proposal));
+                    _logger.LogInformation(
+                        "[AutoSendProposalOnApproval] Successfully auto-sent proposal for study {StudyId}",
+                        study.Id);
+                } else {
+                    _logger.LogWarning(
+                        "[AutoSendProposalOnApproval] Failed to auto-send proposal for study {StudyId}",
+                        study.Id);
+                }
+            }
+            
+            return true;
+        }
+        
+        /// <summary>
+        /// Marks a proposal as reviewed (required before approval when RequireProposalReview is enabled).
+        /// </summary>
+        public async Task<bool> ReviewProposalAsync(Guid proposalId, string reviewedBy) {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            
+            var proposal = await db.Proposals.Include(p => p.ReserveStudy)
+                .FirstOrDefaultAsync(p => p.Id == proposalId);
+            if (proposal?.ReserveStudy == null) return false;
+            
+            // Check if proposal is already reviewed
+            if (proposal.IsReviewed) {
+                _logger.LogWarning("Proposal {ProposalId} is already reviewed", proposalId);
+                return true;
+            }
+            
+            // Check if the reviewer is different from the approver
+            // (to ensure two-person review)
+            var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == proposal.TenantId);
+            if (tenant?.RequireProposalReview == true && proposal.ApprovedBy == reviewedBy) {
+                _logger.LogWarning(
+                    "Proposal review blocked - reviewer {Reviewer} cannot be the same as approver",
+                    reviewedBy);
+                return false;
+            }
+            
+            proposal.IsReviewed = true;
+            proposal.ReviewedBy = reviewedBy;
+            proposal.DateReviewed = DateTime.UtcNow;
+            
+            proposal.ReserveStudy.DateModified = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+            
+            _logger.LogInformation(
+                "Proposal {ProposalId} reviewed by {ReviewedBy} for study {StudyId}",
+                proposalId, reviewedBy, proposal.ReserveStudyId);
+            
             return true;
         }
 
@@ -378,6 +474,27 @@ namespace CRS.Services {
             .Include(s => s.FinancialInfo)
             .FirstOrDefaultAsync(s => s.Id == reserveStudyId);
             if (study == null) return false;
+            
+            // Check if tenant requires service contacts
+            var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == study.TenantId);
+            if (tenant?.RequireServiceContacts == true) {
+                // Check if any common elements in this study have service contacts assigned
+                var hasAssignedContacts = await db.ReserveStudyCommonElements
+                    .AnyAsync(rsce => rsce.ReserveStudyId == study.Id && rsce.ServiceContact != null);
+                
+                // Alternatively, check if tenant has any active service contacts that could be used
+                if (!hasAssignedContacts) {
+                    var tenantHasContacts = await db.ServiceContacts
+                        .AnyAsync(sc => sc.TenantId == study.TenantId && sc.IsActive);
+                    
+                    if (!tenantHasContacts) {
+                        _logger.LogWarning(
+                            "Financial info submission blocked for study {StudyId} - tenant requires service contacts but none exist",
+                            reserveStudyId);
+                        return false;
+                    }
+                }
+            }
 
             financialInfo.ReserveStudyId = study.Id;
             financialInfo.TenantId = study.TenantId;
@@ -481,6 +598,7 @@ namespace CRS.Services {
             await AppendHistoryAsync(db, sr, from, desired, reviewedBy);
             await db.SaveChangesAsync();
 
+
             return true;
         }
 
@@ -491,17 +609,74 @@ namespace CRS.Services {
             .FirstOrDefaultAsync(s => s.Id == reserveStudyId);
             if (study == null) return false;
 
-            // Enforce transition -> RequestCompleted => Complete
             var sr = await EnsureStudyRequestAsync(db, study);
             var from = sr.CurrentStatus;
-            var desired = StudyStatus.RequestCompleted;
+            
+            // Check if tenant requires final review and we're coming from ReportComplete
+            var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == study.TenantId);
+            
+            StudyStatus desired;
+            if (tenant?.RequireFinalReview == true && from == StudyStatus.ReportComplete) {
+                // Transition to FinalReviewPending instead of RequestCompleted
+                desired = StudyStatus.FinalReviewPending;
+                _logger.LogInformation(
+                    "Study {StudyId} requires final review before completion (tenant setting enabled)",
+                    reserveStudyId);
+            } else {
+                // Direct completion or completing from FinalReviewPending
+                desired = StudyStatus.RequestCompleted;
+            }
+            
             var ok = await _engine.TryTransitionAsync(sr, desired, GetActor());
             if (!ok) return false;
 
-            study.IsComplete = true;
-                        study.DateModified = DateTime.UtcNow;
+            if (desired == StudyStatus.RequestCompleted) {
+                study.IsComplete = true;
+            }
+            study.DateModified = DateTime.UtcNow;
             await AppendHistoryAsync(db, sr, from, desired, GetActor());
             await db.SaveChangesAsync();
+
+            if (desired == StudyStatus.RequestCompleted) {
+                await _dispatcher.Broadcast(new ReserveStudyCompletedEvent(study));
+            }
+            return true;
+        }
+        
+        /// <summary>
+        /// Completes the final review and marks the study as complete.
+        /// Used when RequireFinalReview tenant setting is enabled.
+        /// </summary>
+        public async Task<bool> CompleteFinalReviewAsync(Guid reserveStudyId, string reviewedBy) {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var study = await db.ReserveStudies.Include(s => s.Community)
+                .FirstOrDefaultAsync(s => s.Id == reserveStudyId);
+            if (study == null) return false;
+
+            var sr = await EnsureStudyRequestAsync(db, study);
+            var from = sr.CurrentStatus;
+            
+            // Must be in FinalReviewPending status
+            if (from != StudyStatus.FinalReviewPending) {
+                _logger.LogWarning(
+                    "CompleteFinalReviewAsync called for study {StudyId} but status is {Status}, not FinalReviewPending",
+                    reserveStudyId, from);
+                return false;
+            }
+            
+            var desired = StudyStatus.RequestCompleted;
+            var ok = await _engine.TryTransitionAsync(sr, desired, reviewedBy);
+            if (!ok) return false;
+
+            study.IsComplete = true;
+            study.DateModified = DateTime.UtcNow;
+            await AppendHistoryAsync(db, sr, from, desired, reviewedBy);
+            await db.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Final review completed for study {StudyId} by {ReviewedBy}",
+                reserveStudyId, reviewedBy);
 
             await _dispatcher.Broadcast(new ReserveStudyCompletedEvent(study));
             return true;

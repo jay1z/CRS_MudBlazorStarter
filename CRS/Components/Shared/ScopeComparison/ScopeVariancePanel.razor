@@ -1,7 +1,12 @@
 ﻿@using CRS.Models.Workflow
 @using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
 
 @inject IScopeComparisonService ScopeComparisonService
+@inject ITenantContext TenantContext
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 
@@ -13,7 +18,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.CompareArrows" Class="mr-2" Style="vertical-align: middle;" />
                 Scope Comparison
             </MudText>
-            @if (comparison != null && comparison.Status == ScopeComparisonStatus.ExceedsThreshold)
+            @if (comparison != null && comparison.Status == ScopeComparisonStatus.ExceedsThreshold && allowAmendments)
             {
                 <AuthorizeView Policy="RequireTenantStaff">
                     <Authorized>
@@ -385,51 +390,61 @@
 </MudPaper>
 
 @code {
-    [Parameter]
-    public Guid ReserveStudyId { get; set; }
+[Parameter]
+public Guid ReserveStudyId { get; set; }
 
-    [Parameter]
-    public int TenantId { get; set; }
+[Parameter]
+public int TenantId { get; set; }
 
-    private ScopeComparison? comparison;
-    private TenantScopeChangeSettings? settings;
-    private bool isLoading = true;
-    private bool showDetails = false;
-    private bool showOverrideForm = false;
-    private string overrideReason = "";
-    private bool isSubmitting = false;
+private ScopeComparison? comparison;
+private TenantScopeChangeSettings? settings;
+private bool isLoading = true;
+private bool showDetails = false;
+private bool showOverrideForm = false;
+private string overrideReason = "";
+private bool isSubmitting = false;
+private bool allowAmendments = true;
 
-    protected override async Task OnInitializedAsync()
+protected override async Task OnInitializedAsync()
+{
+    await LoadData();
+}
+
+/// <summary>
+/// Public method to refresh the scope comparison data from external components
+/// </summary>
+public async Task RefreshAsync()
+{
+    await LoadData();
+    StateHasChanged();
+}
+
+private async Task LoadData()
+{
+    try
     {
-        await LoadData();
+        isLoading = true;
+        comparison = await ScopeComparisonService.GetByStudyIdAsync(ReserveStudyId);
+        settings = await ScopeComparisonService.GetSettingsAsync(TenantId);
+            
+        // Load tenant setting for amendments after completion
+        if (TenantContext.TenantId.HasValue)
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var tenant = await db.Tenants.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
+            allowAmendments = tenant?.AllowAmendmentsAfterCompletion ?? true;
+        }
     }
-
-    /// <summary>
-    /// Public method to refresh the scope comparison data from external components
-    /// </summary>
-    public async Task RefreshAsync()
+    catch (Exception ex)
     {
-        await LoadData();
-        StateHasChanged();
+        Snackbar.Add($"Error loading scope comparison: {ex.Message}", Severity.Error);
     }
-
-    private async Task LoadData()
+    finally
     {
-        try
-        {
-            isLoading = true;
-            comparison = await ScopeComparisonService.GetByStudyIdAsync(ReserveStudyId);
-            settings = await ScopeComparisonService.GetSettingsAsync(TenantId);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading scope comparison: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            isLoading = false;
-        }
+        isLoading = false;
     }
+}
 
     private async Task SubmitOverride()
     {

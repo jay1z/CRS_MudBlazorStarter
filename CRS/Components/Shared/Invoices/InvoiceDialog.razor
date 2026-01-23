@@ -53,10 +53,10 @@
 
                                 <!-- Milestone Selection -->
                                 <MudText Typo="Typo.subtitle2">Select Payment Milestone</MudText>
-                                <MudRadioGroup @bind-Value="_selectedMilestoneType">
+                                <MudRadioGroup T="InvoiceMilestoneType?" @bind-Value="_selectedMilestoneType">
                                     @foreach (var milestone in _paymentMilestones)
                                     {
-                                        <MudRadio Value="milestone.Type" 
+                                        <MudRadio T="InvoiceMilestoneType?" Value="@((InvoiceMilestoneType?)milestone.Type)" 
                                                   Disabled="@milestone.IsInvoiced"
                                                   Color="Color.Primary">
                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">

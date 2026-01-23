@@ -1,4 +1,8 @@
 ﻿@using CRS.Data
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@inject ITenantContext TenantContext
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <MudDialog>
     <TitleContent>
@@ -42,23 +46,79 @@
                                    AmPm="true"
                                    Placeholder="Select time..." />
                 </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" @bind-Value="durationMinutes"
+                               Label="Duration"
+                               Variant="Variant.Outlined"
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Filled.Timer">
+                        <MudSelectItem Value="60">1 hour</MudSelectItem>
+                        <MudSelectItem Value="90">1.5 hours</MudSelectItem>
+                        <MudSelectItem Value="120">2 hours</MudSelectItem>
+                        <MudSelectItem Value="180">3 hours</MudSelectItem>
+                        <MudSelectItem Value="240">4 hours</MudSelectItem>
+                        <MudSelectItem Value="360">6 hours</MudSelectItem>
+                        <MudSelectItem Value="480">Full day (8 hours)</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                @if (allowVirtualVisit)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="SiteVisitType" @bind-Value="visitType"
+                                   Label="Visit Type"
+                                   Variant="Variant.Outlined"
+                                   Adornment="Adornment.Start"
+                                   AdornmentIcon="@GetVisitTypeIcon()">
+                            <MudSelectItem Value="SiteVisitType.InPerson">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.DirectionsWalk" Size="Size.Small" />
+                                    <MudText>In-Person Visit</MudText>
+                                </MudStack>
+                            </MudSelectItem>
+                            <MudSelectItem Value="SiteVisitType.Virtual">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Videocam" Size="Size.Small" />
+                                    <MudText>Virtual Visit</MudText>
+                                </MudStack>
+                            </MudSelectItem>
+                            <MudSelectItem Value="SiteVisitType.Hybrid">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" />
+                                    <MudText>Hybrid (Both)</MudText>
+                                </MudStack>
+                            </MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    @if (visitType == SiteVisitType.Virtual || visitType == SiteVisitType.Hybrid)
+                    {
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="videoConferenceLink"
+                                          Label="Video Conference Link"
+                                          Variant="Variant.Outlined"
+                                          Placeholder="https://meet.google.com/... or https://zoom.us/..."
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Link"
+                                          HelperText="Enter the video call link for the virtual portion of the site visit" />
+                        </MudItem>
+                    }
+                }
             </MudGrid>
 
             @if (selectedDate.HasValue && selectedTime.HasValue) {
                 <MudPaper Elevation="0" Class="pa-4" Style="background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%); border-radius: 8px;">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                         <MudAvatar Size="Size.Large" Style="background: #667eea; color: white;">
-                            <MudIcon Icon="@Icons.Material.Filled.Event" />
+                            <MudIcon Icon="@GetVisitTypeIcon()" />
                         </MudAvatar>
                         <div>
                             <MudText Typo="Typo.caption" Style="color: #667eea; font-weight: 600; text-transform: uppercase;">
-                                SCHEDULED DATE & TIME
+                                @(visitType == SiteVisitType.Virtual ? "VIRTUAL VISIT" : visitType == SiteVisitType.Hybrid ? "HYBRID VISIT" : "SCHEDULED VISIT")
                             </MudText>
                             <MudText Typo="Typo.h6" Style="font-weight: 700; color: #5b21b6;">
                                 @GetScheduledDateTime().ToString("dddd, MMMM dd, yyyy")
                             </MudText>
                             <MudText Typo="Typo.body1" Style="font-weight: 600; color: #667eea;">
-                                @GetScheduledDateTime().ToString("h:mm tt")
+                                @GetScheduledDateTime().ToString("h:mm tt") • @GetDurationText()
                             </MudText>
                         </div>
                     </MudStack>
@@ -88,11 +148,34 @@
 
     [Parameter]
     public DateTime? CurrentDate { get; set; }
+    
+    [Parameter]
+    public int? CurrentDuration { get; set; }
 
     private DateTime? selectedDate;
     private TimeSpan? selectedTime;
+    private int durationMinutes = 120; // Default 2 hours
+    private bool allowVirtualVisit = false;
+    private SiteVisitType visitType = SiteVisitType.InPerson;
+    private string videoConferenceLink = "";
 
-    protected override void OnInitialized() {
+    protected override async Task OnInitializedAsync() {
+        // Load tenant settings
+        if (TenantContext.TenantId.HasValue) {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var tenant = await db.Tenants.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
+            if (tenant != null) {
+                durationMinutes = tenant.DefaultSiteVisitDurationMinutes;
+                allowVirtualVisit = tenant.AllowVirtualSiteVisit;
+            }
+        }
+        
+        // Override with current values if editing
+        if (CurrentDuration.HasValue) {
+            durationMinutes = CurrentDuration.Value;
+        }
+        
         if (CurrentDate.HasValue) {
             selectedDate = CurrentDate.Value.Date;
             selectedTime = CurrentDate.Value.TimeOfDay;
@@ -108,13 +191,54 @@
         }
         return DateTime.Now;
     }
+    
+    private string GetDurationText() {
+        return durationMinutes switch {
+            60 => "1 hour",
+            90 => "1.5 hours",
+            120 => "2 hours",
+            180 => "3 hours",
+            240 => "4 hours",
+            360 => "6 hours",
+            480 => "8 hours",
+            _ => $"{durationMinutes} minutes"
+        };
+    }
+    
+    private string GetVisitTypeIcon() {
+        return visitType switch {
+            SiteVisitType.Virtual => Icons.Material.Filled.Videocam,
+            SiteVisitType.Hybrid => Icons.Material.Filled.Groups,
+            _ => Icons.Material.Filled.DirectionsWalk
+        };
+    }
 
     private void Cancel() => MudDialog.Cancel();
 
     private void Submit() {
         if (selectedDate.HasValue && selectedTime.HasValue) {
             var scheduledDateTime = GetScheduledDateTime();
-            MudDialog.Close(DialogResult.Ok(scheduledDateTime));
+            // Return date, duration, visit type, and video link as a result object
+            var result = new SiteVisitScheduleResult {
+                ScheduledDateTime = scheduledDateTime,
+                DurationMinutes = durationMinutes,
+                VisitType = visitType,
+                VideoConferenceLink = visitType != SiteVisitType.InPerson ? videoConferenceLink : null
+            };
+            MudDialog.Close(DialogResult.Ok(result));
         }
+    }
+    
+    public enum SiteVisitType {
+        InPerson,
+        Virtual,
+        Hybrid
+    }
+    
+    public class SiteVisitScheduleResult {
+        public DateTime ScheduledDateTime { get; set; }
+        public int DurationMinutes { get; set; }
+        public SiteVisitType VisitType { get; set; }
+        public string? VideoConferenceLink { get; set; }
     }
 }

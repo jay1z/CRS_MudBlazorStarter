@@ -367,6 +367,26 @@ public class ScopeComparisonService : IScopeComparisonService
         await using var context = await _dbFactory.CreateDbContextAsync();
         var tenantId = _tenantContext.TenantId 
             ?? throw new InvalidOperationException("Tenant context is required");
+        
+        // Check if amendments are allowed for this tenant
+        var tenant = await context.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId);
+        if (tenant != null && !tenant.AllowAmendmentsAfterCompletion)
+        {
+            // Check if the study is completed - first get the study ID from scope comparison
+            var studyId = await context.ScopeComparisons
+                .Where(sc => sc.Id == scopeComparisonId)
+                .Select(sc => sc.ReserveStudyId)
+                .FirstOrDefaultAsync();
+            
+            var study = await context.ReserveStudies
+                .AsNoTracking()
+                .FirstOrDefaultAsync(rs => rs.Id == studyId);
+            
+            if (study?.IsComplete == true)
+            {
+                throw new InvalidOperationException("Amendments after completion are not allowed for this tenant.");
+            }
+        }
 
         var comparison = await context.ScopeComparisons
             .Include(sc => sc.ReserveStudy)

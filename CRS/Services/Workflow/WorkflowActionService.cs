@@ -418,7 +418,7 @@ public class WorkflowActionService : IWorkflowActionService
                  "Signed acceptance must be received."),
                  
             StageValidation.ServiceContactsProvided => 
-                (true, null), // TODO: Implement service contacts check
+                await ValidateServiceContactsAsync(db, study),
                 
             StageValidation.FinancialInfoFormSent => 
                 (study.FinancialInfo != null, 
@@ -468,8 +468,37 @@ public class WorkflowActionService : IWorkflowActionService
             StageValidation.CancellationReasonProvided => 
                 (true, null), // Checked at action level
                 
+                
             _ => (true, null)
         };
+    }
+    
+    private async Task<(bool IsValid, string? Error)> ValidateServiceContactsAsync(ApplicationDbContext db, ReserveStudy study)
+    {
+        // Check if tenant requires service contacts
+        var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == study.TenantId);
+        if (tenant?.RequireServiceContacts != true)
+        {
+            return (true, null); // Setting not enabled, skip validation
+        }
+        
+        // Check if any common elements in this study have service contacts assigned
+        var hasAssignedContacts = await db.ReserveStudyCommonElements
+            .AnyAsync(rsce => rsce.ReserveStudyId == study.Id && rsce.ServiceContact != null);
+        
+        // Alternatively, check if tenant has any active service contacts that could be used
+        if (!hasAssignedContacts)
+        {
+            var tenantHasContacts = await db.ServiceContacts
+                .AnyAsync(sc => sc.TenantId == study.TenantId && sc.IsActive);
+            
+            if (!tenantHasContacts)
+            {
+                return (false, "At least one service contact is required. Please add vendor/contractor contacts before proceeding.");
+            }
+        }
+        
+        return (true, null);
     }
 
     #endregion

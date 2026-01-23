@@ -214,6 +214,12 @@ namespace CRS.Services.Workflow {
             },
             
             [StudyStatus.ReportComplete] = new() { 
+                StudyStatus.FinalReviewPending,  // When RequireFinalReview enabled
+                StudyStatus.RequestCompleted     // Direct completion when setting disabled
+            },
+            
+            // Final review step (optional, based on tenant setting)
+            [StudyStatus.FinalReviewPending] = new() { 
                 StudyStatus.RequestCompleted 
             },
 

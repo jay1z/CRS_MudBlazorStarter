@@ -868,6 +868,36 @@
                                                 </AuthorizeView>
                                             }
                                             
+                                            @* Submit for Final Review (when RequireFinalReview is enabled) *@
+                                            @if (allowedNextStudy.Contains(StudyStatus.FinalReviewPending)) {
+                                                <AuthorizeView Policy="RequireTenantStaff">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Primary" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.RateReview" 
+                                                                   OnClick="@(() => ApplyTransition(StudyStatus.FinalReviewPending))">
+                                                            Submit for Final Review
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                            
+                                            @* Complete Final Review (when in FinalReviewPending status) *@
+                                            @if (currentStatus == StudyStatus.FinalReviewPending) {
+                                                <AuthorizeView Policy="RequireTenantOwner">
+                                                    <Authorized>
+                                                        <MudButton Variant="Variant.Filled" 
+                                                                   Color="Color.Success" 
+                                                                   Size="Size.Large"
+                                                                   StartIcon="@Icons.Material.Filled.Verified" 
+                                                                   OnClick="@(() => CompleteFinalReviewAsync(Id))">
+                                                            Complete Final Review
+                                                        </MudButton>
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            }
+                                            
                                             @* Generic advance for other transitions (forward progression) *@
                                             @foreach (var nextAllowed in allowedNextStudy.Where(s => 
                                                 s != StudyStatus.RequestCancelled &&
@@ -897,7 +927,8 @@
                                                 s != StudyStatus.NarrativeComplete &&
                                                 s != StudyStatus.NarrativePrintReady &&
                                                 s != StudyStatus.NarrativePackaged &&
-                                                s != StudyStatus.NarrativeSent)) {
+                                                s != StudyStatus.NarrativeSent &&
+                                                s != StudyStatus.FinalReviewPending)) {
                                                 <AuthorizeView Policy="RequireTenantStaff">
                                                     <Authorized>
                                                         <MudButton Variant="Variant.Filled" 
@@ -1924,8 +1955,22 @@
                     Snackbar.Add(success ? "Amendment accepted!" : "Amendment accepted, but workflow transition failed.", success ? Severity.Success : Severity.Warning);
                 } else {
                     await ApplyTransition(StudyStatus.ProposalAccepted);
-                    await RequestFinancialInfoAsync(Id);
-                    Snackbar.Add("Proposal accepted! Financial information request sent.", Severity.Success);
+                    
+                    // Check tenant settings to determine next step
+                    await using var db = await DbFactory.CreateDbContextAsync();
+                    var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == reserveStudy.TenantId);
+                    
+                    if (tenant?.SkipFinancialInfoStep == true) {
+                        // Skip financial info and go directly to site visit
+                        Snackbar.Add("Proposal accepted! Financial info step skipped per tenant settings.", Severity.Success);
+                    } else if (tenant?.AutoRequestFinancialInfo == true) {
+                        // Auto-request financial info (default behavior)
+                        await RequestFinancialInfoAsync(Id);
+                        Snackbar.Add("Proposal accepted! Financial information request sent.", Severity.Success);
+                    } else {
+                        // Manual financial info request - just notify acceptance
+                        Snackbar.Add("Proposal accepted! Financial information will need to be requested manually.", Severity.Success);
+                    }
                 }
             } else {
                 Snackbar.Add("Proposal accepted successfully!", Severity.Success);
@@ -2071,6 +2116,15 @@
     
     private async Task CompleteReserveStudyAsync(Guid studyId) { var success = await ExecuteActionAsync(async () => await WorkflowService.CompleteReserveStudyAsync(studyId), "Study completed", "Failed"); if (success) await ReloadAfterChange(); }
 
+    private async Task CompleteFinalReviewAsync(Guid studyId) {
+        var confirmed = await DialogService.ShowMessageBox("Complete Final Review", 
+            "This will mark the final review as complete and finalize the study.", yesText: "Complete Review", cancelText: "Cancel");
+        if (confirmed != true) return;
+        var currentUser = UserState.CurrentUser?.UserName ?? "Unknown";
+        var success = await ExecuteActionAsync(async () => await WorkflowService.CompleteFinalReviewAsync(studyId, currentUser), "Final review completed. Study is now complete!", "Failed");
+        if (success) await ReloadAfterChange();
+    }
+
     private async Task SendProposalAsync(Guid studyId) {
         if (reserveStudy?.CurrentProposal == null) NavigationManager.NavigateTo($"/ReserveStudies/{studyId}/Proposal");
         else await ApplyTransition(StudyStatus.ProposalSent);
@@ -2128,27 +2182,82 @@
     private async Task OpenScheduleSiteVisitDialog() {
         var dialog = await DialogService.ShowAsync<ScheduleSiteVisitDialog>("Schedule Site Visit", new DialogParameters { ["CurrentDate"] = reserveStudy?.SiteVisitDate }, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
         var result = await dialog.Result;
-        if (!result.Canceled && result.Data is DateTime date) await ScheduleSiteVisitAsync(date);
+        if (!result.Canceled && result.Data is ScheduleSiteVisitDialog.SiteVisitScheduleResult scheduleResult) {
+            await ScheduleSiteVisitAsync(scheduleResult.ScheduledDateTime, scheduleResult.DurationMinutes, scheduleResult.VisitType.ToString(), scheduleResult.VideoConferenceLink);
+        }
+        // Legacy support for old tuple result
+        else if (!result.Canceled && result.Data is (DateTime date, int duration)) {
+            await ScheduleSiteVisitAsync(date, duration, "InPerson", null);
+        }
     }
 
-    private async Task ScheduleSiteVisitAsync(DateTime siteVisitDate) {
+    private async Task ScheduleSiteVisitAsync(DateTime siteVisitDate, int durationMinutes = 120, string visitType = "InPerson", string? videoConferenceLink = null) {
         if (reserveStudy == null) return;
         using var context = await DbFactory.CreateDbContextAsync();
         var study = await context.ReserveStudies.Include(s => s.StudyRequest).FirstOrDefaultAsync(s => s.Id == reserveStudy.Id);
         if (study != null) {
-            study.SiteVisitDate = siteVisitDate; study.DateModified = DateTime.UtcNow; await context.SaveChangesAsync();
-            await CalendarService.AddEventAsync(new Models.CalendarEvent { Title = $"Site Visit - {reserveStudy.Community?.Name}", Start = siteVisitDate, End = siteVisitDate.AddHours(4), EventType = Models.CalendarEventType.SiteVisit, ReserveStudyId = Id });
+            study.SiteVisitDate = siteVisitDate;
+            study.DateModified = DateTime.UtcNow;
+            // Store visit type and video link if we have those fields on the model
+            // TODO: Add SiteVisitType and VideoConferenceLink fields to ReserveStudy model
+            await context.SaveChangesAsync();
+            
+            var eventTitle = visitType == "Virtual" 
+                ? $"Virtual Site Visit - {reserveStudy.Community?.Name}" 
+                : visitType == "Hybrid" 
+                    ? $"Hybrid Site Visit - {reserveStudy.Community?.Name}" 
+                    : $"Site Visit - {reserveStudy.Community?.Name}";
+            
+            await CalendarService.AddEventAsync(new Models.CalendarEvent { 
+                Title = eventTitle, 
+                Start = siteVisitDate, 
+                End = siteVisitDate.AddMinutes(durationMinutes), 
+                EventType = Models.CalendarEventType.SiteVisit, 
+                ReserveStudyId = Id 
+            });
             await _dispatcher.Broadcast(new SiteVisitScheduledEvent(reserveStudy, siteVisitDate));
             var currentStatus = study.StudyRequest?.CurrentStatus ?? study.CurrentStatus;
             bool ok = currentStatus == StudyStatus.SiteVisitPending ? await WorkflowService.TryTransitionStudyAsync(Id, StudyStatus.SiteVisitScheduled) : currentStatus == StudyStatus.SiteVisitScheduled;
-            Snackbar.Add($"Site visit scheduled for {siteVisitDate:MMMM dd, yyyy}!", ok ? Severity.Success : Severity.Warning);
+            
+            var visitTypeText = visitType == "Virtual" ? "virtual " : visitType == "Hybrid" ? "hybrid " : "";
+            Snackbar.Add($"Site {visitTypeText}visit scheduled for {siteVisitDate:MMMM dd, yyyy}!", ok ? Severity.Success : Severity.Warning);
             await ReloadAfterChange();
         }
     }
 
     private bool NeedsApproval() => GetCurrentStatus() == StudyStatus.RequestCreated;
     private bool CanAssignSpecialist() => (GetCurrentStatus() == StudyStatus.RequestApproved || GetCurrentStatus() == StudyStatus.ProposalCreated) && reserveStudy?.SpecialistUserId == null;
-    private async Task ApproveRequestAsync() { var result = await WorkflowActionService.AdvanceAsync(Id, "Request approved"); Snackbar.Add(result.Success ? "Request approved!" : $"Failed: {result.Message}", result.Success ? Severity.Success : Severity.Error); if (result.Success) await ReloadAfterChange(); }
+    
+    private async Task ApproveRequestAsync() { 
+        var result = await WorkflowActionService.AdvanceAsync(Id, "Request approved"); 
+        
+        if (result.Success) {
+            // Check if we should skip the proposal step
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == reserveStudy!.TenantId);
+            
+            if (tenant?.SkipProposalStep == true) {
+                // Skip proposal and go directly to ProposalAccepted - then handle financial info
+                var skipResult = await WorkflowService.TryTransitionStudyAsync(Id, StudyStatus.ProposalAccepted);
+                if (skipResult) {
+                    // Check if we should also skip financial info
+                    if (tenant.SkipFinancialInfoStep) {
+                        Snackbar.Add("Request approved! Proposal and financial info steps skipped per tenant settings.", Severity.Success);
+                    } else {
+                        await RequestFinancialInfoAsync(Id);
+                        Snackbar.Add("Request approved! Proposal step skipped. Financial information request sent.", Severity.Success);
+                    }
+                } else {
+                    Snackbar.Add("Request approved! Proposal skip failed - please proceed manually.", Severity.Warning);
+                }
+            } else {
+                Snackbar.Add("Request approved!", Severity.Success);
+            }
+            await ReloadAfterChange();
+        } else {
+            Snackbar.Add($"Failed: {result.Message}", Severity.Error);
+        }
+    }
 
     private StudyStatus GetCurrentStatus() => reserveStudy?.StudyRequest?.CurrentStatus ?? reserveStudy?.CurrentStatus ?? StudyStatus.RequestCreated;
     private StudyStatus? GetNextStatus() { var cr = StatusRank.TryGetValue(GetCurrentStatus(), out var r) ? r : -1; return KeyMilestones.FirstOrDefault(s => (StatusRank.TryGetValue(s, out var rr) ? rr : int.MaxValue) > cr); }

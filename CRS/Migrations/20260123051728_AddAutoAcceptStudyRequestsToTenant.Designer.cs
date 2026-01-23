@@ -4,6 +4,7 @@ using CRS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260123051728_AddAutoAcceptStudyRequestsToTenant")]
+    partial class AddAutoAcceptStudyRequestsToTenant
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -4175,28 +4178,7 @@ namespace CRS.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("AllowAmendmentsAfterCompletion")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("AllowVirtualSiteVisit")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("AutoAcceptStudyRequests")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("AutoArchiveAfterDays")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("AutoGenerateInvoiceOnAcceptance")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("AutoRequestFinancialInfo")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("AutoSendInvoiceReminders")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("AutoSendProposalOnApproval")
                         .HasColumnType("bit");
 
                     b.Property<string>("BrandingJson")
@@ -4208,23 +4190,11 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateDeleted")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("DefaultPaymentTermsDays")
-                        .HasColumnType("int");
-
-                    b.Property<int>("DefaultProposalExpirationDays")
-                        .HasColumnType("int");
-
-                    b.Property<int>("DefaultSiteVisitDurationMinutes")
-                        .HasColumnType("int");
-
                     b.Property<string>("DeletionReason")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DeletionScheduledAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("FinancialInfoDueDays")
-                        .HasColumnType("int");
 
                     b.Property<DateTime?>("GracePeriodEndsAt")
                         .HasColumnType("datetime2");
@@ -4257,12 +4227,6 @@ namespace CRS.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("NotifyClientOnStatusChange")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("NotifyOwnerOnStatusChange")
-                        .HasColumnType("bit");
-
                     b.Property<string>("OwnerId")
                         .HasColumnType("nvarchar(max)");
 
@@ -4286,32 +4250,8 @@ namespace CRS.Migrations
                     b.Property<int>("ReactivationCount")
                         .HasColumnType("int");
 
-                    b.Property<int>("ReminderFrequencyDays")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("RequireFinalReview")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("RequireProposalReview")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("RequireServiceContacts")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("RequireSiteVisit")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("SendAutomaticReminders")
-                        .HasColumnType("bit");
-
                     b.Property<Guid>("SignupToken")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("SkipFinancialInfoStep")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("SkipProposalStep")
-                        .HasColumnType("bit");
 
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("nvarchar(max)");

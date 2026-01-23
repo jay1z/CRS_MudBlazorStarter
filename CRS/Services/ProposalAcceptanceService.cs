@@ -16,17 +16,20 @@ public class ProposalAcceptanceService : IProposalAcceptanceService
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
     private readonly IScopeComparisonService _scopeComparisonService;
+    private readonly IInvoiceService _invoiceService;
     private readonly ILogger<ProposalAcceptanceService> _logger;
 
     public ProposalAcceptanceService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
         ITenantContext tenantContext,
         IScopeComparisonService scopeComparisonService,
+        IInvoiceService invoiceService,
         ILogger<ProposalAcceptanceService> logger)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
         _scopeComparisonService = scopeComparisonService;
+        _invoiceService = invoiceService;
         _logger = logger;
     }
 
@@ -118,6 +121,30 @@ public class ProposalAcceptanceService : IProposalAcceptanceService
             // Log but don't fail the acceptance - scope comparison is optional
             _logger.LogWarning(ex,
                 "Failed to capture original scope for study {StudyId}. Scope comparison may not be available.",
+                acceptance.ReserveStudyId);
+        }
+        
+        // Check tenant setting for auto-generating invoice on acceptance
+        try
+        {
+            var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == acceptance.TenantId, ct);
+            if (tenant?.AutoGenerateInvoiceOnAcceptance == true)
+            {
+                _logger.LogInformation(
+                    "[AutoGenerateInvoiceOnAcceptance] Auto-generating draft invoice for study {StudyId}",
+                    acceptance.ReserveStudyId);
+                
+                var invoice = await _invoiceService.CreateFromProposalAsync(acceptance.ReserveStudyId, ct);
+                _logger.LogInformation(
+                    "[AutoGenerateInvoiceOnAcceptance] Created draft invoice {InvoiceNumber} for study {StudyId}",
+                    invoice.InvoiceNumber, acceptance.ReserveStudyId);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log but don't fail the acceptance - invoice generation is optional
+            _logger.LogWarning(ex,
+                "[AutoGenerateInvoiceOnAcceptance] Failed to auto-generate invoice for study {StudyId}",
                 acceptance.ReserveStudyId);
         }
 
