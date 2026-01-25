@@ -11,10 +11,17 @@
 <PageTitle>Invoice Settings</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
+    <!-- Breadcrumb -->
+    <MudBreadcrumbs Items="_breadcrumbs" Class="mb-2 px-0" Style="font-size: 0.875rem;">
+        <ItemTemplate Context="item">
+            <MudLink Href="@item.Href" Underline="Underline.Hover" Color="Color.Primary">@item.Text</MudLink>
+        </ItemTemplate>
+    </MudBreadcrumbs>
+
     <!-- Header -->
     <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px;">
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-            <MudIcon Icon="@Icons.Material.Filled.Settings" Style="color: white; font-size: 40px;" />
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Style="color: white; font-size: 40px;" />
             <div>
                 <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">Invoice Settings</MudText>
                 <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.8);">
@@ -375,22 +382,28 @@
                                         </MudButton>
                                     </MudStack>
                                 </MudPaper>
-                            </MudForm>
-                        }
-                    </MudContainer>
+                                                    </MudForm>
+                                                }
+                                            </MudContainer>
 
-                    @code {
-                        private TenantInvoiceSettings? _settings;
-                        private MudForm _form = null!;
-                        private bool _isValid;
-                        private bool _isLoading = true;
-                        private bool _isSaving = false;
-                        private string _numberPreview = "";
+                                            @code {
+                                                private TenantInvoiceSettings? _settings;
+                                                private MudForm _form = null!;
+                                                private bool _isValid;
+                                                private bool _isLoading = true;
+                                                private bool _isSaving = false;
+                                                private string _numberPreview = "";
 
-                        protected override async Task OnInitializedAsync()
-                        {
-        await LoadSettingsAsync();
-    }
+                                                private List<BreadcrumbItem> _breadcrumbs = new()
+                                                {
+                                                    new BreadcrumbItem("Settings", href: "/Admin/Settings"),
+                                                    new BreadcrumbItem("Invoice Settings", href: null, disabled: true)
+                                                };
+
+                                                protected override async Task OnInitializedAsync()
+                                                {
+                                await LoadSettingsAsync();
+                            }
 
     private async Task LoadSettingsAsync()
     {

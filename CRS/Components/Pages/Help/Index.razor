@@ -1,0 +1,332 @@
+﻿@page "/Help"
+@page "/Help/{GuideType}"
+@page "/Help/{GuideType}/{Section}"
+@attribute [Authorize]
+@using Markdig
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Hosting
+@inject ITenantUserRoleService RoleService
+@inject IWebHostEnvironment Environment
+@inject NavigationManager NavigationManager
+
+<PageTitle>Help - User Guide</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6 mb-8">
+    <MudBreadcrumbs Items="_breadcrumbs" Class="mb-4" />
+
+    <MudGrid>
+        @* Sidebar Navigation *@
+        <MudItem xs="12" md="3">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">User Guides</MudText>
+                    <MudNavMenu>
+                        @foreach (var guide in _guides)
+                        {
+                            <MudNavGroup Title="@guide.Title" Icon="@guide.Icon" Expanded="@(GuideType == guide.Key)">
+                                @foreach (var sectionItem in guide.Sections)
+                                {
+                                    <MudNavLink Href="@($"/Help/{guide.Key}/{sectionItem.Key}")"
+                                               Match="NavLinkMatch.All"
+                                               Class="@(Section == sectionItem.Key ? "mud-nav-link-active" : "")">
+                                        @sectionItem.Title
+                                    </MudNavLink>
+                                }
+                            </MudNavGroup>
+                        }
+                    </MudNavMenu>
+                </MudPaper>
+            </MudItem>
+
+        @* Main Content *@
+        <MudItem xs="12" md="9">
+            <MudPaper Elevation="2" Class="pa-6">
+                @if (_isLoading)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                    <MudText Class="mt-4">Loading documentation...</MudText>
+                }
+                else if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GoToDefaultGuide">
+                        Go to Default Guide
+                    </MudButton>
+                }
+                else
+                {
+                    <div class="markdown-content">
+                        @((MarkupString)_renderedHtml)
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<style>
+    .markdown-content h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--mud-palette-primary);
+    }
+
+    .markdown-content h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-top: 2rem;
+        margin-bottom: 0.75rem;
+        color: var(--mud-palette-text-primary);
+    }
+
+    .markdown-content h3 {
+        font-size: 1.25rem;
+        font-weight: 500;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .markdown-content p {
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+
+    .markdown-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+    }
+
+    .markdown-content th,
+    .markdown-content td {
+        border: 1px solid var(--mud-palette-lines-default);
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+    }
+
+    .markdown-content th {
+        background-color: var(--mud-palette-background-grey);
+        font-weight: 600;
+    }
+
+    .markdown-content tr:nth-child(even) {
+        background-color: var(--mud-palette-surface);
+    }
+
+    .markdown-content blockquote {
+        border-left: 4px solid var(--mud-palette-primary);
+        padding: 0.5rem 1rem;
+        margin: 1rem 0;
+        background-color: var(--mud-palette-background-grey);
+    }
+
+    .markdown-content code {
+        background-color: var(--mud-palette-background-grey);
+        padding: 0.125rem 0.25rem;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+
+    .markdown-content pre {
+        background-color: var(--mud-palette-dark);
+        color: var(--mud-palette-white);
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 1rem 0;
+    }
+
+    .markdown-content pre code {
+        background-color: transparent;
+        padding: 0;
+    }
+
+    .markdown-content ul,
+    .markdown-content ol {
+        margin: 0.5rem 0 1rem 1.5rem;
+    }
+
+    .markdown-content li {
+        margin-bottom: 0.25rem;
+    }
+
+    .markdown-content hr {
+        border: none;
+        border-top: 1px solid var(--mud-palette-lines-default);
+        margin: 2rem 0;
+    }
+
+    .markdown-content a {
+        color: var(--mud-palette-primary);
+        text-decoration: none;
+    }
+
+    .markdown-content a:hover {
+        text-decoration: underline;
+    }
+</style>
+
+@code {
+    [Parameter] public string? GuideType { get; set; }
+    [Parameter] public string? Section { get; set; }
+
+    private bool _isLoading = true;
+    private string _renderedHtml = string.Empty;
+    private string? _errorMessage;
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private List<GuideInfo> _guides = new();
+
+    private record GuideInfo(string Key, string Title, string Icon, List<SectionInfo> Sections);
+    private record SectionInfo(string Key, string Title, string FileName);
+
+    protected override void OnInitialized()
+    {
+        InitializeGuides();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadContent();
+    }
+
+    private void InitializeGuides()
+    {
+        _guides = new List<GuideInfo>
+        {
+            new("HOAUserGuide", "HOA User Guide", Icons.Material.Filled.Home, new List<SectionInfo>
+            {
+                new("index", "Overview", "index.md"),
+                new("getting-started", "Getting Started", "getting-started.md"),
+                new("submitting-requests", "Submitting Requests", "submitting-requests.md"),
+                new("proposals", "Proposals", "proposals.md"),
+                new("financial-info", "Financial Information", "financial-info.md"),
+                new("reports-and-documents", "Reports & Documents", "reports-and-documents.md"),
+                new("invoices-and-payments", "Invoices & Payments", "invoices-and-payments.md")
+            }),
+            new("SpecialistGuide", "Specialist Guide", Icons.Material.Filled.Engineering, new List<SectionInfo>
+            {
+                new("index", "Overview", "index.md"),
+                new("getting-started", "Getting Started", "getting-started.md"),
+                new("dashboard-and-workflow", "Dashboard & Workflow", "dashboard-and-workflow.md"),
+                new("proposals", "Proposals", "proposals.md"),
+                new("data-collection", "Data Collection", "data-collection.md"),
+                new("site-visits", "Site Visits", "site-visits.md"),
+                new("report-generation", "Report Generation", "report-generation.md")
+            }),
+            new("AdminGuide", "Admin Guide", Icons.Material.Filled.AdminPanelSettings, new List<SectionInfo>
+            {
+                new("index", "Overview", "index.md"),
+                new("getting-started", "Getting Started", "getting-started.md"),
+                new("user-management", "User Management", "user-management.md"),
+                new("workflow-management", "Workflow Management", "workflow-management.md"),
+                new("settings-and-configuration", "Settings & Configuration", "settings-and-configuration.md"),
+                new("financial-management", "Financial Management", "financial-management.md"),
+                new("reporting-and-analytics", "Reporting & Analytics", "reporting-and-analytics.md")
+            })
+        };
+    }
+
+    private async Task LoadContent()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            // Set defaults based on user role
+            if (string.IsNullOrEmpty(GuideType))
+            {
+                GuideType = GetDefaultGuideForRole();
+            }
+
+            if (string.IsNullOrEmpty(Section))
+            {
+                Section = "index";
+            }
+
+            // Build file path
+            var guide = _guides.FirstOrDefault(g => g.Key == GuideType);
+            if (guide == null)
+            {
+                _errorMessage = $"Guide '{GuideType}' not found.";
+                _isLoading = false;
+                return;
+            }
+
+            var sectionInfo = guide.Sections.FirstOrDefault(s => s.Key == Section);
+            if (sectionInfo == null)
+            {
+                _errorMessage = $"Section '{Section}' not found in {guide.Title}.";
+                _isLoading = false;
+                return;
+            }
+
+            // Read markdown file
+            var filePath = Path.Combine(
+                Environment.ContentRootPath,
+                "Documentation",
+                "UserGuides",
+                GuideType,
+                sectionInfo.FileName
+            );
+
+            if (!File.Exists(filePath))
+            {
+                _errorMessage = $"Documentation file not found: {sectionInfo.FileName}";
+                _isLoading = false;
+                return;
+            }
+
+            var markdown = await File.ReadAllTextAsync(filePath);
+
+            // Convert markdown to HTML using Markdig
+            var pipeline = new MarkdownPipelineBuilder()
+                .UseAdvancedExtensions()
+                .Build();
+
+            _renderedHtml = Markdown.ToHtml(markdown, pipeline);
+
+            // Update breadcrumbs
+            UpdateBreadcrumbs(guide, sectionInfo);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading documentation: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetDefaultGuideForRole()
+    {
+        if (RoleService.IsHOAUser || RoleService.IsHOAAuditor)
+            return "HOAUserGuide";
+
+        if (RoleService.IsTenantOwner)
+            return "AdminGuide";
+
+            if (RoleService.IsTenantSpecialist)
+                return "SpecialistGuide";
+
+            return "HOAUserGuide";
+        }
+
+        private void UpdateBreadcrumbs(GuideInfo guide, SectionInfo sectionInfo)
+        {
+            _breadcrumbs = new List<BreadcrumbItem>
+            {
+                new("Help", "/Help", false, Icons.Material.Filled.Help),
+                new(guide.Title, $"/Help/{guide.Key}", false),
+                new(sectionInfo.Title, null, true)
+            };
+        }
+
+        private void GoToDefaultGuide()
+        {
+            var defaultGuide = GetDefaultGuideForRole();
+            NavigationManager.NavigateTo($"/Help/{defaultGuide}");
+    }
+}

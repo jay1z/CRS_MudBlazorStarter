@@ -1,10 +1,13 @@
 ﻿@using CRS.Models
 @using CRS.Services.Interfaces
 @using CRS.Services.Storage
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
 
 @inject ISiteVisitPhotoService PhotoService
 @inject IPhotoStorageService PhotoStorage
 @inject ISnackbar Snackbar
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <MudDialog Style="max-width: 95vw;">
     <DialogContent>
@@ -100,6 +103,36 @@
                                               Lines="3"
                                               Margin="Margin.Dense" />
                             </MudItem>
+
+                            @* Element linking dropdown *@
+                            @if (availableElements.Any())
+                            {
+                                <MudItem xs="12">
+                                    <MudSelect T="ElementSelection" 
+                                               @bind-Value="editSelectedElement"
+                                               Label="Link to Element"
+                                               Variant="Variant.Outlined"
+                                               Margin="Margin.Dense"
+                                               Clearable="true"
+                                               AnchorOrigin="Origin.BottomCenter"
+                                               TransformOrigin="Origin.TopCenter"
+                                               HelperText="Associate this photo with a specific element">
+                                        @foreach (var elementGroup in availableElements.GroupBy(e => e.TypeDisplay))
+                                        {
+                                            <MudSelectItem T="ElementSelection" Value="@(null)" Disabled="true">
+                                                <MudText Typo="Typo.overline" Style="font-weight: 600; color: #666;">@elementGroup.Key</MudText>
+                                            </MudSelectItem>
+                                            @foreach (var element in elementGroup)
+                                            {
+                                                <MudSelectItem T="ElementSelection" Value="@element">
+                                                    @element.Name
+                                                </MudSelectItem>
+                                            }
+                                        }
+                                    </MudSelect>
+                                </MudItem>
+                            }
+
                             <MudItem xs="12">
                                 <MudStack Row="true" Spacing="2">
                                     <MudCheckBox T="bool" @bind-Value="editIncludeInReport" Label="Include in report" />
@@ -146,6 +179,19 @@
                                             <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" />
                                             In Report
                                         </MudChip>
+                                    }
+                                    @if (currentPhoto.ElementId.HasValue && !string.IsNullOrEmpty(currentPhoto.ElementType))
+                                    {
+                                        @* Show linked element *@
+                                        var linkedElement = availableElements.FirstOrDefault(e => 
+                                            e.Id == currentPhoto.ElementId.Value && e.ElementType == currentPhoto.ElementType);
+                                        if (linkedElement != null)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Tertiary" Variant="Variant.Outlined">
+                                                <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" Class="mr-1" />
+                                                @linkedElement.Name
+                                            </MudChip>
+                                        }
                                     }
                                 </MudStack>
                             </MudStack>
@@ -196,6 +242,9 @@
     [Parameter]
     public bool CanEdit { get; set; } = false;
 
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
     private SiteVisitPhoto? currentPhoto;
     private int currentIndex;
     private bool isEditing = false;
@@ -210,11 +259,95 @@
     private bool editIncludeInReport;
     private bool editIsPrimary;
 
-    protected override void OnInitialized()
+    // Element linking
+    private List<ElementSelection> availableElements = new();
+    private ElementSelection? editSelectedElement = null;
+    private bool isLoadingElements = false;
+
+    // Element selection record for the dropdown
+    private record ElementSelection(Guid Id, string Name, string ElementType, string TypeDisplay);
+
+    protected override async Task OnInitializedAsync()
     {
         currentPhoto = Photo;
         currentIndex = AllPhotos.FindIndex(p => p.Id == Photo.Id);
         if (currentIndex < 0) currentIndex = 0;
+
+        await LoadAvailableElementsAsync();
+    }
+
+    private async Task LoadAvailableElementsAsync()
+    {
+        if (ReserveStudyId == Guid.Empty) return;
+
+        isLoadingElements = true;
+        try
+        {
+            await using var context = await DbFactory.CreateDbContextAsync();
+
+            var study = await context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.ReserveStudyBuildingElements!)
+                    .ThenInclude(e => e.BuildingElement)
+                .Include(rs => rs.ReserveStudyCommonElements!)
+                    .ThenInclude(e => e.CommonElement)
+                .Include(rs => rs.ReserveStudyAdditionalElements)
+                .FirstOrDefaultAsync(rs => rs.Id == ReserveStudyId);
+
+            if (study == null) return;
+
+            var elements = new List<ElementSelection>();
+
+            // Add building elements
+            if (study.ReserveStudyBuildingElements != null)
+            {
+                foreach (var e in study.ReserveStudyBuildingElements.Where(x => x.BuildingElement != null))
+                {
+                    elements.Add(new ElementSelection(
+                        e.Id, 
+                        e.BuildingElement!.Name, 
+                        "Building", 
+                        "🏢 Building"));
+                }
+            }
+
+            // Add common elements
+            if (study.ReserveStudyCommonElements != null)
+            {
+                foreach (var e in study.ReserveStudyCommonElements.Where(x => x.CommonElement != null))
+                {
+                    elements.Add(new ElementSelection(
+                        e.Id, 
+                        e.CommonElement!.Name, 
+                        "Common", 
+                        "🏘️ Common"));
+                }
+            }
+
+            // Add additional elements (these have Name directly on the element)
+            if (study.ReserveStudyAdditionalElements != null)
+            {
+                foreach (var e in study.ReserveStudyAdditionalElements.Where(x => !string.IsNullOrEmpty(x.Name)))
+                {
+                    elements.Add(new ElementSelection(
+                        e.Id, 
+                        e.Name, 
+                        "Additional", 
+                        "➕ Additional"));
+                }
+            }
+
+            availableElements = elements.OrderBy(e => e.TypeDisplay).ThenBy(e => e.Name).ToList();
+        }
+        catch
+        {
+            // Silently fail - element linking is optional
+            availableElements = new List<ElementSelection>();
+        }
+        finally
+        {
+            isLoadingElements = false;
+        }
     }
 
     private void PreviousPhoto()
@@ -236,13 +369,25 @@
     private void StartEdit()
     {
         if (currentPhoto == null) return;
-        
+
         editCaption = currentPhoto.Caption ?? "";
         editNotes = currentPhoto.Notes ?? "";
         editCategory = currentPhoto.Category;
         editCondition = currentPhoto.Condition;
         editIncludeInReport = currentPhoto.IncludeInReport;
         editIsPrimary = currentPhoto.IsPrimary;
+
+        // Initialize element selection based on current photo
+        if (currentPhoto.ElementId.HasValue && !string.IsNullOrEmpty(currentPhoto.ElementType))
+        {
+            editSelectedElement = availableElements.FirstOrDefault(e => 
+                e.Id == currentPhoto.ElementId.Value && e.ElementType == currentPhoto.ElementType);
+        }
+        else
+        {
+            editSelectedElement = null;
+        }
+
         isEditing = true;
     }
 
@@ -263,6 +408,10 @@
             currentPhoto.Category = editCategory;
             currentPhoto.Condition = editCondition;
             currentPhoto.IncludeInReport = editIncludeInReport;
+
+            // Update element association
+            currentPhoto.ElementId = editSelectedElement?.Id;
+            currentPhoto.ElementType = editSelectedElement?.ElementType;
 
             await PhotoService.UpdateAsync(currentPhoto);
 

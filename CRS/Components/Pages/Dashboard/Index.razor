@@ -9,6 +9,7 @@
 @using CRS.Components.AppHome.ViewModels
 @using CRS.Data
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
 @using System.Security.Claims
 @inject ISystemSettingsService SystemSettingsService
 @inject ITenantUserRoleService RoleService
@@ -16,8 +17,10 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IReserveStudyService ReserveStudyService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 @inject IInvoiceService InvoiceService
 @inject NavigationManager NavigationManager
+@inject ThemeService ThemeService
 
 <PageTitle>Dashboard - @TenantName</PageTitle>
 
@@ -41,33 +44,14 @@
     else
     {
         <!-- Staff/Admin View - Full featured -->
-        <MudPaper Elevation="0" Class="pa-6 mb-6" Style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); border-radius: 16px;">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-wrap">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
-                        Welcome back, @GetUserGreeting()! 👋
-                    </MudText>
-                    <MudText Typo="Typo.body1" Style="color: rgba(255,255,255,0.95);">
-                        @GetRoleDescription()
-                    </MudText>
-                </MudStack>
-                @if (!RoleService.IsTenantViewer)
-                {
-                    <MudStack Row="true" Spacing="2" Class="flex-wrap">
-                        <MudButton Variant="Variant.Filled" 
-                                   Color="Color.Surface" 
-                                   StartIcon="@Icons.Material.Filled.Add"
-                                   Style="color: #FF8C00; font-weight: 600;">
-                            New Property
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined" 
-                                   Color="Color.Surface" 
-                                   StartIcon="@Icons.Material.Filled.Upload"
-                                   Style="color: white; border-color: white;">
-                            Import Data
-                        </MudButton>
-                    </MudStack>
-                }
+        <MudPaper Elevation="3" Class="pa-6 mb-6" Style="@BannerGradient">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h5" Style="color: white; font-weight: 500; letter-spacing: 0.5px;">
+                    Welcome back@(GetUserGreeting())
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.8);">
+                    @GetRoleDescription()
+                </MudText>
             </MudStack>
         </MudPaper>
     }
@@ -913,9 +897,14 @@
 </style>
 
 @code {
-    private string TenantName => TenantContext.TenantName ?? "ALX Reserve Cloud";
-    private GlobalBannerInfo? globalBanner;
-    private bool bannerDismissed = false;
+private string TenantName => TenantContext.TenantName ?? "ALX Reserve Cloud";
+private GlobalBannerInfo? globalBanner;
+private bool bannerDismissed = false;
+    
+// Brand colors from tenant settings
+private string primaryColor = "#667eea";
+private string secondaryColor = "#764ba2";
+private string BannerGradient => $"background: linear-gradient(135deg, {primaryColor} 0%, {secondaryColor} 100%); border-radius: 12px;";
 
     // KPI Metrics
     private int KpiProperties { get; set; } = 0;
@@ -959,6 +948,7 @@
     private HashSet<Guid> pendingAmendmentStudyIds { get; set; } = new();
     private bool isLoadingStudies = false;
     private Guid? currentUserId = null;
+    private string? currentUserName = null;
 
 protected override async Task OnInitializedAsync()
 {
@@ -967,13 +957,37 @@ protected override async Task OnInitializedAsync()
         
     // Load global banner from system settings
     globalBanner = await SystemSettingsService.GetGlobalBannerInfoAsync();
+    
+    // Load tenant brand colors from Branding & Theme settings
+    try
+    {
+        if (!string.IsNullOrWhiteSpace(TenantContext.BrandingJson) &&
+            ThemeService.TryParseBranding(TenantContext.BrandingJson, out var branding, out _))
+        {
+            if (!string.IsNullOrWhiteSpace(branding.Primary))
+                primaryColor = branding.Primary;
+            if (!string.IsNullOrWhiteSpace(branding.Secondary))
+                secondaryColor = branding.Secondary;
+        }
+    }
+    catch
+    {
+        // Use default colors if branding can't be loaded
+    }
 
-        // Get current user ID for HOA user study checks
+        // Get current user ID and name for personalization
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
         {
             currentUserId = userId;
+            
+            // Get user's first name from the database profile
+            var user = await UserManager.FindByIdAsync(userId.ToString());
+            if (user != null && !string.IsNullOrWhiteSpace(user.FirstName))
+            {
+                currentUserName = user.FirstName;
+            }
         }
 
         // Load real code from services based on role and tenant context
@@ -1177,13 +1191,13 @@ private async Task LoadPipelineDataAsync(int tenantId)
         }
     }
 
-        private string GetUserGreeting()
+    private string GetUserGreeting()
     {
-        if (RoleService.IsPlatformAdmin) return "Platform Admin";
-        if (RoleService.IsTenantOwner) return "Owner";
-        if (RoleService.IsTenantSpecialist) return "Specialist";
-        if (RoleService.IsTenantViewer) return "Viewer";
-        return "User";
+        // Return user's name if available
+        if (!string.IsNullOrWhiteSpace(currentUserName))
+            return $", {currentUserName}";
+            
+        return string.Empty;
     }
 
     private string GetRoleDescription()
@@ -1257,13 +1271,13 @@ private async Task LoadPipelineDataAsync(int tenantId)
 
             await using var context = await DbFactory.CreateDbContextAsync();
             
-            // Get reserve studies owned by this HOA user
+            // Get reserve studies owned by this HOA user (as creator OR as the requested customer)
             hoaUserStudies = await context.ReserveStudies
                 .AsNoTracking()
                 .Include(rs => rs.Community)
                     .ThenInclude(c => c.PhysicalAddress)
                 .Include(rs => rs.StudyRequest)
-                .Where(rs => rs.ApplicationUserId == currentUserId.Value && 
+                .Where(rs => (rs.ApplicationUserId == currentUserId.Value || rs.RequestedByUserId == currentUserId.Value) && 
                             rs.IsActive &&
                             rs.TenantId == TenantContext.TenantId.Value)
                 .OrderByDescending(rs => rs.DateCreated)
@@ -1293,8 +1307,8 @@ private async Task LoadPipelineDataAsync(int tenantId)
     {
         if (study == null) return false;
         
-        // Only the owner can edit
-        if (study.ApplicationUserId != currentUserId) return false;
+        // The owner (creator or requested user) can edit
+        if (study.ApplicationUserId != currentUserId && study.RequestedByUserId != currentUserId) return false;
         
         // Use the service method to check if study is in editable state
         return ReserveStudyService.CanUpdateReserveStudy(study);

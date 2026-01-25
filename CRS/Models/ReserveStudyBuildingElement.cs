@@ -21,9 +21,28 @@ namespace CRS.Models {
         public Guid? MeasurementOptionId { get; set; }
         public ElementOption? MeasurementOption { get; set; }
         
+        /// <summary>
+        /// Remaining life in years (simple integer value)
+        /// </summary>
+        public int? RemainingLifeYears { get; set; }
+
+        // Legacy: kept for migration compatibility
         public Guid? RemainingLifeOptionId { get; set; }
         public ElementOption? RemainingLifeOption { get; set; }
-        
+
+        /// <summary>
+        /// Minimum useful life option
+        /// </summary>
+        public Guid? MinUsefulLifeOptionId { get; set; }
+        public ElementOption? MinUsefulLifeOption { get; set; }
+
+        /// <summary>
+        /// Maximum useful life option
+        /// </summary>
+        public Guid? MaxUsefulLifeOptionId { get; set; }
+        public ElementOption? MaxUsefulLifeOption { get; set; }
+
+        // Legacy: kept for migration compatibility
         public Guid? UsefulLifeOptionId { get; set; }
         public ElementOption? UsefulLifeOption { get; set; }
 

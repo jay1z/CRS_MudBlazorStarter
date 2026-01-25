@@ -1,5 +1,9 @@
-﻿using CRS.Data;
+﻿using Coravel.Mailer.Mail.Interfaces;
+
+using CRS.Data;
 using CRS.Models;
+using CRS.Models.Email;
+using CRS.Models.Emails;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 
@@ -16,15 +20,18 @@ public class InvoiceService : IInvoiceService
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
     private readonly ILogger<InvoiceService> _logger;
+    private readonly IMailer _mailer;
 
     public InvoiceService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
         ITenantContext tenantContext,
-        ILogger<InvoiceService> logger)
+        ILogger<InvoiceService> logger,
+        IMailer mailer)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
         _logger = logger;
+        _mailer = mailer;
     }
 
     public async Task<IReadOnlyList<Invoice>> GetByReserveStudyAsync(Guid reserveStudyId, CancellationToken ct = default)
@@ -208,12 +215,16 @@ public class InvoiceService : IInvoiceService
             invoice.TotalAmount = invoice.Subtotal - invoice.DiscountAmount;
         }
 
-            context.Invoices.Add(invoice);
-            await context.SaveChangesAsync(ct);
+                context.Invoices.Add(invoice);
+                await context.SaveChangesAsync(ct);
 
-            _logger.LogInformation("Created invoice {InvoiceNumber} from proposal for study {StudyId}", invoiceNumber, reserveStudyId);
-            return invoice;
-        }
+                _logger.LogInformation("Created invoice {InvoiceNumber} from proposal for study {StudyId}", invoiceNumber, reserveStudyId);
+
+                // Try to auto-send if AutoSendOnCreate is enabled
+                await TryAutoSendInvoiceAsync(invoice, context, null, ct);
+
+                return invoice;
+            }
 
         public async Task<Invoice> CreateFromProposalMilestoneAsync(
             Guid reserveStudyId, 
@@ -331,15 +342,18 @@ public class InvoiceService : IInvoiceService
                     invoice.EarlyPaymentDiscountPercentage);
             }
 
-            context.Invoices.Add(invoice);
-            await context.SaveChangesAsync(ct);
+                context.Invoices.Add(invoice);
+                await context.SaveChangesAsync(ct);
 
-            _logger.LogInformation(
-                "Created invoice {InvoiceNumber} for milestone {Milestone} ({Percentage}%) on study {StudyId}", 
-                invoiceNumber, milestoneType, milestone.Percentage, reserveStudyId);
+                _logger.LogInformation(
+                    "Created invoice {InvoiceNumber} for milestone {Milestone} ({Percentage}%) on study {StudyId}", 
+                    invoiceNumber, milestoneType, milestone.Percentage, reserveStudyId);
 
-            return invoice;
-        }
+                // Try to auto-send if AutoSendOnCreate is enabled
+                await TryAutoSendInvoiceAsync(invoice, context, null, ct);
+
+                return invoice;
+            }
 
         public async Task<List<PaymentMilestone>> GetPaymentMilestonesAsync(Guid reserveStudyId, CancellationToken ct = default)
         {
@@ -1285,17 +1299,164 @@ public class InvoiceService : IInvoiceService
                                         return nextInvoice;
                                     }
 
-                                    private static (string Description, decimal Percentage) GetMilestoneInfo(InvoiceMilestoneType milestone)
-                                    {
-                                        return milestone switch
+                                                                        private static (string Description, decimal Percentage) GetMilestoneInfo(InvoiceMilestoneType milestone)
+                                                                        {
+                                                                            return milestone switch
+                                                                            {
+                                                                                InvoiceMilestoneType.Deposit => ("Initial Deposit", 25m),
+                                                                                InvoiceMilestoneType.SiteVisitComplete => ("Site Visit Complete", 25m),
+                                                                                InvoiceMilestoneType.DraftReportDelivery => ("Draft Report Delivery", 25m),
+                                                                                InvoiceMilestoneType.FinalDelivery => ("Final Delivery", 25m),
+                                                                                InvoiceMilestoneType.FullPayment => ("Full Payment", 100m),
+                                                                                InvoiceMilestoneType.Custom => ("Custom Milestone", 0m),
+                                                                                _ => ("Payment", 0m)
+                                                                            };
+                                                                        }
+
+                                        /// <summary>
+                                        /// Sends an invoice to the client via email, marks it as sent, and generates access token.
+                                        /// </summary>
+                                        public async Task<Invoice> SendInvoiceAsync(Guid invoiceId, Guid sentByUserId, string baseUrl, CancellationToken ct = default)
                                         {
-                                            InvoiceMilestoneType.Deposit => ("Initial Deposit", 25m),
-                                            InvoiceMilestoneType.SiteVisitComplete => ("Site Visit Complete", 25m),
-                                            InvoiceMilestoneType.DraftReportDelivery => ("Draft Report Delivery", 25m),
-                                            InvoiceMilestoneType.FinalDelivery => ("Final Delivery", 25m),
-                                            InvoiceMilestoneType.FullPayment => ("Full Payment", 100m),
-                                            InvoiceMilestoneType.Custom => ("Custom Milestone", 0m),
-                                            _ => ("Payment", 0m)
-                                        };
+                                            if (!_tenantContext.TenantId.HasValue)
+                                                throw new InvalidOperationException("Tenant context is required");
+
+                                            await using var context = await _dbFactory.CreateDbContextAsync(ct);
+
+                                            var invoice = await context.Invoices
+                                                .Include(i => i.LineItems)
+                                                .Include(i => i.ReserveStudy)
+                                                    .ThenInclude(rs => rs!.Community)
+                                                .FirstOrDefaultAsync(i => i.Id == invoiceId && i.TenantId == _tenantContext.TenantId.Value, ct)
+                                                ?? throw new InvalidOperationException($"Invoice {invoiceId} not found");
+
+                                            if (string.IsNullOrWhiteSpace(invoice.BillToEmail))
+                                                throw new InvalidOperationException("Invoice has no recipient email address");
+
+                                            // Generate access token if not already present
+                                            if (string.IsNullOrEmpty(invoice.AccessToken))
+                                            {
+                                                invoice.AccessToken = Guid.NewGuid().ToString("N");
+                                            }
+
+                                            // Update status to sent
+                                            if (invoice.Status == InvoiceStatus.Draft)
+                                            {
+                                                invoice.Status = InvoiceStatus.Finalized;
+                                            }
+                                            if (invoice.Status == InvoiceStatus.Finalized)
+                                            {
+                                                invoice.Status = InvoiceStatus.Sent;
+                                            }
+
+                                            invoice.SentAt = DateTime.UtcNow;
+                                            invoice.SentByUserId = sentByUserId;
+                                            invoice.DateModified = DateTime.UtcNow;
+
+                                            await context.SaveChangesAsync(ct);
+
+                                            // Send email
+                                            try
+                                            {
+                                                var emailModel = new InvoiceEmail
+                                                {
+                                                    Invoice = invoice,
+                                                    ReserveStudy = invoice.ReserveStudy,
+                                                    BaseUrl = baseUrl.TrimEnd('/'),
+                                                    InvoiceViewUrl = $"{baseUrl.TrimEnd('/')}/invoice/{invoice.AccessToken}"
+                                                };
+
+                                                var mailable = new InvoiceMailable(emailModel, invoice.BillToEmail);
+                                                await _mailer.SendAsync(mailable);
+
+                                                _logger.LogInformation("Sent invoice {InvoiceNumber} to {Email}", invoice.InvoiceNumber, invoice.BillToEmail);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                _logger.LogError(ex, "Failed to send invoice email for {InvoiceNumber} to {Email}", invoice.InvoiceNumber, invoice.BillToEmail);
+                                                // Don't throw - invoice is already marked as sent, email failure shouldn't roll back
+                                            }
+
+                                            return invoice;
+                                        }
+
+                                        /// <summary>
+                                        /// Attempts to auto-send an invoice if AutoSendOnCreate is enabled in tenant settings.
+                                        /// </summary>
+                                        private async Task TryAutoSendInvoiceAsync(Invoice invoice, ApplicationDbContext context, string? baseUrl, CancellationToken ct)
+                                        {
+                                            try
+                                            {
+                                                // Get tenant settings
+                                                var settings = await context.TenantInvoiceSettings
+                                                    .FirstOrDefaultAsync(s => s.TenantId == invoice.TenantId && s.DateDeleted == null, ct);
+
+                                                if (settings == null || !settings.AutoSendOnCreate)
+                                                {
+                                                    return;
+                                                }
+
+                                                // Validate email address exists
+                                                if (string.IsNullOrWhiteSpace(invoice.BillToEmail))
+                                                {
+                                                    _logger.LogWarning("AutoSendOnCreate: Cannot auto-send invoice {InvoiceNumber} - no recipient email", invoice.InvoiceNumber);
+                                                    return;
+                                                }
+
+                                                // Determine base URL - use tenant domain if available
+                                                var effectiveBaseUrl = baseUrl;
+                                                if (string.IsNullOrEmpty(effectiveBaseUrl))
+                                                {
+                                                    var tenant = await context.Tenants.FirstOrDefaultAsync(t => t.Id == invoice.TenantId, ct);
+                                                    if (tenant != null && !string.IsNullOrEmpty(tenant.Subdomain))
+                                                    {
+                                                        effectiveBaseUrl = $"https://{tenant.Subdomain}.alxreservecloud.com";
+                                                    }
+                                                    else
+                                                    {
+                                                        effectiveBaseUrl = "https://alxreservecloud.com";
+                                                    }
+                                                }
+
+                                                // Generate access token
+                                                if (string.IsNullOrEmpty(invoice.AccessToken))
+                                                {
+                                                    invoice.AccessToken = Guid.NewGuid().ToString("N");
+                                                }
+
+                                                // Update status
+                                                if (invoice.Status == InvoiceStatus.Draft)
+                                                {
+                                                    invoice.Status = InvoiceStatus.Finalized;
+                                                }
+                                                if (invoice.Status == InvoiceStatus.Finalized)
+                                                {
+                                                    invoice.Status = InvoiceStatus.Sent;
+                                                }
+
+                                                invoice.SentAt = DateTime.UtcNow;
+                                                invoice.DateModified = DateTime.UtcNow;
+
+                                                await context.SaveChangesAsync(ct);
+
+                                                // Send email
+                                                var emailModel = new InvoiceEmail
+                                                {
+                                                    Invoice = invoice,
+                                                    ReserveStudy = invoice.ReserveStudy,
+                                                    BaseUrl = effectiveBaseUrl.TrimEnd('/'),
+                                                    InvoiceViewUrl = $"{effectiveBaseUrl.TrimEnd('/')}/invoice/{invoice.AccessToken}"
+                                                };
+
+                                                var mailable = new InvoiceMailable(emailModel, invoice.BillToEmail);
+                                                await _mailer.SendAsync(mailable);
+
+                                                _logger.LogInformation("AutoSendOnCreate: Sent invoice {InvoiceNumber} to {Email}", invoice.InvoiceNumber, invoice.BillToEmail);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                _logger.LogError(ex, "AutoSendOnCreate: Failed to auto-send invoice {InvoiceNumber}", invoice.InvoiceNumber);
+                                                // Don't throw - this is a best-effort operation
+                                            }
+                                        }
                                     }
-                                }

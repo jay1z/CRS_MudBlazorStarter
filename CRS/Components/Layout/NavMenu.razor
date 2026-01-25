@@ -8,128 +8,156 @@
 @inject NavigationManager NavigationManager
 
 <MudNavMenu>
-    <!-- Tenant links: require tenant viewer/staff/owner policies as appropriate -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- MAIN NAVIGATION (All authenticated tenant users)                -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <AuthorizeView Policy="RequireTenantViewer">
         <Authorized>
             <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-            <MudNavLink Href="/messages/inbox" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Email">Messages</MudNavLink>
-            <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Reserve Studies</MudNavLink>
-            <MudNavLink Href="/reserve-calculator/demo" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Calculate">Calculator</MudNavLink>
-            <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business">Communities</MudNavLink>
-            <MudNavLink Href="/Documents" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Folder">Documents</MudNavLink>
-            <MudNavLink Href="/Compliance" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.FactCheck">Compliance</MudNavLink>
-            <MudNavLink Href="/support/tickets" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
-        </Authorized>
-    </AuthorizeView>
-
-    <AuthorizeView Policy="RequireTenantOwner">
-        <Authorized>
-            <MudNavGroup Title="Tenant Admin" Expanded="true">
-                <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Team Members</MudNavLink>
-                <MudNavLink Href="/Admin/HOAUsers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business">HOA Users</MudNavLink>
-                <MudNavLink Href="/Admin/Settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">Tenant Settings</MudNavLink>
-                <MudNavLink Href="/Settings/ReserveStudy" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Tune">Calculator Defaults</MudNavLink>
-                <MudNavLink Href="/Admin/Elements" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Category">Element Management</MudNavLink>
-                <MudNavLink Href="/Reports/Publish" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Publish">Publish Reports</MudNavLink>
-                <MudNavLink Href="/account/billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing</MudNavLink>
-                <MudNavLink Href="/Customers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Group">Customers</MudNavLink>
+            <MudNavLink Href="/messages/inbox" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Email">Messages</MudNavLink>
+            
+            <MudDivider Class="my-2" />
+            
+            <!-- Studies & Properties -->
+            <MudNavGroup Title="Studies & Properties" Expanded="true" Icon="@Icons.Material.Filled.Assignment">
+                <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ListAlt">Reserve Studies</MudNavLink>
+                <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business">Communities</MudNavLink>
+                <MudNavLink Href="/reserve-calculator/demo" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Calculate">Calculator</MudNavLink>
+            </MudNavGroup>
+            
+            <!-- Documents & Reports -->
+            <MudNavGroup Title="Documents & Reports" Expanded="false" Icon="@Icons.Material.Filled.FolderOpen">
+                <MudNavLink Href="/Documents" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Folder">Documents</MudNavLink>
+                <MudNavLink Href="/Reports/View" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Visibility">View Reports</MudNavLink>
+                <MudNavLink Href="/Compliance" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.FactCheck">Compliance</MudNavLink>
             </MudNavGroup>
         </Authorized>
     </AuthorizeView>
 
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- FINANCE (Staff and above)                                       -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <AuthorizeView Policy="RequireTenantStaff">
         <Authorized>
-            <MudNavGroup Title="Specialist Tools" Expanded="false">
+            <MudNavGroup Title="Finance" Expanded="false" Icon="@Icons.Material.Filled.AccountBalance">
+                <MudNavLink Href="/Invoices" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">Invoices</MudNavLink>
+                <MudNavLink Href="/Reports/Aging" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assessment">A/R Aging</MudNavLink>
+                <MudNavLink Href="/Reports/Revenue" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.TrendingUp">Revenue</MudNavLink>
+            </MudNavGroup>
+        </Authorized>
+    </AuthorizeView>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- SPECIALIST TOOLS (Staff role)                                   -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <AuthorizeView Policy="RequireTenantStaff">
+        <Authorized>
+            <MudNavGroup Title="Specialist Tools" Expanded="false" Icon="@Icons.Material.Filled.Build">
                 <MudNavLink Href="/ReserveStudies/Specialist" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AssignmentTurnedIn">My Work</MudNavLink>
-                <MudNavLink Href="/Admin/HOAUsers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonAdd">Manage HOA Users</MudNavLink>
                 <MudNavLink Href="/Calendar" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CalendarMonth">Calendar</MudNavLink>
                 <MudNavLink Href="/Contacts" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Contacts">Contacts</MudNavLink>
             </MudNavGroup>
         </Authorized>
     </AuthorizeView>
 
-    <!-- External auditor visibility for Compliance -->
-    <AuthorizeView Roles="HOAAuditor">
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- ADMIN (Tenant Owner only)                                       -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <AuthorizeView Policy="RequireTenantOwner">
         <Authorized>
-            <MudNavLink Href="/Compliance" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.FactCheck">Compliance</MudNavLink>
+            <MudDivider Class="my-2" />
+            <MudNavGroup Title="Administration" Expanded="false" Icon="@Icons.Material.Filled.AdminPanelSettings">
+                <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Team Members</MudNavLink>
+                <MudNavLink Href="/Admin/HOAUsers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Group">HOA Users</MudNavLink>
+                <MudNavLink Href="/Customers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonSearch">Customers</MudNavLink>
+                <MudNavLink Href="/Admin/Settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">Tenant Settings</MudNavLink>
+                <MudNavLink Href="/Settings/ReserveStudy" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Tune">Calculator Defaults</MudNavLink>
+                <MudNavLink Href="/Settings/Invoices" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ReceiptLong">Invoice Settings</MudNavLink>
+                <MudNavLink Href="/Admin/Elements" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Category">Elements</MudNavLink>
+                <MudNavLink Href="/Reports/Publish" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Publish">Publish Reports</MudNavLink>
+                <MudNavLink Href="/account/billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing</MudNavLink>
+            </MudNavGroup>
         </Authorized>
     </AuthorizeView>
 
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- SUPPORT (All users)                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <AuthorizeView Policy="RequireTenantViewer">
         <Authorized>
-            <MudNavLink Href="/Reports/View" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Visibility">View Reports</MudNavLink>
-        </Authorized>
-    </AuthorizeView>
-
-    <AuthorizeView Policy="RequireHOAUser">
-        <Authorized>
-            <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-            <MudNavLink Href="/ReserveStudies/Request" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.RequestQuote">Request Reserve Study</MudNavLink>
-            <MudNavLink Href="/Documents" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Folder">Documents</MudNavLink>
-            <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Download Final Report</MudNavLink>
+            <MudDivider Class="my-2" />
             <MudNavLink Href="/support/tickets" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
         </Authorized>
     </AuthorizeView>
 
-    <!-- Platform admin links -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- HOA USER VIEW (Simplified menu for HOA users)                   -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <AuthorizeView Policy="RequireHOAUser">
+        <Authorized>
+            <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="/ReserveStudies/Request" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.RequestQuote">Request Study</MudNavLink>
+            <MudNavLink Href="/MyInvoices" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">My Invoices</MudNavLink>
+            <MudNavLink Href="/Documents" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Folder">Documents</MudNavLink>
+            <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Reports</MudNavLink>
+            <MudNavLink Href="/support/tickets" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- HOA AUDITOR (Compliance access)                                 -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <AuthorizeView Roles="HOAAuditor">
+        <Authorized>
+            <MudNavLink Href="/Compliance" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.FactCheck">Compliance</MudNavLink>
+            <MudNavLink Href="/Reports/View" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Visibility">View Reports</MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- PLATFORM ADMIN                                                  -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <AuthorizeView Policy="RequirePlatformAdmin">
         <Authorized>
-            <MudDivider Class="my-2" />
-            <MudText Typo="Typo.h6" Class="px-4">Platform Administration</MudText>
-            <MudDivider Class="my-2" />
-
-            <MudNavGroup Title="Platform" Expanded="true">
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.overline" Class="px-4 mud-text-secondary">Platform</MudText>
+            
+            <MudNavGroup Title="Platform Admin" Expanded="true" Icon="@Icons.Material.Filled.Cloud">
                 <MudNavLink Href="/Admin/Tenants" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Apartment">Tenants</MudNavLink>
                 <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Users & Roles</MudNavLink>
-                <MudNavLink Href="/Admin/SuperAdmins" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.VerifiedUser">SuperAdmins</MudNavLink>
-                <MudNavLink Href="/Admin/SystemSettings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.AdminPanelSettings">System Settings</MudNavLink>
+                <MudNavLink Href="/Admin/SuperAdmins" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.VerifiedUser">Super Admins</MudNavLink>
+                <MudNavLink Href="/Admin/SystemSettings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">System Settings</MudNavLink>
                 <MudNavLink Href="/Admin/Billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing</MudNavLink>
-                <MudNavLink Href="/Customers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Group">Customers</MudNavLink>
             </MudNavGroup>
 
-            <MudDivider />
-            <MudNavGroup Title="Platform Tools" Expanded="false">
-                <MudNavLink Href="/reserve-calculator/demo" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Calculate">Reserve Calculator</MudNavLink>
-                <MudNavLink Href="/Admin/VisualEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Brush">Visual Editor</MudNavLink>
-                <MudNavLink Href="/Admin/GrapesEditor" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Draw">GrapesJS Prototype</MudNavLink>
-                <MudNavLink Href="/dbmanager" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Storage">Database Manager</MudNavLink>
+            <MudNavGroup Title="Platform Tools" Expanded="false" Icon="@Icons.Material.Filled.Construction">
+                <MudNavLink Href="/reserve-calculator/demo" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Calculate">Calculator</MudNavLink>
+                <MudNavLink Href="/dbmanager" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Storage">Database</MudNavLink>
                 <MudNavLink Href="/Admin/Audit" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.History">Audit Logs</MudNavLink>
+                <MudNavLink Href="/admin/tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Support Tickets</MudNavLink>
             </MudNavGroup>
 
-            <MudDivider />
-            <MudNavGroup Title="Support" Expanded="false">
-                <MudNavLink Href="/admin/tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">All Support Tickets</MudNavLink>
-            </MudNavGroup>
-
-            <MudDivider />
-            <MudNavGroup Title="Tenant Actions" Expanded="false">
-                <MudNavLink Href="/Admin/Impersonate" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonSearch">Impersonate Tenant</MudNavLink>
+            <MudNavGroup Title="Tenant Actions" Expanded="false" Icon="@Icons.Material.Filled.SwitchAccount">
+                <MudNavLink Href="/Admin/Impersonate" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonSearch">Impersonate</MudNavLink>
                 @if (TenantContext?.TenantId != null)
                 {
-                    <MudNavLink Href="/Admin/StopImpersonation" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.HighlightOff" IconColor="Color.Error">Stop Impersonation</MudNavLink>
+                    <MudNavLink Href="/Admin/StopImpersonation" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ExitToApp" IconColor="Color.Error">Stop Impersonation</MudNavLink>
                 }
             </MudNavGroup>
         </Authorized>
     </AuthorizeView>
 
-    <!-- Platform support menu (read-only) -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- PLATFORM SUPPORT (Read-only access)                             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
     <AuthorizeView Roles="PlatformSupport">
         <Authorized>
-            <MudDivider Class="my-2" />
-            <MudText Typo="Typo.h6" Class="px-4">Platform Support</MudText>
-            <MudDivider Class="my-2" />
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.overline" Class="px-4 mud-text-secondary">Support View</MudText>
             <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
             <MudNavLink Href="/Communities" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Business">Communities</MudNavLink>
-            <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Reserve Studies</MudNavLink>
-            <MudNavLink Href="/admin/tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Support Tickets</MudNavLink>
-            <MudNavLink Href="/Admin/Billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing (read-only)</MudNavLink>
-        </Authorized>
-    </AuthorizeView>
-
-    <!-- Auditor reports access -->
-    <AuthorizeView Roles="HOAAuditor">
-        <Authorized>
-            <MudNavLink Href="/Reports/View" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Visibility">View Reports</MudNavLink>
+            <MudNavLink Href="/ReserveStudies" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Studies</MudNavLink>
+            <MudNavLink Href="/admin/tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Tickets</MudNavLink>
         </Authorized>
     </AuthorizeView>
 </MudNavMenu>

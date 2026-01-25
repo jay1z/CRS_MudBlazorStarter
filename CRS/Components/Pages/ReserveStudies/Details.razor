@@ -2026,13 +2026,14 @@
 
             var isHOAUser = UserState.UserRoles?.Any(r => r == "HOAUser" || r == "HOAAuditor") ?? false;
             var isStaff = UserState.UserRoles?.Any(r => r == "TenantOwner" || r == "TenantSpecialist" || r == "TenantViewer" || r == "PlatformAdmin") ?? false;
-            if (isHOAUser && !isStaff && reserveStudy.ApplicationUserId != UserState.CurrentUser?.Id) {
+            var isOwnerOrRequested = reserveStudy.ApplicationUserId == UserState.CurrentUser?.Id || reserveStudy.RequestedByUserId == UserState.CurrentUser?.Id;
+            if (isHOAUser && !isStaff && !isOwnerOrRequested) {
                 Snackbar.Add("You don't have permission to view this reserve study.", Severity.Error);
                 reserveStudy = null; return;
             }
 
             statusHistory = await context.StudyStatusHistories.AsNoTracking().Where(h => h.RequestId == Id).OrderBy(h => h.ChangedAt).ToListAsync();
-            canEdit = ReserveStudyService.CanUpdateReserveStudy(reserveStudy) && UserState.CurrentUser?.Id == reserveStudy.ApplicationUserId;
+            canEdit = ReserveStudyService.CanUpdateReserveStudy(reserveStudy) && isOwnerOrRequested;
             canStaffEdit = isStaff && ReserveStudyService.CanStaffUpdateReserveStudy(reserveStudy);
             canEditPhotos = isStaff;
         } catch (Exception ex) { Snackbar.Add($"Error loading: {ex.Message}", Severity.Error); }

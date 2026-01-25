@@ -57,22 +57,26 @@
 
                         <!-- Viewer and external links -->
             <AuthorizeView Policy="RequireTenantViewer" Context="tenantViewerAuth">
-                <Authorized>
-                    <MudNavLink Href="/Reports/View" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Visibility">View Reports</MudNavLink>
-                </Authorized>
-            </AuthorizeView>
-
-                        <AuthorizeView Policy="RequireHOAUser" Context="hoaAuth">
-                            <Authorized>
-                                <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-                                <MudNavLink Href="/MyInvoices" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">My Invoices</MudNavLink>
-                                <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Download Final Report</MudNavLink>
-                                <MudNavLink Href="/Support" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
-                            </Authorized>
-                        </AuthorizeView>
+                    <Authorized>
+                        <MudNavLink Href="/Reports/View" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Visibility">View Reports</MudNavLink>
                     </Authorized>
                 </AuthorizeView>
 
-                <MudDivider Class="my-2" />
-                <MudText Typo="Typo.caption" Class="px-4">Tenant mode</MudText>
-            </MudNavMenu>
+                            <AuthorizeView Policy="RequireHOAUser" Context="hoaAuth">
+                                <Authorized>
+                                    <MudNavLink Href="/Dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+                                    <MudNavLink Href="/MyInvoices" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Receipt">My Invoices</MudNavLink>
+                                    <MudNavLink Href="/Reports/Download" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Download">Download Final Report</MudNavLink>
+                                    <MudNavLink Href="/Support" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.SupportAgent">Support</MudNavLink>
+                                </Authorized>
+                            </AuthorizeView>
+
+                            @* Help Link - Available to all authenticated users *@
+                            <MudDivider Class="my-2" />
+                            <MudNavLink Href="/Help" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Help">Help & Guides</MudNavLink>
+                        </Authorized>
+                    </AuthorizeView>
+
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.caption" Class="px-4">Tenant mode</MudText>
+                </MudNavMenu>

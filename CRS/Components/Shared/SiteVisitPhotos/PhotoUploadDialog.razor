@@ -3,7 +3,9 @@
 @using CRS.Services.Storage
 @using CRS.Services.Tenant
 @using CRS.Services
+@using CRS.Data
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
 
 @inject ISiteVisitPhotoService PhotoService
 @inject IPhotoStorageService PhotoStorage
@@ -11,6 +13,7 @@
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <MudDialog>
     <TitleContent>
@@ -151,14 +154,49 @@
                                     </MudSelectItem>
                                 }
                             </MudSelect>
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudCheckBox T="bool" @bind-Value="includeInReport" Label="Include in report" />
-                        </MudItem>
-                    </MudGrid>
-                }
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudCheckBox T="bool" @bind-Value="includeInReport" Label="Include in report" />
+                                </MudItem>
 
-                @if (validationErrors.Any())
+                                @* Optional element linking *@
+                                @if (availableElements.Any())
+                                {
+                                    <MudItem xs="12">
+                                        <MudSelect T="ElementSelection" 
+                                                   @bind-Value="selectedElement"
+                                                   Label="Link to Element (optional)"
+                                                   Variant="Variant.Outlined"
+                                                   Margin="Margin.Dense"
+                                                   Clearable="true"
+                                                   AnchorOrigin="Origin.BottomCenter"
+                                                   TransformOrigin="Origin.TopCenter"
+                                                   HelperText="Associate all photos with a specific element">
+                                            @foreach (var elementGroup in availableElements.GroupBy(e => e.TypeDisplay))
+                                            {
+                                                <MudSelectItem T="ElementSelection" Value="@(null)" Disabled="true">
+                                                    <MudText Typo="Typo.overline" Style="font-weight: 600; color: #666;">@elementGroup.Key</MudText>
+                                                </MudSelectItem>
+                                                @foreach (var element in elementGroup)
+                                                {
+                                                    <MudSelectItem T="ElementSelection" Value="@element">
+                                                        @element.Name
+                                                    </MudSelectItem>
+                                                }
+                                            }
+                                        </MudSelect>
+                                    </MudItem>
+                                }
+                                else if (isLoadingElements)
+                                {
+                                    <MudItem xs="12">
+                                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        }
+
+                        @if (validationErrors.Any())
                 {
                     <MudAlert Severity="Severity.Warning">
                         <MudText Typo="Typo.body2">Some files could not be added:</MudText>
@@ -208,6 +246,11 @@
     private ElementCondition commonCondition = ElementCondition.NotAssessed;
     private bool includeInReport = true;
 
+    // Element linking (optional)
+    private List<ElementSelection> availableElements = new();
+    private ElementSelection? selectedElement = null;
+    private bool isLoadingElements = false;
+
     private const long MaxFileSize = 10 * 1024 * 1024; // 10MB per photo
 
     // Data class to store file bytes
@@ -217,6 +260,88 @@
         public string ContentType { get; set; } = "";
         public long FileSize { get; set; }
         public byte[] Bytes { get; set; } = Array.Empty<byte>();
+    }
+
+    // Element selection record for the dropdown
+    private record ElementSelection(Guid Id, string Name, string ElementType, string TypeDisplay);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAvailableElementsAsync();
+    }
+
+    private async Task LoadAvailableElementsAsync()
+    {
+        if (ReserveStudyId == Guid.Empty) return;
+
+        isLoadingElements = true;
+        try
+        {
+            await using var context = await DbFactory.CreateDbContextAsync();
+
+            var study = await context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.ReserveStudyBuildingElements!)
+                    .ThenInclude(e => e.BuildingElement)
+                .Include(rs => rs.ReserveStudyCommonElements!)
+                    .ThenInclude(e => e.CommonElement)
+                .Include(rs => rs.ReserveStudyAdditionalElements)
+                .FirstOrDefaultAsync(rs => rs.Id == ReserveStudyId);
+
+            if (study == null) return;
+
+            var elements = new List<ElementSelection>();
+
+            // Add building elements
+            if (study.ReserveStudyBuildingElements != null)
+            {
+                foreach (var e in study.ReserveStudyBuildingElements.Where(x => x.BuildingElement != null))
+                {
+                    elements.Add(new ElementSelection(
+                        e.Id, 
+                        e.BuildingElement!.Name, 
+                        "Building", 
+                        "🏢 Building"));
+                }
+            }
+
+            // Add common elements
+            if (study.ReserveStudyCommonElements != null)
+            {
+                foreach (var e in study.ReserveStudyCommonElements.Where(x => x.CommonElement != null))
+                {
+                    elements.Add(new ElementSelection(
+                        e.Id, 
+                        e.CommonElement!.Name, 
+                        "Common", 
+                        "🏘️ Common"));
+                }
+            }
+
+            // Add additional elements (these have Name directly on the element)
+            if (study.ReserveStudyAdditionalElements != null)
+            {
+                foreach (var e in study.ReserveStudyAdditionalElements.Where(x => !string.IsNullOrEmpty(x.Name)))
+                {
+                    elements.Add(new ElementSelection(
+                        e.Id, 
+                        e.Name, 
+                        "Additional", 
+                        "➕ Additional"));
+                }
+            }
+
+            availableElements = elements.OrderBy(e => e.TypeDisplay).ThenBy(e => e.Name).ToList();
+        }
+        catch
+        {
+            // Silently fail - element linking is optional
+            availableElements = new List<ElementSelection>();
+        }
+        finally
+        {
+            isLoadingElements = false;
+        }
     }
 
     private async Task TriggerFileInput()
@@ -340,7 +465,10 @@
                         Condition = commonCondition,
                         IncludeInReport = includeInReport,
                         PhotoTakenAt = DateTime.UtcNow,
-                        TakenByUserId = userId
+                        TakenByUserId = userId,
+                        // Optional element linking
+                        ElementId = selectedElement?.Id,
+                        ElementType = selectedElement?.ElementType
                     };
 
                     await PhotoService.CreateAsync(siteVisitPhoto);

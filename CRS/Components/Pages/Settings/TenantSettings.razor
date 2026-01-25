@@ -105,13 +105,31 @@
                                         OnClick="@(() => activeTab = 6)">
                                 Acceptance Terms
                             </MudNavLink>
-                            <MudNavLink Icon="@Icons.Material.Filled.AccountTree" 
-                                        IconColor="@(activeTab == 7 ? Color.Primary : Color.Default)"
-                                        Class="@(activeTab == 7 ? "mud-nav-link-active" : "")"
-                                        OnClick="@(() => activeTab = 7)">
-                                Workflow
-                            </MudNavLink>
-                        </MudNavMenu>
+                                <MudNavLink Icon="@Icons.Material.Filled.AccountTree" 
+                                            IconColor="@(activeTab == 7 ? Color.Primary : Color.Default)"
+                                            Class="@(activeTab == 7 ? "mud-nav-link-active" : "")"
+                                            OnClick="@(() => activeTab = 7)">
+                                    Workflow
+                                </MudNavLink>
+
+                                <MudDivider Class="my-2" />
+                                <MudText Typo="Typo.caption" Class="px-3 py-1" Style="color: #999; text-transform: uppercase; font-size: 0.65rem;">
+                                    Additional Settings
+                                </MudText>
+
+                                <MudNavLink Icon="@Icons.Material.Filled.Receipt" 
+                                            Href="/Settings/Invoices"
+                                            IconColor="Color.Default">
+                                    Invoice Settings
+                                    <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Style="margin-left: auto; opacity: 0.5;" />
+                                </MudNavLink>
+                                <MudNavLink Icon="@Icons.Material.Filled.Calculate" 
+                                            Href="/Settings/ReserveStudy"
+                                            IconColor="Color.Default">
+                                    Calculator Defaults
+                                    <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Style="margin-left: auto; opacity: 0.5;" />
+                                </MudNavLink>
+                            </MudNavMenu>
                 </MudPaper>
             </MudItem>
 

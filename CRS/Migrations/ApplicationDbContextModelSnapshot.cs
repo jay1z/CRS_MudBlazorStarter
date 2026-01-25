@@ -2723,6 +2723,9 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateModified")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DateReviewed")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DateSent")
                         .HasColumnType("datetime2");
 
@@ -2761,6 +2764,9 @@ namespace CRS.Migrations
                     b.Property<bool>("IsDepositNonRefundable")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsReviewed")
+                        .HasColumnType("bit");
+
                     b.Property<int>("LatePaymentGracePeriodDays")
                         .HasColumnType("int");
 
@@ -2797,6 +2803,9 @@ namespace CRS.Migrations
 
                     b.Property<Guid>("ReserveStudyId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -3092,7 +3101,13 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("MaxUsefulLifeOptionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("MeasurementOptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("MinUsefulLifeOptionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
@@ -3104,6 +3119,9 @@ namespace CRS.Migrations
 
                     b.Property<Guid?>("RemainingLifeOptionId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("RemainingLifeYears")
+                        .HasColumnType("int");
 
                     b.Property<Guid?>("ReserveStudyId")
                         .HasColumnType("uniqueidentifier");
@@ -3122,7 +3140,11 @@ namespace CRS.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("MaxUsefulLifeOptionId");
+
                     b.HasIndex("MeasurementOptionId");
+
+                    b.HasIndex("MinUsefulLifeOptionId");
 
                     b.HasIndex("RemainingLifeOptionId");
 
@@ -3162,11 +3184,20 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("MaxUsefulLifeOptionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("MeasurementOptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("MinUsefulLifeOptionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("RemainingLifeOptionId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("RemainingLifeYears")
+                        .HasColumnType("int");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -3184,7 +3215,11 @@ namespace CRS.Migrations
 
                     b.HasIndex("BuildingElementId");
 
+                    b.HasIndex("MaxUsefulLifeOptionId");
+
                     b.HasIndex("MeasurementOptionId");
+
+                    b.HasIndex("MinUsefulLifeOptionId");
 
                     b.HasIndex("RemainingLifeOptionId");
 
@@ -3471,7 +3506,13 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("LastServiced")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("MaxUsefulLifeOptionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("MeasurementOptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("MinUsefulLifeOptionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
@@ -3486,6 +3527,9 @@ namespace CRS.Migrations
 
                     b.Property<Guid?>("RemainingLifeOptionId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("RemainingLifeYears")
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("ReplacementCost")
                         .HasPrecision(18, 2)
@@ -3513,7 +3557,11 @@ namespace CRS.Migrations
 
                     b.HasIndex("CommonElementId");
 
+                    b.HasIndex("MaxUsefulLifeOptionId");
+
                     b.HasIndex("MeasurementOptionId");
+
+                    b.HasIndex("MinUsefulLifeOptionId");
 
                     b.HasIndex("RemainingLifeOptionId");
 
@@ -5530,9 +5578,17 @@ namespace CRS.Migrations
 
             modelBuilder.Entity("CRS.Models.ReserveStudyAdditionalElement", b =>
                 {
+                    b.HasOne("CRS.Models.ElementOption", "MaxUsefulLifeOption")
+                        .WithMany()
+                        .HasForeignKey("MaxUsefulLifeOptionId");
+
                     b.HasOne("CRS.Models.ElementOption", "MeasurementOption")
                         .WithMany()
                         .HasForeignKey("MeasurementOptionId");
+
+                    b.HasOne("CRS.Models.ElementOption", "MinUsefulLifeOption")
+                        .WithMany()
+                        .HasForeignKey("MinUsefulLifeOptionId");
 
                     b.HasOne("CRS.Models.ElementOption", "RemainingLifeOption")
                         .WithMany()
@@ -5550,7 +5606,11 @@ namespace CRS.Migrations
                         .WithMany()
                         .HasForeignKey("UsefulLifeOptionId");
 
+                    b.Navigation("MaxUsefulLifeOption");
+
                     b.Navigation("MeasurementOption");
+
+                    b.Navigation("MinUsefulLifeOption");
 
                     b.Navigation("RemainingLifeOption");
 
@@ -5569,9 +5629,17 @@ namespace CRS.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("CRS.Models.ElementOption", "MaxUsefulLifeOption")
+                        .WithMany()
+                        .HasForeignKey("MaxUsefulLifeOptionId");
+
                     b.HasOne("CRS.Models.ElementOption", "MeasurementOption")
                         .WithMany()
                         .HasForeignKey("MeasurementOptionId");
+
+                    b.HasOne("CRS.Models.ElementOption", "MinUsefulLifeOption")
+                        .WithMany()
+                        .HasForeignKey("MinUsefulLifeOptionId");
 
                     b.HasOne("CRS.Models.ElementOption", "RemainingLifeOption")
                         .WithMany()
@@ -5593,7 +5661,11 @@ namespace CRS.Migrations
 
                     b.Navigation("BuildingElement");
 
+                    b.Navigation("MaxUsefulLifeOption");
+
                     b.Navigation("MeasurementOption");
+
+                    b.Navigation("MinUsefulLifeOption");
 
                     b.Navigation("RemainingLifeOption");
 
@@ -5659,9 +5731,17 @@ namespace CRS.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("CRS.Models.ElementOption", "MaxUsefulLifeOption")
+                        .WithMany()
+                        .HasForeignKey("MaxUsefulLifeOptionId");
+
                     b.HasOne("CRS.Models.ElementOption", "MeasurementOption")
                         .WithMany()
                         .HasForeignKey("MeasurementOptionId");
+
+                    b.HasOne("CRS.Models.ElementOption", "MinUsefulLifeOption")
+                        .WithMany()
+                        .HasForeignKey("MinUsefulLifeOptionId");
 
                     b.HasOne("CRS.Models.ElementOption", "RemainingLifeOption")
                         .WithMany()
@@ -5683,7 +5763,11 @@ namespace CRS.Migrations
 
                     b.Navigation("CommonElement");
 
+                    b.Navigation("MaxUsefulLifeOption");
+
                     b.Navigation("MeasurementOption");
+
+                    b.Navigation("MinUsefulLifeOption");
 
                     b.Navigation("RemainingLifeOption");
 

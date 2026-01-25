@@ -9,6 +9,7 @@ using CRS.Models.Workflow;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 using CRS.Services.Billing; // feature guard
+using CRS.Services.Storage;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -20,14 +21,16 @@ namespace CRS.Services {
         private readonly IConfiguration _configuration;
         private readonly ITenantContext _tenantContext;
         private readonly IFeatureGuardService _featureGuard;
+        private readonly ILogoStorageService _logoStorage;
         private readonly ILogger<ReserveStudyService> _logger;
 
-        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext, IFeatureGuardService featureGuard, ILogger<ReserveStudyService> logger) {
+        public ReserveStudyService(IDbContextFactory<ApplicationDbContext> dbFactory, IMailer mailer, IDispatcher dispatcher, IConfiguration configuration, ITenantContext tenantContext, IFeatureGuardService featureGuard, ILogoStorageService logoStorage, ILogger<ReserveStudyService> logger) {
             _dbFactory = dbFactory;
             _dispatcher = dispatcher;
             _configuration = configuration;
             _tenantContext = tenantContext;
             _featureGuard = featureGuard;
+            _logoStorage = logoStorage;
             _logger = logger;
         }
 
@@ -775,12 +778,12 @@ namespace CRS.Services {
                 }
             }
 
-            // Build logo URL if not explicitly set
+            // Get logo URL from storage if not explicitly set in branding
             if (string.IsNullOrWhiteSpace(tenantInfo.LogoUrl)) {
-                var rootDomain = _configuration["App:RootDomain"]?.Trim().Trim('.');
-                if (!string.IsNullOrWhiteSpace(rootDomain) && !string.IsNullOrWhiteSpace(tenant.Subdomain)) {
-                    // Try to use tenant logo from storage
-                    tenantInfo.LogoUrl = $"https://{tenant.Subdomain}.{rootDomain}/api/logos/{tenantId}";
+                try {
+                    tenantInfo.LogoUrl = await _logoStorage.GetLogoUrlAsync(tenantId);
+                } catch (Exception ex) {
+                    _logger.LogWarning(ex, "Failed to get logo URL from storage for tenant {TenantId}", tenantId);
                 }
             }
 

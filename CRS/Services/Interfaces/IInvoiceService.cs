@@ -188,8 +188,18 @@ public interface IInvoiceService
                                                                         /// </summary>
                                                                         Task<string> PreviewInvoiceNumberAsync(TenantInvoiceSettings settings, CancellationToken ct = default);
 
-                                        /// <summary>
-                                        /// Creates the next milestone invoice based on a paid invoice.
-                                        /// </summary>
-                                        Task<Invoice?> CreateNextMilestoneInvoiceAsync(Guid paidInvoiceId, InvoiceMilestoneType nextMilestone, CancellationToken ct = default);
-                                    }
+                                                                                /// <summary>
+                                                                                /// Creates the next milestone invoice based on a paid invoice.
+                                                                                /// </summary>
+                                                                                Task<Invoice?> CreateNextMilestoneInvoiceAsync(Guid paidInvoiceId, InvoiceMilestoneType nextMilestone, CancellationToken ct = default);
+
+                                            /// <summary>
+                                            /// Sends an invoice to the client via email, marks it as sent, and generates access token.
+                                            /// </summary>
+                                            /// <param name="invoiceId">The invoice to send</param>
+                                            /// <param name="sentByUserId">The user sending the invoice</param>
+                                            /// <param name="baseUrl">The base URL for the invoice link</param>
+                                            /// <param name="ct">Cancellation token</param>
+                                            /// <returns>The updated invoice</returns>
+                                            Task<Invoice> SendInvoiceAsync(Guid invoiceId, Guid sentByUserId, string baseUrl, CancellationToken ct = default);
+                                        }
