@@ -1,4 +1,4 @@
-﻿# Getting Started
+# Getting Started
 
 Welcome to the Admin Guide! As a TenantOwner (Admin), you have full control over your organization's reserve study operations. This guide will help you understand your dashboard, responsibilities, and the tools at your disposal.
 
@@ -282,10 +282,10 @@ A: Reserve Studies shows all. Use filters to narrow down.
 
 Start exploring your admin capabilities:
 
-- **[User Management →](./user-management.md)** - Add and manage users
-- **[Workflow Management →](./workflow-management.md)** - Handle approvals and assignments
-- **[Settings →](./settings-and-configuration.md)** - Configure your organization
+- **[User Management →](/Help/AdminGuide/user-management)** - Add and manage users
+- **[Workflow Management →](/Help/AdminGuide/workflow-management)** - Handle approvals and assignments
+- **[Settings →](/Help/AdminGuide/settings-and-configuration)** - Configure your organization
 
 ---
 
-[← Back to Admin Guide](./index.md) | [User Management →](./user-management.md)
+[← Back to Admin Guide](/Help/AdminGuide/index) | [User Management →](/Help/AdminGuide/user-management)

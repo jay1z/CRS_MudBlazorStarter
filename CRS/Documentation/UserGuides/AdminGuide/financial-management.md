@@ -1,4 +1,4 @@
-﻿# Financial Management
+# Financial Management
 
 Manage your organization's invoicing, payments, and financial tracking. This guide covers invoice settings, creating invoices, payment processing, credit memos, and aging reports.
 
@@ -510,8 +510,8 @@ A: Record a negative payment to reverse, then apply to correct invoice.
 
 Monitor your business performance:
 
-- **[Reporting and Analytics →](./reporting-and-analytics.md)** - Business intelligence
+- **[Reporting and Analytics →](/Help/AdminGuide/reporting-and-analytics)** - Business intelligence
 
 ---
 
-[← Settings and Configuration](./settings-and-configuration.md) | [Reporting and Analytics →](./reporting-and-analytics.md)
+[← Settings and Configuration](/Help/AdminGuide/settings-and-configuration) | [Reporting and Analytics →](/Help/AdminGuide/reporting-and-analytics)

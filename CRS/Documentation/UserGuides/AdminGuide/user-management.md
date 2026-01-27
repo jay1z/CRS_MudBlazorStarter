@@ -1,4 +1,4 @@
-﻿# User Management
+# User Management
 
 Managing users is a core admin responsibility. This guide covers creating staff users, inviting HOA clients, assigning roles, and maintaining user accounts.
 
@@ -371,8 +371,8 @@ A: Edit user → Roles → Add/remove as needed.
 
 With users set up, manage the workflow:
 
-- **[Workflow Management →](./workflow-management.md)** - Handle approvals and assignments
+- **[Workflow Management →](/Help/AdminGuide/workflow-management)** - Handle approvals and assignments
 
 ---
 
-[← Getting Started](./getting-started.md) | [Workflow Management →](./workflow-management.md)
+[← Getting Started](/Help/AdminGuide/getting-started) | [Workflow Management →](/Help/AdminGuide/workflow-management)

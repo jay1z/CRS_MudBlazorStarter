@@ -1,4 +1,4 @@
-﻿# Data Collection
+# Data Collection
 
 After a proposal is accepted, you need to collect financial information and service contacts from the HOA client. This guide covers requesting, reviewing, and accepting client data.
 
@@ -363,8 +363,8 @@ A: Try different contact methods. Contact the property manager if different from
 
 Once financial info is received:
 
-- **[Site Visits →](./site-visits.md)** - Schedule and conduct property inspections
+- **[Site Visits →](/Help/SpecialistGuide/site-visits)** - Schedule and conduct property inspections
 
 ---
 
-[← Proposals](./proposals.md) | [Site Visits →](./site-visits.md)
+[← Proposals](/Help/SpecialistGuide/proposals) | [Site Visits →](/Help/SpecialistGuide/site-visits)

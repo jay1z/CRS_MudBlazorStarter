@@ -1,4 +1,4 @@
-﻿# Site Visits
+# Site Visits
 
 The site visit is where you physically inspect the community's components. This guide covers scheduling, preparation, conducting the inspection, and documenting your findings.
 
@@ -406,8 +406,8 @@ A: Schedule continuation. Document what was completed. Update client.
 
 After completing your site visit:
 
-- **[Report Generation →](./report-generation.md)** - Create the reserve study report
+- **[Report Generation →](/Help/SpecialistGuide/report-generation)** - Create the reserve study report
 
 ---
 
-[← Data Collection](./data-collection.md) | [Report Generation →](./report-generation.md)
+[← Data Collection](/Help/SpecialistGuide/data-collection) | [Report Generation →](/Help/SpecialistGuide/report-generation)

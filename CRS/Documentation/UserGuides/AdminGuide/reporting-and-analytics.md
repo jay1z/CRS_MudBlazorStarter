@@ -1,4 +1,4 @@
-﻿# Reporting and Analytics
+# Reporting and Analytics
 
 Monitor your business performance with dashboards, reports, and analytics. This guide covers metrics, aging reports, email logs, audit trails, and report archives.
 
@@ -470,4 +470,4 @@ Use reporting tools to:
 
 ---
 
-[← Financial Management](./financial-management.md) | [Back to Admin Guide](./index.md)
+[← Financial Management](/Help/AdminGuide/financial-management) | [Back to Admin Guide](/Help/AdminGuide/index)

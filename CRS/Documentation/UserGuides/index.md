@@ -6,7 +6,7 @@ Welcome to the CRS (Community Reserve Study) documentation. Select the guide tha
 
 ## Choose Your Guide
 
-### 🏠 [HOA User Guide](./HOAUserGuide/index.md)
+### 🏠 [HOA User Guide](/Help/HOAUserGuide/index)
 **For**: HOA board members, property managers, and community representatives
 
 Learn how to:
@@ -18,7 +18,7 @@ Learn how to:
 
 ---
 
-### 🔧 [Specialist Guide](./SpecialistGuide/index.md)
+### 🔧 [Specialist Guide](/Help/SpecialistGuide/index)
 **For**: Reserve study specialists, inspectors, and analysts
 
 Learn how to:
@@ -30,7 +30,7 @@ Learn how to:
 
 ---
 
-### ⚙️ [Admin Guide](./AdminGuide/index.md)
+### ⚙️ [Admin Guide](/Help/AdminGuide/index)
 **For**: Company administrators and tenant owners
 
 Learn how to:
@@ -46,10 +46,10 @@ Learn how to:
 
 | Topic | HOA Users | Specialists | Admins |
 |-------|-----------|-------------|--------|
-| Getting Started | [Link](./HOAUserGuide/getting-started.md) | [Link](./SpecialistGuide/getting-started.md) | [Link](./AdminGuide/getting-started.md) |
-| Proposals | [Link](./HOAUserGuide/proposals.md) | [Link](./SpecialistGuide/proposals.md) | - |
-| Reports | [Link](./HOAUserGuide/reports-and-documents.md) | [Link](./SpecialistGuide/report-generation.md) | [Link](./AdminGuide/workflow-management.md) |
-| Invoices | [Link](./HOAUserGuide/invoices-and-payments.md) | - | [Link](./AdminGuide/financial-management.md) |
+| Getting Started | [Link](/Help/HOAUserGuide/getting-started) | [Link](/Help/SpecialistGuide/getting-started) | [Link](/Help/AdminGuide/getting-started) |
+| Proposals | [Link](/Help/HOAUserGuide/proposals) | [Link](/Help/SpecialistGuide/proposals) | - |
+| Reports | [Link](/Help/HOAUserGuide/reports-and-documents) | [Link](/Help/SpecialistGuide/report-generation) | [Link](/Help/AdminGuide/workflow-management) |
+| Invoices | [Link](/Help/HOAUserGuide/invoices-and-payments) | - | [Link](/Help/AdminGuide/financial-management) |
 
 ---
 

@@ -1,4 +1,4 @@
-﻿# Proposals
+# Proposals
 
 Creating and sending proposals is a key part of the reserve study workflow. This guide covers the full proposal process from creation to client acceptance.
 
@@ -403,9 +403,9 @@ A: Check for required fields. Refresh the page. Contact support.
 
 After sending proposals:
 
-- **[Data Collection →](./data-collection.md)** - Request and review financial information
-- **[Site Visits →](./site-visits.md)** - Schedule and conduct inspections
+- **[Data Collection →](/Help/SpecialistGuide/data-collection)** - Request and review financial information
+- **[Site Visits →](/Help/SpecialistGuide/site-visits)** - Schedule and conduct inspections
 
 ---
 
-[← Dashboard and Workflow](./dashboard-and-workflow.md) | [Data Collection →](./data-collection.md)
+[← Dashboard and Workflow](/Help/SpecialistGuide/dashboard-and-workflow) | [Data Collection →](/Help/SpecialistGuide/data-collection)

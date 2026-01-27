@@ -2,12 +2,15 @@
 @using CRS.Services.Interfaces
 @using CRS.Services.Storage
 @using CRS.Services.Tenant
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
 
 @inject ISiteVisitPhotoService PhotoService
 @inject IPhotoStorageService PhotoStorage
 @inject ITenantContext TenantContext
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
@@ -107,9 +110,18 @@
                                     </MudText>
                                 }
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                                    <MudChip T="string" Size="Size.Small" Color="@GetConditionColor(photo.Condition)" Variant="Variant.Outlined">
-                                        @GetConditionDisplayName(photo.Condition)
-                                    </MudChip>
+                                    @if (photo.ElementId.HasValue && elementNames.TryGetValue(photo.ElementId.Value, out var elementName))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                            @elementName
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                                            Unlinked
+                                        </MudChip>
+                                    }
                                     <MudText Typo="Typo.caption" Style="color: #999;">
                                         @photo.PhotoTakenAt.ToString("MMM dd")
                                     </MudText>
@@ -144,6 +156,7 @@
     private List<SiteVisitPhoto> photos = new();
     private bool isLoading = true;
     private PhotoCategory? selectedCategory = null;
+    private Dictionary<Guid, string> elementNames = new();
 
     private IEnumerable<SiteVisitPhoto> FilteredPhotos => selectedCategory == null 
         ? photos 
@@ -160,6 +173,7 @@
         {
             isLoading = true;
             photos = (await PhotoService.GetByReserveStudyAsync(ReserveStudyId)).ToList();
+            await LoadElementNames();
         }
         catch (Exception ex)
         {
@@ -168,6 +182,58 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadElementNames()
+    {
+        elementNames.Clear();
+
+        if (ReserveStudyId == Guid.Empty) return;
+
+        try
+        {
+            await using var context = await DbFactory.CreateDbContextAsync();
+
+            var study = await context.ReserveStudies
+                .AsNoTracking()
+                .Include(rs => rs.ReserveStudyBuildingElements!)
+                    .ThenInclude(e => e.BuildingElement)
+                .Include(rs => rs.ReserveStudyCommonElements!)
+                    .ThenInclude(e => e.CommonElement)
+                .Include(rs => rs.ReserveStudyAdditionalElements)
+                .FirstOrDefaultAsync(rs => rs.Id == ReserveStudyId);
+
+            if (study == null) return;
+
+            // Build a lookup of element IDs to names
+            if (study.ReserveStudyBuildingElements != null)
+            {
+                foreach (var e in study.ReserveStudyBuildingElements.Where(x => x.BuildingElement != null))
+                {
+                    elementNames[e.Id] = e.BuildingElement!.Name;
+                }
+            }
+
+            if (study.ReserveStudyCommonElements != null)
+            {
+                foreach (var e in study.ReserveStudyCommonElements.Where(x => x.CommonElement != null))
+                {
+                    elementNames[e.Id] = e.CommonElement!.Name;
+                }
+            }
+
+            if (study.ReserveStudyAdditionalElements != null)
+            {
+                foreach (var e in study.ReserveStudyAdditionalElements.Where(x => !string.IsNullOrEmpty(x.Name)))
+                {
+                    elementNames[e.Id] = e.Name;
+                }
+            }
+        }
+        catch
+        {
+            // Silently fail - element names are optional
         }
     }
 

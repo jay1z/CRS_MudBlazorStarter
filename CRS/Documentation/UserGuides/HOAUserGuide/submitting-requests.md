@@ -1,4 +1,4 @@
-﻿# Submitting a Reserve Study Request
+# Submitting a Reserve Study Request
 
 This guide walks you through the process of requesting a new reserve study for your community.
 
@@ -237,8 +237,8 @@ A: Submit a separate request for each community. Each community receives its own
 
 After submitting your request:
 
-- **[Review Proposals →](./proposals.md)** - Learn how to review and accept the service proposal
+- **[Review Proposals →](/Help/HOAUserGuide/proposals)** - Learn how to review and accept the service proposal
 
 ---
 
-[← Getting Started](./getting-started.md) | [Proposals →](./proposals.md)
+[← Getting Started](/Help/HOAUserGuide/getting-started) | [Proposals →](/Help/HOAUserGuide/proposals)

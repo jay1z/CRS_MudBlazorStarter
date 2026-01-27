@@ -1,4 +1,4 @@
-﻿# Getting Started
+# Getting Started
 
 Welcome to the Specialist Guide! This section will help you get oriented with your dashboard, understand your role, and navigate the system efficiently.
 
@@ -274,9 +274,9 @@ A: Typically no. Studies are assigned for accountability. Ask your admin if you 
 
 Now that you're oriented:
 
-- **[Dashboard and Workflow →](./dashboard-and-workflow.md)** - Master the Kanban board and workflow
-- **[Creating Proposals →](./proposals.md)** - Learn to create and send proposals
+- **[Dashboard and Workflow →](/Help/SpecialistGuide/dashboard-and-workflow)** - Master the Kanban board and workflow
+- **[Creating Proposals →](/Help/SpecialistGuide/proposals)** - Learn to create and send proposals
 
 ---
 
-[← Back to Specialist Guide](./index.md) | [Dashboard and Workflow →](./dashboard-and-workflow.md)
+[← Back to Specialist Guide](/Help/SpecialistGuide/index) | [Dashboard and Workflow →](/Help/SpecialistGuide/dashboard-and-workflow)

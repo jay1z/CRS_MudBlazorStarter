@@ -1,4 +1,4 @@
-﻿# Reports and Documents
+# Reports and Documents
 
 Throughout the reserve study process, various documents will be generated and shared with you. This guide explains how to access, understand, and download your documents.
 
@@ -347,8 +347,8 @@ A: Contact the specialist. Minor corrections are typically accommodated; signifi
 
 Now that you understand your documents:
 
-- **[Invoices and Payments →](./invoices-and-payments.md)** - Learn about paying for your study
+- **[Invoices and Payments →](/Help/HOAUserGuide/invoices-and-payments)** - Learn about paying for your study
 
 ---
 
-[← Financial Information](./financial-info.md) | [Invoices and Payments →](./invoices-and-payments.md)
+[← Financial Information](/Help/HOAUserGuide/financial-info) | [Invoices and Payments →](/Help/HOAUserGuide/invoices-and-payments)

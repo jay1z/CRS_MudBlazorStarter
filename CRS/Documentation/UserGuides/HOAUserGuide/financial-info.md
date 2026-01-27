@@ -1,4 +1,4 @@
-﻿# Providing Financial Information
+# Providing Financial Information
 
 After you accept a proposal, you'll be asked to provide financial information about your community. This data is essential for creating an accurate reserve study and funding plan.
 
@@ -316,8 +316,8 @@ After submitting your financial information:
 
 - **Wait for confirmation** that your data was received
 - **Prepare for site visit** scheduling
-- **[View Reports and Documents →](./reports-and-documents.md)** - Learn about accessing your deliverables
+- **[View Reports and Documents →](/Help/HOAUserGuide/reports-and-documents)** - Learn about accessing your deliverables
 
 ---
 
-[← Proposals](./proposals.md) | [Reports and Documents →](./reports-and-documents.md)
+[← Proposals](/Help/HOAUserGuide/proposals) | [Reports and Documents →](/Help/HOAUserGuide/reports-and-documents)

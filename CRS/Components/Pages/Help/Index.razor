@@ -18,20 +18,36 @@
         @* Sidebar Navigation *@
         <MudItem xs="12" md="3">
                 <MudPaper Elevation="2" Class="pa-4">
-                    <MudText Typo="Typo.h6" Class="mb-3">User Guides</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">@(_guides.Count == 1 ? _guides[0].Title : "User Guides")</MudText>
                     <MudNavMenu>
-                        @foreach (var guide in _guides)
+                        @if (_guides.Count == 1)
                         {
-                            <MudNavGroup Title="@guide.Title" Icon="@guide.Icon" Expanded="@(GuideType == guide.Key)">
-                                @foreach (var sectionItem in guide.Sections)
-                                {
-                                    <MudNavLink Href="@($"/Help/{guide.Key}/{sectionItem.Key}")"
-                                               Match="NavLinkMatch.All"
-                                               Class="@(Section == sectionItem.Key ? "mud-nav-link-active" : "")">
-                                        @sectionItem.Title
-                                    </MudNavLink>
-                                }
-                            </MudNavGroup>
+                            @* Single guide - show sections directly without collapsible group *@
+                            @foreach (var sectionItem in _guides[0].Sections)
+                            {
+                                <MudNavLink Href="@($"/Help/{_guides[0].Key}/{sectionItem.Key}")"
+                                           Match="NavLinkMatch.All"
+                                           Icon="@(Section == sectionItem.Key ? Icons.Material.Filled.ChevronRight : null)">
+                                    @sectionItem.Title
+                                </MudNavLink>
+                            }
+                        }
+                        else
+                        {
+                            @* Multiple guides - show collapsible groups *@
+                            @foreach (var guide in _guides)
+                            {
+                                <MudNavGroup Title="@guide.Title" Icon="@guide.Icon" Expanded="@(GuideType == guide.Key)">
+                                    @foreach (var sectionItem in guide.Sections)
+                                    {
+                                        <MudNavLink Href="@($"/Help/{guide.Key}/{sectionItem.Key}")"
+                                                   Match="NavLinkMatch.All"
+                                                   Class="@(Section == sectionItem.Key ? "mud-nav-link-active" : "")">
+                                            @sectionItem.Title
+                                        </MudNavLink>
+                                    }
+                                </MudNavGroup>
+                            }
                         }
                     </MudNavMenu>
                 </MudPaper>
@@ -187,45 +203,82 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        await LoadContent();
-    }
+            await LoadContent();
+        }
 
-    private void InitializeGuides()
-    {
-        _guides = new List<GuideInfo>
+        private void InitializeGuides()
         {
-            new("HOAUserGuide", "HOA User Guide", Icons.Material.Filled.Home, new List<SectionInfo>
+            // Define all available guides
+            var allGuides = new List<GuideInfo>
             {
-                new("index", "Overview", "index.md"),
-                new("getting-started", "Getting Started", "getting-started.md"),
-                new("submitting-requests", "Submitting Requests", "submitting-requests.md"),
-                new("proposals", "Proposals", "proposals.md"),
-                new("financial-info", "Financial Information", "financial-info.md"),
-                new("reports-and-documents", "Reports & Documents", "reports-and-documents.md"),
-                new("invoices-and-payments", "Invoices & Payments", "invoices-and-payments.md")
-            }),
-            new("SpecialistGuide", "Specialist Guide", Icons.Material.Filled.Engineering, new List<SectionInfo>
+                new("HOAUserGuide", "HOA User Guide", Icons.Material.Filled.Home, new List<SectionInfo>
+                {
+                    new("index", "Overview", "index.md"),
+                    new("getting-started", "Getting Started", "getting-started.md"),
+                    new("submitting-requests", "Submitting Requests", "submitting-requests.md"),
+                    new("proposals", "Proposals", "proposals.md"),
+                    new("financial-info", "Financial Information", "financial-info.md"),
+                    new("reports-and-documents", "Reports & Documents", "reports-and-documents.md"),
+                    new("invoices-and-payments", "Invoices & Payments", "invoices-and-payments.md")
+                }),
+                new("SpecialistGuide", "Specialist Guide", Icons.Material.Filled.Engineering, new List<SectionInfo>
+                {
+                    new("index", "Overview", "index.md"),
+                    new("getting-started", "Getting Started", "getting-started.md"),
+                    new("dashboard-and-workflow", "Dashboard & Workflow", "dashboard-and-workflow.md"),
+                    new("proposals", "Proposals", "proposals.md"),
+                    new("data-collection", "Data Collection", "data-collection.md"),
+                    new("site-visits", "Site Visits", "site-visits.md"),
+                    new("report-generation", "Report Generation", "report-generation.md")
+                }),
+                new("AdminGuide", "Admin Guide", Icons.Material.Filled.AdminPanelSettings, new List<SectionInfo>
+                {
+                    new("index", "Overview", "index.md"),
+                    new("getting-started", "Getting Started", "getting-started.md"),
+                    new("user-management", "User Management", "user-management.md"),
+                    new("workflow-management", "Workflow Management", "workflow-management.md"),
+                    new("settings-and-configuration", "Settings & Configuration", "settings-and-configuration.md"),
+                    new("financial-management", "Financial Management", "financial-management.md"),
+                    new("reporting-and-analytics", "Reporting & Analytics", "reporting-and-analytics.md")
+                })
+            };
+
+            // Filter guides based on user role
+            _guides = FilterGuidesForRole(allGuides);
+        }
+
+        private List<GuideInfo> FilterGuidesForRole(List<GuideInfo> allGuides)
+        {
+            var accessibleGuides = new List<GuideInfo>();
+
+            // HOA users only see the HOA User Guide
+            if (RoleService.IsHOAUser || RoleService.IsHOAAuditor)
             {
-                new("index", "Overview", "index.md"),
-                new("getting-started", "Getting Started", "getting-started.md"),
-                new("dashboard-and-workflow", "Dashboard & Workflow", "dashboard-and-workflow.md"),
-                new("proposals", "Proposals", "proposals.md"),
-                new("data-collection", "Data Collection", "data-collection.md"),
-                new("site-visits", "Site Visits", "site-visits.md"),
-                new("report-generation", "Report Generation", "report-generation.md")
-            }),
-            new("AdminGuide", "Admin Guide", Icons.Material.Filled.AdminPanelSettings, new List<SectionInfo>
+                var hoaGuide = allGuides.FirstOrDefault(g => g.Key == "HOAUserGuide");
+                if (hoaGuide != null)
+                    accessibleGuides.Add(hoaGuide);
+                return accessibleGuides;
+            }
+
+            // TenantOwner (Admin) sees all guides
+            if (RoleService.IsTenantOwner)
             {
-                new("index", "Overview", "index.md"),
-                new("getting-started", "Getting Started", "getting-started.md"),
-                new("user-management", "User Management", "user-management.md"),
-                new("workflow-management", "Workflow Management", "workflow-management.md"),
-                new("settings-and-configuration", "Settings & Configuration", "settings-and-configuration.md"),
-                new("financial-management", "Financial Management", "financial-management.md"),
-                new("reporting-and-analytics", "Reporting & Analytics", "reporting-and-analytics.md")
-            })
-        };
-    }
+                return allGuides;
+            }
+
+            // TenantSpecialist sees Specialist and HOA guides (not Admin)
+            if (RoleService.IsTenantSpecialist)
+            {
+                accessibleGuides.AddRange(allGuides.Where(g => g.Key != "AdminGuide"));
+                return accessibleGuides;
+            }
+
+            // Default: show HOA guide only
+            var defaultGuide = allGuides.FirstOrDefault(g => g.Key == "HOAUserGuide");
+            if (defaultGuide != null)
+                accessibleGuides.Add(defaultGuide);
+            return accessibleGuides;
+        }
 
     private async Task LoadContent()
     {
@@ -245,11 +298,11 @@
                 Section = "index";
             }
 
-            // Build file path
+            // Build file path - check against filtered guides (role-based access)
             var guide = _guides.FirstOrDefault(g => g.Key == GuideType);
             if (guide == null)
             {
-                _errorMessage = $"Guide '{GuideType}' not found.";
+                _errorMessage = "You don't have access to this guide, or it doesn't exist.";
                 _isLoading = false;
                 return;
             }

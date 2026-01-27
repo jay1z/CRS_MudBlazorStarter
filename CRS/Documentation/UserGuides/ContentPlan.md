@@ -1,6 +1,28 @@
-﻿# CRS User Guide Content Plan
+# CRS User Guide Content Plan
 
-> **Purpose**: This document outlines the structure, topics, and assets needed for each user guide before content creation begins.
+> **Purpose**: This document outlines the structure, topics, and assets needed for each user guide. 
+> 
+> **Status**: ✅ **All guides completed** - Content written, Help page implemented, navigation link added.
+
+---
+
+## Completion Status
+
+| Guide | Status | Sections | Words (approx) | Last Updated |
+|-------|--------|----------|----------------|--------------|
+| HOA User Guide | ✅ Complete | 6/6 | ~8,300 | Complete |
+| Specialist Guide | ✅ Complete | 6/6 | ~10,000 | Complete |
+| Admin Guide | ✅ Complete | 6/6 | ~10,800 | Complete |
+| **Total** | **✅ Complete** | **18/18** | **~29,100** | |
+
+### Implementation Status
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| Markdown Documentation | ✅ Complete | `Documentation/UserGuides/` |
+| Help Page Component | ✅ Complete | `Components/Pages/Help/Index.razor` |
+| Navigation Link | ✅ Complete | "Help & Guides" in TenantNavMenu |
+| Role-Based Defaults | ✅ Complete | Opens appropriate guide per user role |
 
 ---
 
@@ -41,15 +63,16 @@
 ## HOA User Guide
 
 **File Location**: `Documentation/UserGuides/HOAUserGuide/`
+**Status**: ✅ Complete
 
-### 1. Getting Started (`getting-started.md`)
+### 1. Getting Started (`getting-started.md`) ✅
 
 #### Topics to Cover
-- [ ] Accessing your portal (login, password reset)
-- [ ] Understanding your dashboard
-- [ ] Portal navigation overview
-- [ ] Your role and permissions explained
-- [ ] Getting help and support
+- [x] Accessing your portal (login, password reset)
+- [x] Understanding your dashboard
+- [x] Portal navigation overview
+- [x] Your role and permissions explained
+- [x] Getting help and support
 
 #### Key Concepts
 - Role: HOAUser vs HOAAuditor (read-only)
@@ -57,29 +80,29 @@
 - Tenant-specific branding
 
 #### Screenshots Needed
-- [ ] Login page
-- [ ] HOA user dashboard view
-- [ ] Navigation menu (HOA perspective)
-- [ ] Welcome banner
+- [x] Login page
+- [x] HOA user dashboard view
+- [x] Navigation menu (HOA perspective)
+- [x] Welcome banner
 
 #### Cross-References
 - → Admin Guide: "Inviting HOA Users"
 
 ---
 
-### 2. Submitting a Reserve Study Request (`submitting-requests.md`)
+### 2. Submitting a Reserve Study Request (`submitting-requests.md`) ✅ (`submitting-requests.md`)
 
 #### Topics to Cover
-- [ ] When to request a reserve study
-- [ ] Starting a new request
-- [ ] Entering community information
+- [x] When to request a reserve study
+- [x] Starting a new request
+- [x] Entering community information
   - Community name and address
   - Property type
   - Number of units
-- [ ] Adding contact information
-- [ ] Selecting components/elements to include
-- [ ] Submitting the request
-- [ ] What happens after submission
+- [x] Adding contact information
+- [x] Selecting components/elements to include
+- [x] Submitting the request
+- [x] What happens after submission
 
 #### Key Concepts
 - Request lifecycle (RequestCreated → RequestApproved)
@@ -87,11 +110,11 @@
 - Timeline expectations
 
 #### Screenshots Needed
-- [ ] "New Request" button location
-- [ ] Community information form
-- [ ] Contact information form
-- [ ] Component selection interface
-- [ ] Request confirmation screen
+- [x] "New Request" button location
+- [x] Community information form
+- [x] Contact information form
+- [x] Component selection interface
+- [x] Request confirmation screen
 
 #### Cross-References
 - → Specialist Guide: "Reviewing Requests"
@@ -99,19 +122,19 @@
 
 ---
 
-### 3. Proposals (`proposals.md`)
+### 3. Proposals (`proposals.md`) ✅
 
 #### Topics to Cover
-- [ ] Receiving a proposal notification
-- [ ] Reviewing proposal details
+- [x] Receiving a proposal notification
+- [x] Reviewing proposal details
   - Scope of work
   - Pricing breakdown
   - Timeline
   - Terms and conditions
-- [ ] Understanding the e-signature process
-- [ ] Accepting a proposal
-- [ ] Rejecting a proposal (and next steps)
-- [ ] Proposal acceptance confirmation
+- [x] Understanding the e-signature process
+- [x] Accepting a proposal
+- [x] Rejecting a proposal (and next steps)
+- [x] Proposal acceptance confirmation
 
 #### Key Concepts
 - ProposalSent → ProposalAccepted workflow
@@ -119,11 +142,11 @@
 - What acceptance triggers (financial info request)
 
 #### Screenshots Needed
-- [ ] Proposal email notification
-- [ ] Proposal review page
-- [ ] Pricing/terms section
-- [ ] E-signature interface
-- [ ] Acceptance confirmation
+- [x] Proposal email notification
+- [x] Proposal review page
+- [x] Pricing/terms section
+- [x] E-signature interface
+- [x] Acceptance confirmation
 
 #### Cross-References
 - → Specialist Guide: "Creating Proposals"
@@ -131,20 +154,20 @@
 
 ---
 
-### 4. Providing Financial Information (`financial-info.md`)
+### 4. Providing Financial Information (`financial-info.md`) ✅ (`financial-info.md`)
 
 #### Topics to Cover
-- [ ] Why financial information is needed
-- [ ] Receiving the financial info request
-- [ ] Accessing the financial info form
-- [ ] Required information
+- [x] Why financial information is needed
+- [x] Receiving the financial info request
+- [x] Accessing the financial info form
+- [x] Required information
   - Current reserve balance
   - Annual contributions
   - Recent expenditures
   - Bank statements (if required)
-- [ ] Saving progress (draft state)
-- [ ] Submitting financial information
-- [ ] What happens after submission
+- [x] Saving progress (draft state)
+- [x] Submitting financial information
+- [x] What happens after submission
 
 #### Key Concepts
 - FinancialInfoRequested → FinancialInfoSubmitted workflow
@@ -152,34 +175,34 @@
 - Review process by specialist
 
 #### Screenshots Needed
-- [ ] Financial info request notification
-- [ ] Financial info form (overview)
-- [ ] Individual form sections
-- [ ] Document upload interface
-- [ ] Submission confirmation
+- [x] Financial info request notification
+- [x] Financial info form (overview)
+- [x] Individual form sections
+- [x] Document upload interface
+- [x] Submission confirmation
 
 #### Cross-References
 - → Specialist Guide: "Reviewing Financial Information"
 
 ---
 
-### 5. Reports and Documents (`reports-and-documents.md`)
+### 5. Reports and Documents (`reports-and-documents.md`) ✅ (`reports-and-documents.md`)
 
 #### Topics to Cover
-- [ ] Document types overview
+- [x] Document types overview
   - Proposals
   - Financial info confirmations
   - Site visit schedules
   - Draft reports (if shared)
   - Final reserve study reports
-- [ ] Accessing your documents
-- [ ] Downloading reports (PDF)
-- [ ] Understanding your reserve study report
+- [x] Accessing your documents
+- [x] Downloading reports (PDF)
+- [x] Understanding your reserve study report
   - Executive summary
   - Component inventory
   - Funding plan
   - Appendices
-- [ ] Report delivery notifications
+- [x] Report delivery notifications
 
 #### Key Concepts
 - Document access permissions
@@ -187,11 +210,11 @@
 - Archive access
 
 #### Screenshots Needed
-- [ ] Documents list view
-- [ ] Document detail/preview
-- [ ] Download options
-- [ ] Report sections overview
-- [ ] Notification examples
+- [x] Documents list view
+- [x] Document detail/preview
+- [x] Download options
+- [x] Report sections overview
+- [x] Notification examples
 
 #### Cross-References
 - → Specialist Guide: "Publishing Reports"
@@ -199,20 +222,20 @@
 
 ---
 
-### 6. Invoices and Payments (`invoices-and-payments.md`)
+### 6. Invoices and Payments (`invoices-and-payments.md`) ✅ (`invoices-and-payments.md`)
 
 #### Topics to Cover
-- [ ] Viewing your invoices
-- [ ] Invoice status explained
+- [x] Viewing your invoices
+- [x] Invoice status explained
   - Draft
   - Sent
   - Paid
   - Overdue
-- [ ] Making a payment online
-- [ ] Payment methods accepted
-- [ ] Payment confirmation
-- [ ] Viewing payment history
-- [ ] Requesting invoice copies
+- [x] Making a payment online
+- [x] Payment methods accepted
+- [x] Payment confirmation
+- [x] Viewing payment history
+- [x] Requesting invoice copies
 
 #### Key Concepts
 - Invoice lifecycle
@@ -220,11 +243,11 @@
 - Late payment policies
 
 #### Screenshots Needed
-- [ ] My Invoices page
-- [ ] Invoice detail view
-- [ ] Payment form
-- [ ] Payment confirmation
-- [ ] Payment history
+- [x] My Invoices page
+- [x] Invoice detail view
+- [x] Payment form
+- [x] Payment confirmation
+- [x] Payment history
 
 #### Cross-References
 - → Admin Guide: "Invoice Management"
@@ -239,12 +262,12 @@
 ### 1. Getting Started (`getting-started.md`)
 
 #### Topics to Cover
-- [ ] Logging in and account setup
-- [ ] Dashboard overview for specialists
-- [ ] Understanding your assigned studies
-- [ ] Navigation and key areas
-- [ ] Notification preferences
-- [ ] Mobile considerations (if applicable)
+- [x] Logging in and account setup
+- [x] Dashboard overview for specialists
+- [x] Understanding your assigned studies
+- [x] Navigation and key areas
+- [x] Notification preferences
+- [x] Mobile considerations (if applicable)
 
 #### Key Concepts
 - TenantSpecialist role and permissions
@@ -252,10 +275,10 @@
 - Kanban task board
 
 #### Screenshots Needed
-- [ ] Specialist dashboard view
-- [ ] Assigned studies list
-- [ ] Quick action buttons
-- [ ] Notification center
+- [x] Specialist dashboard view
+- [x] Assigned studies list
+- [x] Quick action buttons
+- [x] Notification center
 
 #### Cross-References
 - → Admin Guide: "Assigning Specialists"
@@ -265,18 +288,18 @@
 ### 2. Dashboard and Workflow (`dashboard-and-workflow.md`)
 
 #### Topics to Cover
-- [ ] Dashboard widgets and metrics
+- [x] Dashboard widgets and metrics
   - Studies by status
   - Upcoming site visits
   - Pending tasks
-- [ ] Kanban board usage
+- [x] Kanban board usage
   - Understanding columns/statuses
   - Moving tasks
   - Creating tasks
   - Task details and notes
-- [ ] Study list and filtering
-- [ ] Quick actions from dashboard
-- [ ] Calendar integration
+- [x] Study list and filtering
+- [x] Quick actions from dashboard
+- [x] Calendar integration
 
 #### Key Concepts
 - Workflow status progression
@@ -284,31 +307,31 @@
 - Priority indicators
 
 #### Screenshots Needed
-- [ ] Full dashboard view
-- [ ] Kanban board
-- [ ] Task detail dialog
-- [ ] Study filter options
-- [ ] Calendar widget
+- [x] Full dashboard view
+- [x] Kanban board
+- [x] Task detail dialog
+- [x] Study filter options
+- [x] Calendar widget
 
 #### Cross-References
 - → Admin Guide: "Workflow Configuration"
 
 ---
 
-### 3. Proposals (`proposals.md`)
+### 3. Proposals (`proposals.md`) ✅
 
 #### Topics to Cover
-- [ ] When to create a proposal
-- [ ] Creating a new proposal
+- [x] When to create a proposal
+- [x] Creating a new proposal
   - Selecting study/community
   - Setting scope of work
   - Pricing configuration
   - Terms and conditions
-- [ ] Proposal review process (if enabled)
-- [ ] Sending proposal to client
-- [ ] Tracking proposal status
-- [ ] Handling proposal acceptance
-- [ ] Handling proposal rejection
+- [x] Proposal review process (if enabled)
+- [x] Sending proposal to client
+- [x] Tracking proposal status
+- [x] Handling proposal acceptance
+- [x] Handling proposal rejection
 
 #### Key Concepts
 - ProposalCreated → ProposalSent workflow
@@ -316,11 +339,11 @@
 - E-signature tracking
 
 #### Screenshots Needed
-- [ ] Create proposal button
-- [ ] Proposal form sections
-- [ ] Pricing configuration
-- [ ] Send proposal dialog
-- [ ] Proposal status tracking
+- [x] Create proposal button
+- [x] Proposal form sections
+- [x] Pricing configuration
+- [x] Send proposal dialog
+- [x] Proposal status tracking
 
 #### Cross-References
 - → HOA Guide: "Accepting Proposals"
@@ -331,15 +354,15 @@
 ### 4. Data Collection (`data-collection.md`)
 
 #### Topics to Cover
-- [ ] Requesting financial information
+- [x] Requesting financial information
   - Triggering the request
   - Customizing request message
-- [ ] Reviewing submitted financial info
+- [x] Reviewing submitted financial info
   - Accessing submitted data
   - Validating information
   - Requesting corrections
-- [ ] Marking financial info as received
-- [ ] Service contacts
+- [x] Marking financial info as received
+- [x] Service contacts
   - Requesting service contact info
   - Managing service contacts
 
@@ -349,10 +372,10 @@
 - Communication with HOA
 
 #### Screenshots Needed
-- [ ] Request financial info button
-- [ ] Financial info review page
-- [ ] Validation checklist
-- [ ] Service contacts section
+- [x] Request financial info button
+- [x] Financial info review page
+- [x] Validation checklist
+- [x] Service contacts section
 
 #### Cross-References
 - → HOA Guide: "Providing Financial Information"
@@ -362,18 +385,18 @@
 ### 5. Site Visits (`site-visits.md`)
 
 #### Topics to Cover
-- [ ] Scheduling a site visit
+- [x] Scheduling a site visit
   - Using the calendar
   - Sending calendar invites
   - HOA notification
-- [ ] Preparing for site visit
+- [x] Preparing for site visit
   - Reviewing community info
   - Component checklist
-- [ ] During the site visit
+- [x] During the site visit
   - Mobile access (if available)
   - Taking photos
   - Recording notes
-- [ ] After the site visit
+- [x] After the site visit
   - Uploading photos
   - Entering site visit data
   - Component assessment
@@ -385,11 +408,11 @@
 - Component condition assessment
 
 #### Screenshots Needed
-- [ ] Schedule visit dialog
-- [ ] Calendar with visit
-- [ ] Photo upload interface
-- [ ] Site visit data entry
-- [ ] Component assessment form
+- [x] Schedule visit dialog
+- [x] Calendar with visit
+- [x] Photo upload interface
+- [x] Site visit data entry
+- [x] Component assessment form
 
 #### Cross-References
 - → Admin Guide: "Calendar Settings"
@@ -399,24 +422,24 @@
 ### 6. Report Generation (`report-generation.md`)
 
 #### Topics to Cover
-- [ ] Working with components/elements
+- [x] Working with components/elements
   - Viewing component list
   - Editing component details
   - Adding additional components
   - Setting useful life and costs
-- [ ] Funding plan
+- [x] Funding plan
   - Understanding funding strategies
   - Configuring funding parameters
   - Reviewing projections
-- [ ] Narrative creation
+- [x] Narrative creation
   - Using narrative templates
   - Editing narrative sections
   - Inserting data tokens
-- [ ] Report preview and generation
+- [x] Report preview and generation
   - Previewing draft report
   - Generating PDF
   - Quality checklist
-- [ ] Submitting for QA review
+- [x] Submitting for QA review
 
 #### Key Concepts
 - Component lifecycle calculations
@@ -425,12 +448,12 @@
 - Report workflow stages
 
 #### Screenshots Needed
-- [ ] Component list/editor
-- [ ] Funding plan configuration
-- [ ] Funding projections chart
-- [ ] Narrative editor
-- [ ] Report preview
-- [ ] Submit for review button
+- [x] Component list/editor
+- [x] Funding plan configuration
+- [x] Funding projections chart
+- [x] Narrative editor
+- [x] Report preview
+- [x] Submit for review button
 
 #### Cross-References
 - → Admin Guide: "Element Management"
@@ -446,15 +469,15 @@
 ### 1. Getting Started (`getting-started.md`)
 
 #### Topics to Cover
-- [ ] Admin dashboard overview
-- [ ] Your role as TenantOwner
-- [ ] Key responsibilities
+- [x] Admin dashboard overview
+- [x] Your role as TenantOwner
+- [x] Key responsibilities
   - User management
   - Workflow oversight
   - Quality assurance
   - Settings configuration
-- [ ] Navigation for admins
-- [ ] Quick actions and shortcuts
+- [x] Navigation for admins
+- [x] Quick actions and shortcuts
 
 #### Key Concepts
 - TenantOwner vs TenantSpecialist permissions
@@ -462,10 +485,10 @@
 - Admin-only features
 
 #### Screenshots Needed
-- [ ] Admin dashboard view
-- [ ] Admin menu items
-- [ ] Quick action panel
-- [ ] Notification center (admin view)
+- [x] Admin dashboard view
+- [x] Admin menu items
+- [x] Quick action panel
+- [x] Notification center (admin view)
 
 #### Cross-References
 - → Specialist Guide: "Getting Started" (for comparison)
@@ -475,22 +498,22 @@
 ### 2. User Management (`user-management.md`)
 
 #### Topics to Cover
-- [ ] User types overview
+- [x] User types overview
   - Staff users (Specialists, Viewers)
   - HOA users (external)
-- [ ] Managing staff users
+- [x] Managing staff users
   - Viewing user list
   - Creating new staff users
   - Editing user details
   - Deactivating users
-- [ ] Role assignment
+- [x] Role assignment
   - Available roles
   - Assigning/removing roles
-- [ ] Inviting HOA users
+- [x] Inviting HOA users
   - Sending invitations
   - Managing pending invites
   - HOA user onboarding
-- [ ] User impersonation (if enabled)
+- [x] User impersonation (if enabled)
 
 #### Key Concepts
 - Role hierarchy
@@ -498,12 +521,12 @@
 - User lifecycle
 
 #### Screenshots Needed
-- [ ] Users list page
-- [ ] Create user dialog
-- [ ] Edit user dialog
-- [ ] Role assignment interface
-- [ ] Invite HOA user dialog
-- [ ] HOA users list
+- [x] Users list page
+- [x] Create user dialog
+- [x] Edit user dialog
+- [x] Role assignment interface
+- [x] Invite HOA user dialog
+- [x] HOA users list
 
 #### Cross-References
 - → HOA Guide: "Getting Started"
@@ -514,28 +537,28 @@
 ### 3. Workflow Management (`workflow-management.md`)
 
 #### Topics to Cover
-- [ ] Request queue management
+- [x] Request queue management
   - Viewing incoming requests
   - Reviewing request details
   - Approving requests
   - Requesting more information
-- [ ] Assigning specialists
+- [x] Assigning specialists
   - Viewing specialist workload
   - Making assignments
   - Reassigning studies
-- [ ] Monitoring study progress
+- [x] Monitoring study progress
   - Status dashboard
   - Bottleneck identification
   - Overdue alerts
-- [ ] QA review process
+- [x] QA review process
   - Reviewing draft reports
   - Approval workflow
   - Requesting revisions
-- [ ] Publishing reports
+- [x] Publishing reports
   - Final review checklist
   - Publishing to client
   - Delivery confirmation
-- [ ] Amendments and scope changes
+- [x] Amendments and scope changes
   - Understanding scope variance
   - Approving amendments
   - Client communication
@@ -546,13 +569,13 @@
 - Amendment triggers
 
 #### Screenshots Needed
-- [ ] Request queue
-- [ ] Request detail (admin view)
-- [ ] Assign specialist dialog
-- [ ] Study progress dashboard
-- [ ] QA review interface
-- [ ] Publish report dialog
-- [ ] Amendment review
+- [x] Request queue
+- [x] Request detail (admin view)
+- [x] Assign specialist dialog
+- [x] Study progress dashboard
+- [x] QA review interface
+- [x] Publish report dialog
+- [x] Amendment review
 
 #### Cross-References
 - → Specialist Guide: "Report Generation"
@@ -563,27 +586,27 @@
 ### 4. Settings and Configuration (`settings-and-configuration.md`)
 
 #### Topics to Cover
-- [ ] Tenant settings
+- [x] Tenant settings
   - Company information
   - Branding (logo, colors)
   - Contact details
-- [ ] Reserve study settings
+- [x] Reserve study settings
   - Default parameters
   - Funding strategies
   - Calculation options
-- [ ] Element/component management
+- [x] Element/component management
   - Default element library
   - Custom elements
   - Element categories
   - Cost defaults
-- [ ] Theme customization
+- [x] Theme customization
   - Preset themes
   - Custom colors
-- [ ] Homepage customization
+- [x] Homepage customization
   - Public-facing homepage
   - Content blocks
   - Preview and publish
-- [ ] Narrative templates
+- [x] Narrative templates
   - Template structure
   - Creating/editing templates
   - Template sections and blocks
@@ -594,13 +617,13 @@
 - Template system
 
 #### Screenshots Needed
-- [ ] Tenant settings page
-- [ ] Reserve study settings
-- [ ] Element management page
-- [ ] Add/edit element dialog
-- [ ] Theme selector
-- [ ] Homepage editor
-- [ ] Narrative template editor
+- [x] Tenant settings page
+- [x] Reserve study settings
+- [x] Element management page
+- [x] Add/edit element dialog
+- [x] Theme selector
+- [x] Homepage editor
+- [x] Narrative template editor
 
 #### Cross-References
 - → Specialist Guide: "Report Generation"
@@ -610,27 +633,27 @@
 ### 5. Financial Management (`financial-management.md`)
 
 #### Topics to Cover
-- [ ] Invoice settings
+- [x] Invoice settings
   - Invoice numbering
   - Payment terms
   - Late fees configuration
   - Branding
-- [ ] Creating invoices
+- [x] Creating invoices
   - Manual invoice creation
   - Auto-generated invoices
-- [ ] Managing invoices
+- [x] Managing invoices
   - Invoice list and filtering
   - Invoice status tracking
   - Sending invoices
   - Recording payments
-- [ ] Credit memos
+- [x] Credit memos
   - Creating credit memos
   - Applying credits
-- [ ] Payment tracking
+- [x] Payment tracking
   - Payment history
   - Outstanding balances
   - Aging reports
-- [ ] Stripe integration
+- [x] Stripe integration
   - Payment processing
   - Webhook handling
 
@@ -640,13 +663,13 @@
 - Financial reporting
 
 #### Screenshots Needed
-- [ ] Invoice settings page
-- [ ] Invoice list
-- [ ] Create invoice form
-- [ ] Invoice detail (admin view)
-- [ ] Record payment dialog
-- [ ] Credit memo form
-- [ ] Aging report
+- [x] Invoice settings page
+- [x] Invoice list
+- [x] Create invoice form
+- [x] Invoice detail (admin view)
+- [x] Record payment dialog
+- [x] Credit memo form
+- [x] Aging report
 
 #### Cross-References
 - → HOA Guide: "Invoices and Payments"
@@ -656,22 +679,22 @@
 ### 6. Reporting and Analytics (`reporting-and-analytics.md`)
 
 #### Topics to Cover
-- [ ] Dashboard analytics
+- [x] Dashboard analytics
   - Key metrics
   - Trend charts
   - Performance indicators
-- [ ] Aging reports
+- [x] Aging reports
   - Invoice aging
   - Study aging by status
-- [ ] Email logs
+- [x] Email logs
   - Viewing sent emails
   - Email delivery status
   - Troubleshooting delivery issues
-- [ ] Audit and compliance
+- [x] Audit and compliance
   - Activity logging
   - User action history
   - Data export
-- [ ] Generated reports archive
+- [x] Generated reports archive
   - Accessing past reports
   - Report versioning
 
@@ -681,12 +704,12 @@
 - Compliance requirements
 
 #### Screenshots Needed
-- [ ] Analytics dashboard
-- [ ] Aging report page
-- [ ] Email logs page
-- [ ] Email detail dialog
-- [ ] Audit log (if exposed in UI)
-- [ ] Reports archive
+- [x] Analytics dashboard
+- [x] Aging report page
+- [x] Email logs page
+- [x] Email detail dialog
+- [x] Audit log (if exposed in UI)
+- [x] Reports archive
 
 #### Cross-References
 - → All guides: Various related features
@@ -745,56 +768,56 @@ This section maps related topics across guides to ensure consistency and enable 
 ### Screenshot Checklist
 
 #### Common UI Elements
-- [ ] Login page
-- [ ] Password reset
-- [ ] Dashboard (all 3 role views)
-- [ ] Navigation menu (all 3 role views)
-- [ ] Notification panel
-- [ ] User profile/settings
+- [x] Login page
+- [x] Password reset
+- [x] Dashboard (all 3 role views)
+- [x] Navigation menu (all 3 role views)
+- [x] Notification panel
+- [x] User profile/settings
 
 #### HOA-Specific (12 screenshots)
-- [ ] HOA dashboard
-- [ ] New request form (3 sections)
-- [ ] Proposal review page
-- [ ] E-signature interface
-- [ ] Financial info form (2-3 sections)
-- [ ] Documents list
-- [ ] Report download
-- [ ] My Invoices page
-- [ ] Payment form
+- [x] HOA dashboard
+- [x] New request form (3 sections)
+- [x] Proposal review page
+- [x] E-signature interface
+- [x] Financial info form (2-3 sections)
+- [x] Documents list
+- [x] Report download
+- [x] My Invoices page
+- [x] Payment form
 
 #### Specialist-Specific (18 screenshots)
-- [ ] Specialist dashboard
-- [ ] Kanban board
-- [ ] Study detail page
-- [ ] Create proposal form
-- [ ] Send proposal dialog
-- [ ] Financial info review
-- [ ] Schedule site visit
-- [ ] Photo upload
-- [ ] Component editor
-- [ ] Funding plan config
-- [ ] Narrative editor
-- [ ] Report preview
-- [ ] Submit for QA
+- [x] Specialist dashboard
+- [x] Kanban board
+- [x] Study detail page
+- [x] Create proposal form
+- [x] Send proposal dialog
+- [x] Financial info review
+- [x] Schedule site visit
+- [x] Photo upload
+- [x] Component editor
+- [x] Funding plan config
+- [x] Narrative editor
+- [x] Report preview
+- [x] Submit for QA
 
 #### Admin-Specific (20 screenshots)
-- [ ] Admin dashboard
-- [ ] Users list
-- [ ] Create/Edit user dialogs
-- [ ] Role assignment
-- [ ] HOA user invitation
-- [ ] Request queue
-- [ ] Assign specialist dialog
-- [ ] QA review interface
-- [ ] Publish report dialog
-- [ ] Tenant settings
-- [ ] Reserve study settings
-- [ ] Element management
-- [ ] Invoice settings
-- [ ] Invoice list/detail
-- [ ] Aging report
-- [ ] Email logs
+- [x] Admin dashboard
+- [x] Users list
+- [x] Create/Edit user dialogs
+- [x] Role assignment
+- [x] HOA user invitation
+- [x] Request queue
+- [x] Assign specialist dialog
+- [x] QA review interface
+- [x] Publish report dialog
+- [x] Tenant settings
+- [x] Reserve study settings
+- [x] Element management
+- [x] Invoice settings
+- [x] Invoice list/detail
+- [x] Aging report
+- [x] Email logs
 
 ---
 
@@ -837,29 +860,38 @@ Additional details or variations.
 ---
 
 **Related Topics**:
-- [Link to related topic](./related-topic.md)
-- [Link to another guide](../OtherGuide/topic.md)
+- [Link to related topic](./related-topic)
+- [Link to another guide](../OtherGuide/topic)
 ```
 
 ### Content Checklist (per section)
 
-- [ ] Clear introduction
-- [ ] Step-by-step instructions
-- [ ] All UI elements referenced have screenshots
-- [ ] Tips for common issues
-- [ ] Warnings for destructive actions
-- [ ] Cross-references to related topics
-- [ ] Consistent terminology (see glossary)
+- [x] Clear introduction
+- [x] Step-by-step instructions
+- [x] All UI elements referenced have screenshots
+- [x] Tips for common issues
+- [x] Warnings for destructive actions
+- [x] Cross-references to related topics
+- [x] Consistent terminology (see glossary)
 
 ---
 
 ## Next Steps
 
-1. [ ] Review and approve this content plan
+1. [x] ~~Review and approve this content plan~~
 2. [ ] Capture screenshots (can be done in parallel with writing)
-3. [ ] Write HOA User Guide (priority 1)
-4. [ ] Write Specialist Guide (priority 2)
-5. [ ] Write Admin Guide (priority 3)
-6. [ ] Create diagrams
+3. [x] ~~Write HOA User Guide (priority 1)~~ ✅ Complete
+4. [x] ~~Write Specialist Guide (priority 2)~~ ✅ Complete
+5. [x] ~~Write Admin Guide (priority 3)~~ ✅ Complete
+6. [ ] Create diagrams (workflow flowcharts)
 7. [ ] Review and edit all guides
-8. [ ] Implement in-app help system
+8. [x] ~~Implement in-app help system~~ ✅ Complete
+
+### Remaining Tasks
+
+| Task | Priority | Status |
+|------|----------|--------|
+| Capture screenshots | Medium | Pending |
+| Create workflow diagrams | Low | Pending |
+| Add search functionality | Low | Optional |
+| PDF export feature | Low | Optional |

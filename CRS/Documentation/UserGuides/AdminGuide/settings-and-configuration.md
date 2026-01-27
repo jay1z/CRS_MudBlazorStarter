@@ -1,4 +1,4 @@
-﻿# Settings and Configuration
+# Settings and Configuration
 
 Configure your organization's settings to customize how the system works for your business. This guide covers tenant settings, reserve study defaults, element management, themes, and templates.
 
@@ -446,8 +446,8 @@ A: Hard refresh the page (Ctrl+F5). Clear browser cache.
 
 Configure your financial settings:
 
-- **[Financial Management →](./financial-management.md)** - Invoicing and payments
+- **[Financial Management →](/Help/AdminGuide/financial-management)** - Invoicing and payments
 
 ---
 
-[← Workflow Management](./workflow-management.md) | [Financial Management →](./financial-management.md)
+[← Workflow Management](/Help/AdminGuide/workflow-management) | [Financial Management →](/Help/AdminGuide/financial-management)

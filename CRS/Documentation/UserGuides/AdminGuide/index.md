@@ -1,4 +1,4 @@
-﻿# Admin Guide
+# Admin Guide
 
 Welcome to the Admin Guide! As a TenantOwner (Admin), you have full control over your organization's reserve study operations, user management, and system configuration.
 
@@ -22,22 +22,22 @@ As an **Admin (TenantOwner)**, you are responsible for:
 
 ## Guide Contents
 
-### [1. Getting Started](./getting-started.md)
+### [1. Getting Started](/Help/AdminGuide/getting-started)
 Admin dashboard overview, your responsibilities, and navigation.
 
-### [2. User Management](./user-management.md)
+### [2. User Management](/Help/AdminGuide/user-management)
 Managing staff users, HOA clients, and role assignments.
 
-### [3. Workflow Management](./workflow-management.md)
+### [3. Workflow Management](/Help/AdminGuide/workflow-management)
 Request approvals, specialist assignments, QA reviews, and publishing.
 
-### [4. Settings and Configuration](./settings-and-configuration.md)
+### [4. Settings and Configuration](/Help/AdminGuide/settings-and-configuration)
 Tenant settings, reserve study defaults, elements, themes, and templates.
 
-### [5. Financial Management](./financial-management.md)
+### [5. Financial Management](/Help/AdminGuide/financial-management)
 Invoice settings, creating invoices, payments, credit memos, and aging.
 
-### [6. Reporting and Analytics](./reporting-and-analytics.md)
+### [6. Reporting and Analytics](/Help/AdminGuide/reporting-and-analytics)
 Dashboard analytics, aging reports, email logs, and audit compliance.
 
 ---
@@ -103,4 +103,4 @@ Request Submitted → You Review & Approve
 
 ---
 
-**Get Started**: [Getting Started →](./getting-started.md)
+**Get Started**: [Getting Started →](/Help/AdminGuide/getting-started)

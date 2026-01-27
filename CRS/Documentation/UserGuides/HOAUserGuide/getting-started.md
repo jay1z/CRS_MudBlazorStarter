@@ -1,4 +1,4 @@
-﻿# Getting Started
+# Getting Started
 
 Welcome to your reserve study portal! This guide will help you access your account, understand your dashboard, and navigate the system.
 
@@ -180,10 +180,10 @@ A: Contact your reserve study company to request a new study for an additional c
 
 Now that you understand the basics, learn how to:
 
-- **[Submit a Reserve Study Request →](./submitting-requests.md)** - Start a new study
-- **[Review Proposals →](./proposals.md)** - Accept service agreements
-- **[Provide Financial Information →](./financial-info.md)** - Submit required data
+- **[Submit a Reserve Study Request →](/Help/HOAUserGuide/submitting-requests)** - Start a new study
+- **[Review Proposals →](/Help/HOAUserGuide/proposals)** - Accept service agreements
+- **[Provide Financial Information →](/Help/HOAUserGuide/financial-info)** - Submit required data
 
 ---
 
-[← Back to HOA User Guide](./index.md) | [Submit a Request →](./submitting-requests.md)
+[← Back to HOA User Guide](/Help/HOAUserGuide/index) | [Submit a Request →](/Help/HOAUserGuide/submitting-requests)

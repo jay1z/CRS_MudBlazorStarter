@@ -1,4 +1,4 @@
-﻿# Proposals
+# Proposals
 
 When your reserve study request is approved, you'll receive a proposal outlining the scope of work, pricing, and terms. This guide explains how to review and accept proposals.
 
@@ -256,8 +256,8 @@ A: The accepted price is locked in unless there's a scope change requiring an am
 
 After accepting your proposal:
 
-- **[Provide Financial Information →](./financial-info.md)** - Submit required financial data
+- **[Provide Financial Information →](/Help/HOAUserGuide/financial-info)** - Submit required financial data
 
 ---
 
-[← Submitting Requests](./submitting-requests.md) | [Financial Information →](./financial-info.md)
+[← Submitting Requests](/Help/HOAUserGuide/submitting-requests) | [Financial Information →](/Help/HOAUserGuide/financial-info)

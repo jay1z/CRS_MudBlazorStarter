@@ -1,4 +1,4 @@
-﻿# Invoices and Payments
+# Invoices and Payments
 
 This guide explains how to view your invoices and make payments through the portal.
 
@@ -414,4 +414,4 @@ For billing questions:
 
 ---
 
-[← Reports and Documents](./reports-and-documents.md) | [Back to HOA User Guide](./index.md)
+[← Reports and Documents](/Help/HOAUserGuide/reports-and-documents) | [Back to HOA User Guide](/Help/HOAUserGuide/index)

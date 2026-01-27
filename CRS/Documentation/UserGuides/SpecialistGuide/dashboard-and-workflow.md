@@ -1,4 +1,4 @@
-﻿# Dashboard and Workflow
+# Dashboard and Workflow
 
 The dashboard is your command center for managing reserve studies. This guide covers the metrics, Kanban board, and workflow management tools.
 
@@ -348,9 +348,9 @@ A: You may not have studies in those stages. Check the List view for all studies
 
 Master these workflow tools, then learn:
 
-- **[Creating Proposals →](./proposals.md)** - Draft and send service agreements
-- **[Site Visits →](./site-visits.md)** - Conduct effective inspections
+- **[Creating Proposals →](/Help/SpecialistGuide/proposals)** - Draft and send service agreements
+- **[Site Visits →](/Help/SpecialistGuide/site-visits)** - Conduct effective inspections
 
 ---
 
-[← Getting Started](./getting-started.md) | [Proposals →](./proposals.md)
+[← Getting Started](/Help/SpecialistGuide/getting-started) | [Proposals →](/Help/SpecialistGuide/proposals)

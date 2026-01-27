@@ -1,4 +1,4 @@
-﻿# Workflow Management
+# Workflow Management
 
 As an admin, you oversee the entire reserve study workflow—from approving requests to publishing final reports. This guide covers your key workflow responsibilities.
 
@@ -432,8 +432,8 @@ A: Verify client has active account. Check email delivery. Resend access link.
 
 With workflow understood, configure your settings:
 
-- **[Settings and Configuration →](./settings-and-configuration.md)** - Customize your organization
+- **[Settings and Configuration →](/Help/AdminGuide/settings-and-configuration)** - Customize your organization
 
 ---
 
-[← User Management](./user-management.md) | [Settings →](./settings-and-configuration.md)
+[← User Management](/Help/AdminGuide/user-management) | [Settings →](/Help/AdminGuide/settings-and-configuration)

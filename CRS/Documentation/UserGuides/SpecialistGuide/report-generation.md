@@ -1,4 +1,4 @@
-﻿# Report Generation
+# Report Generation
 
 This is where everything comes together—creating the comprehensive reserve study report. This guide covers component editing, funding plans, narrative creation, and submitting for QA review.
 
@@ -465,9 +465,9 @@ Report generation workflow:
 
 Congratulations! You've completed the specialist workflow.
 
-- Return to **[Dashboard](./dashboard-and-workflow.md)** for your next assignment
-- Reference the **[Admin Guide](../AdminGuide/index.md)** if you're also an admin
+- Return to **[Dashboard](/Help/SpecialistGuide/dashboard-and-workflow)** for your next assignment
+- Reference the **[Admin Guide](/Help/AdminGuide/index)** if you're also an admin
 
 ---
 
-[← Site Visits](./site-visits.md) | [Back to Specialist Guide](./index.md)
+[← Site Visits](/Help/SpecialistGuide/site-visits) | [Back to Specialist Guide](/Help/SpecialistGuide/index)

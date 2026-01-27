@@ -1,4 +1,4 @@
-﻿# HOA User Guide
+# HOA User Guide
 
 Welcome to your portal! This guide will help you navigate the reserve study process from start to finish.
 
@@ -16,22 +16,22 @@ A reserve study is a financial planning document that helps your community prepa
 
 ## Guide Contents
 
-### [1. Getting Started](./getting-started.md)
+### [1. Getting Started](/Help/HOAUserGuide/getting-started)
 Learn how to access your portal, understand your dashboard, and navigate the system.
 
-### [2. Submitting a Reserve Study Request](./submitting-requests.md)
+### [2. Submitting a Reserve Study Request](/Help/HOAUserGuide/submitting-requests)
 Step-by-step instructions for requesting a new reserve study for your community.
 
-### [3. Proposals](./proposals.md)
+### [3. Proposals](/Help/HOAUserGuide/proposals)
 How to review, understand, and accept (or decline) a reserve study proposal.
 
-### [4. Providing Financial Information](./financial-info.md)
+### [4. Providing Financial Information](/Help/HOAUserGuide/financial-info)
 Guide to submitting the financial data needed for your reserve study.
 
-### [5. Reports and Documents](./reports-and-documents.md)
+### [5. Reports and Documents](/Help/HOAUserGuide/reports-and-documents)
 Accessing, downloading, and understanding your reserve study reports.
 
-### [6. Invoices and Payments](./invoices-and-payments.md)
+### [6. Invoices and Payments](/Help/HOAUserGuide/invoices-and-payments)
 Managing invoices and making payments through the portal.
 
 ---
@@ -61,4 +61,4 @@ As an **HOA User**, you can:
 
 ---
 
-**Next**: [Getting Started →](./getting-started.md)
+**Next**: [Getting Started →](/Help/HOAUserGuide/getting-started)
