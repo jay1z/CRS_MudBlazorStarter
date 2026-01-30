@@ -84,23 +84,11 @@ public class ReportGenerationService : IReportGenerationService
             .Include(s => s.ReserveStudyBuildingElements!)
                 .ThenInclude(e => e.BuildingElement)
             .Include(s => s.ReserveStudyBuildingElements!)
-                .ThenInclude(e => e.UsefulLifeOption)
-            .Include(s => s.ReserveStudyBuildingElements!)
-                .ThenInclude(e => e.RemainingLifeOption)
-            .Include(s => s.ReserveStudyBuildingElements!)
                 .ThenInclude(e => e.ServiceContact)
             .Include(s => s.ReserveStudyCommonElements!)
                 .ThenInclude(e => e.CommonElement)
             .Include(s => s.ReserveStudyCommonElements!)
-                .ThenInclude(e => e.UsefulLifeOption)
-            .Include(s => s.ReserveStudyCommonElements!)
-                .ThenInclude(e => e.RemainingLifeOption)
-            .Include(s => s.ReserveStudyCommonElements!)
                 .ThenInclude(e => e.ServiceContact)
-            .Include(s => s.ReserveStudyAdditionalElements!)
-                .ThenInclude(e => e.UsefulLifeOption)
-            .Include(s => s.ReserveStudyAdditionalElements!)
-                .ThenInclude(e => e.RemainingLifeOption)
             .Include(s => s.ReserveStudyAdditionalElements!)
                 .ThenInclude(e => e.ServiceContact)
             .AsSplitQuery()
@@ -165,8 +153,10 @@ public class ReportGenerationService : IReportGenerationService
             foreach (var element in study.ReserveStudyBuildingElements)
             {
                 var name = element.BuildingElement?.Name ?? "Unknown Building Element";
-                var hasUsefulLife = element.UsefulLifeOption != null;
-                var hasRemainingLife = element.RemainingLifeOption != null || element.LastServiced.HasValue;
+                var hasUsefulLife = element.MinUsefulLifeOptionId.HasValue || 
+                                    element.MaxUsefulLifeOptionId.HasValue;
+                var hasRemainingLife = element.RemainingLifeYears.HasValue || 
+                                       element.LastServiced.HasValue;
                 allElements.Add((name, "Building", hasUsefulLife, hasRemainingLife));
             }
         }
@@ -177,8 +167,10 @@ public class ReportGenerationService : IReportGenerationService
             foreach (var element in study.ReserveStudyCommonElements)
             {
                 var name = element.ElementName ?? element.CommonElement?.Name ?? "Unknown Common Element";
-                var hasUsefulLife = element.UsefulLife.HasValue || element.UsefulLifeOption != null;
-                var hasRemainingLife = element.RemainingLife.HasValue || element.RemainingLifeOption != null || element.LastServiced.HasValue;
+                var hasUsefulLife = element.MinUsefulLifeOptionId.HasValue || 
+                                    element.MaxUsefulLifeOptionId.HasValue;
+                var hasRemainingLife = element.RemainingLifeYears.HasValue || 
+                                       element.LastServiced.HasValue;
                 allElements.Add((name, "Common", hasUsefulLife, hasRemainingLife));
             }
         }
@@ -189,8 +181,10 @@ public class ReportGenerationService : IReportGenerationService
             foreach (var element in study.ReserveStudyAdditionalElements)
             {
                 var name = element.Name ?? "Unknown Additional Element";
-                var hasUsefulLife = element.UsefulLifeOption != null;
-                var hasRemainingLife = element.RemainingLifeOption != null || element.LastServiced.HasValue;
+                var hasUsefulLife = element.MinUsefulLifeOptionId.HasValue || 
+                                    element.MaxUsefulLifeOptionId.HasValue;
+                var hasRemainingLife = element.RemainingLifeYears.HasValue || 
+                                       element.LastServiced.HasValue;
                 allElements.Add((name, "Additional", hasUsefulLife, hasRemainingLife));
             }
         }

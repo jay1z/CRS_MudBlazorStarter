@@ -2,6 +2,7 @@
 using CRS.Core.ReserveCalculator.Models;
 using CRS.Models;
 using CRS.Models.ReserveStudyCalculator;
+using Microsoft.Extensions.Logging;
 
 namespace CRS.Services.ReserveCalculator;
 
@@ -11,6 +12,12 @@ namespace CRS.Services.ReserveCalculator;
 /// </summary>
 public class ReserveStudyAdapter
 {
+    private readonly ILogger? _logger;
+
+    public ReserveStudyAdapter(ILogger? logger = null)
+    {
+        _logger = logger;
+    }
     /// <summary>
     /// Builds calculator input from a ReserveStudy entity with its proposal and elements.
     /// Uses the study's financial data and converts elements to components.
@@ -119,39 +126,83 @@ public class ReserveStudyAdapter
     private List<ReserveComponentInput> ConvertElementsToComponents(ReserveStudy study)
     {
         var components = new List<ReserveComponentInput>();
+        var buildingConverted = 0;
+        var buildingSkipped = 0;
+        var commonConverted = 0;
+        var commonSkipped = 0;
+        var additionalConverted = 0;
+        var additionalSkipped = 0;
 
         // Convert building elements
         if (study.ReserveStudyBuildingElements != null)
         {
+            _logger?.LogInformation("ReserveStudyAdapter: Converting {Count} building elements", 
+                study.ReserveStudyBuildingElements.Count);
+
             foreach (var element in study.ReserveStudyBuildingElements)
             {
                 var component = ConvertBuildingElement(element);
                 if (component != null)
+                {
                     components.Add(component);
+                    buildingConverted++;
+                }
+                else
+                {
+                    buildingSkipped++;
+                }
             }
         }
 
         // Convert common elements
         if (study.ReserveStudyCommonElements != null)
         {
+            _logger?.LogInformation("ReserveStudyAdapter: Converting {Count} common elements", 
+                study.ReserveStudyCommonElements.Count);
+
             foreach (var element in study.ReserveStudyCommonElements)
             {
                 var component = ConvertCommonElement(element);
                 if (component != null)
+                {
                     components.Add(component);
+                    commonConverted++;
+                }
+                else
+                {
+                    commonSkipped++;
+                }
             }
         }
 
         // Convert additional elements
         if (study.ReserveStudyAdditionalElements != null)
         {
+            _logger?.LogInformation("ReserveStudyAdapter: Converting {Count} additional elements", 
+                study.ReserveStudyAdditionalElements.Count);
+
             foreach (var element in study.ReserveStudyAdditionalElements)
             {
                 var component = ConvertAdditionalElement(element);
                 if (component != null)
+                {
                     components.Add(component);
+                    additionalConverted++;
+                }
+                else
+                {
+                    additionalSkipped++;
+                }
             }
         }
+
+        _logger?.LogInformation(
+            "ReserveStudyAdapter: Conversion complete - Building: {BC} converted/{BS} skipped, " +
+            "Common: {CC} converted/{CS} skipped, Additional: {AC} converted/{AS} skipped, Total: {Total}",
+            buildingConverted, buildingSkipped,
+            commonConverted, commonSkipped,
+            additionalConverted, additionalSkipped,
+            components.Count);
 
         return components;
     }
@@ -161,25 +212,46 @@ public class ReserveStudyAdapter
     /// </summary>
     private ReserveComponentInput? ConvertBuildingElement(ReserveStudyBuildingElement element)
     {
+        // Try BuildingElement navigation property name first, then use a fallback based on BuildingElementId
         var name = element.BuildingElement?.Name;
+
         if (string.IsNullOrEmpty(name))
-            return null;
+        {
+            // Log the issue - BuildingElement navigation property wasn't loaded
+            _logger?.LogWarning(
+                "ReserveStudyAdapter: BuildingElement navigation is null for element {ElementId} (BuildingElementId: {BuildingElementId}). " +
+                "Ensure .Include(e => e.BuildingElement) is used when loading the study.",
+                element.Id, element.BuildingElementId);
 
-        // Extract useful life from element option (use midpoint of range)
-        int? usefulLifeYears = GetMidpointFromRange(
-            element.UsefulLifeOption?.MinValue,
-            element.UsefulLifeOption?.MaxValue);
+            // Use a fallback name based on the BuildingElementId to avoid losing the element entirely
+            name = $"Building Element {element.BuildingElementId.ToString()[..8]}";
+            _logger?.LogInformation("ReserveStudyAdapter: Using fallback name '{Name}' for building element", name);
+        }
 
-        // Extract remaining life from element option
-        int? remainingLifeYears = GetMidpointFromRange(
-            element.RemainingLifeOption?.MinValue,
-            element.RemainingLifeOption?.MaxValue);
+        // Extract useful life from min/max element options (use midpoint of the combined range)
+        // Try new MinUsefulLifeOption/MaxUsefulLifeOption first, fall back to legacy UsefulLifeOption
+        int? usefulLifeYears = GetUsefulLifeFromOptions(
+            element.MinUsefulLifeOption,
+            element.MaxUsefulLifeOption) ??
+            GetMidpointFromRange(
+                element.UsefulLifeOption?.MinValue,
+                element.UsefulLifeOption?.MaxValue);
+
+        // Use RemainingLifeYears directly if set, otherwise fall back to legacy option
+        int? remainingLifeYears = element.RemainingLifeYears ?? 
+            GetMidpointFromRange(
+                element.RemainingLifeOption?.MinValue,
+                element.RemainingLifeOption?.MaxValue);
 
         // Calculate last service year if we have last serviced date
         int? lastServiceYear = element.LastServiced?.Year;
 
         // Building elements don't have cost in the current model - use placeholder
         decimal estimatedCost = 10000m;
+
+        _logger?.LogDebug(
+            "ReserveStudyAdapter: Converted building element '{Name}' - UsefulLife: {UsefulLife}, RemainingLife: {RemainingLife}",
+            name, usefulLifeYears, remainingLifeYears);
 
         return new ReserveComponentInput
         {
@@ -201,22 +273,45 @@ public class ReserveStudyAdapter
     {
         // Try element name first, then CommonElement navigation
         var name = element.ElementName ?? element.CommonElement?.Name;
+
         if (string.IsNullOrEmpty(name))
-            return null;
+        {
+            // Log the issue - neither ElementName nor CommonElement navigation property was available
+            _logger?.LogWarning(
+                "ReserveStudyAdapter: CommonElement name is null for element {ElementId} (CommonElementId: {CommonElementId}). " +
+                "Ensure .Include(e => e.CommonElement) is used when loading the study or set ElementName.",
+                element.Id, element.CommonElementId);
+
+            // Use a fallback name based on the CommonElementId to avoid losing the element entirely
+            name = $"Common Element {element.CommonElementId.ToString()[..8]}";
+            _logger?.LogInformation("ReserveStudyAdapter: Using fallback name '{Name}' for common element", name);
+        }
 
         // Use stored values or extract from options
-        int? usefulLifeYears = element.UsefulLife ?? GetMidpointFromRange(
-            element.UsefulLifeOption?.MinValue,
-            element.UsefulLifeOption?.MaxValue);
+        // Try new MinUsefulLifeOption/MaxUsefulLifeOption first, then UsefulLife property, then legacy option
+        int? usefulLifeYears = GetUsefulLifeFromOptions(
+            element.MinUsefulLifeOption,
+            element.MaxUsefulLifeOption) ??
+            element.UsefulLife ?? 
+            GetMidpointFromRange(
+                element.UsefulLifeOption?.MinValue,
+                element.UsefulLifeOption?.MaxValue);
 
-        int? remainingLifeYears = element.RemainingLife ?? GetMidpointFromRange(
-            element.RemainingLifeOption?.MinValue,
-            element.RemainingLifeOption?.MaxValue);
+        // Use RemainingLifeYears directly, then RemainingLife property, then legacy option
+        int? remainingLifeYears = element.RemainingLifeYears ??
+            element.RemainingLife ?? 
+            GetMidpointFromRange(
+                element.RemainingLifeOption?.MinValue,
+                element.RemainingLifeOption?.MaxValue);
 
         int? lastServiceYear = element.LastServiced?.Year;
 
         // Use ReplacementCost if available, otherwise placeholder
         decimal cost = element.ReplacementCost ?? 10000m;
+
+        _logger?.LogDebug(
+            "ReserveStudyAdapter: Converted common element '{Name}' - UsefulLife: {UsefulLife}, RemainingLife: {RemainingLife}",
+            name, usefulLifeYears, remainingLifeYears);
 
         return new ReserveComponentInput
         {
@@ -238,20 +333,35 @@ public class ReserveStudyAdapter
     {
         var name = element.Name;
         if (string.IsNullOrEmpty(name))
+        {
+            _logger?.LogWarning(
+                "ReserveStudyAdapter: Additional element {ElementId} has no name, skipping",
+                element.Id);
             return null;
+        }
 
-        int? usefulLifeYears = GetMidpointFromRange(
-            element.UsefulLifeOption?.MinValue,
-            element.UsefulLifeOption?.MaxValue);
+        // Try new MinUsefulLifeOption/MaxUsefulLifeOption first, fall back to legacy UsefulLifeOption
+        int? usefulLifeYears = GetUsefulLifeFromOptions(
+            element.MinUsefulLifeOption,
+            element.MaxUsefulLifeOption) ??
+            GetMidpointFromRange(
+                element.UsefulLifeOption?.MinValue,
+                element.UsefulLifeOption?.MaxValue);
 
-        int? remainingLifeYears = GetMidpointFromRange(
-            element.RemainingLifeOption?.MinValue,
-            element.RemainingLifeOption?.MaxValue);
+        // Use RemainingLifeYears directly if set, otherwise fall back to legacy option
+        int? remainingLifeYears = element.RemainingLifeYears ??
+            GetMidpointFromRange(
+                element.RemainingLifeOption?.MinValue,
+                element.RemainingLifeOption?.MaxValue);
 
         int? lastServiceYear = element.LastServiced?.Year;
 
         // Additional elements don't have cost in the current model - use placeholder
         decimal estimatedCost = 10000m;
+
+        _logger?.LogDebug(
+            "ReserveStudyAdapter: Converted additional element '{Name}' - UsefulLife: {UsefulLife}, RemainingLife: {RemainingLife}",
+            name, usefulLifeYears, remainingLifeYears);
 
         return new ReserveComponentInput
         {
@@ -290,6 +400,30 @@ public class ReserveStudyAdapter
                 AnnualCostOverride = c.AnnualCostOverride
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// Gets the useful life from min/max element options.
+    /// Calculates the midpoint of the overall range from min option's min value to max option's max value.
+    /// </summary>
+    private int? GetUsefulLifeFromOptions(ElementOption? minOption, ElementOption? maxOption)
+    {
+        // If we have both min and max options, use the full range (min's MinValue to max's MaxValue)
+        if (minOption != null && maxOption != null)
+        {
+            int min = minOption.MinValue ?? minOption.MaxValue ?? 0;
+            int max = maxOption.MaxValue ?? maxOption.MinValue ?? 0;
+            return (min + max) / 2;
+        }
+
+        // If we only have one option, use its midpoint
+        if (minOption != null)
+            return GetMidpointFromRange(minOption.MinValue, minOption.MaxValue);
+
+        if (maxOption != null)
+            return GetMidpointFromRange(maxOption.MinValue, maxOption.MaxValue);
+
+        return null;
     }
 
     /// <summary>

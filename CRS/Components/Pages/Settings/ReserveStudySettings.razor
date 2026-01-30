@@ -7,6 +7,7 @@
 @using CRS.Services.ReserveCalculator
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IReserveStudyCalculatorService CalculatorService
 @inject ITenantContext TenantContext
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
@@ -223,9 +224,7 @@
         var tenantId = TenantContext.TenantId;
         if (!tenantId.HasValue) return;
 
-        await using var context = await DbFactory.CreateDbContextAsync();
-        var service = new ReserveStudyCalculatorService(context);
-        _settings = await service.GetOrCreateTenantSettingsAsync(tenantId.Value);
+        _settings = await CalculatorService.GetOrCreateTenantSettingsAsync(tenantId.Value);
         _hasUnsavedChanges = false;
     }
 
@@ -241,9 +240,7 @@
         _isSaving = true;
         try
         {
-            await using var context = await DbFactory.CreateDbContextAsync();
-            var service = new ReserveStudyCalculatorService(context);
-            await service.UpdateTenantSettingsAsync(_settings);
+            await CalculatorService.UpdateTenantSettingsAsync(_settings);
 
             _hasUnsavedChanges = false;
             Snackbar.Add("Settings saved successfully", Severity.Success);

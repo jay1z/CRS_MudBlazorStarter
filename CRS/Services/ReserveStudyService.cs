@@ -396,6 +396,9 @@ namespace CRS.Services {
                 var updatedBuildingElementIds = reserveStudy.ReserveStudyBuildingElements
                     .Select(e => e.BuildingElementId).ToHashSet();
 
+                _logger.LogInformation("UpdateReserveStudyAsync: Processing {Count} incoming building elements, {ExistingCount} existing in DB",
+                    reserveStudy.ReserveStudyBuildingElements.Count, existingBuildingElementIds.Count);
+
                 // Add new building elements or update existing ones
                 foreach (var element in reserveStudy.ReserveStudyBuildingElements) {
                     if (!existingBuildingElementIds.Contains(element.BuildingElementId)) {
@@ -408,6 +411,7 @@ namespace CRS.Services {
                         existingStudy.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
                         existingStudy.ReserveStudyBuildingElements.Add(element);
                         context.Add(element);
+                        _logger.LogInformation("UpdateReserveStudyAsync: Added new building element {ElementId}", element.BuildingElementId);
                     } else {
                         // Update existing element's properties
                         var existingElement = existingStudy.ReserveStudyBuildingElements?
@@ -416,14 +420,16 @@ namespace CRS.Services {
                             // Update element details (staff mode data entry)
                             existingElement.Count = element.Count;
                             existingElement.LastServiced = element.LastServiced;
-                            existingElement.UsefulLifeOptionId = element.UsefulLifeOptionId;
-                            existingElement.RemainingLifeOptionId = element.RemainingLifeOptionId;
+                            existingElement.MinUsefulLifeOptionId = element.MinUsefulLifeOptionId;
+                            existingElement.MaxUsefulLifeOptionId = element.MaxUsefulLifeOptionId;
+                            existingElement.RemainingLifeYears = element.RemainingLifeYears;
                             existingElement.MeasurementOptionId = element.MeasurementOptionId;
-                            
+
                             // Update service contact if provided
                             if (element.ServiceContact != null) {
                                 UpdateServiceContact(existingElement, element.ServiceContact);
                             }
+                            _logger.LogInformation("UpdateReserveStudyAsync: Updated building element {ElementId}", element.BuildingElementId);
                         }
                     }
                 }
@@ -433,6 +439,7 @@ namespace CRS.Services {
                     .Where(e => !updatedBuildingElementIds.Contains(e.BuildingElementId))
                     .ToList();
                 if (buildingElementsToRemove != null && buildingElementsToRemove.Any()) {
+                    _logger.LogInformation("UpdateReserveStudyAsync: Removing {Count} building elements", buildingElementsToRemove.Count);
                     foreach (var element in buildingElementsToRemove) {
                         existingStudy.ReserveStudyBuildingElements?.Remove(element);
                         context.Remove(element);
@@ -467,10 +474,11 @@ namespace CRS.Services {
                             // Update element details (staff mode data entry)
                             existingElement.Count = element.Count;
                             existingElement.LastServiced = element.LastServiced;
-                            existingElement.UsefulLifeOptionId = element.UsefulLifeOptionId;
-                            existingElement.RemainingLifeOptionId = element.RemainingLifeOptionId;
+                            existingElement.MinUsefulLifeOptionId = element.MinUsefulLifeOptionId;
+                            existingElement.MaxUsefulLifeOptionId = element.MaxUsefulLifeOptionId;
+                            existingElement.RemainingLifeYears = element.RemainingLifeYears;
                             existingElement.MeasurementOptionId = element.MeasurementOptionId;
-                            
+
                             // Update service contact if provided
                             if (element.ServiceContact != null) {
                                 UpdateServiceContact(existingElement, element.ServiceContact);
@@ -534,8 +542,9 @@ namespace CRS.Services {
                             // Update element details (staff mode data entry)
                             existingElement.Count = element.Count;
                             existingElement.LastServiced = element.LastServiced;
-                            existingElement.UsefulLifeOptionId = element.UsefulLifeOptionId;
-                            existingElement.RemainingLifeOptionId = element.RemainingLifeOptionId;
+                            existingElement.MinUsefulLifeOptionId = element.MinUsefulLifeOptionId;
+                            existingElement.MaxUsefulLifeOptionId = element.MaxUsefulLifeOptionId;
+                            existingElement.RemainingLifeYears = element.RemainingLifeYears;
                             existingElement.MeasurementOptionId = element.MeasurementOptionId;
                             // Update service contact
                             if (element.ServiceContact != null) {

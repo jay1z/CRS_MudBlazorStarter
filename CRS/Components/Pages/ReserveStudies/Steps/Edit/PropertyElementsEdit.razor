@@ -16,14 +16,15 @@
 else
 {
 <MudForm Model="Model" @ref="form">
-    <MudGrid>
+    <MudGrid Spacing="4">
         <!-- Property Elements Header -->
         <MudItem xs="12">
-            <MudText Typo="Typo.h5" Class="mb-4">Property Elements</MudText>
+            <MudText Typo="Typo.h5" Class="mb-2">Property Elements</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Select the elements that apply to this property.</MudText>
         </MudItem>
 
         <!-- Building Elements Section -->
-        <MudItem xs="6">
+        <MudItem xs="12" md="6">
             <MudText Typo="Typo.h6" Class="mb-4">Building Elements</MudText>
             @if (buildingElements != null && buildingElements.Any()) {
                 @foreach (var element in buildingElements) {
@@ -46,7 +47,7 @@ else
         </MudItem>
 
         <!-- Common Elements Section -->
-        <MudItem xs="6">
+        <MudItem xs="12" md="6">
             <MudText Typo="Typo.h6" Class="mb-4">Common Elements</MudText>
             @if (commonElements != null && commonElements.Any()) {
                 @foreach (var element in commonElements) {
@@ -70,31 +71,23 @@ else
 
         <!-- Additional Elements Section -->
         <MudItem xs="12">
-            <MudText Typo="Typo.h6" Class="mb-4">Additional Elements</MudText>
-            <MudList T="ReserveStudyAdditionalElement">
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.h6" Class="mb-2">Additional Elements</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">Add any custom elements not listed above.</MudText>
+            <MudStack Spacing="2">
                 @foreach (var additionalElement in Model.ReserveStudyAdditionalElements.OrderBy(ae => ae.DateCreated)) {
-                    <MudListItem>
-                        <MudGrid>
-                            <MudItem xs="7">
-                                <MudTextField T="string" @bind-Value="additionalElement.Name" Placeholder="Enter element name" />
-                            </MudItem>
-                            <MudItem xs="3">
-                                <MudCheckBox T="bool" @bind-Value="additionalElement.NeedsService" Label="Needs Service" />
-                            </MudItem>
-                            <MudItem xs="2">
-                                <MudButton Variant="Variant.Text" Color="Color.Error"
-                                           OnClick="() => RemoveAdditionalElement(additionalElement)">
-                                    <MudIcon Icon="@Icons.Material.Filled.Delete" />
-                                    Delete
-                                </MudButton>
-                            </MudItem>
-                        </MudGrid>
-                    </MudListItem>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudTextField T="string" @bind-Value="additionalElement.Name" Placeholder="Enter element name" 
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;" />
+                        <MudCheckBox T="bool" @bind-Value="additionalElement.NeedsService" Label="Needs Service" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                       OnClick="() => RemoveAdditionalElement(additionalElement)" />
+                    </MudStack>
                 }
-            </MudList>
-            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="AddAdditionalElement">
-                <MudIcon Icon="@Icons.Material.Filled.Add" />
-                Add Additional Element
+            </MudStack>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="AddAdditionalElement" Class="mt-3" Size="Size.Small">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-1" Size="Size.Small" />
+                Add Element
             </MudButton>
         </MudItem>
     </MudGrid>

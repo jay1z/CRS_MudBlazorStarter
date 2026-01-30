@@ -4,6 +4,7 @@ using CRS.Data;
 using CRS.Models;
 using CRS.Models.ReserveStudyCalculator;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CRS.Services.ReserveCalculator;
 
@@ -56,24 +57,30 @@ public interface IReserveStudyCalculatorService
 /// </summary>
 public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ReserveStudyCalculator _calculator;
     private readonly SettingsResolver _resolver;
     private readonly ReserveStudyAdapter _adapter;
+    private readonly ILogger<ReserveStudyCalculatorService>? _logger;
 
-    public ReserveStudyCalculatorService(ApplicationDbContext context)
+    public ReserveStudyCalculatorService(
+        IDbContextFactory<ApplicationDbContext> dbFactory,
+        ILogger<ReserveStudyCalculatorService>? logger = null)
     {
-        _context = context;
+        _dbFactory = dbFactory;
         _calculator = new ReserveStudyCalculator();
         _resolver = new SettingsResolver();
-        _adapter = new ReserveStudyAdapter();
+        _adapter = new ReserveStudyAdapter(logger);
+        _logger = logger;
     }
 
     /// <inheritdoc />
     public async Task<ReserveStudyResult> CalculateScenarioAsync(int scenarioId)
     {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+
         // Load scenario with components
-        var scenario = await _context.ReserveStudyScenarios
+        var scenario = await context.ReserveStudyScenarios
             .Include(s => s.Components.Where(c => c.DateDeleted == null))
             .FirstOrDefaultAsync(s => s.Id == scenarioId && s.DateDeleted == null);
 
@@ -83,7 +90,7 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
         }
 
         // Load tenant settings
-        var tenantSettings = await GetOrCreateTenantSettingsAsync(scenario.TenantId);
+        var tenantSettings = await GetOrCreateTenantSettingsAsync(context, scenario.TenantId);
 
         // Build calculator input using adapter
         var input = _adapter.BuildInputFromScenario(scenario, tenantSettings);
@@ -97,25 +104,11 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
     /// <inheritdoc />
     public async Task<ReserveStudyResult> CalculateFromStudyAsync(Guid studyId)
     {
-        // Load study with all related elements
-        var study = await _context.ReserveStudies
+        await using var context = await _dbFactory.CreateDbContextAsync();
+
+        // Load study with financial info first
+        var study = await context.ReserveStudies
             .Include(s => s.FinancialInfo)
-            .Include(s => s.ReserveStudyBuildingElements!)
-                .ThenInclude(e => e.BuildingElement)
-            .Include(s => s.ReserveStudyBuildingElements!)
-                .ThenInclude(e => e.UsefulLifeOption)
-            .Include(s => s.ReserveStudyBuildingElements!)
-                .ThenInclude(e => e.RemainingLifeOption)
-            .Include(s => s.ReserveStudyCommonElements!)
-                .ThenInclude(e => e.CommonElement)
-            .Include(s => s.ReserveStudyCommonElements!)
-                .ThenInclude(e => e.UsefulLifeOption)
-            .Include(s => s.ReserveStudyCommonElements!)
-                .ThenInclude(e => e.RemainingLifeOption)
-            .Include(s => s.ReserveStudyAdditionalElements!)
-                .ThenInclude(e => e.UsefulLifeOption)
-            .Include(s => s.ReserveStudyAdditionalElements!)
-                .ThenInclude(e => e.RemainingLifeOption)
             .Include(s => s.CurrentProposal)
             .FirstOrDefaultAsync(s => s.Id == studyId);
 
@@ -124,11 +117,65 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
             return ReserveStudyResult.Failure($"ReserveStudy {studyId} not found.");
         }
 
+        // Load elements directly (more reliable than nested includes for composite-key junction tables)
+        study.ReserveStudyBuildingElements = await context.ReserveStudyBuildingElements
+            .AsNoTracking()
+            .Where(e => e.ReserveStudyId == studyId)
+            .Include(e => e.BuildingElement)
+            .Include(e => e.MinUsefulLifeOption)
+            .Include(e => e.MaxUsefulLifeOption)
+            .Include(e => e.UsefulLifeOption)
+            .Include(e => e.RemainingLifeOption)
+            .ToListAsync();
+
+        study.ReserveStudyCommonElements = await context.ReserveStudyCommonElements
+            .AsNoTracking()
+            .Where(e => e.ReserveStudyId == studyId)
+            .Include(e => e.CommonElement)
+            .Include(e => e.MinUsefulLifeOption)
+            .Include(e => e.MaxUsefulLifeOption)
+            .Include(e => e.UsefulLifeOption)
+            .Include(e => e.RemainingLifeOption)
+            .ToListAsync();
+
+        study.ReserveStudyAdditionalElements = await context.ReserveStudyAdditionalElements
+            .AsNoTracking()
+            .Where(e => e.ReserveStudyId == studyId)
+            .Include(e => e.MinUsefulLifeOption)
+            .Include(e => e.MaxUsefulLifeOption)
+            .Include(e => e.UsefulLifeOption)
+            .Include(e => e.RemainingLifeOption)
+            .ToListAsync();
+
+        // Log element counts for debugging
+        _logger?.LogInformation("CalculateFromStudyAsync: Study {StudyId} loaded with " +
+            "BuildingElements={BuildingCount}, CommonElements={CommonCount}, AdditionalElements={AdditionalCount}",
+            studyId,
+            study.ReserveStudyBuildingElements?.Count ?? 0,
+            study.ReserveStudyCommonElements?.Count ?? 0,
+            study.ReserveStudyAdditionalElements?.Count ?? 0);
+
+        // Log building element details
+        if (study.ReserveStudyBuildingElements != null && _logger != null)
+        {
+            foreach (var be in study.ReserveStudyBuildingElements)
+            {
+                _logger.LogInformation("BuildingElement: Name={Name}, MinUsefulLife={Min}, MaxUsefulLife={Max}, RemainingLife={Remaining}",
+                    be.BuildingElement?.Name ?? "(null)",
+                    be.MinUsefulLifeOption?.DisplayText ?? "(null)",
+                    be.MaxUsefulLifeOption?.DisplayText ?? "(null)",
+                    be.RemainingLifeYears);
+            }
+        }
+
         // Load tenant settings
-        var tenantSettings = await GetOrCreateTenantSettingsAsync(study.TenantId);
+        var tenantSettings = await GetOrCreateTenantSettingsAsync(context, study.TenantId);
 
         // Build calculator input using adapter
         var input = _adapter.BuildInputFromStudy(study, tenantSettings);
+
+        _logger?.LogInformation("CalculateFromStudyAsync: Adapter produced {ComponentCount} components", 
+            input.Components.Count);
 
         // Execute pure calculation
         var result = _calculator.Calculate(input);
@@ -139,8 +186,10 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
     /// <inheritdoc />
     public async Task<ReserveStudyScenario?> GetOrCreateScenarioForStudyAsync(Guid studyId, bool createIfMissing = true)
     {
+        await using var context = await _dbFactory.CreateDbContextAsync();
+
         // Check for existing scenario
-        var scenario = await _context.ReserveStudyScenarios
+        var scenario = await context.ReserveStudyScenarios
             .Include(s => s.Components.Where(c => c.DateDeleted == null))
             .FirstOrDefaultAsync(s => s.ReserveStudyId == studyId && s.DateDeleted == null);
 
@@ -150,35 +199,46 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
         if (!createIfMissing)
             return null;
 
-        // Load study with elements to create scenario
-        var study = await _context.ReserveStudies
+        // Load study with financial info
+        var study = await context.ReserveStudies
             .Include(s => s.FinancialInfo)
-            .Include(s => s.ReserveStudyBuildingElements!)
-                .ThenInclude(e => e.BuildingElement)
-            .Include(s => s.ReserveStudyBuildingElements!)
-                .ThenInclude(e => e.UsefulLifeOption)
-            .Include(s => s.ReserveStudyBuildingElements!)
-                .ThenInclude(e => e.RemainingLifeOption)
-            .Include(s => s.ReserveStudyCommonElements!)
-                .ThenInclude(e => e.CommonElement)
-            .Include(s => s.ReserveStudyCommonElements!)
-                .ThenInclude(e => e.UsefulLifeOption)
-            .Include(s => s.ReserveStudyCommonElements!)
-                .ThenInclude(e => e.RemainingLifeOption)
-            .Include(s => s.ReserveStudyAdditionalElements!)
-                .ThenInclude(e => e.UsefulLifeOption)
-            .Include(s => s.ReserveStudyAdditionalElements!)
-                .ThenInclude(e => e.RemainingLifeOption)
             .FirstOrDefaultAsync(s => s.Id == studyId);
 
         if (study == null)
             return null;
 
+        // Load elements directly (more reliable for composite-key junction tables)
+        study.ReserveStudyBuildingElements = await context.ReserveStudyBuildingElements
+            .Where(e => e.ReserveStudyId == studyId)
+            .Include(e => e.BuildingElement)
+            .Include(e => e.MinUsefulLifeOption)
+            .Include(e => e.MaxUsefulLifeOption)
+            .Include(e => e.UsefulLifeOption)
+            .Include(e => e.RemainingLifeOption)
+            .ToListAsync();
+
+        study.ReserveStudyCommonElements = await context.ReserveStudyCommonElements
+            .Where(e => e.ReserveStudyId == studyId)
+            .Include(e => e.CommonElement)
+            .Include(e => e.MinUsefulLifeOption)
+            .Include(e => e.MaxUsefulLifeOption)
+            .Include(e => e.UsefulLifeOption)
+            .Include(e => e.RemainingLifeOption)
+            .ToListAsync();
+
+        study.ReserveStudyAdditionalElements = await context.ReserveStudyAdditionalElements
+            .Where(e => e.ReserveStudyId == studyId)
+            .Include(e => e.MinUsefulLifeOption)
+            .Include(e => e.MaxUsefulLifeOption)
+            .Include(e => e.UsefulLifeOption)
+            .Include(e => e.RemainingLifeOption)
+            .ToListAsync();
+
         // Create scenario from study using adapter
         scenario = _adapter.CreateScenarioFromStudy(study, "From Proposal");
 
-        _context.ReserveStudyScenarios.Add(scenario);
-        await _context.SaveChangesAsync();
+        context.ReserveStudyScenarios.Add(scenario);
+        await context.SaveChangesAsync();
 
         return scenario;
     }
@@ -186,14 +246,20 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
     /// <inheritdoc />
     public async Task<TenantReserveSettings> GetOrCreateTenantSettingsAsync(int tenantId)
     {
-        var settings = await _context.TenantReserveSettings
+        await using var context = await _dbFactory.CreateDbContextAsync();
+        return await GetOrCreateTenantSettingsAsync(context, tenantId);
+    }
+
+    private async Task<TenantReserveSettings> GetOrCreateTenantSettingsAsync(ApplicationDbContext context, int tenantId)
+    {
+        var settings = await context.TenantReserveSettings
             .FirstOrDefaultAsync(s => s.TenantId == tenantId);
 
         if (settings == null)
         {
             settings = SettingsResolver.CreateDefaultSettings(tenantId);
-            _context.TenantReserveSettings.Add(settings);
-            await _context.SaveChangesAsync();
+            context.TenantReserveSettings.Add(settings);
+            await context.SaveChangesAsync();
         }
 
         return settings;
@@ -202,16 +268,19 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
     /// <inheritdoc />
     public async Task<TenantReserveSettings> UpdateTenantSettingsAsync(TenantReserveSettings settings)
     {
+        await using var context = await _dbFactory.CreateDbContextAsync();
         settings.UpdatedAt = DateTime.UtcNow;
-        _context.TenantReserveSettings.Update(settings);
-        await _context.SaveChangesAsync();
+        context.TenantReserveSettings.Update(settings);
+        await context.SaveChangesAsync();
         return settings;
     }
 
     /// <inheritdoc />
     public async Task<EffectiveReserveSettings> GetEffectiveSettingsAsync(int scenarioId)
     {
-        var scenario = await _context.ReserveStudyScenarios
+        await using var context = await _dbFactory.CreateDbContextAsync();
+
+        var scenario = await context.ReserveStudyScenarios
             .FirstOrDefaultAsync(s => s.Id == scenarioId && s.DateDeleted == null);
 
         if (scenario == null)
@@ -219,7 +288,7 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
             throw new InvalidOperationException($"Scenario {scenarioId} not found.");
         }
 
-        var tenantSettings = await GetOrCreateTenantSettingsAsync(scenario.TenantId);
+        var tenantSettings = await GetOrCreateTenantSettingsAsync(context, scenario.TenantId);
         return _resolver.Resolve(tenantSettings, scenario);
     }
 }

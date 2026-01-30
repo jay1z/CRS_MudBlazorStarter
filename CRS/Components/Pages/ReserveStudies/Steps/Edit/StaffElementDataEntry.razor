@@ -56,65 +56,65 @@
                                                                OnClick="@(() => RemoveBuildingElement(element))" />
                                             </MudStack>
                                         </MudItem>
-                                        <MudItem xs="6" sm="4">
+                                        <MudItem xs="6" sm="2">
                                             <MudNumericField T="int" @bind-Value="element.Count" 
                                                              Label="Count"
                                                              Variant="Variant.Outlined" 
                                                              Margin="Margin.Dense"
                                                              Min="1" Max="9999" />
                                         </MudItem>
-                                                <MudItem xs="6" sm="4">
-                                                    <MudDatePicker @bind-Date="element.LastServiced"
-                                                                   Label="Last Replaced"
-                                                                   Variant="Variant.Outlined"
-                                                                   Margin="Margin.Dense"
-                                                                   DateFormat="MM/yyyy" />
-                                                </MudItem>
-                                                <MudItem xs="6" sm="3">
-                                                    <MudSelect T="Guid?" @bind-Value="element.MinUsefulLifeOptionId"
-                                                               Label="Min Useful Life"
-                                                               Variant="Variant.Outlined"
-                                                               Margin="Margin.Dense">
-                                                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                                        @foreach (var opt in usefulLifeOptions)
-                                                        {
-                                                            <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
-                                                        }
-                                                    </MudSelect>
-                                                </MudItem>
-                                                <MudItem xs="6" sm="3">
-                                                    <MudSelect T="Guid?" @bind-Value="element.MaxUsefulLifeOptionId"
-                                                               Label="Max Useful Life"
-                                                               Variant="Variant.Outlined"
-                                                               Margin="Margin.Dense">
-                                                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                                        @foreach (var opt in usefulLifeOptions)
-                                                        {
-                                                            <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
-                                                        }
-                                                    </MudSelect>
-                                                </MudItem>
-                                                <MudItem xs="6" sm="3">
-                                                    <MudNumericField T="int?" @bind-Value="element.RemainingLifeYears"
-                                                                     Label="Remaining Life (Years)"
-                                                                     Variant="Variant.Outlined"
-                                                                     Margin="Margin.Dense"
-                                                                     Min="0" Max="100" />
-                                                </MudItem>
-                                                <MudItem xs="12" sm="3">
-                                                    <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"
-                                                               Label="Measurement"
-                                                               Variant="Variant.Outlined"
-                                                               Margin="Margin.Dense">
-                                                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                                        @foreach (var opt in measurementOptions)
-                                                        {
-                                                            <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
-                                                        }
-                                                    </MudSelect>
-                                                </MudItem>
-                                            </MudGrid>
-                                        </MudPaper>
+                                        <MudItem xs="6" sm="2">
+                                            <MudDatePicker @bind-Date="element.LastServiced"
+                                                           Label="Last Replaced"
+                                                           Variant="Variant.Outlined"
+                                                           Margin="Margin.Dense"
+                                                           DateFormat="MM/yyyy" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
+                                            <MudSelect T="Guid?" @bind-Value="element.MinUsefulLifeOptionId"
+                                                       Label="Min Useful Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in usefulLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
+                                            <MudSelect T="Guid?" @bind-Value="element.MaxUsefulLifeOptionId"
+                                                       Label="Max Useful Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in usefulLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
+                                            <MudNumericField T="int?" @bind-Value="element.RemainingLifeYears"
+                                                             Label="Remaining Life (Years)"
+                                                             Variant="Variant.Outlined"
+                                                             Margin="Margin.Dense"
+                                                             Min="0" Max="100" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
+                                            <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"
+                                                       Label="Measurement"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in measurementOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
                             }
                         }
                         else
@@ -123,7 +123,7 @@
                         }
                         
                         <MudDivider Class="my-2" />
-                        
+
                         <!-- Add Building Element -->
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
                             <MudSelect T="Guid?" @bind-Value="selectedNewBuildingElementId"
@@ -132,7 +132,7 @@
                                        Margin="Margin.Dense"
                                        Style="min-width: 200px; max-width: 300px;">
                                 <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                @foreach (var element in buildingElements)
+                                @foreach (var element in GetAvailableBuildingElements())
                                 {
                                     <MudSelectItem T="Guid?" Value="@element.Id">@element.Name</MudSelectItem>
                                 }
@@ -145,9 +145,9 @@
                                        OnClick="AddSelectedBuildingElement">
                                 Add
                             </MudButton>
-                            @if (buildingElements.Count == 0)
+                            @if (!GetAvailableBuildingElements().Any())
                             {
-                                <MudText Typo="Typo.caption" Color="Color.Warning">No elements available - check element configuration</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Info">All elements have been added</MudText>
                             }
                         </MudStack>
                     </ChildContent>
@@ -179,65 +179,65 @@
                                                                OnClick="@(() => RemoveCommonElement(element))" />
                                             </MudStack>
                                         </MudItem>
-                                        <MudItem xs="6" sm="4">
+                                        <MudItem xs="6" sm="2">
                                             <MudNumericField T="int" @bind-Value="element.Count" 
                                                              Label="Count"
                                                              Variant="Variant.Outlined" 
                                                              Margin="Margin.Dense"
                                                              Min="1" Max="9999" />
                                         </MudItem>
-                                                        <MudItem xs="6" sm="4">
-                                                            <MudDatePicker @bind-Date="element.LastServiced"
-                                                                           Label="Last Replaced"
-                                                                           Variant="Variant.Outlined"
-                                                                           Margin="Margin.Dense"
-                                                                           DateFormat="MM/yyyy" />
-                                                        </MudItem>
-                                                        <MudItem xs="6" sm="3">
-                                                            <MudSelect T="Guid?" @bind-Value="element.MinUsefulLifeOptionId"
-                                                                       Label="Min Useful Life"
-                                                                       Variant="Variant.Outlined"
-                                                                       Margin="Margin.Dense">
-                                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                                                @foreach (var opt in usefulLifeOptions)
-                                                                {
-                                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
-                                                                }
-                                                            </MudSelect>
-                                                        </MudItem>
-                                                        <MudItem xs="6" sm="3">
-                                                            <MudSelect T="Guid?" @bind-Value="element.MaxUsefulLifeOptionId"
-                                                                       Label="Max Useful Life"
-                                                                       Variant="Variant.Outlined"
-                                                                       Margin="Margin.Dense">
-                                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                                                @foreach (var opt in usefulLifeOptions)
-                                                                {
-                                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
-                                                                }
-                                                            </MudSelect>
-                                                        </MudItem>
-                                                        <MudItem xs="6" sm="3">
-                                                            <MudNumericField T="int?" @bind-Value="element.RemainingLifeYears"
-                                                                             Label="Remaining Life (Years)"
-                                                                             Variant="Variant.Outlined"
-                                                                             Margin="Margin.Dense"
-                                                                             Min="0" Max="100" />
-                                                        </MudItem>
-                                                        <MudItem xs="6" sm="3">
-                                                            <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"
-                                                                       Label="Measurement"
-                                                                       Variant="Variant.Outlined"
-                                                                       Margin="Margin.Dense">
-                                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                                                @foreach (var opt in measurementOptions)
-                                                                {
-                                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
-                                                                }
-                                                            </MudSelect>
-                                                        </MudItem>
-                                                    </MudGrid>
-                                                </MudPaper>
+                                        <MudItem xs="6" sm="2">
+                                            <MudDatePicker @bind-Date="element.LastServiced"
+                                                           Label="Last Replaced"
+                                                           Variant="Variant.Outlined"
+                                                           Margin="Margin.Dense"
+                                                           DateFormat="MM/yyyy" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
+                                            <MudSelect T="Guid?" @bind-Value="element.MinUsefulLifeOptionId"
+                                                       Label="Min Useful Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in usefulLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
+                                            <MudSelect T="Guid?" @bind-Value="element.MaxUsefulLifeOptionId"
+                                                       Label="Max Useful Life"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in usefulLifeOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
+                                            <MudNumericField T="int?" @bind-Value="element.RemainingLifeYears"
+                                                             Label="Remaining Life (Years)"
+                                                             Variant="Variant.Outlined"
+                                                             Margin="Margin.Dense"
+                                                             Min="0" Max="100" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
+                                            <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"
+                                                       Label="Measurement"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense">
+                                                <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                @foreach (var opt in measurementOptions)
+                                                {
+                                                    <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
                                             }
                                         }
                         else
@@ -246,7 +246,7 @@
                         }
                         
                         <MudDivider Class="my-2" />
-                        
+
                         <!-- Add Common Element -->
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
                             <MudSelect T="Guid?" @bind-Value="selectedNewCommonElementId"
@@ -255,7 +255,7 @@
                                        Margin="Margin.Dense"
                                        Style="min-width: 200px; max-width: 300px;">
                                 <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                @foreach (var element in commonElements)
+                                @foreach (var element in GetAvailableCommonElements())
                                 {
                                     <MudSelectItem T="Guid?" Value="@element.Id">@element.Name</MudSelectItem>
                                 }
@@ -268,9 +268,9 @@
                                        OnClick="AddSelectedCommonElement">
                                 Add
                             </MudButton>
-                            @if (commonElements.Count == 0)
+                            @if (!GetAvailableCommonElements().Any())
                             {
-                                <MudText Typo="Typo.caption" Color="Color.Warning">No elements available - check element configuration</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Info">All elements have been added</MudText>
                             }
                         </MudStack>
                     </ChildContent>
@@ -286,105 +286,106 @@
                     </TitleContent>
                     <ChildContent>
                         @if (Model?.ReserveStudyAdditionalElements?.Any() == true)
-                        {
-                            @foreach (var element in Model.ReserveStudyAdditionalElements.OrderBy(e => e.DateCreated))
-                            {
-                                <MudPaper Elevation="1" Class="pa-3 mb-2" Style="border-radius: 8px;">
-                                    <MudGrid Spacing="2">
-                                        <MudItem xs="10" sm="11">
-                                            <MudTextField T="string" @bind-Value="element.Name" 
-                                                          Label="Element Name"
-                                                          Variant="Variant.Outlined"
-                                                          Margin="Margin.Dense" />
-                                        </MudItem>
-                                        <MudItem xs="2" sm="1" Class="d-flex align-center justify-center">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                                           Color="Color.Error" 
-                                                           Size="Size.Small"
-                                                           OnClick="@(() => RemoveAdditionalElement(element))" />
-                                        </MudItem>
-                                        <MudItem xs="6" sm="4">
-                                            <MudNumericField T="int" @bind-Value="element.Count" 
-                                                             Label="Count"
-                                                             Variant="Variant.Outlined" 
-                                                             Margin="Margin.Dense"
-                                                             Min="1" Max="9999" />
-                                        </MudItem>
-                                        <MudItem xs="6" sm="4">
-                                            <MudDatePicker @bind-Date="element.LastServiced"
-                                                           Label="Last Replaced"
-                                                           Variant="Variant.Outlined"
-                                                           Margin="Margin.Dense"
-                                                           DateFormat="MM/yyyy" />
-                                        </MudItem>
-                                                                <MudItem xs="6" sm="4">
-                                                                    <MudCheckBox T="bool" @bind-Value="element.NeedsService" 
-                                                                                 Label="Needs Service" 
-                                                                                 Color="Color.Primary" />
-                                                                </MudItem>
-                                                                <MudItem xs="6" sm="3">
-                                                                    <MudSelect T="Guid?" @bind-Value="element.MinUsefulLifeOptionId"
-                                                                               Label="Min Useful Life"
-                                                                               Variant="Variant.Outlined"
-                                                                               Margin="Margin.Dense">
-                                                                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                                                        @foreach (var opt in usefulLifeOptions)
-                                                                        {
-                                                                            <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
-                                                                        }
-                                                                    </MudSelect>
-                                                                </MudItem>
-                                                                <MudItem xs="6" sm="3">
-                                                                    <MudSelect T="Guid?" @bind-Value="element.MaxUsefulLifeOptionId"
-                                                                               Label="Max Useful Life"
-                                                                               Variant="Variant.Outlined"
-                                                                               Margin="Margin.Dense">
-                                                                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                                                        @foreach (var opt in usefulLifeOptions)
-                                                                        {
-                                                                            <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
-                                                                        }
-                                                                    </MudSelect>
-                                                                </MudItem>
-                                                                <MudItem xs="6" sm="3">
-                                                                    <MudNumericField T="int?" @bind-Value="element.RemainingLifeYears"
-                                                                                     Label="Remaining Life (Years)"
-                                                                                     Variant="Variant.Outlined"
-                                                                                     Margin="Margin.Dense"
-                                                                                     Min="0" Max="100" />
-                                                                </MudItem>
-                                                                <MudItem xs="12" sm="3">
-                                                                    <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"
-                                                                               Label="Measurement"
-                                                                               Variant="Variant.Outlined"
-                                                                               Margin="Margin.Dense">
-                                                                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
-                                                                        @foreach (var opt in measurementOptions)
-                                                                        {
-                                                                            <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
-                                                                        }
-                                                                    </MudSelect>
-                                                                </MudItem>
-                                                            </MudGrid>
-                                                        </MudPaper>
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    <MudText Typo="Typo.body2" Style="color: #666;">No additional elements added yet.</MudText>
-                                                }
+                                {
+                                    @foreach (var element in Model.ReserveStudyAdditionalElements.OrderBy(e => e.DateCreated))
+                                    {
+                                        <MudPaper Elevation="1" Class="pa-3 mb-2" Style="border-radius: 8px;">
+                                            <MudGrid Spacing="2">
+                                                <MudItem xs="12">
+                                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                        <MudTextField T="string" @bind-Value="element.Name" 
+                                                                      Label="Element Name"
+                                                                      Variant="Variant.Outlined"
+                                                                      Margin="Margin.Dense"
+                                                                      Style="flex: 1; max-width: 400px;" />
+                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                            <MudCheckBox T="bool" @bind-Value="element.NeedsService" 
+                                                                         Label="Needs Service" 
+                                                                         Color="Color.Primary" />
+                                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                                           Color="Color.Error" 
+                                                                           Size="Size.Small"
+                                                                           OnClick="@(() => RemoveAdditionalElement(element))" />
+                                                        </MudStack>
+                                                    </MudStack>
+                                                </MudItem>
+                                                <MudItem xs="6" sm="2">
+                                                    <MudNumericField T="int" @bind-Value="element.Count" 
+                                                                     Label="Count"
+                                                                     Variant="Variant.Outlined" 
+                                                                     Margin="Margin.Dense"
+                                                                     Min="1" Max="9999" />
+                                                </MudItem>
+                                                <MudItem xs="6" sm="2">
+                                                    <MudDatePicker @bind-Date="element.LastServiced"
+                                                                   Label="Last Replaced"
+                                                                   Variant="Variant.Outlined"
+                                                                   Margin="Margin.Dense"
+                                                                   DateFormat="MM/yyyy" />
+                                                </MudItem>
+                                                <MudItem xs="6" sm="2">
+                                                    <MudSelect T="Guid?" @bind-Value="element.MinUsefulLifeOptionId"
+                                                               Label="Min Useful Life"
+                                                               Variant="Variant.Outlined"
+                                                               Margin="Margin.Dense">
+                                                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                        @foreach (var opt in usefulLifeOptions)
+                                                        {
+                                                            <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                        }
+                                                    </MudSelect>
+                                                </MudItem>
+                                                <MudItem xs="6" sm="2">
+                                                    <MudSelect T="Guid?" @bind-Value="element.MaxUsefulLifeOptionId"
+                                                               Label="Max Useful Life"
+                                                               Variant="Variant.Outlined"
+                                                               Margin="Margin.Dense">
+                                                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                        @foreach (var opt in usefulLifeOptions)
+                                                        {
+                                                            <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                        }
+                                                    </MudSelect>
+                                                </MudItem>
+                                                <MudItem xs="6" sm="2">
+                                                    <MudNumericField T="int?" @bind-Value="element.RemainingLifeYears"
+                                                                     Label="Remaining Life (Years)"
+                                                                     Variant="Variant.Outlined"
+                                                                     Margin="Margin.Dense"
+                                                                     Min="0" Max="100" />
+                                                </MudItem>
+                                                <MudItem xs="6" sm="2">
+                                                    <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"
+                                                               Label="Measurement"
+                                                               Variant="Variant.Outlined"
+                                                               Margin="Margin.Dense">
+                                                        <MudSelectItem T="Guid?" Value="@((Guid?)null)">-- Select --</MudSelectItem>
+                                                        @foreach (var opt in measurementOptions)
+                                                        {
+                                                            <MudSelectItem T="Guid?" Value="@opt.Id">@opt.DisplayText</MudSelectItem>
+                                                        }
+                                                    </MudSelect>
+                                                </MudItem>
+                                            </MudGrid>
+                                        </MudPaper>
+                                    }
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Style="color: #666;">No additional elements added yet.</MudText>
+                                }
 
-                                                <MudDivider Class="my-2" />
+                                <MudDivider Class="my-2" />
 
-                                                <MudButton Variant="Variant.Filled" 
-                                                           Color="Color.Tertiary" 
-                                                           Size="Size.Small"
-                                                           StartIcon="@Icons.Material.Filled.Add"
-                                                           OnClick="AddAdditionalElement">
-                                                    Add Custom Element
-                                                </MudButton>
-                                            </ChildContent>
-                                        </MudExpansionPanel>
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Tertiary" 
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="AddAdditionalElement">
+                                    Add Custom Element
+                                </MudButton>
+                            </ChildContent>
+                        </MudExpansionPanel>
             </MudExpansionPanels>
         }
     </MudStack>
@@ -410,6 +411,19 @@
 
     private Guid? selectedNewBuildingElementId;
     private Guid? selectedNewCommonElementId;
+
+    // Filter out elements that are already added to the reserve study
+    private IEnumerable<BuildingElement> GetAvailableBuildingElements()
+    {
+        var addedIds = Model?.ReserveStudyBuildingElements?.Select(e => e.BuildingElementId).ToHashSet() ?? [];
+        return buildingElements.Where(e => !addedIds.Contains(e.Id));
+    }
+
+    private IEnumerable<CommonElement> GetAvailableCommonElements()
+    {
+        var addedIds = Model?.ReserveStudyCommonElements?.Select(e => e.CommonElementId).ToHashSet() ?? [];
+        return commonElements.Where(e => !addedIds.Contains(e.Id));
+    }
 
     protected override async Task OnInitializedAsync()
     {

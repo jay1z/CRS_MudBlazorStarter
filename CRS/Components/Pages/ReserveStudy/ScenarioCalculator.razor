@@ -12,6 +12,7 @@
 @using CRS.Services.ReserveCalculator
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IReserveStudyCalculatorService CalculatorService
 @inject ITenantContext TenantContext
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
@@ -258,16 +259,13 @@
     {
         if (!StudyId.HasValue) return;
 
-        await using var context = await DbFactory.CreateDbContextAsync();
-        var service = new ReserveStudyCalculatorService(context);
-
         // Try to get or create a scenario for this study
-        _scenario = await service.GetOrCreateScenarioForStudyAsync(StudyId.Value, createIfMissing: true);
-        
+        _scenario = await CalculatorService.GetOrCreateScenarioForStudyAsync(StudyId.Value, createIfMissing: true);
+
         if (_scenario != null)
         {
             // Load effective settings and components from the scenario
-            _effectiveSettings = await service.GetEffectiveSettingsAsync(_scenario.Id);
+            _effectiveSettings = await CalculatorService.GetEffectiveSettingsAsync(_scenario.Id);
             _startYear = _scenario.StartYear;
             _startingBalance = _scenario.StartingBalance;
             _inflationRate = _effectiveSettings.InflationRate;
@@ -292,9 +290,10 @@
                 }).ToList();
 
             _loadedFromStudy = true;
-            
+
             // Get community name for display
-            _study = await context.ReserveStudies
+            await using var studyContext = await DbFactory.CreateDbContextAsync();
+            _study = await studyContext.ReserveStudies
                 .Include(s => s.Community)
                 .FirstOrDefaultAsync(s => s.Id == StudyId.Value);
             _communityName = _study?.Community?.Name ?? _study?.Name;
@@ -313,15 +312,14 @@
         if (!ScenarioId.HasValue) return;
 
         await using var context = await DbFactory.CreateDbContextAsync();
-        var service = new ReserveStudyCalculatorService(context);
-        
+
         _scenario = await context.ReserveStudyScenarios
             .Include(s => s.Components.Where(c => c.DateDeleted == null))
             .FirstOrDefaultAsync(s => s.Id == ScenarioId.Value);
 
         if (_scenario != null)
         {
-            _effectiveSettings = await service.GetEffectiveSettingsAsync(ScenarioId.Value);
+            _effectiveSettings = await CalculatorService.GetEffectiveSettingsAsync(ScenarioId.Value);
             _startYear = _scenario.StartYear;
             _startingBalance = _scenario.StartingBalance;
             _inflationRate = _effectiveSettings.InflationRate;
