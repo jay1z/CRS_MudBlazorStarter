@@ -176,7 +176,13 @@ namespace CRS.Models {
         // ═══════════════════════════════════════════════════════════════
         // WORKFLOW SETTINGS - Report & Completion
         // ═══════════════════════════════════════════════════════════════
-        
+
+        /// <summary>
+        /// When enabled, requires owner review of narrative before it can be used in reports.
+        /// When disabled, specialists can mark narratives as approved directly.
+        /// </summary>
+        public bool RequireNarrativeReview { get; set; } = false;
+
         /// <summary>
         /// When enabled, requires owner review before marking a study complete.
         /// </summary>

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260125103830_AddMinMaxUsefulLifeAndRemainingLifeYears")]
-    partial class AddMinMaxUsefulLifeAndRemainingLifeYears
+    [Migration("20260202154108_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -3126,6 +3126,9 @@ namespace CRS.Migrations
                     b.Property<int?>("RemainingLifeYears")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("ReplacementCost")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<Guid?>("ReserveStudyId")
                         .HasColumnType("uniqueidentifier");
 
@@ -3201,6 +3204,9 @@ namespace CRS.Migrations
 
                     b.Property<int?>("RemainingLifeYears")
                         .HasColumnType("int");
+
+                    b.Property<decimal?>("ReplacementCost")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -4227,28 +4233,44 @@ namespace CRS.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("AllowAmendmentsAfterCompletion")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("AllowVirtualSiteVisit")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("AutoAcceptStudyRequests")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("AutoArchiveAfterDays")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<bool>("AutoGenerateInvoiceOnAcceptance")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("AutoRequestFinancialInfo")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("AutoSendInvoiceReminders")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("AutoSendProposalOnApproval")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("BrandingJson")
                         .HasColumnType("nvarchar(max)");
@@ -4260,13 +4282,19 @@ namespace CRS.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("DefaultPaymentTermsDays")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(30);
 
                     b.Property<int>("DefaultProposalExpirationDays")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(30);
 
                     b.Property<int>("DefaultSiteVisitDurationMinutes")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(120);
 
                     b.Property<string>("DeletionReason")
                         .HasColumnType("nvarchar(max)");
@@ -4275,7 +4303,9 @@ namespace CRS.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("FinancialInfoDueDays")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(14);
 
                     b.Property<DateTime?>("GracePeriodEndsAt")
                         .HasColumnType("datetime2");
@@ -4309,10 +4339,14 @@ namespace CRS.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("NotifyClientOnStatusChange")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("NotifyOwnerOnStatusChange")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("OwnerId")
                         .HasColumnType("nvarchar(max)");
@@ -4338,31 +4372,52 @@ namespace CRS.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("ReminderFrequencyDays")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(7);
 
                     b.Property<bool>("RequireFinalReview")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("RequireNarrativeReview")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("RequireProposalReview")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("RequireServiceContacts")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("RequireSiteVisit")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("SendAutomaticReminders")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<Guid>("SignupToken")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("SkipFinancialInfoStep")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("SkipProposalStep")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("nvarchar(max)");

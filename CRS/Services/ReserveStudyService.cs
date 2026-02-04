@@ -424,6 +424,7 @@ namespace CRS.Services {
                             existingElement.MaxUsefulLifeOptionId = element.MaxUsefulLifeOptionId;
                             existingElement.RemainingLifeYears = element.RemainingLifeYears;
                             existingElement.MeasurementOptionId = element.MeasurementOptionId;
+                            existingElement.ReplacementCost = element.ReplacementCost;
 
                             // Update service contact if provided
                             if (element.ServiceContact != null) {
@@ -478,6 +479,7 @@ namespace CRS.Services {
                             existingElement.MaxUsefulLifeOptionId = element.MaxUsefulLifeOptionId;
                             existingElement.RemainingLifeYears = element.RemainingLifeYears;
                             existingElement.MeasurementOptionId = element.MeasurementOptionId;
+                            existingElement.ReplacementCost = element.ReplacementCost;
 
                             // Update service contact if provided
                             if (element.ServiceContact != null) {
@@ -546,6 +548,7 @@ namespace CRS.Services {
                             existingElement.MaxUsefulLifeOptionId = element.MaxUsefulLifeOptionId;
                             existingElement.RemainingLifeYears = element.RemainingLifeYears;
                             existingElement.MeasurementOptionId = element.MeasurementOptionId;
+                            existingElement.ReplacementCost = element.ReplacementCost;
                             // Update service contact
                             if (element.ServiceContact != null) {
                                 UpdateServiceContact(existingElement, element.ServiceContact);

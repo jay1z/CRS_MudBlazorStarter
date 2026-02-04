@@ -3,55 +3,46 @@
 
 @inject IProposalAcceptanceService AcceptanceService
 
-<MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
-    @if (isLoading)
-    {
-        <MudStack AlignItems="AlignItems.Center" Class="py-4">
-            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-            <MudText Typo="Typo.caption" Color="Color.Secondary">Loading acceptance details...</MudText>
-        </MudStack>
-    }
-    else if (acceptance == null)
-    {
-        <MudStack Spacing="2">
+<MudPaper Elevation="0" Class="pa-4">
+    <MudStack Spacing="3">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudIcon Icon="@Icons.Material.Filled.PendingActions" Color="Color.Warning" />
-                <MudText Typo="Typo.h6" Class="fw-bold">Proposal Not Yet Accepted</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Style="font-weight: 600;">Proposal Acceptance</MudText>
             </MudStack>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                The client has not yet accepted this proposal. Once they accept, the acceptance details will appear here.
-            </MudText>
         </MudStack>
-    }
-    else
-    {
-        <MudStack Spacing="3">
-            <!-- Header -->
-            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <div style="width: 40px; height: 40px; background: #E8F5E9; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        <MudIcon Icon="@Icons.Material.Filled.Verified" Style="color: #28a745;" />
-                    </div>
-                    <MudStack Spacing="0">
-                        <MudText Typo="Typo.h6" Class="fw-bold" Style="color: #28a745;">
-                            Proposal Accepted
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            Click-wrap agreement recorded
-                        </MudText>
-                    </MudStack>
-                </MudStack>
-                
-                @if (!acceptance.IsValid)
-                {
-                    <MudChip T="string" Color="Color.Error" Size="Size.Small">
-                        <MudIcon Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" Class="mr-1" />
-                        Revoked
-                    </MudChip>
-                }
-            </MudStack>
 
-            <MudDivider />
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (acceptance == null)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" />
+                    <MudText Typo="Typo.body2">
+                        The client has not yet accepted this proposal. Once they accept, the acceptance details will appear here.
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
+        else
+        {
+            <!-- Acceptance Status Badge -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudChip T="string" 
+                         Size="Size.Medium" 
+                         Color="@(acceptance.IsValid ? Color.Success : Color.Error)" 
+                         Variant="Variant.Filled"
+                         Icon="@(acceptance.IsValid ? Icons.Material.Filled.Verified : Icons.Material.Filled.Cancel)">
+                    @(acceptance.IsValid ? "Proposal Accepted" : "Acceptance Revoked")
+                </MudChip>
+                <MudText Typo="Typo.caption" Style="color: #666;">
+                    @acceptance.AcceptedAt.ToLocalTime().ToString("MMM dd, yyyy")
+                </MudText>
+            </MudStack>
 
             <!-- Acceptance Details -->
             <MudGrid Spacing="2">
@@ -192,8 +183,8 @@
                     </MudText>
                 </MudAlert>
             }
-        </MudStack>
-    }
+        }
+    </MudStack>
 </MudPaper>
 
 @code {

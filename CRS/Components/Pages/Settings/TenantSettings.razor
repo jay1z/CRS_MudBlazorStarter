@@ -1370,6 +1370,20 @@
                                 <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                         <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">Require Narrative Review</MudText>
+                                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                                Require owner approval of narrative content before generating reports
+                                            </MudText>
+                                        </MudStack>
+                                        <MudSwitch T="bool" @bind-Value="tenant.RequireNarrativeReview" 
+                                                   Color="@(tenant.RequireNarrativeReview ? Color.Success : Color.Default)"
+                                                   @bind-Value:after="MarkAsChanged" />
+                                    </MudStack>
+                                </MudPaper>
+
+                                <MudPaper Elevation="0" Class="pa-4" Style="border: 1px solid #e0e0e0; border-radius: 8px;">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudStack Spacing="0">
                                             <MudText Typo="Typo.body1" Style="font-weight: 600;">Require Final Review</MudText>
                                             <MudText Typo="Typo.caption" Style="color: #666;">
                                                 Require owner review before marking a study complete

@@ -1,8 +1,17 @@
 ﻿@using CRS.Models
+@using CRS.Models.Workflow
 @using CRS.Services
 @using CRS.Services.Interfaces
+@using CRS.Services.Workflow
+@using CRS.Services.MultiTenancy
+@using CRS.Services.Tenant
+@implements IDisposable
 
 @inject INarrativeService NarrativeService
+@inject INarrativeStateService NarrativeStateService
+@inject IReserveStudyWorkflowService WorkflowService
+@inject TenantService TenantService
+@inject ITenantContext TenantContext
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
 
@@ -22,18 +31,26 @@
                     }
                 </div>
             </MudStack>
-            
+
             <MudStack Row="true" Spacing="2">
                 @if (narrative != null)
                 {
+                    @if (NarrativeStateService.HasUnsavedChanges)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined"
+                                 Icon="@Icons.Material.Filled.Edit">
+                            Unsaved
+                        </MudChip>
+                    }
+
                     <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(narrative.Status)" Variant="Variant.Filled">
                         @GetStatusDisplayName(narrative.Status)
                     </MudChip>
-                    
+
                     @if (narrative.Status == NarrativeStatus.Draft || narrative.Status == NarrativeStatus.InProgress)
                     {
-                        <MudButton Variant="Variant.Outlined" 
-                                   Color="Color.Primary" 
+                        <MudButton Variant="@(NarrativeStateService.HasUnsavedChanges ? Variant.Filled : Variant.Outlined)" 
+                                   Color="@(NarrativeStateService.HasUnsavedChanges ? Color.Warning : Color.Primary)" 
                                    Size="Size.Small"
                                    StartIcon="@Icons.Material.Filled.Save"
                                    OnClick="SaveAllSections"
@@ -49,23 +66,43 @@
                             }
                         </MudButton>
                     }
-                    
+
                     @if (narrative.Status == NarrativeStatus.InProgress || narrative.Status == NarrativeStatus.RevisionRequired)
                     {
-                        <AuthorizeView Policy="RequireTenantStaff">
-                            <Authorized>
-                                <MudButton Variant="Variant.Filled" 
-                                           Color="Color.Primary" 
-                                           Size="Size.Small"
-                                           StartIcon="@Icons.Material.Filled.Send"
-                                           OnClick="SubmitForReview"
-                                           Disabled="@(!CanSubmitForReview())">
-                                    Submit for Review
-                                </MudButton>
-                            </Authorized>
-                        </AuthorizeView>
+                        @if (requireNarrativeReview)
+                        {
+                            @* Require review: Show Submit for Review button *@
+                            <AuthorizeView Policy="RequireTenantStaff">
+                                <Authorized>
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="Color.Primary" 
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Send"
+                                               OnClick="SubmitForReview"
+                                               Disabled="@(!CanSubmitForReview())">
+                                        Submit for Review
+                                    </MudButton>
+                                </Authorized>
+                            </AuthorizeView>
+                        }
+                        else
+                        {
+                            @* No review required: Allow staff to mark as approved directly *@
+                            <AuthorizeView Policy="RequireTenantStaff">
+                                <Authorized>
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="Color.Success" 
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                                               OnClick="ApproveNarrative"
+                                               Disabled="@(!CanSubmitForReview())">
+                                        Mark as Complete
+                                    </MudButton>
+                                </Authorized>
+                            </AuthorizeView>
+                        }
                     }
-                    
+
                     @if (narrative.Status == NarrativeStatus.PendingReview)
                     {
                         <AuthorizeView Policy="RequireTenantOwner">
@@ -202,6 +239,7 @@
                                               Placeholder="@sect.Placeholder"
                                               Immediate="false"
                                               DebounceInterval="500"
+                                              TextChanged="@(() => NarrativeStateService.MarkDirty())"
                                               OnBlur="@(() => SaveSection(sect))"
                                               Disabled="@(!CanEdit())" />
                             </MudStack>
@@ -241,10 +279,30 @@
     private List<NarrativeSection> sections = [];
     private bool isLoading = true;
     private bool isSaving = false;
+    private Dictionary<string, string> originalContent = new();
+    private bool requireNarrativeReview = false;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadTenantSettings();
         await LoadNarrative();
+
+        // Register with state service for cross-component communication
+        NarrativeStateService.RegisterEditor(ReserveStudyId, SaveAllSectionsAsync);
+    }
+
+    private async Task LoadTenantSettings()
+    {
+        if (TenantContext.TenantId.HasValue)
+        {
+            var tenant = await TenantService.FindByIdAsync(TenantContext.TenantId.Value);
+            requireNarrativeReview = tenant?.RequireNarrativeReview ?? false;
+        }
+    }
+
+    public void Dispose()
+    {
+        NarrativeStateService.UnregisterEditor(ReserveStudyId);
     }
 
     private async Task LoadNarrative()
@@ -253,10 +311,11 @@
         {
             isLoading = true;
             narrative = await NarrativeService.GetByStudyIdAsync(ReserveStudyId);
-            
+
             if (narrative != null)
             {
                 InitializeSections();
+                CaptureOriginalContent();
                 validationResult = await NarrativeService.ValidateAsync(narrative.Id);
             }
         }
@@ -314,16 +373,61 @@
         {
             await UserState.InitializeAsync();
             var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
-            
+
             narrative = await NarrativeService.CreateAsync(ReserveStudyId, userId, templateName);
             InitializeSections();
-            validationResult = await NarrativeService.ValidateAsync(narrative.Id);
-            
+
+            // Auto-save template content immediately so word count is calculated
+            // and content is persisted before any report generation
+            await SaveAllSectionsInternalAsync();
+
+            // Reload to get updated word count
+            narrative = await NarrativeService.GetByIdAsync(narrative.Id);
+            CaptureOriginalContent();
+            validationResult = await NarrativeService.ValidateAsync(narrative!.Id);
+
+            // Register with state service now that we have a narrative
+            NarrativeStateService.RegisterEditor(ReserveStudyId, SaveAllSectionsAsync);
+
+            // Auto-advance workflow when narrative is created
+            var allowedTransitions = await WorkflowService.GetAllowedStudyTransitionsAsync(ReserveStudyId);
+            if (allowedTransitions.Contains(StudyStatus.NarrativeReady))
+            {
+                await WorkflowService.TryTransitionStudyAsync(ReserveStudyId, StudyStatus.NarrativeReady);
+            }
+            // Also try to transition to InProcess since we're actively working on it
+            allowedTransitions = await WorkflowService.GetAllowedStudyTransitionsAsync(ReserveStudyId);
+            if (allowedTransitions.Contains(StudyStatus.NarrativeInProcess))
+            {
+                await WorkflowService.TryTransitionStudyAsync(ReserveStudyId, StudyStatus.NarrativeInProcess);
+            }
+
             Snackbar.Add($"Narrative created with '{templateName}' template", Severity.Success);
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error creating narrative: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void CaptureOriginalContent()
+    {
+        originalContent.Clear();
+        foreach (var section in sections)
+        {
+            originalContent[section.Name] = section.Content;
+        }
+    }
+
+    private void CheckForChanges()
+    {
+        foreach (var section in sections)
+        {
+            if (originalContent.TryGetValue(section.Name, out var original) && section.Content != original)
+            {
+                NarrativeStateService.MarkDirty();
+                return;
+            }
         }
     }
 
@@ -334,10 +438,16 @@
         try
         {
             await NarrativeService.SaveSectionAsync(narrative.Id, section.Name, section.Content);
-            
+
+            // Update original content for this section
+            originalContent[section.Name] = section.Content;
+
             // Reload to get updated word count
             narrative = await NarrativeService.GetByIdAsync(narrative.Id);
             validationResult = await NarrativeService.ValidateAsync(narrative!.Id);
+
+            // Check if all changes have been saved
+            CheckForChanges();
         }
         catch (Exception ex)
         {
@@ -354,23 +464,14 @@
             isSaving = true;
             StateHasChanged();
 
-            // Update narrative with all section content
-            narrative.ExecutiveSummary = sections.First(s => s.Name == "ExecutiveSummary").Content;
-            narrative.Introduction = sections.First(s => s.Name == "Introduction").Content;
-            narrative.PropertyDescription = sections.First(s => s.Name == "PropertyDescription").Content;
-            narrative.Methodology = sections.First(s => s.Name == "Methodology").Content;
-            narrative.Findings = sections.First(s => s.Name == "Findings").Content;
-            narrative.FundingAnalysis = sections.First(s => s.Name == "FundingAnalysis").Content;
-            narrative.Recommendations = sections.First(s => s.Name == "Recommendations").Content;
-            narrative.Conclusion = sections.First(s => s.Name == "Conclusion").Content;
-            narrative.AdditionalNotes = sections.First(s => s.Name == "AdditionalNotes").Content;
+            await SaveAllSectionsInternalAsync();
 
-            await NarrativeService.UpdateAsync(narrative);
-            
             // Reload
             narrative = await NarrativeService.GetByIdAsync(narrative.Id);
+            CaptureOriginalContent();
+            NarrativeStateService.MarkClean();
             validationResult = await NarrativeService.ValidateAsync(narrative!.Id);
-            
+
             Snackbar.Add("All sections saved", Severity.Success);
         }
         catch (Exception ex)
@@ -381,6 +482,50 @@
         {
             isSaving = false;
         }
+    }
+
+    /// <summary>
+    /// Internal save method that can be called from the state service callback.
+    /// Does not show UI feedback.
+    /// </summary>
+    private async Task SaveAllSectionsAsync()
+    {
+        if (narrative == null || !CanEdit()) return;
+
+        try
+        {
+            await SaveAllSectionsInternalAsync();
+            narrative = await NarrativeService.GetByIdAsync(narrative.Id);
+            CaptureOriginalContent();
+            NarrativeStateService.MarkClean();
+            validationResult = await NarrativeService.ValidateAsync(narrative!.Id);
+        }
+        catch
+        {
+            // Errors will be logged by the state service
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Core save logic without UI updates.
+    /// </summary>
+    private async Task SaveAllSectionsInternalAsync()
+    {
+        if (narrative == null) return;
+
+        // Update narrative with all section content
+        narrative.ExecutiveSummary = sections.First(s => s.Name == "ExecutiveSummary").Content;
+        narrative.Introduction = sections.First(s => s.Name == "Introduction").Content;
+        narrative.PropertyDescription = sections.First(s => s.Name == "PropertyDescription").Content;
+        narrative.Methodology = sections.First(s => s.Name == "Methodology").Content;
+        narrative.Findings = sections.First(s => s.Name == "Findings").Content;
+        narrative.FundingAnalysis = sections.First(s => s.Name == "FundingAnalysis").Content;
+        narrative.Recommendations = sections.First(s => s.Name == "Recommendations").Content;
+        narrative.Conclusion = sections.First(s => s.Name == "Conclusion").Content;
+        narrative.AdditionalNotes = sections.First(s => s.Name == "AdditionalNotes").Content;
+
+        await NarrativeService.UpdateAsync(narrative);
     }
 
     private async Task SubmitForReview()

@@ -7,6 +7,7 @@
 @inject IGeneratedReportService ReportService
 @inject IReportGenerationService GenerationService
 @inject IDocumentStorageService DocumentStorage
+@inject INarrativeStateService NarrativeStateService
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -65,6 +66,19 @@
                                     </Authorized>
                                 </AuthorizeView>
                             </MudStack>
+
+        <!-- Unsaved Narrative Warning -->
+        @if (NarrativeStateService.HasUnsavedChangesForStudy(ReserveStudyId))
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="mb-2">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">
+                        <strong>Unsaved narrative changes.</strong> Please save your narrative before generating reports to ensure the latest content is included.
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
 
         <!-- Workflow Gate Warning -->
         @if (!canGenerateReports && !isLoading && validationResult != null)
@@ -708,6 +722,22 @@
 
     private async Task OpenPreviewDialog()
     {
+        // Check if this study has unsaved narrative changes
+        if (NarrativeStateService.HasUnsavedChangesForStudy(ReserveStudyId))
+        {
+            var saved = await NarrativeStateService.EnsureSavedAsync(ReserveStudyId);
+            if (saved)
+            {
+                Snackbar.Add("Narrative auto-saved before preview", Severity.Info);
+            }
+            else
+            {
+                // Editor is not active - user switched tabs without saving
+                Snackbar.Add("You have unsaved narrative changes. Please go to the Narrative tab and save before previewing.", Severity.Warning);
+                return;
+            }
+        }
+
         var parameters = new DialogParameters
         {
             ["ReserveStudyId"] = ReserveStudyId
@@ -734,6 +764,19 @@
         {
             Snackbar.Add(workflowGateMessage, Severity.Warning);
             return;
+        }
+
+        // Check if this study has unsaved narrative changes
+        if (NarrativeStateService.HasUnsavedChangesForStudy(ReserveStudyId))
+        {
+            var saved = await NarrativeStateService.EnsureSavedAsync(ReserveStudyId);
+            if (!saved)
+            {
+                // Editor is not active - user switched tabs without saving
+                Snackbar.Add("You have unsaved narrative changes. Please go to the Narrative tab and save before generating.", Severity.Error);
+                return;
+            }
+            Snackbar.Add("Narrative auto-saved before report generation", Severity.Info);
         }
 
         try

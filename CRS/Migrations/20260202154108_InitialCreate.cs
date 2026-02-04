@@ -543,28 +543,29 @@ namespace CRS.Migrations
                     IsDemo = table.Column<bool>(type: "bit", nullable: false),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
                     OwnerId = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    AutoAcceptStudyRequests = table.Column<bool>(type: "bit", nullable: false),
-                    DefaultProposalExpirationDays = table.Column<int>(type: "int", nullable: false),
-                    AutoSendProposalOnApproval = table.Column<bool>(type: "bit", nullable: false),
-                    RequireProposalReview = table.Column<bool>(type: "bit", nullable: false),
-                    SkipProposalStep = table.Column<bool>(type: "bit", nullable: false),
-                    AutoRequestFinancialInfo = table.Column<bool>(type: "bit", nullable: false),
-                    FinancialInfoDueDays = table.Column<int>(type: "int", nullable: false),
-                    RequireServiceContacts = table.Column<bool>(type: "bit", nullable: false),
-                    SkipFinancialInfoStep = table.Column<bool>(type: "bit", nullable: false),
-                    RequireSiteVisit = table.Column<bool>(type: "bit", nullable: false),
-                    DefaultSiteVisitDurationMinutes = table.Column<int>(type: "int", nullable: false),
-                    AllowVirtualSiteVisit = table.Column<bool>(type: "bit", nullable: false),
-                    SendAutomaticReminders = table.Column<bool>(type: "bit", nullable: false),
-                    ReminderFrequencyDays = table.Column<int>(type: "int", nullable: false),
-                    NotifyOwnerOnStatusChange = table.Column<bool>(type: "bit", nullable: false),
-                    NotifyClientOnStatusChange = table.Column<bool>(type: "bit", nullable: false),
-                    AutoGenerateInvoiceOnAcceptance = table.Column<bool>(type: "bit", nullable: false),
-                    DefaultPaymentTermsDays = table.Column<int>(type: "int", nullable: false),
-                    AutoSendInvoiceReminders = table.Column<bool>(type: "bit", nullable: false),
-                    RequireFinalReview = table.Column<bool>(type: "bit", nullable: false),
-                    AutoArchiveAfterDays = table.Column<int>(type: "int", nullable: false),
-                    AllowAmendmentsAfterCompletion = table.Column<bool>(type: "bit", nullable: false)
+                    AutoAcceptStudyRequests = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    DefaultProposalExpirationDays = table.Column<int>(type: "int", nullable: false, defaultValue: 30),
+                    AutoSendProposalOnApproval = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    RequireProposalReview = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    SkipProposalStep = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    AutoRequestFinancialInfo = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    FinancialInfoDueDays = table.Column<int>(type: "int", nullable: false, defaultValue: 14),
+                    RequireServiceContacts = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    SkipFinancialInfoStep = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    RequireSiteVisit = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    DefaultSiteVisitDurationMinutes = table.Column<int>(type: "int", nullable: false, defaultValue: 120),
+                    AllowVirtualSiteVisit = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    SendAutomaticReminders = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    ReminderFrequencyDays = table.Column<int>(type: "int", nullable: false, defaultValue: 7),
+                    NotifyOwnerOnStatusChange = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    NotifyClientOnStatusChange = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    AutoGenerateInvoiceOnAcceptance = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    DefaultPaymentTermsDays = table.Column<int>(type: "int", nullable: false, defaultValue: 30),
+                    AutoSendInvoiceReminders = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    RequireNarrativeReview = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    RequireFinalReview = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    AutoArchiveAfterDays = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    AllowAmendmentsAfterCompletion = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
@@ -1821,8 +1822,12 @@ namespace CRS.Migrations
                     ServiceContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     LastServiced = table.Column<DateTime>(type: "datetime2", nullable: true),
                     MeasurementOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RemainingLifeYears = table.Column<int>(type: "int", nullable: true),
                     RemainingLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MinUsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MaxUsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     UsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReplacementCost = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1832,8 +1837,18 @@ namespace CRS.Migrations
                 {
                     table.PrimaryKey("PK_ReserveStudyAdditionalElements", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_ReserveStudyAdditionalElements_ElementOptions_MaxUsefulLifeOptionId",
+                        column: x => x.MaxUsefulLifeOptionId,
+                        principalTable: "ElementOptions",
+                        principalColumn: "Id");
+                    table.ForeignKey(
                         name: "FK_ReserveStudyAdditionalElements_ElementOptions_MeasurementOptionId",
                         column: x => x.MeasurementOptionId,
+                        principalTable: "ElementOptions",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ReserveStudyAdditionalElements_ElementOptions_MinUsefulLifeOptionId",
+                        column: x => x.MinUsefulLifeOptionId,
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -1868,8 +1883,12 @@ namespace CRS.Migrations
                     ServiceContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     LastServiced = table.Column<DateTime>(type: "datetime2", nullable: true),
                     MeasurementOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RemainingLifeYears = table.Column<int>(type: "int", nullable: true),
                     RemainingLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MinUsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MaxUsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     UsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReplacementCost = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1886,8 +1905,18 @@ namespace CRS.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
+                        name: "FK_ReserveStudyBuildingElements_ElementOptions_MaxUsefulLifeOptionId",
+                        column: x => x.MaxUsefulLifeOptionId,
+                        principalTable: "ElementOptions",
+                        principalColumn: "Id");
+                    table.ForeignKey(
                         name: "FK_ReserveStudyBuildingElements_ElementOptions_MeasurementOptionId",
                         column: x => x.MeasurementOptionId,
+                        principalTable: "ElementOptions",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ReserveStudyBuildingElements_ElementOptions_MinUsefulLifeOptionId",
+                        column: x => x.MinUsefulLifeOptionId,
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -1923,7 +1952,10 @@ namespace CRS.Migrations
                     ServiceContactId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     LastServiced = table.Column<DateTime>(type: "datetime2", nullable: true),
                     MeasurementOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RemainingLifeYears = table.Column<int>(type: "int", nullable: true),
                     RemainingLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MinUsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    MaxUsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     UsefulLifeOptionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ElementName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -1950,8 +1982,18 @@ namespace CRS.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
+                        name: "FK_ReserveStudyCommonElements_ElementOptions_MaxUsefulLifeOptionId",
+                        column: x => x.MaxUsefulLifeOptionId,
+                        principalTable: "ElementOptions",
+                        principalColumn: "Id");
+                    table.ForeignKey(
                         name: "FK_ReserveStudyCommonElements_ElementOptions_MeasurementOptionId",
                         column: x => x.MeasurementOptionId,
+                        principalTable: "ElementOptions",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ReserveStudyCommonElements_ElementOptions_MinUsefulLifeOptionId",
+                        column: x => x.MinUsefulLifeOptionId,
                         principalTable: "ElementOptions",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -3032,9 +3074,19 @@ namespace CRS.Migrations
                 columns: new[] { "TenantId", "ApplicationUserId", "CommunityId" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyAdditionalElements_MaxUsefulLifeOptionId",
+                table: "ReserveStudyAdditionalElements",
+                column: "MaxUsefulLifeOptionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyAdditionalElements_MeasurementOptionId",
                 table: "ReserveStudyAdditionalElements",
                 column: "MeasurementOptionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyAdditionalElements_MinUsefulLifeOptionId",
+                table: "ReserveStudyAdditionalElements",
+                column: "MinUsefulLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyAdditionalElements_RemainingLifeOptionId",
@@ -3062,9 +3114,19 @@ namespace CRS.Migrations
                 column: "BuildingElementId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyBuildingElements_MaxUsefulLifeOptionId",
+                table: "ReserveStudyBuildingElements",
+                column: "MaxUsefulLifeOptionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyBuildingElements_MeasurementOptionId",
                 table: "ReserveStudyBuildingElements",
                 column: "MeasurementOptionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyBuildingElements_MinUsefulLifeOptionId",
+                table: "ReserveStudyBuildingElements",
+                column: "MinUsefulLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyBuildingElements_RemainingLifeOptionId",
@@ -3092,9 +3154,19 @@ namespace CRS.Migrations
                 column: "CommonElementId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyCommonElements_MaxUsefulLifeOptionId",
+                table: "ReserveStudyCommonElements",
+                column: "MaxUsefulLifeOptionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyCommonElements_MeasurementOptionId",
                 table: "ReserveStudyCommonElements",
                 column: "MeasurementOptionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReserveStudyCommonElements_MinUsefulLifeOptionId",
+                table: "ReserveStudyCommonElements",
+                column: "MinUsefulLifeOptionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ReserveStudyCommonElements_RemainingLifeOptionId",

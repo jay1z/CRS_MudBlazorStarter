@@ -334,6 +334,32 @@ namespace CRS.Data {
                     .HasColumnType("uniqueidentifier")
                     .HasDefaultValueSql("NEWSEQUENTIALID()");
                 entity.HasIndex(t => t.PublicId).IsUnique();
+
+                // Workflow settings: Add database default values for boolean columns
+                // This ensures existing rows get proper defaults when columns are added
+                entity.Property(t => t.AutoAcceptStudyRequests).HasDefaultValue(false);
+                entity.Property(t => t.DefaultProposalExpirationDays).HasDefaultValue(30);
+                entity.Property(t => t.AutoSendProposalOnApproval).HasDefaultValue(false);
+                entity.Property(t => t.RequireProposalReview).HasDefaultValue(false);
+                entity.Property(t => t.SkipProposalStep).HasDefaultValue(false);
+                entity.Property(t => t.AutoRequestFinancialInfo).HasDefaultValue(true);
+                entity.Property(t => t.FinancialInfoDueDays).HasDefaultValue(14);
+                entity.Property(t => t.RequireServiceContacts).HasDefaultValue(false);
+                entity.Property(t => t.SkipFinancialInfoStep).HasDefaultValue(false);
+                entity.Property(t => t.RequireSiteVisit).HasDefaultValue(true);
+                entity.Property(t => t.DefaultSiteVisitDurationMinutes).HasDefaultValue(120);
+                entity.Property(t => t.AllowVirtualSiteVisit).HasDefaultValue(false);
+                entity.Property(t => t.SendAutomaticReminders).HasDefaultValue(true);
+                entity.Property(t => t.ReminderFrequencyDays).HasDefaultValue(7);
+                entity.Property(t => t.NotifyOwnerOnStatusChange).HasDefaultValue(true);
+                entity.Property(t => t.NotifyClientOnStatusChange).HasDefaultValue(true);
+                entity.Property(t => t.AutoGenerateInvoiceOnAcceptance).HasDefaultValue(false);
+                entity.Property(t => t.DefaultPaymentTermsDays).HasDefaultValue(30);
+                entity.Property(t => t.AutoSendInvoiceReminders).HasDefaultValue(true);
+                entity.Property(t => t.RequireNarrativeReview).HasDefaultValue(false);
+                entity.Property(t => t.RequireFinalReview).HasDefaultValue(false);
+                entity.Property(t => t.AutoArchiveAfterDays).HasDefaultValue(0);
+                entity.Property(t => t.AllowAmendmentsAfterCompletion).HasDefaultValue(true);
             });
 
             builder.Entity<ReserveStudyBuildingElement>()

@@ -13,7 +13,7 @@ namespace CRS.Models {
 
         public required Guid BuildingElementId { get; set; }
         public BuildingElement? BuildingElement { get; set; }
-        public int Count { get; set; }
+        public int Count { get; set; } = 1;
         public ServiceContact? ServiceContact { get; set; }
         [DataType(DataType.Date)] public DateTime? LastServiced { get; set; }
         
@@ -45,6 +45,12 @@ namespace CRS.Models {
         // Legacy: kept for migration compatibility
         public Guid? UsefulLifeOptionId { get; set; }
         public ElementOption? UsefulLifeOption { get; set; }
+
+        /// <summary>
+        /// Current replacement cost for this element (used in funding plan calculations)
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? ReplacementCost { get; set; }
 
         [NotMapped]
         public ElementTypeEnum ElementType { get => ElementTypeEnum.Building; set => throw new NotImplementedException(); }

@@ -13,7 +13,7 @@ namespace CRS.Models {
 
         public required Guid CommonElementId { get; set; }
         public CommonElement? CommonElement { get; set; }
-        public int Count { get; set; }
+        public int Count { get; set; } = 1;
         public ServiceContact? ServiceContact { get; set; }
         [DataType(DataType.Date)] public DateTime? LastServiced { get; set; }
         

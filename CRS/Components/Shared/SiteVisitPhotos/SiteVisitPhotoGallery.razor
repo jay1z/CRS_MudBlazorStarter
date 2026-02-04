@@ -12,54 +12,59 @@
 @inject ISnackbar Snackbar
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 
-<MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Color="Color.Primary" Size="Size.Large" />
-            <MudText Typo="Typo.h6" Style="font-weight: 600;">Site Visit Photos</MudText>
-            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                @photos.Count photos
-            </MudChip>
-        </MudStack>
-        
-        @if (CanEdit)
-        {
-            <MudButton Variant="Variant.Filled" 
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.AddAPhoto"
-                       OnClick="OpenUploadDialog"
-                       Size="Size.Small">
-                Add Photos
-            </MudButton>
-        }
-    </MudStack>
+<MudPaper Elevation="0" Class="pa-4">
+    <MudStack Spacing="3">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Color="Color.Primary" Size="Size.Large" />
+                <div>
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">Site Visit Photos</MudText>
+                </div>
+            </MudStack>
 
-    @if (isLoading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
-        <MudText Typo="Typo.body2" Align="Align.Center" Style="color: #666;">Loading photos...</MudText>
-    }
-    else if (!photos.Any())
-    {
-        <MudPaper Elevation="0" Class="pa-8 text-center" Style="background: #f9f9f9; border-radius: 12px;">
-            <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Style="font-size: 64px; color: #ccc; margin-bottom: 16px;" />
-            <MudText Typo="Typo.h6" Style="color: #666; margin-bottom: 8px;">No photos yet</MudText>
-            <MudText Typo="Typo.body2" Style="color: #999; margin-bottom: 16px;">
-                Add photos from your site visit to document property conditions
-            </MudText>
-            @if (CanEdit)
-            {
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.AddAPhoto"
-                           OnClick="OpenUploadDialog">
-                    Upload Photos
-                </MudButton>
-            }
-        </MudPaper>
-    }
-    else
-    {
+            <MudStack Row="true" Spacing="2">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                    @photos.Count photos
+                </MudChip>
+                @if (CanEdit)
+                {
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.AddAPhoto"
+                               OnClick="OpenUploadDialog"
+                               Size="Size.Small">
+                        Add Photos
+                    </MudButton>
+                }
+            </MudStack>
+        </MudStack>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (!photos.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.body1">
+                        No photos have been added for this site visit yet.
+                    </MudText>
+                    @if (CanEdit)
+                    {
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.AddAPhoto"
+                                   OnClick="OpenUploadDialog">
+                            Upload Photos
+                        </MudButton>
+                    }
+                </MudStack>
+            </MudAlert>
+        }
+        else
+        {
         <!-- Category Filter -->
         <MudStack Row="true" Spacing="2" Class="mb-4" AlignItems="AlignItems.Center">
             <MudText Typo="Typo.body2" Style="color: #666;">Filter:</MudText>
@@ -132,7 +137,8 @@
                 </MudItem>
             }
         </MudGrid>
-    }
+        }
+    </MudStack>
 </MudPaper>
 
 <style>

@@ -189,6 +189,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.Interfaces.IGeneratedReportService, CRS.Services.GeneratedReportService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.IReportGenerationService, CRS.Services.ReportGenerationService>();
     builder.Services.AddScoped<CRS.Services.Interfaces.INarrativeService, CRS.Services.NarrativeService>();
+    builder.Services.AddScoped<CRS.Services.Interfaces.INarrativeStateService, CRS.Services.NarrativeStateService>();
 
     // Narrative HTML Template Services
     builder.Services.AddScoped<ITokenRenderer, DefaultTokenRenderer>();

@@ -246,12 +246,12 @@ public class ReserveStudyAdapter
         // Calculate last service year if we have last serviced date
         int? lastServiceYear = element.LastServiced?.Year;
 
-        // Building elements don't have cost in the current model - use placeholder
-        decimal estimatedCost = 10000m;
+        // Use ReplacementCost if available, otherwise placeholder
+        decimal cost = element.ReplacementCost ?? 10000m;
 
         _logger?.LogDebug(
-            "ReserveStudyAdapter: Converted building element '{Name}' - UsefulLife: {UsefulLife}, RemainingLife: {RemainingLife}",
-            name, usefulLifeYears, remainingLifeYears);
+            "ReserveStudyAdapter: Converted building element '{Name}' - UsefulLife: {UsefulLife}, RemainingLife: {RemainingLife}, Cost: {Cost}",
+            name, usefulLifeYears, remainingLifeYears, cost);
 
         return new ReserveComponentInput
         {
@@ -259,7 +259,7 @@ public class ReserveStudyAdapter
             Name = name,
             Category = "Building",
             Method = ComponentMethod.Replacement,
-            CurrentCost = estimatedCost,
+            CurrentCost = cost,
             UsefulLifeYears = usefulLifeYears,
             RemainingLifeOverrideYears = remainingLifeYears,
             LastServiceYear = lastServiceYear
@@ -356,12 +356,12 @@ public class ReserveStudyAdapter
 
         int? lastServiceYear = element.LastServiced?.Year;
 
-        // Additional elements don't have cost in the current model - use placeholder
-        decimal estimatedCost = 10000m;
+        // Use ReplacementCost if available, otherwise placeholder
+        decimal cost = element.ReplacementCost ?? 10000m;
 
         _logger?.LogDebug(
-            "ReserveStudyAdapter: Converted additional element '{Name}' - UsefulLife: {UsefulLife}, RemainingLife: {RemainingLife}",
-            name, usefulLifeYears, remainingLifeYears);
+            "ReserveStudyAdapter: Converted additional element '{Name}' - UsefulLife: {UsefulLife}, RemainingLife: {RemainingLife}, Cost: {Cost}",
+            name, usefulLifeYears, remainingLifeYears, cost);
 
         return new ReserveComponentInput
         {
@@ -369,7 +369,7 @@ public class ReserveStudyAdapter
             Name = name,
             Category = "Additional",
             Method = ComponentMethod.Replacement,
-            CurrentCost = estimatedCost,
+            CurrentCost = cost,
             UsefulLifeYears = usefulLifeYears,
             RemainingLifeOverrideYears = remainingLifeYears,
             LastServiceYear = lastServiceYear

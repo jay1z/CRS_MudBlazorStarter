@@ -102,6 +102,16 @@
                                                              Min="0" Max="100" />
                                         </MudItem>
                                         <MudItem xs="6" sm="2">
+                                            <MudNumericField T="decimal?" @bind-Value="element.ReplacementCost"
+                                                             Label="Replacement Cost"
+                                                             Variant="Variant.Outlined"
+                                                             Margin="Margin.Dense"
+                                                             Adornment="Adornment.Start"
+                                                             AdornmentText="$"
+                                                             Format="N0"
+                                                             Min="0" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
                                             <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"
                                                        Label="Measurement"
                                                        Variant="Variant.Outlined"
@@ -223,6 +233,16 @@
                                                              Variant="Variant.Outlined"
                                                              Margin="Margin.Dense"
                                                              Min="0" Max="100" />
+                                        </MudItem>
+                                        <MudItem xs="6" sm="2">
+                                            <MudNumericField T="decimal?" @bind-Value="element.ReplacementCost"
+                                                             Label="Replacement Cost"
+                                                             Variant="Variant.Outlined"
+                                                             Margin="Margin.Dense"
+                                                             Adornment="Adornment.Start"
+                                                             AdornmentText="$"
+                                                             Format="N0"
+                                                             Min="0" />
                                         </MudItem>
                                         <MudItem xs="6" sm="2">
                                             <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"
@@ -353,6 +373,16 @@
                                                                      Variant="Variant.Outlined"
                                                                      Margin="Margin.Dense"
                                                                      Min="0" Max="100" />
+                                                </MudItem>
+                                                <MudItem xs="6" sm="2">
+                                                    <MudNumericField T="decimal?" @bind-Value="element.ReplacementCost"
+                                                                     Label="Replacement Cost"
+                                                                     Variant="Variant.Outlined"
+                                                                     Margin="Margin.Dense"
+                                                                     Adornment="Adornment.Start"
+                                                                     AdornmentText="$"
+                                                                     Format="N0"
+                                                                     Min="0" />
                                                 </MudItem>
                                                 <MudItem xs="6" sm="2">
                                                     <MudSelect T="Guid?" @bind-Value="element.MeasurementOptionId"

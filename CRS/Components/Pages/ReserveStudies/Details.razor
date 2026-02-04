@@ -37,6 +37,7 @@
 @inject IDispatcher _dispatcher
 @inject IDialogService DialogService
 @inject IProposalAcceptanceService AcceptanceService
+@inject IScopeComparisonService ScopeComparisonService
 @inject ILogger<Details> Logger
 
 <PageTitle>Reserve Study Details</PageTitle>
@@ -67,21 +68,21 @@
                             </div>
                         </MudStack>
                         <MudStack Row="true" Spacing="3" Class="mt-2">
-                            <MudChip T="string" Icon="@Icons.Material.Filled.Tag" 
-                                     Style="background: rgba(255,255,255,0.2); color: white;" 
+                            <MudChip T="string" Icon="@Icons.Material.Filled.Tag"
+                                     Style="background: rgba(255,255,255,0.2); color: white;"
                                      Size="Size.Small">
                                 ID: @reserveStudy.Id.ToString().Substring(0, 8)
                             </MudChip>
-                            <MudChip T="string" Icon="@Icons.Material.Filled.CalendarToday" 
-                                     Style="background: rgba(255,255,255,0.2); color: white;" 
+                            <MudChip T="string" Icon="@Icons.Material.Filled.CalendarToday"
+                                     Style="background: rgba(255,255,255,0.2); color: white;"
                                      Size="Size.Small">
                                 Created: @reserveStudy.DateCreated?.ToString("MMM dd, yyyy")
                             </MudChip>
                         </MudStack>
                     </MudStack>
-                    
+
                     @if (canEdit || canStaffEdit) {
-                        <MudButton Variant="Variant.Filled" 
+                        <MudButton Variant="Variant.Filled"
                                    Size="Size.Large"
                                    StartIcon="@Icons.Material.Filled.Edit"
                                    Href="@($"/ReserveStudies/{Id}/Edit")"
@@ -143,8 +144,8 @@
                                 </MudStack>
                                 <AuthorizeView Policy="RequireTenantOwner">
                                     <Authorized>
-                                        <MudButton Variant="Variant.Filled" 
-                                                   Size="Size.Small" 
+                                        <MudButton Variant="Variant.Filled"
+                                                   Size="Size.Small"
                                                    Style="background: rgba(255,255,255,0.2); color: white; text-transform: none;"
                                                    StartIcon="@Icons.Material.Filled.Edit"
                                                    OnClick="OpenAssignSpecialistDialog">
@@ -163,18 +164,18 @@
                                             @reserveStudy.Specialist.Email
                                         </MudLink>
                                     </MudStack>
-                                    <MudButton Variant="Variant.Outlined" 
-                                               Color="Color.Primary" 
+                                    <MudButton Variant="Variant.Outlined"
+                                               Color="Color.Primary"
                                                FullWidth="true"
                                                StartIcon="@Icons.Material.Filled.Message"
-                                               Disabled="@(reserveStudy?.SpecialistUserId == null)" 
+                                               Disabled="@(reserveStudy?.SpecialistUserId == null)"
                                                OnClick="OpenComposeMessage">
                                         Send Message
                                     </MudButton>
                                     <AuthorizeView Policy="RequireTenantOwner">
                                         <Authorized>
-                                            <MudButton Variant="Variant.Text" 
-                                                       Color="Color.Primary" 
+                                            <MudButton Variant="Variant.Text"
+                                                       Color="Color.Primary"
                                                        FullWidth="true"
                                                        StartIcon="@Icons.Material.Filled.SwapHoriz"
                                                        OnClick="OpenAssignSpecialistDialog">
@@ -182,15 +183,15 @@
                                             </MudButton>
                                         </Authorized>
                                     </AuthorizeView>
-                } else {
+                                } else {
                                     @if (CanAssignSpecialist()) {
                                         <MudAlert Severity="Severity.Success" Dense="true">
                                             Request approved! You can now assign a specialist.
                                         </MudAlert>
                                         <AuthorizeView Policy="RequireTenantOwner">
                                             <Authorized>
-                                                <MudButton Variant="Variant.Filled" 
-                                                           Color="Color.Primary" 
+                                                <MudButton Variant="Variant.Filled"
+                                                           Color="Color.Primary"
                                                            FullWidth="true"
                                                            StartIcon="@Icons.Material.Filled.PersonAdd"
                                                            OnClick="OpenAssignSpecialistDialog">
@@ -238,9 +239,9 @@
                                             @GetProgressPercentage()%
                                         </MudText>
                                     </MudStack>
-                                    <MudProgressLinear Color="Color.Success" 
-                                                       Value="@GetProgressPercentage()" 
-                                                       Size="Size.Medium" 
+                                    <MudProgressLinear Color="Color.Success"
+                                                       Value="@GetProgressPercentage()"
+                                                       Size="Size.Medium"
                                                        Style="border-radius: 8px; height: 12px;" />
                                 </div>
 
@@ -249,24 +250,24 @@
                                 <MudText Typo="Typo.caption" Style="font-weight: 600; text-transform: uppercase; color: #666;">
                                     Key Milestones
                                 </MudText>
-                                
+
                                 @foreach (var milestone in GetKeyMilestones()) {
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         @if (milestone.IsCompleted) {
-                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
-                                                     Color="Color.Success" 
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                                     Color="Color.Success"
                                                      Size="Size.Small" />
                                         } else if (milestone.IsCurrent) {
-                                            <MudIcon Icon="@Icons.Material.Filled.RadioButtonChecked" 
-                                                     Color="Color.Primary" 
+                                            <MudIcon Icon="@Icons.Material.Filled.RadioButtonChecked"
+                                                     Color="Color.Primary"
                                                      Size="Size.Small" />
                                         } else {
-                                            <MudIcon Icon="@Icons.Material.Outlined.RadioButtonUnchecked" 
-                                                     Style="color: #ccc;" 
+                                            <MudIcon Icon="@Icons.Material.Outlined.RadioButtonUnchecked"
+                                                     Style="color: #ccc;"
                                                      Size="Size.Small" />
                                         }
                                         <div style="flex: 1;">
-                                            <MudText Typo="Typo.body2" 
+                                            <MudText Typo="Typo.body2"
                                                      Style="@(milestone.IsCompleted ? "color: #666; text-decoration: line-through;" : milestone.IsCurrent ? "font-weight: 600; color: #667eea;" : "color: #999;")">
                                                 @milestone.Title
                                             </MudText>
@@ -289,8 +290,8 @@
                                     <MudPaper Elevation="0" Class="pa-3" Style="background: #f0f4ff; border-radius: 8px;">
                                         <MudStack Spacing="1">
                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward" 
-                                                         Color="Color.Primary" 
+                                                <MudIcon Icon="@Icons.Material.Filled.ArrowForward"
+                                                         Color="Color.Primary"
                                                          Size="Size.Small" />
                                                 <MudText Typo="Typo.caption" Style="color: #667eea; font-weight: 600; text-transform: uppercase;">
                                                     Next Step
@@ -300,8 +301,8 @@
                                                 @nextActionInfo.ActionText
                                             </MudText>
                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                <MudIcon Icon="@nextActionInfo.ActorIcon" 
-                                                         Size="Size.Small" 
+                                                <MudIcon Icon="@nextActionInfo.ActorIcon"
+                                                         Size="Size.Small"
                                                          Style="color: #999;" />
                                                 <MudText Typo="Typo.caption" Style="color: #666;">
                                                     @nextActionInfo.ActorText
@@ -324,15 +325,15 @@
                                 </MudCardHeader>
                                 <MudCardContent>
                                     <MudStack Spacing="2">
-                                        <MudButton Variant="Variant.Outlined" 
-                                                   Color="Color.Secondary" 
+                                        <MudButton Variant="Variant.Outlined"
+                                                   Color="Color.Secondary"
                                                    FullWidth="true"
                                                    StartIcon="@Icons.Material.Filled.Link"
                                                    OnClick="SendRequestLink">
                                             Send Request Link
                                         </MudButton>
-                                        <MudButton Variant="Variant.Outlined" 
-                                                   Color="Color.Secondary" 
+                                        <MudButton Variant="Variant.Outlined"
+                                                   Color="Color.Secondary"
                                                    FullWidth="true"
                                                    StartIcon="@Icons.Material.Filled.VpnKey"
                                                    OnClick="SendAccessTokenLink">
@@ -340,8 +341,8 @@
                                         </MudButton>
                                         @if (reserveStudy?.CurrentProposal != null && reserveStudy?.CurrentStatus < StudyStatus.ProposalSent) {
                                             <MudDivider Class="my-2" />
-                                            <MudButton Variant="Variant.Filled" 
-                                                       Color="Color.Primary" 
+                                            <MudButton Variant="Variant.Filled"
+                                                       Color="Color.Primary"
                                                        FullWidth="true"
                                                        StartIcon="@Icons.Material.Filled.Edit"
                                                        Href="@($"/ReserveStudies/{Id}/Proposal")">
@@ -355,11 +356,10 @@
                     </AuthorizeView>
 
                     <!-- Admin Workflow Panel -->
-                    <CRS.Components.Custom.AdminWorkflowPanel 
-                        StudyId="@Id"
-                        CurrentStatus="@GetCurrentStatus()"
-                        StatusHistory="@statusHistory"
-                        OnActionCompleted="@ReloadAfterChange" />
+                    <CRS.Components.Custom.AdminWorkflowPanel StudyId="@Id"
+                                                              CurrentStatus="@GetCurrentStatus()"
+                                                              StatusHistory="@statusHistory"
+                                                              OnActionCompleted="@ReloadAfterChange" />
 
                     @if (reserveStudy.DateCreated.HasValue && (DateTime.Now - reserveStudy.DateCreated.Value).TotalDays > 30 && !reserveStudy.IsComplete) {
                         <MudAlert Severity="Severity.Warning" Elevation="2" Class="mb-4" Style="border-radius: 12px;">
@@ -368,7 +368,7 @@
                                 <div>
                                     <MudText Typo="Typo.h6" Style="font-weight: 600;">Attention Needed</MudText>
                                     <MudText Typo="Typo.body2">
-                                        This request has been pending for 
+                                        This request has been pending for
                                         <strong>@((DateTime.Now - reserveStudy.DateCreated.Value).TotalDays.ToString("N0")) days</strong>
                                     </MudText>
                                 </div>
@@ -379,13 +379,7 @@
 
                 <!-- Main Column -->
                 <MudItem xs="12" lg="8">
-                    <MudTabs Elevation="2" 
-                             Rounded="true" 
-                             Color="Color.Primary" 
-                             ActivePanelIndex="activeTabIndex" 
-                             ActivePanelIndexChanged="HandleTabChange"
-                             Style="border-radius: 12px; overflow: hidden;"
-                             PanelClass="pa-4">
+                    <MudTabs Elevation="2" Rounded="true" Color="Color.Primary" ActivePanelIndex="activeTabIndex" ActivePanelIndexChanged="HandleTabChange" Style="border-radius: 12px; overflow: hidden;" PanelClass="pa-4">
                         <!-- Workflow Status Tab -->
                         <MudTabPanel Text="Workflow Details" Icon="@Icons.Material.Filled.Info">
                             <MudCard Elevation="0">
@@ -458,8 +452,8 @@
                                         var proposalSent = proposal.DateSent.HasValue;
                                         var proposalStatus = GetCurrentStatus();
                                         // Show proposal if not yet accepted, OR if it's an amendment awaiting acceptance
-                                        var showProposalDetails = proposalStatus < StudyStatus.ProposalAccepted || 
-                                                                  (proposal.IsAmendment && (proposalStatus == StudyStatus.AmendmentPending || proposalStatus == StudyStatus.AmendmentApproved));
+                                        var showProposalDetails = proposalStatus < StudyStatus.ProposalAccepted ||
+                                        (proposal.IsAmendment && (proposalStatus == StudyStatus.AmendmentPending || proposalStatus == StudyStatus.AmendmentApproved));
 
                                         @if (showProposalDetails) {
                                             @* Show to staff always, or to HOA users only after proposal is sent *@
@@ -481,7 +475,7 @@
                                         var currentStatus = GetCurrentStatus();
                                         var isAmendmentPending = currentStatus == StudyStatus.AmendmentPending;
                                         var isAmendmentApproved = currentStatus == StudyStatus.AmendmentApproved;
-                                        
+
                                         <MudStack Row="true" Spacing="2" Class="mb-4" Style="flex-wrap: wrap;">
                                             @* Amendment Pending - Show alert and admin approval button *@
                                             @if (isAmendmentPending) {
@@ -498,10 +492,10 @@
                                                             </MudStack>
                                                             <AuthorizeView Policy="RequireTenantOwner">
                                                                 <Authorized>
-                                                                    <MudButton Variant="Variant.Filled" 
-                                                                               Color="Color.Success" 
+                                                                    <MudButton Variant="Variant.Filled"
+                                                                               Color="Color.Success"
                                                                                Size="Size.Large"
-                                                                               StartIcon="@Icons.Material.Filled.CheckCircle" 
+                                                                               StartIcon="@Icons.Material.Filled.CheckCircle"
                                                                                OnClick="@(() => ApplyTransition(StudyStatus.AmendmentApproved))">
                                                                         Approve Amendment
                                                                     </MudButton>
@@ -511,7 +505,7 @@
                                                     </MudAlert>
                                                 </MudItem>
                                             }
-                                            
+
                                             @* Amendment Approved - Waiting for HOA acceptance *@
                                             @if (isAmendmentApproved) {
                                                 <MudItem xs="12">
@@ -541,10 +535,10 @@
                                                                             The site visit revealed scope changes that affect the original proposal. Please review and accept the amendment to continue with your reserve study.
                                                                         </MudText>
                                                                     </MudStack>
-                                                                    <MudButton Variant="Variant.Filled" 
-                                                                               Color="Color.Success" 
+                                                                    <MudButton Variant="Variant.Filled"
+                                                                               Color="Color.Success"
                                                                                Size="Size.Large"
-                                                                               StartIcon="@Icons.Material.Filled.CheckCircle" 
+                                                                               StartIcon="@Icons.Material.Filled.CheckCircle"
                                                                                OnClick="OpenAcceptProposalDialog">
                                                                         Review & Accept Amendment
                                                                     </MudButton>
@@ -554,422 +548,432 @@
                                                     </AuthorizeView>
                                                 </MudItem>
                                             }
-                                            
+
 
                                             @* Only show other action buttons if NOT in amendment flow *@
                                             @if (!isAmendmentPending && !isAmendmentApproved) {
-                                            @* Approve Request - when RequestApproved is allowed *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.RequestApproved)) {
-                                                <AuthorizeView Policy="RequireTenantOwner">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
-                                                                   OnClick="ApproveRequestAsync">
-                                                            Approve Request
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
+                                                @* Approve Request - when RequestApproved is allowed *@
+                                                @if (allowedNextStudy.Contains(StudyStatus.RequestApproved)) {
+                                                    <AuthorizeView Policy="RequireTenantOwner">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Success"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                                                       OnClick="ApproveRequestAsync">
+                                                                Approve Request
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @* Create Proposal - when no proposal exists and ProposalCreated is allowed *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalCreated) && reserveStudy?.CurrentProposal == null) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Description" 
-                                                                   Href="@($"/ReserveStudies/{Id}/Proposal")">
-                                                            Create Proposal
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
-                                            @* Show Send Proposal only when we can actually transition to ProposalSent *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalSent)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Send" 
-                                                                   OnClick="@(() => SendProposalAsync(Id))">
-                                                            Send Proposal
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
-                                            @* Proposal workflow steps *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalReviewed)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.RateReview" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.ProposalReviewed))">
-                                                            Submit for Review
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
-                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalApproved)) {
-                                                <AuthorizeView Policy="RequireTenantOwner">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.ProposalApproved))">
-                                                            Approve Proposal
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
-                                            @if (allowedNextStudy.Contains(StudyStatus.ProposalUpdated)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Outlined" 
-                                                                   Color="Color.Warning" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Edit" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.ProposalUpdated))">
-                                                            Request Changes
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
-                                            @* Data collection steps - only show for statuses before ProposalAccepted *@
-                                            @* ProposalAccepted triggers automatic financial info request *@
-                                            @if ((allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested) || 
-                                                  allowedNextStudy.Contains(StudyStatus.ServiceContactsRequested)) &&
-                                                  currentStatus < StudyStatus.ProposalAccepted) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Description" 
-                                                                   OnClick="@(() => RequestFinancialInfoAsync(Id))">
-                                                            Request Financial Info
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
 
-                                            @* Request more financial info (after review) *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested) &&
-                                                 currentStatus >= StudyStatus.FinancialInfoSubmitted &&
-                                                 currentStatus < StudyStatus.SiteVisitPending) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Outlined" 
-                                                                   Color="Color.Warning" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Refresh" 
-                                                                   OnClick="@(() => RequestFinancialInfoAsync(Id))">
-                                                            Request More Info
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @* Create Proposal - when no proposal exists and ProposalCreated is allowed *@
+                                                @if (allowedNextStudy.Contains(StudyStatus.ProposalCreated) && reserveStudy?.CurrentProposal == null) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Success"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Description"
+                                                                       Href="@($"/ReserveStudies/{Id}/Proposal")">
+                                                                Create Proposal
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @* Accept financial info *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.FinancialInfoReceived)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.FinancialInfoReceived))">
-                                                            Accept Financial Info
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @* Show Send Proposal only when we can actually transition to ProposalSent *@
+                                                @if (allowedNextStudy.Contains(StudyStatus.ProposalSent)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Send"
+                                                                       OnClick="@(() => SendProposalAsync(Id))">
+                                                                Send Proposal
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @* HOA user button to submit financial info when requested *@
-                                            @if (currentStatus == StudyStatus.FinancialInfoRequested || 
-                                                 currentStatus == StudyStatus.FinancialInfoInProgress) {
-                                                <AuthorizeView Policy="RequireHOAUser">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled"
-                                                                   Color="Color.Success"
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Description"
-                                                                   Href="@($"/ReserveStudies/{Id}/FinancialInfo")">
-                                                            Submit Financial Information
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
-                                            @* Site visit workflow *@
-                                            @if (currentStatus == StudyStatus.FinancialInfoReceived && 
-                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitPending)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Event" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitPending))">
-                                                            Begin Site Visit Process
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @* Proposal workflow steps *@
+                                                @if (allowedNextStudy.Contains(StudyStatus.ProposalReviewed)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.RateReview"
+                                                                       OnClick="@(() => ApplyTransition(StudyStatus.ProposalReviewed))">
+                                                                Submit for Review
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @if (currentStatus == StudyStatus.SiteVisitPending && 
-                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitScheduled)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.CalendarMonth" 
-                                                                   OnClick="OpenScheduleSiteVisitDialog">
-                                                            Schedule Site Visit
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @if (allowedNextStudy.Contains(StudyStatus.ProposalApproved)) {
+                                                    <AuthorizeView Policy="RequireTenantOwner">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Success"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                                                       OnClick="@(() => ApplyTransition(StudyStatus.ProposalApproved))">
+                                                                Approve Proposal
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @if (currentStatus == StudyStatus.SiteVisitScheduled && 
-                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitCompleted)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitCompleted))">
-                                                            Mark Site Visit Complete
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @if (allowedNextStudy.Contains(StudyStatus.ProposalUpdated)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Outlined"
+                                                                       Color="Color.Warning"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Edit"
+                                                                       OnClick="@(() => ApplyTransition(StudyStatus.ProposalUpdated))">
+                                                                Request Changes
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @if (currentStatus == StudyStatus.SiteVisitCompleted && 
-                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitDataEntered)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Storage" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitDataEntered))">
-                                                            Mark Data Entry Complete
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @* Data collection steps - only show for statuses before ProposalAccepted *@
+                                                @* ProposalAccepted triggers automatic financial info request *@
+                                                @if ((allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested) ||
+                                                                                    allowedNextStudy.Contains(StudyStatus.ServiceContactsRequested)) &&
+                                                                                    currentStatus < StudyStatus.ProposalAccepted) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Description"
+                                                                       OnClick="@(() => RequestFinancialInfoAsync(Id))">
+                                                                Request Financial Info
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @* Site Visit Data Entered - Advance to Funding Plan *@
-                                            @if (currentStatus == StudyStatus.SiteVisitDataEntered && 
-                                                 allowedNextStudy.Contains(StudyStatus.FundingPlanReady)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.PlayArrow" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.FundingPlanReady))">
-                                                            Begin Funding Plan
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @* Request more financial info (after review) *@
+                                                @if (allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested) &&
+                                                                                    currentStatus >= StudyStatus.FinancialInfoSubmitted &&
+                                                                                    currentStatus < StudyStatus.SiteVisitPending) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Outlined"
+                                                                       Color="Color.Warning"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Refresh"
+                                                                       OnClick="@(() => RequestFinancialInfoAsync(Id))">
+                                                                Request More Info
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @* Funding Plan Phase - Link to Reports tab and option to go back *@
-                                            @if (currentStatus == StudyStatus.FundingPlanReady || 
-                                                 currentStatus == StudyStatus.FundingPlanInProcess) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Description" 
-                                                                   OnClick="NavigateToReportsTab">
-                                                            Go to Reports
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @* Accept financial info *@
+                                                @if (allowedNextStudy.Contains(StudyStatus.FinancialInfoReceived)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Success"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                                                       OnClick="@(() => ApplyTransition(StudyStatus.FinancialInfoReceived))">
+                                                                Accept Financial Info
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @if (currentStatus == StudyStatus.FundingPlanReady &&
-                                                 allowedNextStudy.Contains(StudyStatus.SiteVisitDataEntered)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Outlined" 
-                                                                   Color="Color.Secondary" 
-                                                                   Size="Size.Medium"
-                                                                   StartIcon="@Icons.Material.Filled.Edit" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitDataEntered))">
-                                                            Edit Site Visit Data
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @* HOA user button to submit financial info when requested *@
+                                                @if (currentStatus == StudyStatus.FinancialInfoRequested ||
+                                                                                    currentStatus == StudyStatus.FinancialInfoInProgress) {
+                                                    <AuthorizeView Policy="RequireHOAUser">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Success"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Description"
+                                                                       Href="@($"/ReserveStudies/{Id}/FinancialInfo")">
+                                                                Submit Financial Information
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @* Narrative Phase - Link to Narrative tab *@
-                                            @if (currentStatus >= StudyStatus.FundingPlanComplete && 
-                                                 currentStatus <= StudyStatus.NarrativeSent) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Article" 
-                                                                   OnClick="NavigateToNarrativeTab">
-                                                            Go to Narrative
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @* Site visit workflow *@
+                                                @if (currentStatus == StudyStatus.FinancialInfoReceived &&
+                                                                                    allowedNextStudy.Contains(StudyStatus.SiteVisitPending)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Event"
+                                                                       OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitPending))">
+                                                                Begin Site Visit Process
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @* Advance to Narrative Ready from Funding Plan Complete *@
-                                            @if (currentStatus == StudyStatus.FundingPlanComplete && 
-                                                 allowedNextStudy.Contains(StudyStatus.NarrativeReady)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.PlayArrow" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.NarrativeReady))">
-                                                            Begin Narrative
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @if (currentStatus == StudyStatus.SiteVisitPending &&
+                                                                                    allowedNextStudy.Contains(StudyStatus.SiteVisitScheduled)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.CalendarMonth"
+                                                                       OnClick="OpenScheduleSiteVisitDialog">
+                                                                Schedule Site Visit
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
 
-                                            @* Complete study *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.RequestCompleted)) {
-                                                <AuthorizeView Policy="RequireTenantOwner">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
-                                                                   OnClick="@(() => CompleteReserveStudyAsync(Id))">
-                                                            Mark as Complete
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
-                                            @* Submit for Final Review (when RequireFinalReview is enabled) *@
-                                            @if (allowedNextStudy.Contains(StudyStatus.FinalReviewPending)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.RateReview" 
-                                                                   OnClick="@(() => ApplyTransition(StudyStatus.FinalReviewPending))">
-                                                            Submit for Final Review
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
-                                            @* Complete Final Review (when in FinalReviewPending status) *@
-                                            @if (currentStatus == StudyStatus.FinalReviewPending) {
-                                                <AuthorizeView Policy="RequireTenantOwner">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.Verified" 
-                                                                   OnClick="@(() => CompleteFinalReviewAsync(Id))">
-                                                            Complete Final Review
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            
-                                            @* Generic advance for other transitions (forward progression) *@
-                                            @foreach (var nextAllowed in allowedNextStudy.Where(s => 
-                                                s != StudyStatus.RequestCancelled &&
-                                                s != StudyStatus.RequestApproved &&
-                                                s != StudyStatus.ProposalCreated &&
-                                                s != StudyStatus.ProposalSent &&
-                                                s != StudyStatus.ProposalReviewed &&
-                                                s != StudyStatus.ProposalApproved &&
-                                                s != StudyStatus.ProposalUpdated &&
-                                                s != StudyStatus.ProposalAccepted &&
-                                                s != StudyStatus.FinancialInfoRequested &&
-                                                s != StudyStatus.FinancialInfoInProgress &&
-                                                s != StudyStatus.FinancialInfoReceived &&
-                                                s != StudyStatus.ServiceContactsRequested &&
-                                                s != StudyStatus.SiteVisitPending &&
-                                                s != StudyStatus.SiteVisitScheduled &&
-                                                s != StudyStatus.SiteVisitCompleted &&
-                                                s != StudyStatus.SiteVisitDataEntered &&
-                                                s != StudyStatus.RequestCompleted &&
-                                                s != StudyStatus.AmendmentPending &&
-                                                s != StudyStatus.AmendmentApproved &&
-                                                s != StudyStatus.FundingPlanReady &&
-                                                s != StudyStatus.FundingPlanInProcess &&
-                                                s != StudyStatus.FundingPlanComplete &&
-                                                s != StudyStatus.NarrativeReady &&
-                                                s != StudyStatus.NarrativeInProcess &&
-                                                s != StudyStatus.NarrativeComplete &&
-                                                s != StudyStatus.NarrativePrintReady &&
-                                                s != StudyStatus.NarrativePackaged &&
-                                                s != StudyStatus.NarrativeSent &&
-                                                s != StudyStatus.FinalReviewPending)) {
-                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Primary" 
-                                                                   Size="Size.Medium"
-                                                                   StartIcon="@Icons.Material.Filled.ArrowForward" 
-                                                                   OnClick="@(() => ApplyTransition(nextAllowed))">
-                                                            @FormatStatusTitle(nextAllowed)
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
-                                            @* HOA User: Accept Proposal button *@
-                                            @if (currentStatus == StudyStatus.ProposalSent && !hasValidAcceptance) {
-                                                <AuthorizeView Policy="RequireHOAUser">
-                                                    <Authorized>
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                   Color="Color.Success" 
-                                                                   Size="Size.Large"
-                                                                   StartIcon="@Icons.Material.Filled.CheckCircle" 
-                                                                   OnClick="OpenAcceptProposalDialog">
-                                                            Accept Proposal
-                                                        </MudButton>
-                                                    </Authorized>
-                                                </AuthorizeView>
-                                            }
+                                                @if (currentStatus == StudyStatus.SiteVisitScheduled &&
+                                                                                    allowedNextStudy.Contains(StudyStatus.SiteVisitCompleted)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Success"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                                                       OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitCompleted))">
+                                                                Mark Site Visit Complete
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+
+                                                @if (currentStatus == StudyStatus.SiteVisitCompleted &&
+                                                                                    allowedNextStudy.Contains(StudyStatus.SiteVisitDataEntered)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Storage"
+                                                                       OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitDataEntered))">
+                                                                Mark Data Entry Complete
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+
+                                                @* Site Visit Data Entered - Check for scope variance before allowing funding plan *@
+                                                @if (currentStatus == StudyStatus.SiteVisitDataEntered) {
+                                                    @if (hasUnresolvedScopeVariance) {
+                                                        @* Scope variance detected - must be resolved first *@
+                                                        <MudItem xs="12">
+                                                            <MudAlert Severity="Severity.Warning" Class="mb-3" Elevation="2" Style="border-radius: 12px;">
+                                                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                                                    <MudStack Spacing="1">
+                                                                        <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                                                                            Scope Variance Detected
+                                                                        </MudText>
+                                                                        <MudText Typo="Typo.body2">
+                                                                            The site visit revealed a variance of @(scopeComparison?.VarianceCount > 0 ? "+" : "")@scopeComparison?.VarianceCount elements (@scopeComparison?.VariancePercent.ToString("N1")%) from the original proposal scope.
+                                                                            This must be resolved before proceeding to the funding plan.
+                                                                        </MudText>
+                                                                    </MudStack>
+                                                                    <MudButton Variant="Variant.Filled"
+                                                                               Color="Color.Warning"
+                                                                               Size="Size.Large"
+                                                                               StartIcon="@Icons.Material.Filled.CompareArrows"
+                                                                               OnClick="NavigateToScopeTab">
+                                                                        Review Scope Variance
+                                                                    </MudButton>
+                                                                </MudStack>
+                                                            </MudAlert>
+                                                        </MudItem>
+                                                    } else if (allowedNextStudy.Contains(StudyStatus.FundingPlanReady)) {
+                                                        @* No variance or variance resolved - allow funding plan *@
+                                                        <AuthorizeView Policy="RequireTenantStaff">
+                                                            <Authorized>
+                                                                <MudButton Variant="Variant.Filled"
+                                                                           Color="Color.Success"
+                                                                           Size="Size.Large"
+                                                                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                                                                           OnClick="@(() => ApplyTransition(StudyStatus.FundingPlanReady))">
+                                                                    Begin Funding Plan
+                                                                </MudButton>
+                                                            </Authorized>
+                                                        </AuthorizeView>
+                                                    }
+                                                }
+
+                                                @* Funding Plan Phase - Link to Reports tab and option to go back *@
+                                                @if (currentStatus == StudyStatus.FundingPlanReady ||
+                                                                                    currentStatus == StudyStatus.FundingPlanInProcess) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Description"
+                                                                       OnClick="NavigateToReportsTab">
+                                                                Go to Reports
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+
+                                                @if (currentStatus == StudyStatus.FundingPlanReady &&
+                                                                                    allowedNextStudy.Contains(StudyStatus.SiteVisitDataEntered)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Outlined"
+                                                                       Color="Color.Secondary"
+                                                                       Size="Size.Medium"
+                                                                       StartIcon="@Icons.Material.Filled.Edit"
+                                                                       OnClick="@(() => ApplyTransition(StudyStatus.SiteVisitDataEntered))">
+                                                                Edit Site Visit Data
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+
+                                                @* Narrative Phase - Link to Narrative tab *@
+                                                @if (currentStatus >= StudyStatus.FundingPlanComplete &&
+                                                                                    currentStatus <= StudyStatus.NarrativeSent) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Article"
+                                                                       OnClick="NavigateToNarrativeTab">
+                                                                Go to Narrative
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+
+                                                @* Complete study *@
+                                                @if (allowedNextStudy.Contains(StudyStatus.RequestCompleted)) {
+                                                    <AuthorizeView Policy="RequireTenantOwner">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Success"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                                                       OnClick="@(() => CompleteReserveStudyAsync(Id))">
+                                                                Mark as Complete
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+
+                                                @* Submit for Final Review (when RequireFinalReview is enabled) *@
+                                                @if (allowedNextStudy.Contains(StudyStatus.FinalReviewPending)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.RateReview"
+                                                                       OnClick="@(() => ApplyTransition(StudyStatus.FinalReviewPending))">
+                                                                Submit for Final Review
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+
+                                                @* Complete Final Review (when in FinalReviewPending status) *@
+                                                @if (currentStatus == StudyStatus.FinalReviewPending) {
+                                                    <AuthorizeView Policy="RequireTenantOwner">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Success"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Verified"
+                                                                       OnClick="@(() => CompleteFinalReviewAsync(Id))">
+                                                                Complete Final Review
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+
+                                                @* Generic advance for other transitions (forward progression) *@
+                                                @foreach (var nextAllowed in allowedNextStudy.Where(s =>
+                                                                                    s != StudyStatus.RequestCancelled &&
+                                                                                    s != StudyStatus.RequestApproved &&
+                                                                                    s != StudyStatus.ProposalCreated &&
+                                                                                    s != StudyStatus.ProposalSent &&
+                                                                                    s != StudyStatus.ProposalReviewed &&
+                                                                                    s != StudyStatus.ProposalApproved &&
+                                                                                    s != StudyStatus.ProposalUpdated &&
+                                                                                    s != StudyStatus.ProposalAccepted &&
+                                                                                    s != StudyStatus.FinancialInfoRequested &&
+                                                                                    s != StudyStatus.FinancialInfoInProgress &&
+                                                                                    s != StudyStatus.FinancialInfoReceived &&
+                                                                                    s != StudyStatus.ServiceContactsRequested &&
+                                                                                    s != StudyStatus.SiteVisitPending &&
+                                                                                    s != StudyStatus.SiteVisitScheduled &&
+                                                                                    s != StudyStatus.SiteVisitCompleted &&
+                                                                                    s != StudyStatus.SiteVisitDataEntered &&
+                                                                                    s != StudyStatus.RequestCompleted &&
+                                                                                    s != StudyStatus.AmendmentPending &&
+                                                                                    s != StudyStatus.AmendmentApproved &&
+                                                                                    s != StudyStatus.FundingPlanReady &&
+                                                                                    s != StudyStatus.FundingPlanInProcess &&
+                                                                                    s != StudyStatus.FundingPlanComplete &&
+                                                                                    s != StudyStatus.NarrativeReady &&
+                                                                                    s != StudyStatus.NarrativeInProcess &&
+                                                                                    s != StudyStatus.NarrativeComplete &&
+                                                                                    s != StudyStatus.NarrativePrintReady &&
+                                                                                    s != StudyStatus.NarrativePackaged &&
+                                                                                    s != StudyStatus.NarrativeSent &&
+                                                                                    s != StudyStatus.FinalReviewPending)) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Medium"
+                                                                       StartIcon="@Icons.Material.Filled.ArrowForward"
+                                                                       OnClick="@(() => ApplyTransition(nextAllowed))">
+                                                                @FormatStatusTitle(nextAllowed)
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+                                                @* HOA User: Accept Proposal button *@
+                                                @if (currentStatus == StudyStatus.ProposalSent && !hasValidAcceptance) {
+                                                    <AuthorizeView Policy="RequireHOAUser">
+                                                        <Authorized>
+                                                            <MudButton Variant="Variant.Filled"
+                                                                       Color="Color.Success"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                                                       OnClick="OpenAcceptProposalDialog">
+                                                                Accept Proposal
+                                                            </MudButton>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
                                             } @* End of !isAmendmentPending && !isAmendmentApproved *@
                                         </MudStack>
                                     }
 
 
-                                        @* Financial Information - only show until status 13 (FinancialInfoReceived) *@
-                                        @* After that, users should use the dedicated FinancialInfo page to view *@
-                                        @if (reserveStudy?.FinancialInfo != null && currentStatus <= StudyStatus.FinancialInfoReceived) {
-                                            <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px; border-left: 4px solid #3b82f6;">
-                                                <MudCardContent>
-                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
-                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                            <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Info" Size="Size.Large" />
-                                                            <MudText Typo="Typo.h6" Style="font-weight: 600;">Financial Information</MudText>
-                                                        </MudStack>
+                                    @* Financial Information - only show until status 13 (FinancialInfoReceived) *@
+                                    @* After that, users should use the dedicated FinancialInfo page to view *@
+                                    @if (reserveStudy?.FinancialInfo != null && currentStatus <= StudyStatus.FinancialInfoReceived) {
+                                        <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px; border-left: 4px solid #3b82f6;">
+                                            <MudCardContent>
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Info" Size="Size.Large" />
+                                                        <MudText Typo="Typo.h6" Style="font-weight: 600;">Financial Information</MudText>
+                                                    </MudStack>
                                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                                         @if (reserveStudy.FinancialInfo.DateSubmitted.HasValue) {
                                                             <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
@@ -980,8 +984,8 @@
                                                         <AuthorizeView Policy="RequireHOAUser">
                                                             <Authorized>
                                                                 @if (currentStatus <= StudyStatus.FinancialInfoReviewed) {
-                                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" 
-                                                                                   Color="Color.Primary" 
+                                                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                                                   Color="Color.Primary"
                                                                                    Size="Size.Small"
                                                                                    Href="@($"/ReserveStudies/{Id}/FinancialInfo")"
                                                                                    Title="Edit Financial Information" />
@@ -991,8 +995,8 @@
                                                         @* Staff/Specialists see view-only button *@
                                                         <AuthorizeView Policy="RequireTenantStaff">
                                                             <Authorized>
-                                                                <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
-                                                                               Color="Color.Default" 
+                                                                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                                               Color="Color.Default"
                                                                                Size="Size.Small"
                                                                                Href="@($"/ReserveStudies/{Id}/FinancialInfo")"
                                                                                Title="View Financial Information" />
@@ -1023,9 +1027,9 @@
                                                 </MudGrid>
 
                                                 @* Budgeted Contributions *@
-                                                @if (reserveStudy.FinancialInfo.BudgetedContributionLastYear.HasValue || 
-                                                     reserveStudy.FinancialInfo.BudgetedContributionCurrentYear.HasValue ||
-                                                     reserveStudy.FinancialInfo.BudgetedContributionNextYear.HasValue) {
+                                                @if (reserveStudy.FinancialInfo.BudgetedContributionLastYear.HasValue ||
+                                                                                        reserveStudy.FinancialInfo.BudgetedContributionCurrentYear.HasValue ||
+                                                                                        reserveStudy.FinancialInfo.BudgetedContributionNextYear.HasValue) {
                                                     <MudDivider Class="my-3" />
                                                     <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: #666; font-weight: 600;">Budgeted Reserve Contributions</MudText>
                                                     <MudGrid Spacing="2">
@@ -1130,49 +1134,49 @@
 
                                                         @* Building Components *@
                                                         @if (!string.IsNullOrEmpty(reserveStudy.FinancialInfo.BuildingRoofSidingInfo)) {
-                                                                                    <MudDivider Class="my-3" />
-                                                                                    <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: #666; font-weight: 600;">Building Components</MudText>
-                                                                                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@reserveStudy.FinancialInfo.BuildingRoofSidingInfo</MudText>
-                                                                                }
-                                                                            </Authorized>
-                                                                        </AuthorizeView>
-                                                                    </MudCardContent>
-                                                                </MudCard>
-                                                            }
+                                                            <MudDivider Class="my-3" />
+                                                            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="color: #666; font-weight: 600;">Building Components</MudText>
+                                                            <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@reserveStudy.FinancialInfo.BuildingRoofSidingInfo</MudText>
+                                                        }
+                                                    </Authorized>
+                                                </AuthorizeView>
+                                            </MudCardContent>
+                                        </MudCard>
+                                    }
 
-                                                            @* Financial Info quick link for staff after status 13 *@
-                                                            @if (reserveStudy?.FinancialInfo != null && currentStatus > StudyStatus.FinancialInfoReceived) {
-                                                                <AuthorizeView Policy="RequireTenantStaff">
-                                                                    <Authorized>
-                                                                        <MudPaper Elevation="1" Class="pa-3 mb-4" Style="border-radius: 8px; background: #f0f4ff; border-left: 3px solid #3b82f6;">
-                                                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                                                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                                                    <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Info" Size="Size.Small" />
-                                                                                    <MudText Typo="Typo.body2" Style="color: #3b82f6;">
-                                                                                        Financial information has been collected
-                                                                                    </MudText>
-                                                                                    @if (reserveStudy.FinancialInfo.DateSubmitted.HasValue) {
-                                                                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
-                                                                                            @reserveStudy.FinancialInfo.DateSubmitted.Value.ToString("MMM dd, yyyy")
-                                                                                        </MudChip>
-                                                                                    }
-                                                                                </MudStack>
-                                                                                <MudButton Variant="Variant.Text" 
-                                                                                           Color="Color.Info" 
-                                                                                           Size="Size.Small"
-                                                                                           StartIcon="@Icons.Material.Filled.Visibility"
-                                                                                           Href="@($"/ReserveStudies/{Id}/FinancialInfo")">
-                                                                                    View Details
-                                                                                </MudButton>
-                                                                            </MudStack>
-                                                                        </MudPaper>
-                                                                    </Authorized>
-                                                                </AuthorizeView>
+                                    @* Financial Info quick link for staff after status 13 *@
+                                    @if (reserveStudy?.FinancialInfo != null && currentStatus > StudyStatus.FinancialInfoReceived) {
+                                        <AuthorizeView Policy="RequireTenantStaff">
+                                            <Authorized>
+                                                <MudPaper Elevation="1" Class="pa-3 mb-4" Style="border-radius: 8px; background: #f0f4ff; border-left: 3px solid #3b82f6;">
+                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                            <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Info" Size="Size.Small" />
+                                                            <MudText Typo="Typo.body2" Style="color: #3b82f6;">
+                                                                Financial information has been collected
+                                                            </MudText>
+                                                            @if (reserveStudy.FinancialInfo.DateSubmitted.HasValue) {
+                                                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
+                                                                    @reserveStudy.FinancialInfo.DateSubmitted.Value.ToString("MMM dd, yyyy")
+                                                                </MudChip>
                                                             }
+                                                        </MudStack>
+                                                        <MudButton Variant="Variant.Text"
+                                                                   Color="Color.Info"
+                                                                   Size="Size.Small"
+                                                                   StartIcon="@Icons.Material.Filled.Visibility"
+                                                                   Href="@($"/ReserveStudies/{Id}/FinancialInfo")">
+                                                            View Details
+                                                        </MudButton>
+                                                    </MudStack>
+                                                </MudPaper>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    }
 
-                                                            @* Site Visit Information - show when scheduled or completed *@
-                                                            @if (reserveStudy?.SiteVisitDate.HasValue == true || 
-                                                                 currentStatus >= StudyStatus.SiteVisitScheduled) {
+                                    @* Site Visit Information - show when scheduled or completed *@
+                                    @if (reserveStudy?.SiteVisitDate.HasValue == true ||
+                                                                    currentStatus >= StudyStatus.SiteVisitScheduled) {
                                         <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px; border-left: 4px solid #8b5cf6;">
                                             <MudCardContent>
                                                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
@@ -1190,7 +1194,7 @@
                                                         </MudChip>
                                                     }
                                                 </MudStack>
-                                                
+
                                                 @if (reserveStudy?.SiteVisitDate.HasValue == true) {
                                                     <MudPaper Elevation="0" Class="pa-4" Style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-radius: 8px;">
                                                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
@@ -1210,13 +1214,13 @@
                                                             </div>
                                                         </MudStack>
                                                     </MudPaper>
-                                                    
+
                                                     @* Allow rescheduling if not yet completed *@
                                                     @if (currentStatus < StudyStatus.SiteVisitCompleted) {
                                                         <AuthorizeView Policy="RequireTenantStaff">
                                                             <Authorized>
-                                                                <MudButton Variant="Variant.Text" 
-                                                                           Color="Color.Primary" 
+                                                                <MudButton Variant="Variant.Text"
+                                                                           Color="Color.Primary"
                                                                            Size="Size.Small"
                                                                            StartIcon="@Icons.Material.Filled.Edit"
                                                                            OnClick="OpenScheduleSiteVisitDialog"
@@ -1393,13 +1397,13 @@
                                                     </thead>
                                                     <tbody>
                                                         @foreach (var element in group.OrderBy(e => e.Name)) {
-                                                            <tr @key="element.Name" 
+                                                            <tr @key="element.Name"
                                                                 style="cursor: pointer; transition: background 0.2s;"
                                                                 @onclick="() => ShowElement(element)">
                                                                 <td style="padding: 12px 16px;">
                                                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                                        <MudIcon Icon="@(element.ShowDetails ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" 
-                                                                                 Size="Size.Small" 
+                                                                        <MudIcon Icon="@(element.ShowDetails? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                                                                 Size="Size.Small"
                                                                                  Style="color: #9ca3af;" />
                                                                         <MudText Typo="Typo.body2" Style="font-weight: 500;">
                                                                             @element.Name
@@ -1428,7 +1432,7 @@
                                                                 </td>
                                                                 <td style="padding: 12px 16px; text-align: center;">
                                                                     @if (element.RemainingLifeOption != null) {
-                                                                        <MudChip T="string" Size="Size.Small" 
+                                                                        <MudChip T="string" Size="Size.Small"
                                                                                  Color="@GetRemainingLifeColor(element.RemainingLifeOption.DisplayText)"
                                                                                  Variant="Variant.Filled">
                                                                             @element.RemainingLifeOption.DisplayText
@@ -1526,10 +1530,10 @@
                                 var missingCount = elementsWithServiceContact.Count(e => !HasValidServiceContact(e.ServiceContact));
                                 var serviceContactStatus = GetCurrentStatus();
                                 // HOA can edit contacts from ProposalAccepted until SiteVisitCompleted
-                                var canHOAEditContacts = serviceContactStatus >= StudyStatus.ProposalAccepted && 
-                                                        serviceContactStatus < StudyStatus.SiteVisitCompleted;
+                                var canHOAEditContacts = serviceContactStatus >= StudyStatus.ProposalAccepted &&
+                                serviceContactStatus < StudyStatus.SiteVisitCompleted;
                                 var canAnyoneEdit = canEdit || canStaffEdit || canHOAEditContacts;
-                                
+
                                 <!-- Summary Header -->
                                 <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
@@ -1575,8 +1579,8 @@
                                                         @missingCount element(s) require service contact details. Please provide vendor/contractor information for maintenance purposes.
                                                     </MudText>
                                                 </MudStack>
-                                                <MudButton Variant="Variant.Filled" 
-                                                           Color="Color.Warning" 
+                                                <MudButton Variant="Variant.Filled"
+                                                           Color="Color.Warning"
                                                            StartIcon="@Icons.Material.Filled.Edit"
                                                            Href="@($"/ReserveStudies/{Id}/Edit?tab=3")">
                                                     Add Service Contacts
@@ -1599,8 +1603,8 @@
                                                     @missingCount service contact(s) are still pending. Please contact your specialist if you need to make changes.
                                                 </MudText>
                                                 @if (canStaffEdit) {
-                                                    <MudButton Variant="Variant.Text" 
-                                                               Color="Color.Primary" 
+                                                    <MudButton Variant="Variant.Text"
+                                                               Color="Color.Primary"
                                                                Size="Size.Small"
                                                                StartIcon="@Icons.Material.Filled.Edit"
                                                                Href="@($"/ReserveStudies/{Id}/Edit?tab=3")">
@@ -1621,8 +1625,8 @@
                                                 </MudText>
                                             </MudStack>
                                             @if (canAnyoneEdit) {
-                                                <MudButton Variant="Variant.Text" 
-                                                           Color="Color.Primary" 
+                                                <MudButton Variant="Variant.Text"
+                                                           Color="Color.Primary"
                                                            Size="Size.Small"
                                                            StartIcon="@Icons.Material.Filled.Edit"
                                                            Href="@($"/ReserveStudies/{Id}/Edit?tab=3")">
@@ -1672,7 +1676,7 @@
                                                                         </MudText>
                                                                     </MudStack>
                                                                 }
-                                                                
+
                                                                 @if (!string.IsNullOrWhiteSpace(element.ServiceContact!.FirstName) || !string.IsNullOrWhiteSpace(element.ServiceContact.LastName)) {
                                                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                                                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Style="color: #6b7280;" />
@@ -1728,8 +1732,8 @@
                                                                 Service contact information has not been provided for this element.
                                                             </MudText>
                                                             @if (canHOAEditContacts || canStaffEdit) {
-                                                                <MudButton Variant="Variant.Text" 
-                                                                           Color="Color.Warning" 
+                                                                <MudButton Variant="Variant.Text"
+                                                                           Color="Color.Warning"
                                                                            Size="Size.Small"
                                                                            StartIcon="@Icons.Material.Filled.Add"
                                                                            Href="@($"/ReserveStudies/{Id}/Edit?tab=3")"
@@ -1779,9 +1783,8 @@
                         <MudTabPanel Text="Invoicing" Icon="@Icons.Material.Filled.Receipt">
                             <AuthorizeView Policy="RequireTenantStaff">
                                 <Authorized>
-                                    <CRS.Components.Shared.Invoices.InvoicePanel 
-                                        ReserveStudyId="@Id" 
-                                        CommunityName="@reserveStudy?.Community?.Name" />
+                                    <CRS.Components.Shared.Invoices.InvoicePanel ReserveStudyId="@Id"
+                                                                                 CommunityName="@reserveStudy?.Community?.Name" />
                                 </Authorized>
                                 <NotAuthorized>
                                     <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
@@ -1823,16 +1826,14 @@
                                         </MudStack>
                                     </MudAlert>
                                 }
-                                
-                                <CRS.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel 
-                                    @ref="acceptancePanel" 
-                                    ReserveStudyId="@Id" />
-                            
+
+                                <CRS.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel @ref="acceptancePanel"
+                                                                                                      ReserveStudyId="@Id" />
+
                                 @* Original proposal acceptance *@
-                                @if (reserveStudy?.CurrentStatus >= StudyStatus.ProposalSent && 
-                                     reserveStudy?.CurrentStatus < StudyStatus.ProposalAccepted &&
-                                     !hasValidAcceptance)
-                                {
+                                @if (reserveStudy?.CurrentStatus >= StudyStatus.ProposalSent &&
+                                                            reserveStudy?.CurrentStatus < StudyStatus.ProposalAccepted &&
+                                                            !hasValidAcceptance) {
                                     <AuthorizeView Policy="RequireHOAUser">
                                         <Authorized>
                                             <MudButton Variant="Variant.Filled"
@@ -1846,10 +1847,9 @@
                                         </Authorized>
                                     </AuthorizeView>
                                 }
-                                
+
                                 @* Amendment acceptance *@
-                                @if (GetCurrentStatus() == StudyStatus.AmendmentApproved)
-                                {
+                                @if (GetCurrentStatus() == StudyStatus.AmendmentApproved) {
                                     <AuthorizeView Policy="RequireHOAUser">
                                         <Authorized>
                                             <MudButton Variant="Variant.Filled"
@@ -1867,10 +1867,7 @@
                         </MudTabPanel>
                         <!-- Scope Comparison Tab -->
                         <MudTabPanel Text="Scope" Icon="@Icons.Material.Filled.CompareArrows">
-                            <CRS.Components.Shared.ScopeComparison.ScopeVariancePanel 
-                                @ref="scopeVariancePanel"
-                                ReserveStudyId="@Id" 
-                                TenantId="@(reserveStudy?.TenantId ?? 0)" />
+                            <CRS.Components.Shared.ScopeComparison.ScopeVariancePanel @ref="scopeVariancePanel" ReserveStudyId="@Id" TenantId="@(reserveStudy?.TenantId ?? 0)" />
                         </MudTabPanel>
                     </MudTabs>
                 </MudItem>
@@ -1897,6 +1894,8 @@
     private CRS.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel? acceptancePanel;
     private CRS.Components.Shared.ScopeComparison.ScopeVariancePanel? scopeVariancePanel;
     private bool hasValidAcceptance = false;
+    private ScopeComparison? scopeComparison;
+    private bool hasUnresolvedScopeVariance = false;
 
     private List<StudyStatus> allowedNextStudy = new();
     private List<StudyStatusHistory> statusHistory = new();
@@ -1932,11 +1931,23 @@
         InitializeTimelineItems();
         await LoadAllowedTransitions();
         await CheckAcceptanceStatus();
+        await CheckScopeVarianceAsync();
     }
 
     private async Task CheckAcceptanceStatus() {
-        try { hasValidAcceptance = await AcceptanceService.HasValidAcceptanceAsync(Id); }
-        catch { hasValidAcceptance = false; }
+        try { hasValidAcceptance = await AcceptanceService.HasValidAcceptanceAsync(Id); } catch { hasValidAcceptance = false; }
+    }
+
+    private async Task CheckScopeVarianceAsync() {
+        try {
+            scopeComparison = await ScopeComparisonService.GetByStudyIdAsync(Id);
+            // Has unresolved variance if comparison exists, exceeds threshold, and is not resolved
+            hasUnresolvedScopeVariance = scopeComparison != null &&
+                scopeComparison.Status == ScopeComparisonStatus.ExceedsThreshold;
+        } catch {
+            scopeComparison = null;
+            hasUnresolvedScopeVariance = false;
+        }
     }
 
     private async Task OpenAcceptProposalDialog() {
@@ -1955,11 +1966,11 @@
                     Snackbar.Add(success ? "Amendment accepted!" : "Amendment accepted, but workflow transition failed.", success ? Severity.Success : Severity.Warning);
                 } else {
                     await ApplyTransition(StudyStatus.ProposalAccepted);
-                    
+
                     // Check tenant settings to determine next step
                     await using var db = await DbFactory.CreateDbContextAsync();
                     var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == reserveStudy.TenantId);
-                    
+
                     if (tenant?.SkipFinancialInfoStep == true) {
                         // Skip financial info and go directly to site visit
                         Snackbar.Add("Proposal accepted! Financial info step skipped per tenant settings.", Severity.Success);
@@ -2036,8 +2047,7 @@
             canEdit = ReserveStudyService.CanUpdateReserveStudy(reserveStudy) && isOwnerOrRequested;
             canStaffEdit = isStaff && ReserveStudyService.CanStaffUpdateReserveStudy(reserveStudy);
             canEditPhotos = isStaff;
-        } catch (Exception ex) { Snackbar.Add($"Error loading: {ex.Message}", Severity.Error); }
-        finally { isLoading = false; }
+        } catch (Exception ex) { Snackbar.Add($"Error loading: {ex.Message}", Severity.Error); } finally { isLoading = false; }
     }
 
     private async Task LoadElementsDataIfNeeded() {
@@ -2055,8 +2065,7 @@
             reserveStudy.ReserveStudyCommonElements = common;
             reserveStudy.ReserveStudyAdditionalElements = additional;
             elementsLoaded = true;
-        } catch (Exception ex) { Snackbar.Add($"Error loading elements: {ex.Message}", Severity.Error); }
-        finally { isElementsLoading = false; StateHasChanged(); }
+        } catch (Exception ex) { Snackbar.Add($"Error loading elements: {ex.Message}", Severity.Error); } finally { isElementsLoading = false; StateHasChanged(); }
     }
 
     private async Task LoadServiceContactsIfNeeded() {
@@ -2073,8 +2082,7 @@
             foreach (var e in additionalContacts.Where(e => e.NeedsService)) { var m = reserveStudy.ReserveStudyAdditionalElements?.FirstOrDefault(x => x.Id == e.Id); if (m != null) m.ServiceContact = e.ServiceContact; }
             elementsWithServiceContact = GetAllElements().Where(e => e.NeedsService).ToList();
             serviceContactsLoaded = true;
-        } catch (Exception ex) { Snackbar.Add($"Error loading service contacts: {ex.Message}", Severity.Error); }
-        finally { isContactsLoading = false; StateHasChanged(); }
+        } catch (Exception ex) { Snackbar.Add($"Error loading service contacts: {ex.Message}", Severity.Error); } finally { isContactsLoading = false; StateHasChanged(); }
     }
 
     private void HandleTabChange(int index) {
@@ -2089,7 +2097,12 @@
     }
 
     private void NavigateToNarrativeTab() {
-        activeTabIndex = 7; // Narrative tab index
+        activeTabIndex = 8; // Narrative tab index
+        StateHasChanged();
+    }
+
+    private void NavigateToScopeTab() {
+        activeTabIndex = 10; // Scope comparison tab index
         StateHasChanged();
     }
 
@@ -2101,24 +2114,23 @@
         .Concat(reserveStudy?.ReserveStudyAdditionalElements?.Cast<IReserveStudyElement>() ?? Enumerable.Empty<IReserveStudyElement>());
 
     private async Task<bool> ExecuteActionAsync(Func<Task<bool>> action, string successMessage, string failureMessage) {
-        try { var result = await action(); Snackbar.Add(result ? successMessage : failureMessage, result ? Severity.Success : Severity.Error); return result; }
-        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); return false; }
+        try { var result = await action(); Snackbar.Add(result ? successMessage : failureMessage, result ? Severity.Success : Severity.Error); return result; } catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); return false; }
     }
 
     private async Task RequestFinancialInfoAsync(Guid studyId) => await ExecuteActionAsync(async () => await WorkflowService.RequestFinancialInfoAsync(studyId), "Financial info requested", "Failed");
-    
+
     private async Task RequestMoreFinancialInfoAsync() {
-        var confirmed = await DialogService.ShowMessageBox("Request More Financial Information", 
+        var confirmed = await DialogService.ShowMessageBox("Request More Financial Information",
             "This will request additional financial information from the client.", yesText: "Yes, Request More Info", cancelText: "Cancel");
         if (confirmed != true) return;
         var success = await ExecuteActionAsync(async () => await WorkflowService.RequestFinancialInfoAsync(Id), "Financial info request sent.", "Failed");
         if (success) await ReloadAfterChange();
     }
-    
+
     private async Task CompleteReserveStudyAsync(Guid studyId) { var success = await ExecuteActionAsync(async () => await WorkflowService.CompleteReserveStudyAsync(studyId), "Study completed", "Failed"); if (success) await ReloadAfterChange(); }
 
     private async Task CompleteFinalReviewAsync(Guid studyId) {
-        var confirmed = await DialogService.ShowMessageBox("Complete Final Review", 
+        var confirmed = await DialogService.ShowMessageBox("Complete Final Review",
             "This will mark the final review as complete and finalize the study.", yesText: "Complete Review", cancelText: "Cancel");
         if (confirmed != true) return;
         var currentUser = UserState.CurrentUser?.UserName ?? "Unknown";
@@ -2132,8 +2144,7 @@
     }
 
     private async Task LoadAllowedTransitions() {
-        try { allowedNextStudy = (await WorkflowService.GetAllowedStudyTransitionsAsync(Id)).ToList(); }
-        catch { allowedNextStudy.Clear(); }
+        try { allowedNextStudy = (await WorkflowService.GetAllowedStudyTransitionsAsync(Id)).ToList(); } catch { allowedNextStudy.Clear(); }
         InitializeTimelineItems(); StateHasChanged();
     }
 
@@ -2143,16 +2154,17 @@
         if (ok) await ReloadAfterChange();
     }
 
-    private async Task ReloadAfterChange() { 
+    private async Task ReloadAfterChange() {
         // Reset elements loading flags so they reload on next tab access
         elementsLoaded = false;
         serviceContactsLoaded = false;
         elementsWithServiceContact.Clear();
-        
-        await LoadInitialData(); 
-        InitializeTimelineItems(); 
-        await LoadAllowedTransitions(); 
-        StateHasChanged(); 
+
+        await LoadInitialData();
+        InitializeTimelineItems();
+        await LoadAllowedTransitions();
+        await CheckScopeVarianceAsync();
+        StateHasChanged();
     }
 
     private void OpenComposeMessage() {
@@ -2202,24 +2214,24 @@
             // Store visit type and video link if we have those fields on the model
             // TODO: Add SiteVisitType and VideoConferenceLink fields to ReserveStudy model
             await context.SaveChangesAsync();
-            
-            var eventTitle = visitType == "Virtual" 
-                ? $"Virtual Site Visit - {reserveStudy.Community?.Name}" 
-                : visitType == "Hybrid" 
-                    ? $"Hybrid Site Visit - {reserveStudy.Community?.Name}" 
+
+            var eventTitle = visitType == "Virtual"
+                ? $"Virtual Site Visit - {reserveStudy.Community?.Name}"
+                : visitType == "Hybrid"
+                    ? $"Hybrid Site Visit - {reserveStudy.Community?.Name}"
                     : $"Site Visit - {reserveStudy.Community?.Name}";
-            
-            await CalendarService.AddEventAsync(new Models.CalendarEvent { 
-                Title = eventTitle, 
-                Start = siteVisitDate, 
-                End = siteVisitDate.AddMinutes(durationMinutes), 
-                EventType = Models.CalendarEventType.SiteVisit, 
-                ReserveStudyId = Id 
+
+            await CalendarService.AddEventAsync(new Models.CalendarEvent {
+                Title = eventTitle,
+                Start = siteVisitDate,
+                End = siteVisitDate.AddMinutes(durationMinutes),
+                EventType = Models.CalendarEventType.SiteVisit,
+                ReserveStudyId = Id
             });
             await _dispatcher.Broadcast(new SiteVisitScheduledEvent(reserveStudy, siteVisitDate));
             var currentStatus = study.StudyRequest?.CurrentStatus ?? study.CurrentStatus;
             bool ok = currentStatus == StudyStatus.SiteVisitPending ? await WorkflowService.TryTransitionStudyAsync(Id, StudyStatus.SiteVisitScheduled) : currentStatus == StudyStatus.SiteVisitScheduled;
-            
+
             var visitTypeText = visitType == "Virtual" ? "virtual " : visitType == "Hybrid" ? "hybrid " : "";
             Snackbar.Add($"Site {visitTypeText}visit scheduled for {siteVisitDate:MMMM dd, yyyy}!", ok ? Severity.Success : Severity.Warning);
             await ReloadAfterChange();
@@ -2228,15 +2240,15 @@
 
     private bool NeedsApproval() => GetCurrentStatus() == StudyStatus.RequestCreated;
     private bool CanAssignSpecialist() => (GetCurrentStatus() == StudyStatus.RequestApproved || GetCurrentStatus() == StudyStatus.ProposalCreated) && reserveStudy?.SpecialistUserId == null;
-    
-    private async Task ApproveRequestAsync() { 
-        var result = await WorkflowActionService.AdvanceAsync(Id, "Request approved"); 
-        
+
+    private async Task ApproveRequestAsync() {
+        var result = await WorkflowActionService.AdvanceAsync(Id, "Request approved");
+
         if (result.Success) {
             // Check if we should skip the proposal step
             await using var db = await DbFactory.CreateDbContextAsync();
             var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == reserveStudy!.TenantId);
-            
+
             if (tenant?.SkipProposalStep == true) {
                 // Skip proposal and go directly to ProposalAccepted - then handle financial info
                 var skipResult = await WorkflowService.TryTransitionStudyAsync(Id, StudyStatus.ProposalAccepted);
@@ -2278,7 +2290,7 @@
         // Request Phase
         StudyStatus.RequestCreated => new NextActionInfo { ActionText = "Approve Request", ActorText = "Awaiting staff review", ActorIcon = Icons.Material.Filled.RateReview },
         StudyStatus.RequestApproved => new NextActionInfo { ActionText = reserveStudy?.SpecialistUserId == null ? "Assign Specialist" : "Create Proposal", ActorText = "Awaiting staff action", ActorIcon = Icons.Material.Filled.PersonAdd },
-        
+
         // Proposal Phase
         StudyStatus.ProposalCreated => new NextActionInfo { ActionText = "Review Proposal", ActorText = "Awaiting internal review", ActorIcon = Icons.Material.Filled.RateReview },
         StudyStatus.ProposalReviewed => new NextActionInfo { ActionText = "Approve Proposal", ActorText = "Awaiting approval", ActorIcon = Icons.Material.Filled.Approval },
@@ -2286,7 +2298,7 @@
         StudyStatus.ProposalApproved => new NextActionInfo { ActionText = "Send Proposal", ActorText = "Ready to send to client", ActorIcon = Icons.Material.Filled.Send },
         StudyStatus.ProposalSent => new NextActionInfo { ActionText = "Accept Proposal", ActorText = "Awaiting client response", ActorIcon = Icons.Material.Filled.Business },
         StudyStatus.ProposalAccepted => new NextActionInfo { ActionText = "Request Financial Info", ActorText = "Awaiting staff action", ActorIcon = Icons.Material.Filled.RequestQuote },
-        
+
         // Data Collection Phase
         StudyStatus.ServiceContactsRequested => new NextActionInfo { ActionText = "Provide Service Contacts", ActorText = "Awaiting client response", ActorIcon = Icons.Material.Filled.Contacts },
         StudyStatus.FinancialInfoRequested => new NextActionInfo { ActionText = "Submit Financial Info", ActorText = "Awaiting client response", ActorIcon = Icons.Material.Filled.AccountBalance },
@@ -2294,22 +2306,22 @@
         StudyStatus.FinancialInfoSubmitted => new NextActionInfo { ActionText = "Review Financial Info", ActorText = "Awaiting staff review", ActorIcon = Icons.Material.Filled.FactCheck },
         StudyStatus.FinancialInfoReviewed => new NextActionInfo { ActionText = "Approve Financial Info", ActorText = "Awaiting staff approval", ActorIcon = Icons.Material.Filled.Approval },
         StudyStatus.FinancialInfoReceived => new NextActionInfo { ActionText = "Schedule Site Visit", ActorText = "Ready to schedule", ActorIcon = Icons.Material.Filled.CalendarMonth },
-        
+
         // Site Visit Phase
         StudyStatus.SiteVisitPending => new NextActionInfo { ActionText = "Schedule Site Visit", ActorText = "Action required by specialist", ActorIcon = Icons.Material.Filled.CalendarMonth },
         StudyStatus.SiteVisitScheduled => new NextActionInfo { ActionText = "Complete Site Visit", ActorText = "Awaiting site visit date", ActorIcon = Icons.Material.Filled.LocationOn },
         StudyStatus.SiteVisitCompleted => new NextActionInfo { ActionText = "Enter Site Visit Data", ActorText = "Awaiting data entry", ActorIcon = Icons.Material.Filled.Storage },
         StudyStatus.SiteVisitDataEntered => new NextActionInfo { ActionText = "Begin Funding Plan", ActorText = "Ready to proceed", ActorIcon = Icons.Material.Filled.PlayArrow },
-        
+
         // Amendment Phase
         StudyStatus.AmendmentPending => new NextActionInfo { ActionText = "Approve Amendment", ActorText = "Awaiting admin approval", ActorIcon = Icons.Material.Filled.RateReview },
         StudyStatus.AmendmentApproved => new NextActionInfo { ActionText = "Accept Amendment", ActorText = "Awaiting client acceptance", ActorIcon = Icons.Material.Filled.Business },
-        
+
         // Funding Plan Phase
         StudyStatus.FundingPlanReady => new NextActionInfo { ActionText = "Create Funding Plan", ActorText = "Ready to begin", ActorIcon = Icons.Material.Filled.Assessment },
         StudyStatus.FundingPlanInProcess => new NextActionInfo { ActionText = "Complete Funding Plan", ActorText = "Work in progress", ActorIcon = Icons.Material.Filled.TrendingUp },
         StudyStatus.FundingPlanComplete => new NextActionInfo { ActionText = "Begin Narrative", ActorText = "Ready for narrative phase", ActorIcon = Icons.Material.Filled.Article },
-        
+
         // Narrative Phase
         StudyStatus.NarrativeReady => new NextActionInfo { ActionText = "Write Narrative", ActorText = "Ready to begin", ActorIcon = Icons.Material.Filled.EditNote },
         StudyStatus.NarrativeInProcess => new NextActionInfo { ActionText = "Complete Narrative", ActorText = "Work in progress", ActorIcon = Icons.Material.Filled.Create },
@@ -2317,17 +2329,17 @@
         StudyStatus.NarrativePrintReady => new NextActionInfo { ActionText = "Package Report", ActorText = "Ready for packaging", ActorIcon = Icons.Material.Filled.Inventory2 },
         StudyStatus.NarrativePackaged => new NextActionInfo { ActionText = "Send to Client", ActorText = "Ready to send", ActorIcon = Icons.Material.Filled.Send },
         StudyStatus.NarrativeSent => new NextActionInfo { ActionText = "Finalize Report", ActorText = "Narrative delivered", ActorIcon = Icons.Material.Filled.MarkEmailRead },
-        
+
         // Final Report Phase
         StudyStatus.ReportReady => new NextActionInfo { ActionText = "Finalize Report", ActorText = "Ready for final review", ActorIcon = Icons.Material.Filled.Summarize },
         StudyStatus.ReportInProcess => new NextActionInfo { ActionText = "Complete Report", ActorText = "Finalizing report", ActorIcon = Icons.Material.Filled.AutoStories },
         StudyStatus.ReportComplete => new NextActionInfo { ActionText = "Mark Complete", ActorText = "Ready to close", ActorIcon = Icons.Material.Filled.CheckCircle },
-        
+
         // Terminal States
         StudyStatus.RequestCompleted => null,
         StudyStatus.RequestCancelled => null,
         StudyStatus.RequestArchived => null,
-        
+
         _ => new NextActionInfo { ActionText = "Processing...", ActorText = "In progress", ActorIcon = Icons.Material.Filled.HourglassEmpty }
     };
 
@@ -2335,7 +2347,7 @@
         // Request Phase
         StudyStatus.RequestCreated => "Your reserve study request has been received and is being reviewed by our team.",
         StudyStatus.RequestApproved => "Your request has been approved. A specialist will be assigned and a proposal will be prepared for you.",
-        
+
         // Proposal Phase
         StudyStatus.ProposalCreated => "A proposal is being prepared for your reserve study.",
         StudyStatus.ProposalReviewed => "The proposal is undergoing internal review to ensure accuracy.",
@@ -2343,7 +2355,7 @@
         StudyStatus.ProposalApproved => "The proposal has been approved and will be sent to you shortly.",
         StudyStatus.ProposalSent => "We've sent you a proposal. Please review the details and accept it to proceed with your reserve study.",
         StudyStatus.ProposalAccepted => "Thank you for accepting the proposal! We'll now request some financial information to proceed.",
-        
+
         // Data Collection Phase
         StudyStatus.ServiceContactsRequested => "Please provide contact information for your service providers (maintenance companies, contractors, etc.).",
         StudyStatus.FinancialInfoRequested => "Please submit your community's financial information to help us prepare an accurate reserve study.",
@@ -2351,22 +2363,22 @@
         StudyStatus.FinancialInfoSubmitted => "Thank you for submitting your financial information. Our team is reviewing it now.",
         StudyStatus.FinancialInfoReviewed => "Your financial information has been reviewed and is being processed.",
         StudyStatus.FinancialInfoReceived => "All required information has been received. We're ready to schedule your site visit.",
-        
+
         // Site Visit Phase
         StudyStatus.SiteVisitPending => "We're ready to schedule a site visit. Our specialist will coordinate a convenient time with you.",
         StudyStatus.SiteVisitScheduled => $"Your site visit has been scheduled{(reserveStudy?.SiteVisitDate.HasValue == true ? $" for {reserveStudy.SiteVisitDate.Value:MMMM dd, yyyy}" : "")}. Our specialist will inspect the property.",
         StudyStatus.SiteVisitCompleted => "The site visit has been completed. Our specialist is now documenting the findings.",
         StudyStatus.SiteVisitDataEntered => "Site visit data has been recorded. We're preparing to create your funding plan.",
-        
+
         // Amendment Phase
         StudyStatus.AmendmentPending => "The site visit revealed scope changes that require an amendment to the original proposal. This is awaiting administrative approval.",
         StudyStatus.AmendmentApproved => "An amendment has been prepared based on site visit findings and sent for your review and acceptance.",
-        
+
         // Funding Plan Phase
         StudyStatus.FundingPlanReady => "We're ready to create your funding plan. This will outline recommended reserve contributions over the study period.",
         StudyStatus.FundingPlanInProcess => "Your funding plan is being developed. This includes analysis of all property components and their replacement costs.",
         StudyStatus.FundingPlanComplete => "Your funding plan has been completed! We're now preparing the narrative section of your report.",
-        
+
         // Narrative Phase
         StudyStatus.NarrativeReady => "We're ready to write the narrative portion of your reserve study report.",
         StudyStatus.NarrativeInProcess => "The narrative section is being written. This includes detailed explanations of our findings and recommendations.",
@@ -2374,57 +2386,57 @@
         StudyStatus.NarrativePrintReady => "Your report is ready for printing and final assembly.",
         StudyStatus.NarrativePackaged => "Your report has been packaged and is ready to be delivered.",
         StudyStatus.NarrativeSent => "The narrative portion of your report has been sent. Final report preparation is underway.",
-        
+
         // Final Report Phase
         StudyStatus.ReportReady => "Your final report is being prepared for delivery.",
         StudyStatus.ReportInProcess => "We're putting the finishing touches on your complete reserve study report.",
         StudyStatus.ReportComplete => "Your reserve study report is complete and has been delivered.",
-        
+
         // Terminal States
         StudyStatus.RequestCompleted => "Congratulations! Your reserve study has been completed. You can access your reports and documents anytime.",
         StudyStatus.RequestCancelled => "This reserve study request has been cancelled.",
         StudyStatus.RequestArchived => "This reserve study has been archived for your records.",
-        
+
         _ => "Your reserve study is in progress. Check back soon for updates."
     };
 
     private string GetNextStepDescription() => GetNextStatus() switch {
         // Request Phase
         StudyStatus.RequestApproved => "Once approved, a specialist will be assigned to your project.",
-        
+
         // Proposal Phase
         StudyStatus.ProposalCreated => "A detailed proposal will be prepared outlining the scope and cost of your reserve study.",
         StudyStatus.ProposalReviewed => "The proposal will be reviewed for accuracy before being sent to you.",
         StudyStatus.ProposalApproved => "After internal approval, the proposal will be sent to you for review.",
         StudyStatus.ProposalSent => "You'll receive a proposal to review and accept.",
         StudyStatus.ProposalAccepted => "Once you accept the proposal, we'll begin gathering information for your study.",
-        
+
         // Data Collection Phase
         StudyStatus.ServiceContactsRequested => "You'll be asked to provide contact information for service providers.",
         StudyStatus.FinancialInfoRequested => "You'll need to provide financial information about your community's reserves.",
         StudyStatus.FinancialInfoSubmitted => "After you submit, our team will review your financial information.",
         StudyStatus.FinancialInfoReceived => "Once reviewed, we'll schedule a site visit to inspect the property.",
-        
+
         // Site Visit Phase
         StudyStatus.SiteVisitPending => "A site visit will be scheduled to inspect your property.",
         StudyStatus.SiteVisitScheduled => "Our specialist will conduct an on-site inspection of all common elements.",
         StudyStatus.SiteVisitCompleted => "After the visit, all findings will be documented and analyzed.",
         StudyStatus.SiteVisitDataEntered => "Site data will be entered into our system for analysis.",
-        
+
         // Funding Plan Phase
         StudyStatus.FundingPlanReady => "We'll begin creating your customized funding plan.",
         StudyStatus.FundingPlanInProcess => "Your funding plan will be developed based on component analysis.",
         StudyStatus.FundingPlanComplete => "Once complete, the narrative report will be prepared.",
-        
+
         // Narrative Phase
         StudyStatus.NarrativeReady => "The narrative section of your report will be written.",
         StudyStatus.NarrativeComplete => "Your report will be formatted and prepared for delivery.",
         StudyStatus.NarrativeSent => "You'll receive the narrative portion of your report.",
-        
+
         // Final Report Phase
         StudyStatus.ReportComplete => "Your complete reserve study will be finalized and delivered.",
         StudyStatus.RequestCompleted => "Your reserve study will be marked complete and available for download.",
-        
+
         _ => "The next phase of your reserve study will begin soon."
     };
 
@@ -2451,7 +2463,7 @@
     /// </summary>
     private static bool HasValidServiceContact(ServiceContact? contact) {
         if (contact == null) return false;
-        
+
         // Check if at least one meaningful field is populated
         return !string.IsNullOrWhiteSpace(contact.CompanyName) ||
                !string.IsNullOrWhiteSpace(contact.FirstName) ||
@@ -2478,7 +2490,7 @@
                         <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Draft</MudChip>
                     }
                 </MudStack>
-                
+
                 <MudGrid Spacing="3">
                     <MudItem xs="12" md="8">
                         <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Scope</MudText>
@@ -2493,7 +2505,7 @@
                         </MudText>
                     </MudItem>
                 </MudGrid>
-                
+
                 @if (!string.IsNullOrEmpty(proposal.ServiceLevel) || !string.IsNullOrEmpty(proposal.DeliveryTimeframe)) {
                     <MudDivider Class="my-2" />
                     <MudGrid Spacing="2">
@@ -2517,7 +2529,7 @@
                         }
                     </MudGrid>
                 }
-                
+
                 @if (proposal.IncludePrepaymentDiscount || proposal.IncludeDigitalDelivery || proposal.IncludeComponentInventory || proposal.IncludeFundingPlans) {
                     <MudDivider Class="my-2" />
                     <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Included Services</MudText>
@@ -2536,13 +2548,13 @@
                         }
                     </MudStack>
                 }
-                
+
                 @if (!string.IsNullOrEmpty(proposal.Comments)) {
                     <MudDivider Class="my-2" />
                     <MudText Typo="Typo.caption" Style="color: #888; font-weight: 600; text-transform: uppercase;">Comments</MudText>
                     <MudText Typo="Typo.body2" Style="color: #666; white-space: pre-wrap;">@proposal.Comments</MudText>
                 }
-                
+
                 @if (proposal.IsAmendment && !string.IsNullOrEmpty(proposal.AmendmentReason)) {
                     <MudDivider Class="my-2" />
                     <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
@@ -2550,7 +2562,7 @@
                         <MudText Typo="Typo.body2">@proposal.AmendmentReason</MudText>
                     </MudAlert>
                 }
-                
+
                 <!-- Proposal Timeline -->
                 <MudDivider Class="my-2" />
                 <MudStack Row="true" Spacing="4" Style="flex-wrap: wrap;">
@@ -2571,14 +2583,14 @@
                         </MudStack>
                     }
                 </MudStack>
-                
+
                 <!-- Edit Proposal Button for Staff -->
                 @if (GetCurrentStatus() < StudyStatus.ProposalSent) {
                     <AuthorizeView Policy="RequireTenantStaff">
                         <Authorized>
                             <MudDivider Class="my-2" />
-                            <MudButton Variant="Variant.Outlined" 
-                                       Color="Color.Primary" 
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
                                        Size="Size.Small"
                                        StartIcon="@Icons.Material.Filled.Edit"
                                        Href="@($"/ReserveStudies/{Id}/Proposal")">
