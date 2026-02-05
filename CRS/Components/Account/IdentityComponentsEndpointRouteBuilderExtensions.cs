@@ -1,4 +1,6 @@
 ﻿using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using CRS.Components.Account.Pages;
 using CRS.Components.Account.Pages.Manage;
@@ -125,6 +127,33 @@ namespace Microsoft.AspNetCore.Routing
             var loggerFactory = endpoints.ServiceProvider.GetRequiredService<ILoggerFactory>();
             var downloadLogger = loggerFactory.CreateLogger("DownloadPersonalData");
 
+            // Endpoint to sign in a user by ID (used after registration in Blazor components)
+            accountGroup.MapGet("/LoginCallback", async (
+                HttpContext context,
+                [FromServices] SignInManager<ApplicationUser> signInManager,
+                [FromServices] UserManager<ApplicationUser> userManager,
+                [FromQuery] string userId,
+                [FromQuery] string token,
+                [FromQuery] string? returnUrl) =>
+            {
+                // Validate the token (simple HMAC of userId + timestamp, valid for 5 minutes)
+                if (!ValidateLoginToken(userId, token))
+                {
+                    return Results.BadRequest("Invalid or expired login token");
+                }
+
+                var user = await userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return Results.NotFound("User not found");
+                }
+
+                await signInManager.SignInAsync(user, isPersistent: true);
+
+                var target = CoerceSafeReturnUrl(returnUrl);
+                return TypedResults.LocalRedirect(target);
+            });
+
             manageGroup.MapPost("/DownloadPersonalData", async (
                 HttpContext context,
                 [FromServices] UserManager<ApplicationUser> userManager,
@@ -162,6 +191,46 @@ namespace Microsoft.AspNetCore.Routing
             });
 
             return accountGroup;
+        }
+
+        // Simple token generation for login callback (valid for 5 minutes)
+        private static readonly byte[] TokenKey = Encoding.UTF8.GetBytes("CRS-Login-Callback-Secret-Key-2024");
+
+        public static string GenerateLoginToken(string userId)
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var data = $"{userId}:{timestamp}";
+            using var hmac = new HMACSHA256(TokenKey);
+            var hash = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(data)));
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes($"{timestamp}:{hash}"));
+        }
+
+        private static bool ValidateLoginToken(string userId, string? token)
+        {
+            if (string.IsNullOrEmpty(token)) return false;
+            try
+            {
+                var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(token));
+                var parts = decoded.Split(':');
+                if (parts.Length != 2) return false;
+
+                var timestamp = long.Parse(parts[0]);
+                var providedHash = parts[1];
+
+                // Check if token is expired (5 minute window)
+                var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                if (now - timestamp > 300) return false;
+
+                // Verify hash
+                var data = $"{userId}:{timestamp}";
+                using var hmac = new HMACSHA256(TokenKey);
+                var expectedHash = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(data)));
+                return providedHash == expectedHash;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

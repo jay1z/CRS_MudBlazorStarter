@@ -175,11 +175,23 @@ namespace CRS.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     TenantId = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    ContactName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    AddressLine1 = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    AddressLine2 = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    State = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PostalCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    Website = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    TaxId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PaymentTerms = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -300,6 +312,68 @@ namespace CRS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_NarrativeTemplateSections", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "NewsletterCampaigns",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Subject = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    PreviewText = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    HtmlContent = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PlainTextContent = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    TargetPreferences = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ScheduledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SendingStartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SendingCompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TargetCount = table.Column<int>(type: "int", nullable: false),
+                    SentCount = table.Column<int>(type: "int", nullable: false),
+                    FailedCount = table.Column<int>(type: "int", nullable: false),
+                    OpenCount = table.Column<int>(type: "int", nullable: false),
+                    ClickCount = table.Column<int>(type: "int", nullable: false),
+                    UnsubscribeCount = table.Column<int>(type: "int", nullable: false),
+                    ExternalCampaignId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ExternalProvider = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ErrorMessage = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NewsletterCampaigns", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "NewsletterSubscribers",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Company = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Source = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    IpAddress = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    UserAgent = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ConfirmationToken = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ConfirmationTokenExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    ConfirmedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsUnsubscribed = table.Column<bool>(type: "bit", nullable: false),
+                    UnsubscribedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UnsubscribeReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Preferences = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ExternalProviderId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ExternalProvider = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NewsletterSubscribers", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -543,6 +617,7 @@ namespace CRS.Migrations
                     IsDemo = table.Column<bool>(type: "bit", nullable: false),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
                     OwnerId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DefaultNotificationEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     AutoAcceptStudyRequests = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     DefaultProposalExpirationDays = table.Column<int>(type: "int", nullable: false, defaultValue: 30),
                     AutoSendProposalOnApproval = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
@@ -592,45 +667,6 @@ namespace CRS.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TenantScopeChangeSettings", x => x.TenantId);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Communities",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    PhysicalAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    MailingAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    TenantId = table.Column<int>(type: "int", nullable: false),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NumberOfUnits = table.Column<int>(type: "int", nullable: true),
-                    YearBuilt = table.Column<int>(type: "int", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Communities", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Communities_Addresses_MailingAddressId",
-                        column: x => x.MailingAddressId,
-                        principalTable: "Addresses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Communities_Addresses_PhysicalAddressId",
-                        column: x => x.PhysicalAddressId,
-                        principalTable: "Addresses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -976,6 +1012,51 @@ namespace CRS.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Communities",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PhysicalAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MailingAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    CustomerAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NumberOfUnits = table.Column<int>(type: "int", nullable: true),
+                    YearBuilt = table.Column<int>(type: "int", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Communities", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Communities_Addresses_MailingAddressId",
+                        column: x => x.MailingAddressId,
+                        principalTable: "Addresses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Communities_Addresses_PhysicalAddressId",
+                        column: x => x.PhysicalAddressId,
+                        principalTable: "Addresses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Communities_CustomerAccounts_CustomerAccountId",
+                        column: x => x.CustomerAccountId,
+                        principalTable: "CustomerAccounts",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -2517,6 +2598,11 @@ namespace CRS.Migrations
                 columns: new[] { "TenantId", "IsActive" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Communities_CustomerAccountId",
+                table: "Communities",
+                column: "CustomerAccountId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Communities_MailingAddressId",
                 table: "Communities",
                 column: "MailingAddressId");
@@ -3640,9 +3726,6 @@ namespace CRS.Migrations
                 name: "CreditMemos");
 
             migrationBuilder.DropTable(
-                name: "CustomerAccounts");
-
-            migrationBuilder.DropTable(
                 name: "DemoSessions");
 
             migrationBuilder.DropTable(
@@ -3674,6 +3757,12 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "NarrativeTemplateBlocks");
+
+            migrationBuilder.DropTable(
+                name: "NewsletterCampaigns");
+
+            migrationBuilder.DropTable(
+                name: "NewsletterSubscribers");
 
             migrationBuilder.DropTable(
                 name: "Notifications");
@@ -3803,6 +3892,9 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Addresses");
+
+            migrationBuilder.DropTable(
+                name: "CustomerAccounts");
         }
     }
 }

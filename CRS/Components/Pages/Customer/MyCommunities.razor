@@ -1,0 +1,156 @@
+﻿@page "/MyCommunities"
+@attribute [Authorize(Policy = "RequireHOAUser")]
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Customers
+@using CRS.Services.Tenant
+@using System.Security.Claims
+
+@inject ICustomerService CustomerService
+@inject ITenantContext TenantContext
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<MyCommunities> Logger
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>My Communities - @(TenantContext.TenantName ?? "Reserve Study")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.Business" Class="mr-2" Style="vertical-align: middle;" />
+            My Communities
+        </MudText>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/ReserveStudies/Request">
+            Request New Study
+        </MudButton>
+    </MudStack>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" Class="mb-4" />
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" />
+    }
+    else if (customer == null)
+    {
+        <MudAlert Severity="Severity.Warning">
+            Your customer account could not be found. Please contact support.
+        </MudAlert>
+    }
+    else if (communities == null || !communities.Any())
+    {
+        <MudPaper Elevation="2" Class="pa-8" Style="text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.LocationCity" 
+                     Style="font-size: 64px; color: #ccc;" Class="mb-4" />
+            <MudText Typo="Typo.h5" Class="mb-2">No Communities Yet</MudText>
+            <MudText Typo="Typo.body1" Style="color: #666;" Class="mb-4">
+                Communities will appear here after you submit a reserve study request.
+            </MudText>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       Href="/ReserveStudies/Request">
+                Request Your First Study
+            </MudButton>
+        </MudPaper>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var community in communities)
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <MudCard Elevation="2" Class="h-100">
+                        <MudCardHeader>
+                            <CardHeaderAvatar>
+                                <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
+                                    <MudIcon Icon="@Icons.Material.Filled.Business" />
+                                </MudAvatar>
+                            </CardHeaderAvatar>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@community.Name</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                    @(community.PhysicalAddress?.City), @(community.PhysicalAddress?.State)
+                                </MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudStack Spacing="2">
+                                @if (community.NumberOfUnits.HasValue)
+                                {
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Small" Style="color: #666;" />
+                                        <MudText Typo="Typo.body2">@community.NumberOfUnits units</MudText>
+                                    </MudStack>
+                                }
+                                @if (community.YearBuilt.HasValue)
+                                {
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Style="color: #666;" />
+                                        <MudText Typo="Typo.body2">Built @community.YearBuilt</MudText>
+                                    </MudStack>
+                                }
+                                @if (!string.IsNullOrEmpty(community.PhysicalAddress?.Street))
+                                {
+                                    <MudStack Row="true" AlignItems="AlignItems.Start" Spacing="1">
+                                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Style="color: #666;" />
+                                        <MudText Typo="Typo.body2">
+                                            @community.PhysicalAddress.Street<br />
+                                            @community.PhysicalAddress.City, @community.PhysicalAddress.State @community.PhysicalAddress.Zip
+                                        </MudText>
+                                    </MudStack>
+                                }
+                            </MudStack>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Text" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Small"
+                                       Href="@($"/MyStudies?communityId={community.Id}")">
+                                View Studies
+                            </MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private CustomerAccount? customer;
+    private List<Community>? communities;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdString = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (Guid.TryParse(userIdString, out var userId))
+            {
+                customer = await CustomerService.GetByUserIdAsync(userId);
+                if (customer != null)
+                {
+                    communities = customer.Communities?.Where(c => c.IsActive).ToList() ?? [];
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading communities");
+            Snackbar.Add("Error loading communities", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

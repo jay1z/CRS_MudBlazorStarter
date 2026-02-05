@@ -1,0 +1,258 @@
+﻿@page "/MyStudies"
+@attribute [Authorize(Policy = "RequireHOAUser")]
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Models.Workflow
+@using CRS.Services.Customers
+@using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+@using System.Security.Claims
+
+@inject IReserveStudyService ReserveStudyService
+@inject ICustomerService CustomerService
+@inject ITenantContext TenantContext
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<MyStudies> Logger
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>My Studies - @(TenantContext.TenantName ?? "Reserve Study")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.ListAlt" Class="mr-2" Style="vertical-align: middle;" />
+            My Reserve Studies
+        </MudText>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/ReserveStudies/Request">
+            Request New Study
+        </MudButton>
+    </MudStack>
+
+    <!-- Filter by Community (if provided) -->
+    @if (communityId.HasValue && selectedCommunity != null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudText>Showing studies for: <strong>@selectedCommunity.Name</strong></MudText>
+                <MudButton Variant="Variant.Text" 
+                           Size="Size.Small" 
+                           Color="Color.Primary"
+                           OnClick="ClearFilter">
+                    Show All
+                </MudButton>
+            </MudStack>
+        </MudAlert>
+    }
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" Class="mb-2" />
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" Class="mb-2" />
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" />
+    }
+    else if (studies == null || !studies.Any())
+    {
+        <MudPaper Elevation="2" Class="pa-8" Style="text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" 
+                     Style="font-size: 64px; color: #ccc;" Class="mb-4" />
+            <MudText Typo="Typo.h5" Class="mb-2">No Reserve Studies Yet</MudText>
+            <MudText Typo="Typo.body1" Style="color: #666;" Class="mb-4">
+                You haven't requested any reserve studies yet. Get started by requesting your first study!
+            </MudText>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       Href="/ReserveStudies/Request">
+                Request Your First Study
+            </MudButton>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="@studies" Hover="true" Elevation="2" Dense="true">
+            <HeaderContent>
+                <MudTh>Community</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Site Visit</MudTh>
+                <MudTh Style="text-align: right;">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Community">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.body1"><strong>@(context.Community?.Name ?? "—")</strong></MudText>
+                        @if (context.Community?.PhysicalAddress != null)
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                @context.Community.PhysicalAddress.City, @context.Community.PhysicalAddress.State
+                            </MudText>
+                        }
+                    </MudStack>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.CurrentStatus)">
+                        @GetStatusLabel(context.CurrentStatus)
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Created">
+                    <MudText Typo="Typo.body2">@(context.DateCreated?.ToString("MMM d, yyyy") ?? "—")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Site Visit">
+                    @if (context.SiteVisitDate.HasValue)
+                    {
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2">@context.SiteVisitDate.Value.ToString("MMM d, yyyy")</MudText>
+                            @if (context.SiteVisitDate.Value > DateTime.Today)
+                            {
+                                <MudText Typo="Typo.caption" Style="color: #4caf50;">Upcoming</MudText>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Style="color: #999;">Not scheduled</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Actions" Style="text-align: right;">
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               Size="Size.Small"
+                               Href="@($"/ReserveStudies/Details/{context.Id}")">
+                        View Details
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50 }" />
+            </PagerContent>
+        </MudTable>
+
+        <!-- Summary Cards -->
+        <MudGrid Class="mt-6">
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="1" Class="pa-4" Style="text-align: center;">
+                    <MudText Typo="Typo.h3" Color="Color.Primary">@studies.Count</MudText>
+                    <MudText Typo="Typo.body2">Total Studies</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="1" Class="pa-4" Style="text-align: center;">
+                    <MudText Typo="Typo.h3" Color="Color.Warning">@studies.Count(s => !s.IsComplete)</MudText>
+                    <MudText Typo="Typo.body2">In Progress</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="1" Class="pa-4" Style="text-align: center;">
+                    <MudText Typo="Typo.h3" Color="Color.Success">@studies.Count(s => s.IsComplete)</MudText>
+                    <MudText Typo="Typo.body2">Completed</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery]
+    public Guid? communityId { get; set; }
+
+    private CustomerAccount? customer;
+    private List<ReserveStudy>? studies;
+    private Community? selectedCommunity;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdString = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (Guid.TryParse(userIdString, out var userId))
+            {
+                // Get customer to access their communities
+                customer = await CustomerService.GetByUserIdAsync(userId);
+                
+                // Get studies owned by this user
+                var allStudies = await ReserveStudyService.GetOwnedReserveStudiesAsync(userId);
+                
+                // Filter by community if specified
+                if (communityId.HasValue)
+                {
+                    selectedCommunity = customer?.Communities?.FirstOrDefault(c => c.Id == communityId.Value);
+                    studies = allStudies.Where(s => s.CommunityId == communityId.Value).ToList();
+                }
+                else
+                {
+                    studies = allStudies;
+                }
+                
+                // Sort by created date descending
+                studies = studies?.OrderByDescending(s => s.DateCreated).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading studies");
+            Snackbar.Add("Error loading studies", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ClearFilter()
+    {
+        NavigationManager.NavigateTo("/MyStudies");
+    }
+
+    private static Color GetStatusColor(StudyStatus status) => status switch
+    {
+        StudyStatus.RequestCreated => Color.Default,
+        StudyStatus.RequestApproved => Color.Info,
+        StudyStatus.ProposalCreated => Color.Info,
+        StudyStatus.ProposalReviewed => Color.Info,
+        StudyStatus.ProposalApproved => Color.Info,
+        StudyStatus.ProposalSent => Color.Warning,
+        StudyStatus.ProposalAccepted => Color.Success,
+        StudyStatus.FinancialInfoRequested => Color.Warning,
+        StudyStatus.FinancialInfoReceived => Color.Info,
+        StudyStatus.SiteVisitScheduled => Color.Primary,
+        StudyStatus.SiteVisitCompleted => Color.Success,
+        StudyStatus.ReportComplete => Color.Success,
+        StudyStatus.RequestCompleted => Color.Success,
+        StudyStatus.RequestCancelled => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string GetStatusLabel(StudyStatus status) => status switch
+    {
+        StudyStatus.RequestCreated => "Request Created",
+        StudyStatus.RequestApproved => "Request Approved",
+        StudyStatus.ProposalCreated => "Proposal Created",
+        StudyStatus.ProposalReviewed => "Proposal Reviewed",
+        StudyStatus.ProposalApproved => "Proposal Approved",
+        StudyStatus.ProposalSent => "Proposal Sent",
+        StudyStatus.ProposalAccepted => "Proposal Accepted",
+        StudyStatus.FinancialInfoRequested => "Awaiting Financial Info",
+        StudyStatus.FinancialInfoReceived => "Financial Info Received",
+        StudyStatus.SiteVisitPending => "Site Visit Pending",
+        StudyStatus.SiteVisitScheduled => "Site Visit Scheduled",
+        StudyStatus.SiteVisitCompleted => "Site Visit Completed",
+        StudyStatus.FundingPlanReady => "Funding Plan Ready",
+        StudyStatus.FundingPlanInProcess => "Funding Plan In Progress",
+        StudyStatus.FundingPlanComplete => "Funding Plan Complete",
+        StudyStatus.NarrativeReady => "Report Writing",
+        StudyStatus.NarrativeComplete => "Report Complete",
+        StudyStatus.ReportComplete => "Report Delivered",
+        StudyStatus.RequestCompleted => "Completed",
+        StudyStatus.RequestCancelled => "Cancelled",
+        _ => status.ToString()
+    };
+}

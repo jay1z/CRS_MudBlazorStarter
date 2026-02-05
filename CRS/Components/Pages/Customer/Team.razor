@@ -1,0 +1,478 @@
+﻿@page "/Customer/Team"
+@attribute [Authorize(Policy = "RequireHOAUser")]
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Customers
+@using CRS.Services.Tenant
+@using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
+
+@inject ICustomerService CustomerService
+@inject ITenantContext TenantContext
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<Team> Logger
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Team Members - @(TenantContext.TenantName ?? "Reserve Study")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <div>
+            <MudText Typo="Typo.h4">
+                <MudIcon Icon="@Icons.Material.Filled.Group" Class="mr-2" Style="vertical-align: middle;" />
+                Team Members
+            </MudText>
+            @if (customer != null)
+            {
+                <MudText Typo="Typo.body2" Style="color: #666;">@customer.Name</MudText>
+            }
+        </div>
+        @if (canManageTeam)
+        {
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.PersonAdd"
+                       OnClick="OpenInviteDialog">
+                Invite Team Member
+            </MudButton>
+        }
+    </MudStack>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    }
+    else if (customer == null)
+    {
+        <MudAlert Severity="Severity.Warning">
+            Your customer account could not be found. Please contact support.
+        </MudAlert>
+    }
+    else
+    {
+        <!-- Current Team Members -->
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.People" Class="mr-2" Style="vertical-align: middle;" />
+                Current Members (@teamMembers.Count)
+            </MudText>
+
+            @if (!teamMembers.Any())
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    No team members yet. You're the only one with access to this account.
+                </MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@teamMembers" Hover="true" Dense="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Member</MudTh>
+                        <MudTh>Role</MudTh>
+                        <MudTh>Joined</MudTh>
+                        @if (canManageTeam)
+                        {
+                            <MudTh Style="text-align: right;">Actions</MudTh>
+                        }
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Member">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudAvatar Color="@GetAvatarColor(context.Role)" Size="Size.Small">
+                                    @(context.User?.FirstName?.Substring(0, 1).ToUpper() ?? "?")
+                                </MudAvatar>
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body2">
+                                        <strong>@context.User?.FirstName @context.User?.LastName</strong>
+                                        @if (context.UserId == currentUserId)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">You</MudChip>
+                                        }
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #666;">@context.User?.Email</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Role">
+                            @if (canManageTeam && context.UserId != currentUserId && context.Role != CustomerAccountRole.Owner)
+                            {
+                                <MudSelect T="CustomerAccountRole" 
+                                           Value="@context.Role" 
+                                           ValueChanged="@(async (r) => await UpdateRole(context.UserId, r))"
+                                           Dense="true"
+                                           Margin="Margin.Dense"
+                                           Variant="Variant.Outlined"
+                                           Style="max-width: 150px;">
+                                    <MudSelectItem Value="CustomerAccountRole.Admin">Admin</MudSelectItem>
+                                    <MudSelectItem Value="CustomerAccountRole.Member">Member</MudSelectItem>
+                                    <MudSelectItem Value="CustomerAccountRole.Viewer">Viewer</MudSelectItem>
+                                </MudSelect>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="@GetRoleColor(context.Role)">
+                                    @GetRoleLabel(context.Role)
+                                </MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Joined">
+                            <MudText Typo="Typo.body2">@context.JoinedAt.ToString("MMM d, yyyy")</MudText>
+                        </MudTd>
+                        @if (canManageTeam)
+                        {
+                            <MudTd DataLabel="Actions" Style="text-align: right;">
+                                @if (context.UserId != currentUserId && !(context.Role == CustomerAccountRole.Owner && ownerCount <= 1))
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" 
+                                                   Color="Color.Error" 
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => ConfirmRemoveMember(context))"
+                                                   Title="Remove from team" />
+                                }
+                            </MudTd>
+                        }
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+
+        <!-- Pending Invitations -->
+        @if (canManageTeam && pendingInvitations.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Mail" Class="mr-2" Style="vertical-align: middle;" />
+                    Pending Invitations (@pendingInvitations.Count)
+                </MudText>
+
+                <MudTable Items="@pendingInvitations" Hover="true" Dense="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Email</MudTh>
+                        <MudTh>Role</MudTh>
+                        <MudTh>Sent</MudTh>
+                        <MudTh>Expires</MudTh>
+                        <MudTh Style="text-align: right;">Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Email">
+                            <MudText Typo="Typo.body2">@context.Email</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Role">
+                            <MudChip T="string" Size="Size.Small" Color="@GetRoleColor(context.Role)">
+                                @GetRoleLabel(context.Role)
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Sent">
+                            <MudText Typo="Typo.body2">@context.CreatedAt.ToString("MMM d, yyyy")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Expires">
+                            <MudText Typo="Typo.body2" Style="@(context.ExpiresAt < DateTime.UtcNow.AddDays(1) ? "color: #f44336;" : "")">
+                                @context.ExpiresAt.ToString("MMM d, yyyy")
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Actions" Style="text-align: right;">
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                                           Color="Color.Primary" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => ResendInvitation(context))"
+                                           Title="Resend invitation" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Cancel" 
+                                           Color="Color.Error" 
+                                           Size="Size.Small"
+                                           OnClick="@(() => RevokeInvitation(context))"
+                                           Title="Revoke invitation" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+    }
+</MudContainer>
+
+<!-- Invite Dialog -->
+<MudDialog @bind-Visible="_showInviteDialog" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2" />
+            Invite Team Member
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_inviteEmail"
+                          Label="Email Address"
+                          InputType="InputType.Email"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Email" />
+
+            <MudSelect @bind-Value="_inviteRole"
+                       Label="Role"
+                       Variant="Variant.Outlined"
+                       Required="true"
+                       Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.Badge">
+                <MudSelectItem Value="CustomerAccountRole.Admin">
+                    <MudStack Spacing="0">
+                        <MudText>Admin</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">Can manage team members and settings</MudText>
+                    </MudStack>
+                </MudSelectItem>
+                <MudSelectItem Value="CustomerAccountRole.Member">
+                    <MudStack Spacing="0">
+                        <MudText>Member</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">Can view and request studies</MudText>
+                    </MudStack>
+                </MudSelectItem>
+                <MudSelectItem Value="CustomerAccountRole.Viewer">
+                    <MudStack Spacing="0">
+                        <MudText>Viewer</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">Read-only access to studies and reports</MudText>
+                    </MudStack>
+                </MudSelectItem>
+            </MudSelect>
+
+            <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined">
+                An email invitation will be sent. The link expires in 7 days.
+            </MudAlert>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showInviteDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="SendInvitation"
+                   Disabled="@(string.IsNullOrWhiteSpace(_inviteEmail) || _isSending)">
+            @if (_isSending)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Send Invitation
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Remove Confirmation Dialog -->
+<MudMessageBox @ref="_removeConfirmation" Title="Remove Team Member" CancelText="Cancel">
+    <MessageContent>
+        Are you sure you want to remove <strong>@_memberToRemove?.User?.Email</strong> from the team?
+        They will lose access to this account immediately.
+    </MessageContent>
+    <YesButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled">Remove</MudButton>
+    </YesButton>
+</MudMessageBox>
+
+@code {
+    private CustomerAccount? customer;
+    private List<CustomerAccountUser> teamMembers = new();
+    private List<CustomerAccountInvitation> pendingInvitations = new();
+    private Guid? currentUserId;
+    private CustomerAccountRole currentUserRole;
+    private bool isLoading = true;
+    private bool canManageTeam = false;
+    private int ownerCount = 0;
+
+    // Invite dialog
+    private bool _showInviteDialog = false;
+    private string _inviteEmail = "";
+    private CustomerAccountRole _inviteRole = CustomerAccountRole.Member;
+    private bool _isSending = false;
+
+    // Remove confirmation
+    private MudMessageBox _removeConfirmation = null!;
+    private CustomerAccountUser? _memberToRemove;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdString = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (Guid.TryParse(userIdString, out var userId))
+            {
+                currentUserId = userId;
+                customer = await CustomerService.GetByUserIdAsync(userId);
+
+                if (customer != null)
+                {
+                    await LoadTeamData();
+
+                    // Check if current user can manage team (Owner or Admin)
+                    canManageTeam = await CustomerService.HasRoleAsync(customer.Id, userId, CustomerAccountRole.Admin);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading team page");
+            Snackbar.Add("Error loading team data", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadTeamData()
+    {
+        if (customer == null) return;
+
+        teamMembers = await CustomerService.GetTeamMembersAsync(customer.Id);
+        pendingInvitations = await CustomerService.GetPendingInvitationsAsync(customer.Id);
+        ownerCount = teamMembers.Count(m => m.Role == CustomerAccountRole.Owner);
+
+        // If no team members yet, the legacy owner should be shown
+        if (!teamMembers.Any() && customer.UserId.HasValue && currentUserId.HasValue)
+        {
+            // Auto-add the legacy owner to the new system
+            await CustomerService.AddTeamMemberAsync(customer.Id, customer.UserId.Value, CustomerAccountRole.Owner);
+            teamMembers = await CustomerService.GetTeamMembersAsync(customer.Id);
+            ownerCount = 1;
+        }
+    }
+
+    private void OpenInviteDialog()
+    {
+        _inviteEmail = "";
+        _inviteRole = CustomerAccountRole.Member;
+        _showInviteDialog = true;
+    }
+
+    private async Task SendInvitation()
+    {
+        if (customer == null || !currentUserId.HasValue || string.IsNullOrWhiteSpace(_inviteEmail)) return;
+
+        _isSending = true;
+        try
+        {
+            var invitation = await CustomerService.CreateInvitationAsync(
+                customer.Id, _inviteEmail, _inviteRole, currentUserId.Value);
+
+            await CustomerService.SendInvitationEmailAsync(invitation);
+
+            pendingInvitations = await CustomerService.GetPendingInvitationsAsync(customer.Id);
+
+            Snackbar.Add($"Invitation sent to {_inviteEmail}", Severity.Success);
+            _showInviteDialog = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error sending invitation");
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSending = false;
+        }
+    }
+
+    private async Task UpdateRole(Guid userId, CustomerAccountRole newRole)
+    {
+        if (customer == null) return;
+
+        try
+        {
+            await CustomerService.UpdateTeamMemberRoleAsync(customer.Id, userId, newRole);
+            await LoadTeamData();
+            Snackbar.Add("Role updated", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating role");
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ConfirmRemoveMember(CustomerAccountUser member)
+    {
+        _memberToRemove = member;
+        var result = await _removeConfirmation.ShowAsync();
+
+        if (result == true && customer != null)
+        {
+            try
+            {
+                await CustomerService.RemoveTeamMemberAsync(customer.Id, member.UserId);
+                await LoadTeamData();
+                Snackbar.Add("Team member removed", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error removing team member");
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+
+        _memberToRemove = null;
+    }
+
+    private async Task ResendInvitation(CustomerAccountInvitation invitation)
+    {
+        if (customer == null || !currentUserId.HasValue) return;
+
+        try
+        {
+            var updated = await CustomerService.CreateInvitationAsync(
+                customer.Id, invitation.Email, invitation.Role, currentUserId.Value);
+
+            await CustomerService.SendInvitationEmailAsync(updated);
+
+            pendingInvitations = await CustomerService.GetPendingInvitationsAsync(customer.Id);
+            Snackbar.Add("Invitation resent", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error resending invitation");
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RevokeInvitation(CustomerAccountInvitation invitation)
+    {
+        if (customer == null) return;
+
+        try
+        {
+            await CustomerService.RevokeInvitationAsync(invitation.Id);
+            pendingInvitations = await CustomerService.GetPendingInvitationsAsync(customer.Id);
+            Snackbar.Add("Invitation revoked", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error revoking invitation");
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static Color GetRoleColor(CustomerAccountRole role) => role switch
+    {
+        CustomerAccountRole.Owner => Color.Primary,
+        CustomerAccountRole.Admin => Color.Info,
+        CustomerAccountRole.Member => Color.Success,
+        CustomerAccountRole.Viewer => Color.Default,
+        _ => Color.Default
+    };
+
+    private static Color GetAvatarColor(CustomerAccountRole role) => role switch
+    {
+        CustomerAccountRole.Owner => Color.Primary,
+        CustomerAccountRole.Admin => Color.Info,
+        CustomerAccountRole.Member => Color.Success,
+        CustomerAccountRole.Viewer => Color.Default,
+        _ => Color.Default
+    };
+
+    private static string GetRoleLabel(CustomerAccountRole role) => role switch
+    {
+        CustomerAccountRole.Owner => "Owner",
+        CustomerAccountRole.Admin => "Admin",
+        CustomerAccountRole.Member => "Member",
+        CustomerAccountRole.Viewer => "Viewer",
+        _ => role.ToString()
+    };
+}

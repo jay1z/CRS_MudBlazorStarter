@@ -1,0 +1,99 @@
+﻿@model CRS.Models.Emails.TeamInvitationEmail
+
+@{
+    var tenantName = Model.TenantName ?? "Reserve Study Services";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're Invited to Join @Model.CustomerName</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%;">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 16px 16px 0 0; padding: 48px 40px; text-align: center;">
+                            <div style="width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px; line-height: 70px;">
+                                <span style="font-size: 35px;">👋</span>
+                            </div>
+                            <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 26px; font-weight: 700;">You're Invited!</h1>
+                            <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 16px;">Join @Model.CustomerName on @tenantName</p>
+                        </td>
+                    </tr>
+
+                    <!-- Body -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Hi there,
+                            </p>
+                            <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                <strong>@Model.InviterName</strong> has invited you to join <strong>@Model.CustomerName</strong> 
+                                on @tenantName as a <strong>@Model.Role</strong>.
+                            </p>
+                            
+                            <!-- Role Info Box -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 24px 0;">
+                                <tr>
+                                    <td style="background-color: #f0f9ff; border-radius: 12px; padding: 20px; border-left: 4px solid #6366f1;">
+                                        <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Your Role: @Model.Role</p>
+                                        <p style="margin: 0; color: #1e40af; font-size: 13px;">
+                                            @if (Model.Role == "Admin")
+                                            {
+                                                <text>You'll be able to manage team members and account settings.</text>
+                                            }
+                                            else if (Model.Role == "Member")
+                                            {
+                                                <text>You'll be able to view and request reserve studies.</text>
+                                            }
+                                            else
+                                            {
+                                                <text>You'll have read-only access to studies and reports.</text>
+                                            }
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA Button -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="@Model.AcceptUrl" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; padding: 16px 48px; border-radius: 8px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);">
+                                            Accept Invitation
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; text-align: center;">
+                                This invitation expires on <strong>@Model.ExpiresAt.ToString("MMMM d, yyyy")</strong>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #1e293b; border-radius: 0 0 16px 16px; padding: 32px 40px; text-align: center;">
+                            <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 13px;">
+                                If you didn't expect this invitation, you can safely ignore this email.
+                            </p>
+                            <p style="margin: 16px 0 0 0; color: #64748b; font-size: 12px;">
+                                © @DateTime.UtcNow.Year @tenantName. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

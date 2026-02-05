@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using CRS.Data;
 
 namespace CRS.Models {
     /// <summary>
@@ -112,6 +113,23 @@ namespace CRS.Models {
         /// When the customer was last updated
         /// </summary>
         public DateTime? UpdatedAt { get; set; }
+
+        /// <summary>
+        /// [DEPRECATED] Single user account - kept for backwards compatibility.
+        /// Use CustomerAccountUsers collection for multi-user support.
+        /// </summary>
+        public Guid? UserId { get; set; }
+        public ApplicationUser? User { get; set; }
+
+        /// <summary>
+        /// Users linked to this customer account (supports multiple users per account)
+        /// </summary>
+        public ICollection<CustomerAccountUser> CustomerAccountUsers { get; set; } = new List<CustomerAccountUser>();
+
+        /// <summary>
+        /// Pending invitations to join this customer account
+        /// </summary>
+        public ICollection<CustomerAccountInvitation> Invitations { get; set; } = new List<CustomerAccountInvitation>();
 
         /// <summary>
         /// Communities/properties owned or managed by this customer

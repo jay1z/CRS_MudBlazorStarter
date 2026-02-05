@@ -1,0 +1,419 @@
+﻿@page "/Customer/Profile"
+@attribute [Authorize(Policy = "RequireHOAUser")]
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Customers
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+@using System.ComponentModel.DataAnnotations
+
+@inject UserManager<ApplicationUser> UserManager
+@inject ICustomerService CustomerService
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+@inject ILogger<Profile> Logger
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>My Account - @(TenantContext.TenantName ?? "Reserve Study")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-6">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" Style="vertical-align: middle;" />
+        My Account
+    </MudText>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (customer == null)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <MudText>Your customer account could not be found. Please contact support.</MudText>
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid Spacing="4">
+            <!-- Account Information Card -->
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                    <MudStack Spacing="3">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6">
+                                <MudIcon Icon="@Icons.Material.Filled.Business" Class="mr-2" Style="vertical-align: middle;" />
+                                Organization
+                            </MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                           Size="Size.Small" 
+                                           OnClick="@(() => editingOrg = true)"
+                                           Disabled="@editingOrg" />
+                        </MudStack>
+
+                        @if (editingOrg)
+                        {
+                            <MudTextField @bind-Value="model.Name"
+                                          Label="Organization Name"
+                                          Variant="Variant.Outlined"
+                                          Required="true" />
+                            
+                            <MudSelect @bind-Value="model.Type"
+                                       Label="Organization Type"
+                                       Variant="Variant.Outlined">
+                                <MudSelectItem Value="CustomerType.HOABoard">HOA Board</MudSelectItem>
+                                <MudSelectItem Value="CustomerType.ManagementCompany">Management Company</MudSelectItem>
+                                <MudSelectItem Value="CustomerType.PropertyOwner">Property Owner</MudSelectItem>
+                                <MudSelectItem Value="CustomerType.Developer">Developer</MudSelectItem>
+                                <MudSelectItem Value="CustomerType.Other">Other</MudSelectItem>
+                            </MudSelect>
+
+                            <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                                <MudButton Variant="Variant.Text" OnClick="@(() => { editingOrg = false; ResetModel(); })">Cancel</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveOrganization" Disabled="@isSaving">
+                                    @if (isSaving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                                    Save
+                                </MudButton>
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body1"><strong>@customer.Name</strong></MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@GetCustomerTypeLabel(customer.Type)</MudChip>
+                            <MudText Typo="Typo.caption" Style="color: #666;">
+                                Member since @customer.CreatedAt.ToString("MMMM yyyy")
+                            </MudText>
+                        }
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Contact Information Card -->
+            <MudItem xs="12" md="6">
+                <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                    <MudStack Spacing="3">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6">
+                                <MudIcon Icon="@Icons.Material.Filled.ContactMail" Class="mr-2" Style="vertical-align: middle;" />
+                                Contact Information
+                            </MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                           Size="Size.Small" 
+                                           OnClick="@(() => editingContact = true)"
+                                           Disabled="@editingContact" />
+                        </MudStack>
+
+                        @if (editingContact)
+                        {
+                            <MudTextField @bind-Value="model.ContactName"
+                                          Label="Contact Name"
+                                          Variant="Variant.Outlined" />
+                            
+                            <MudTextField @bind-Value="model.Email"
+                                          Label="Email"
+                                          InputType="InputType.Email"
+                                          Variant="Variant.Outlined" />
+                            
+                            <MudTextField @bind-Value="model.Phone"
+                                          Label="Phone"
+                                          Variant="Variant.Outlined" />
+
+                            <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                                <MudButton Variant="Variant.Text" OnClick="@(() => { editingContact = false; ResetModel(); })">Cancel</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveContact" Disabled="@isSaving">
+                                    @if (isSaving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                                    Save
+                                </MudButton>
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                                    @(customer.ContactName ?? "Not specified")
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                                    @(customer.Email ?? "Not specified")
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                                    @(customer.Phone ?? "Not specified")
+                                </MudText>
+                            </MudStack>
+                        }
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Address Card -->
+            <MudItem xs="12">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack Spacing="3">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6">
+                                <MudIcon Icon="@Icons.Material.Filled.LocationOn" Class="mr-2" Style="vertical-align: middle;" />
+                                Billing Address
+                            </MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                           Size="Size.Small" 
+                                           OnClick="@(() => editingAddress = true)"
+                                           Disabled="@editingAddress" />
+                        </MudStack>
+
+                        @if (editingAddress)
+                        {
+                            <MudGrid>
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="model.AddressLine1"
+                                                  Label="Address Line 1"
+                                                  Variant="Variant.Outlined" />
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="model.AddressLine2"
+                                                  Label="Address Line 2"
+                                                  Variant="Variant.Outlined" />
+                                </MudItem>
+                                <MudItem xs="12" sm="5">
+                                    <MudTextField @bind-Value="model.City"
+                                                  Label="City"
+                                                  Variant="Variant.Outlined" />
+                                </MudItem>
+                                <MudItem xs="6" sm="4">
+                                    <MudTextField @bind-Value="model.State"
+                                                  Label="State"
+                                                  Variant="Variant.Outlined" />
+                                </MudItem>
+                                <MudItem xs="6" sm="3">
+                                    <MudTextField @bind-Value="model.PostalCode"
+                                                  Label="ZIP Code"
+                                                  Variant="Variant.Outlined" />
+                                </MudItem>
+                            </MudGrid>
+
+                            <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                                <MudButton Variant="Variant.Text" OnClick="@(() => { editingAddress = false; ResetModel(); })">Cancel</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAddress" Disabled="@isSaving">
+                                    @if (isSaving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                                    Save
+                                </MudButton>
+                            </MudStack>
+                        }
+                        else
+                        {
+                            @if (string.IsNullOrWhiteSpace(customer.AddressLine1))
+                            {
+                                <MudText Typo="Typo.body2" Style="color: #666;">No address on file</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2">@customer.AddressLine1</MudText>
+                                @if (!string.IsNullOrWhiteSpace(customer.AddressLine2))
+                                {
+                                    <MudText Typo="Typo.body2">@customer.AddressLine2</MudText>
+                                }
+                                <MudText Typo="Typo.body2">@customer.City, @customer.State @customer.PostalCode</MudText>
+                            }
+                        }
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Communities Summary -->
+            <MudItem xs="12">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.Business" Class="mr-2" Style="vertical-align: middle;" />
+                            My Communities
+                        </MudText>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Small"
+                                   Href="/MyCommunities"
+                                   StartIcon="@Icons.Material.Filled.Visibility">
+                            View All
+                        </MudButton>
+                    </MudStack>
+
+                    @if (customer.Communities == null || !customer.Communities.Any())
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            No communities linked to your account yet. Communities will appear here after you submit a reserve study request.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Style="color: #666;">
+                            You have <strong>@customer.Communities.Count</strong> community/communities linked to your account.
+                        </MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private CustomerAccount? customer;
+    private CustomerProfileModel model = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool editingOrg = false;
+    private bool editingContact = false;
+    private bool editingAddress = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdString = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            
+            if (Guid.TryParse(userIdString, out var userId))
+            {
+                customer = await CustomerService.GetByUserIdAsync(userId);
+                if (customer != null)
+                {
+                    ResetModel();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading customer profile");
+            Snackbar.Add("Error loading profile", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ResetModel()
+    {
+        if (customer == null) return;
+        
+        model = new CustomerProfileModel
+        {
+            Name = customer.Name,
+            Type = customer.Type,
+            ContactName = customer.ContactName,
+            Email = customer.Email,
+            Phone = customer.Phone,
+            AddressLine1 = customer.AddressLine1,
+            AddressLine2 = customer.AddressLine2,
+            City = customer.City,
+            State = customer.State,
+            PostalCode = customer.PostalCode
+        };
+    }
+
+    private async Task SaveOrganization()
+    {
+        if (customer == null) return;
+        
+        isSaving = true;
+        try
+        {
+            customer.Name = model.Name;
+            customer.Type = model.Type;
+            
+            await CustomerService.UpdateAsync(customer);
+            
+            Snackbar.Add("Organization information updated", Severity.Success);
+            editingOrg = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving organization info");
+            Snackbar.Add("Error saving changes", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task SaveContact()
+    {
+        if (customer == null) return;
+        
+        isSaving = true;
+        try
+        {
+            customer.ContactName = model.ContactName;
+            customer.Email = model.Email;
+            customer.Phone = model.Phone;
+            
+            await CustomerService.UpdateAsync(customer);
+            
+            Snackbar.Add("Contact information updated", Severity.Success);
+            editingContact = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving contact info");
+            Snackbar.Add("Error saving changes", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task SaveAddress()
+    {
+        if (customer == null) return;
+        
+        isSaving = true;
+        try
+        {
+            customer.AddressLine1 = model.AddressLine1;
+            customer.AddressLine2 = model.AddressLine2;
+            customer.City = model.City;
+            customer.State = model.State;
+            customer.PostalCode = model.PostalCode;
+            
+            await CustomerService.UpdateAsync(customer);
+            
+            Snackbar.Add("Address updated", Severity.Success);
+            editingAddress = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving address");
+            Snackbar.Add("Error saving changes", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string GetCustomerTypeLabel(CustomerType type) => type switch
+    {
+        CustomerType.HOABoard => "HOA Board",
+        CustomerType.ManagementCompany => "Management Company",
+        CustomerType.PropertyOwner => "Property Owner",
+        CustomerType.Developer => "Developer",
+        _ => "Other"
+    };
+
+    private class CustomerProfileModel
+    {
+        [Required]
+        public string Name { get; set; } = "";
+        public CustomerType Type { get; set; }
+        public string? ContactName { get; set; }
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
+        public string? AddressLine1 { get; set; }
+        public string? AddressLine2 { get; set; }
+        public string? City { get; set; }
+        public string? State { get; set; }
+        public string? PostalCode { get; set; }
+    }
+}

@@ -422,6 +422,40 @@ namespace CRS.Data {
                 entity.Property(e => e.Email).HasMaxLength(256);
             });
 
+            // CustomerAccountUser (join table for multi-user customer accounts)
+            builder.Entity<CRS.Models.CustomerAccountUser>(entity => {
+                entity.ToTable("CustomerAccountUsers");
+                entity.HasKey(e => new { e.CustomerAccountId, e.UserId });
+                entity.HasIndex(e => e.UserId)
+                    .HasDatabaseName("IX_CustomerAccountUser_User");
+                entity.HasIndex(e => new { e.CustomerAccountId, e.Role, e.IsActive })
+                    .HasDatabaseName("IX_CustomerAccountUser_Account_Role_Active");
+                entity.HasOne(e => e.CustomerAccount)
+                    .WithMany(c => c.CustomerAccountUsers)
+                    .HasForeignKey(e => e.CustomerAccountId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // CustomerAccountInvitation
+            builder.Entity<CRS.Models.CustomerAccountInvitation>(entity => {
+                entity.ToTable("CustomerAccountInvitations");
+                entity.HasIndex(e => new { e.CustomerAccountId, e.Email, e.Status })
+                    .HasDatabaseName("IX_CustomerAccountInvitation_Account_Email_Status");
+                entity.HasIndex(e => e.Token)
+                    .IsUnique()
+                    .HasDatabaseName("IX_CustomerAccountInvitation_Token");
+                entity.HasIndex(e => new { e.Status, e.ExpiresAt })
+                    .HasDatabaseName("IX_CustomerAccountInvitation_Status_Expires");
+                entity.HasOne(e => e.CustomerAccount)
+                    .WithMany(c => c.Invitations)
+                    .HasForeignKey(e => e.CustomerAccountId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Phase 2: ElementOption consolidated configuration
             builder.Entity<ElementOption>(entity => {
                 entity.ToTable("ElementOptions");
@@ -989,6 +1023,8 @@ namespace CRS.Data {
 
         // New tenant-scoped entities
         public DbSet<CRS.Models.CustomerAccount> CustomerAccounts { get; set; }
+        public DbSet<CRS.Models.CustomerAccountUser> CustomerAccountUsers { get; set; }
+        public DbSet<CRS.Models.CustomerAccountInvitation> CustomerAccountInvitations { get; set; }
         public DbSet<CRS.Models.SupportTicket> SupportTickets { get; set; }
         public DbSet<CRS.Models.TicketComment> TicketComments { get; set; }
         

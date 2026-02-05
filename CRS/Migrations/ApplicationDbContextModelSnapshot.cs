@@ -1158,6 +1158,9 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Website")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -1166,7 +1169,94 @@ namespace CRS.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("CustomerAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.CustomerAccountInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("AcceptedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CustomerAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("InvitedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique()
+                        .HasDatabaseName("IX_CustomerAccountInvitation_Token");
+
+                    b.HasIndex("Status", "ExpiresAt")
+                        .HasDatabaseName("IX_CustomerAccountInvitation_Status_Expires");
+
+                    b.HasIndex("CustomerAccountId", "Email", "Status")
+                        .HasDatabaseName("IX_CustomerAccountInvitation_Account_Email_Status");
+
+                    b.ToTable("CustomerAccountInvitations", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.CustomerAccountUser", b =>
+                {
+                    b.Property<Guid>("CustomerAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("InvitedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.HasKey("CustomerAccountId", "UserId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_CustomerAccountUser_User");
+
+                    b.HasIndex("CustomerAccountId", "Role", "IsActive")
+                        .HasDatabaseName("IX_CustomerAccountUser_Account_Role_Active");
+
+                    b.ToTable("CustomerAccountUsers", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.Demo.DemoSession", b =>
@@ -5539,6 +5629,45 @@ namespace CRS.Migrations
                     b.Navigation("ReserveStudy");
                 });
 
+            modelBuilder.Entity("CRS.Models.CustomerAccount", b =>
+                {
+                    b.HasOne("CRS.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CRS.Models.CustomerAccountInvitation", b =>
+                {
+                    b.HasOne("CRS.Models.CustomerAccount", "CustomerAccount")
+                        .WithMany("Invitations")
+                        .HasForeignKey("CustomerAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CustomerAccount");
+                });
+
+            modelBuilder.Entity("CRS.Models.CustomerAccountUser", b =>
+                {
+                    b.HasOne("CRS.Models.CustomerAccount", "CustomerAccount")
+                        .WithMany("CustomerAccountUsers")
+                        .HasForeignKey("CustomerAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CRS.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CustomerAccount");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CRS.Models.Demo.DemoSession", b =>
                 {
                     b.HasOne("CRS.Models.Tenant", "DemoTenant")
@@ -6308,6 +6437,10 @@ namespace CRS.Migrations
             modelBuilder.Entity("CRS.Models.CustomerAccount", b =>
                 {
                     b.Navigation("Communities");
+
+                    b.Navigation("CustomerAccountUsers");
+
+                    b.Navigation("Invitations");
                 });
 
             modelBuilder.Entity("CRS.Models.Invoice", b =>

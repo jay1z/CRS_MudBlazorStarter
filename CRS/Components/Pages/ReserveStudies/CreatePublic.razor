@@ -11,6 +11,7 @@
 @using CRS.Services.Tenant
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
+@using CRS.Services.Customers
 @implements IAsyncDisposable
 @inject ILogger<CreatePublic> Logger
 @inject UserStateService UserState
@@ -19,6 +20,7 @@
 @inject IReserveStudyService ReserveStudyService
 @inject IReserveStudyWorkflowService WorkflowService
 @inject ITenantContext TenantContext
+@inject ICustomerService CustomerService
 
 <PageTitle>Request Reserve Study - @(TenantContext.TenantName ?? "ALX Reserve Cloud")</PageTitle>
 
@@ -181,7 +183,7 @@ else {
     protected override async Task OnInitializedAsync() {
         try {
             await UserState.InitializeAsync();
-            
+
             // Allow authenticated users (not just tenant staff)
             if (!UserState.ClaimsPrincipal.Identity?.IsAuthenticated ?? true) {
                 NavigationManager.NavigateTo("/Account/Login?returnUrl=" + Uri.EscapeDataString("/ReserveStudies/Request"), true);
@@ -193,6 +195,18 @@ else {
                 Logger.LogWarning("CreatePublic: No tenant context available for user {UserId}", GetCurrentUserId(UserState.ClaimsPrincipal));
                 isLoading = false;
                 return;
+            }
+
+            // Check if user has a CustomerAccount (required for HOA users)
+            var userId = GetCurrentUserId(UserState.ClaimsPrincipal);
+            if (userId.HasValue) {
+                var customerAccount = await CustomerService.GetByUserIdAsync(userId.Value);
+                if (customerAccount == null && !UserState.ClaimsPrincipal.IsInRole("Admin") && !UserState.ClaimsPrincipal.IsInRole("Staff")) {
+                    // User doesn't have a customer account and isn't staff - redirect to signup
+                    Logger.LogInformation("User {UserId} has no CustomerAccount, redirecting to signup", userId.Value);
+                    NavigationManager.NavigateTo("/signup/customer", true);
+                    return;
+                }
             }
 
             InitializeModel();
@@ -324,7 +338,7 @@ else {
                 await step3.ValidateAsync();
             }
 
-            PrepareModelForSubmission();
+            await PrepareModelForSubmission();
 
             // Use workflow service so the StudyRequest is created and state machine is initialized
             var created = await WorkflowService.CreateReserveStudyRequestAsync(Model!);
@@ -345,11 +359,22 @@ else {
         }
     }
 
-    private void PrepareModelForSubmission() {
+    private async Task PrepareModelForSubmission() {
         // SECURITY: Force tenant ID on all entities one final time
         var tenantId = TenantContext.TenantId!.Value;
         Model!.TenantId = tenantId;
-        
+
+        // Link community to customer account for HOA users
+        var userId = GetCurrentUserId(UserState.ClaimsPrincipal);
+        if (userId.HasValue) {
+            var customerAccount = await CustomerService.GetByUserIdAsync(userId.Value);
+            if (customerAccount != null && Model?.Community != null) {
+                // Set the customer account on the community
+                Model.Community.CustomerAccountId = customerAccount.Id;
+                Logger.LogInformation("PrepareModelForSubmission: Linking community to customer {CustomerId}", customerAccount.Id);
+            }
+        }
+
         // Ensure CommunityId is set properly
         if (Model?.Community != null && Model.Community.Id != Guid.Empty) {
             // Set the CommunityId reference
@@ -367,12 +392,12 @@ else {
                 Model?.Community?.Id ?? Guid.Empty);
             // For new community, keep the Community object so the service can persist it
         }
-        
+
         // SECURITY: Ensure all related entities have correct tenant ID
         if (Model?.Contact != null) {
             Model.Contact.TenantId = tenantId;
         }
-        
+
         if (Model?.PropertyManager != null) {
             Model.PropertyManager.TenantId = tenantId;
         }

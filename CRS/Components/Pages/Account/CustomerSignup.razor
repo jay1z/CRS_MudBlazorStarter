@@ -1,0 +1,311 @@
+﻿@page "/signup/customer"
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Customers
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Routing
+@using Microsoft.EntityFrameworkCore
+@using System.ComponentModel.DataAnnotations
+@layout CRS.Components.Layout.PublicLayout
+
+@inject UserManager<ApplicationUser> UserManager
+@inject ICustomerService CustomerService
+@inject ITenantContext TenantContext
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<CustomerSignup> Logger
+
+<PageTitle>Sign Up - @(TenantContext.TenantName ?? "Reserve Study Request")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="py-8">
+    @if (!TenantContext.TenantId.HasValue)
+    {
+        <MudAlert Severity="MudBlazor.Severity.Error" Class="mb-4">
+            <MudText Typo="Typo.h6">Invalid Access</MudText>
+            <MudText Typo="Typo.body2">
+                Please access this page from your reserve study provider's website.
+            </MudText>
+        </MudAlert>
+    }
+    else
+    {
+        <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 16px;">
+            <!-- Header -->
+            <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="mb-6">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" 
+                         Style="font-size: 48px; color: #6366f1;" />
+                <MudText Typo="Typo.h4" Style="font-weight: 700; text-align: center;">
+                    Create Your Account
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: #666; text-align: center;">
+                    Sign up to request a reserve study from <strong>@TenantContext.TenantName</strong>
+                </MudText>
+            </MudStack>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="MudBlazor.Severity.Error" Class="mb-4" Dense="true">
+                    @errorMessage
+                </MudAlert>
+            }
+
+            <MudForm @ref="form" Model="model">
+                <MudStack Spacing="3">
+                    <!-- Name -->
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="model.FirstName"
+                                          Label="First Name"
+                                          Required="true"
+                                          Variant="Variant.Outlined"
+                                          For="@(() => model.FirstName)" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="model.LastName"
+                                          Label="Last Name"
+                                          Required="true"
+                                          Variant="Variant.Outlined"
+                                          For="@(() => model.LastName)" />
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Email -->
+                    <MudTextField @bind-Value="model.Email"
+                                  Label="Email Address"
+                                  Required="true"
+                                  InputType="InputType.Email"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Email"
+                                  For="@(() => model.Email)" />
+
+                    <!-- Phone -->
+                    <MudTextField @bind-Value="model.Phone"
+                                  Label="Phone Number"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Phone"
+                                  For="@(() => model.Phone)" />
+
+                    <!-- Company/HOA Name -->
+                    <MudTextField @bind-Value="model.CompanyName"
+                                  Label="HOA / Organization Name"
+                                  Required="true"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Business"
+                                  HelperText="The name of your HOA, condo association, or management company"
+                                  For="@(() => model.CompanyName)" />
+
+                    <!-- Customer Type -->
+                    <MudSelect @bind-Value="model.CustomerType"
+                               Label="I am a..."
+                               Variant="Variant.Outlined"
+                               Required="true"
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Filled.Badge">
+                        <MudSelectItem Value="CustomerType.HOABoard">HOA Board Member</MudSelectItem>
+                        <MudSelectItem Value="CustomerType.ManagementCompany">Property Manager</MudSelectItem>
+                        <MudSelectItem Value="CustomerType.PropertyOwner">Property Owner</MudSelectItem>
+                        <MudSelectItem Value="CustomerType.Developer">Developer</MudSelectItem>
+                        <MudSelectItem Value="CustomerType.Other">Other</MudSelectItem>
+                    </MudSelect>
+
+                    <!-- Password -->
+                    <MudTextField @bind-Value="model.Password"
+                                  Label="Password"
+                                  Required="true"
+                                  InputType="@(showPassword ? InputType.Text : InputType.Password)"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                  OnAdornmentClick="@(() => showPassword = !showPassword)"
+                                  For="@(() => model.Password)" />
+
+                    <MudTextField @bind-Value="model.ConfirmPassword"
+                                  Label="Confirm Password"
+                                  Required="true"
+                                  InputType="@(showPassword ? InputType.Text : InputType.Password)"
+                                  Variant="Variant.Outlined"
+                                  For="@(() => model.ConfirmPassword)" />
+
+                    <!-- Terms -->
+                    <MudCheckBox @bind-Value="model.AcceptTerms" 
+                                 Color="Color.Primary"
+                                 For="@(() => model.AcceptTerms)">
+                        <MudText Typo="Typo.body2">
+                            I agree to the <MudLink Href="/terms" Target="_blank">Terms of Service</MudLink> 
+                            and <MudLink Href="/privacy" Target="_blank">Privacy Policy</MudLink>
+                        </MudText>
+                    </MudCheckBox>
+
+                    <!-- Submit -->
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               FullWidth="true"
+                               Disabled="@(isLoading || !model.AcceptTerms)"
+                               OnClick="HandleSignup"
+                               Style="height: 48px;">
+                        @if (isLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Creating Account...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2" />
+                            <span>Create Account</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudForm>
+
+            <!-- Login Link -->
+            <MudDivider Class="my-4" />
+            <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.body2" Style="color: #666;">
+                    Already have an account?
+                </MudText>
+                <MudLink Href="/Account/Login" Typo="Typo.body2">Sign In</MudLink>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private MudForm form = null!;
+    private CustomerSignupModel model = new();
+    private bool isLoading = false;
+    private bool showPassword = false;
+    private string? errorMessage;
+
+    private async Task HandleSignup()
+    {
+        await form.Validate();
+        if (!form.IsValid) return;
+
+        if (!model.AcceptTerms)
+        {
+            errorMessage = "Please accept the terms of service to continue.";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            // Check if email already exists
+            var existingUser = await UserManager.FindByEmailAsync(model.Email);
+            if (existingUser != null)
+            {
+                errorMessage = "An account with this email already exists. Please sign in instead.";
+                isLoading = false;
+                return;
+            }
+
+            // Create the user
+            var user = new ApplicationUser
+            {
+                Id = Guid.CreateVersion7(),
+                UserName = model.Email,
+                Email = model.Email,
+                FirstName = model.FirstName,
+                LastName = model.LastName,
+                PhoneNumber = model.Phone,
+                TenantId = TenantContext.TenantId!.Value,
+                EmailConfirmed = true // Auto-confirm for now
+            };
+
+            var result = await UserManager.CreateAsync(user, model.Password);
+            if (!result.Succeeded)
+            {
+                errorMessage = string.Join(". ", result.Errors.Select(e => e.Description));
+                isLoading = false;
+                return;
+            }
+
+            // Add to HOAUser role
+            await UserManager.AddToRoleAsync(user, "HOAUser");
+
+            // Create CustomerAccount
+            var customer = new CustomerAccount
+            {
+                Name = model.CompanyName,
+                Type = model.CustomerType,
+                ContactName = $"{model.FirstName} {model.LastName}",
+                Email = model.Email,
+                Phone = model.Phone,
+                UserId = user.Id
+            };
+
+            await CustomerService.CreateAsync(customer);
+
+            Logger.LogInformation("Created customer signup: User {UserId}, Customer {CustomerName}", 
+                user.Id, customer.Name);
+
+            // Send welcome email (fire and forget - don't block signup)
+            _ = Task.Run(async () => {
+                try {
+                    await CustomerService.SendWelcomeEmailAsync(customer);
+                } catch (Exception ex) {
+                    Logger.LogError(ex, "Failed to send welcome email for customer {CustomerId}", customer.Id);
+                }
+            });
+
+            // Redirect to login callback endpoint to set auth cookie (can't set cookies in Blazor Server)
+            var token = IdentityComponentsEndpointRouteBuilderExtensions.GenerateLoginToken(user.Id.ToString());
+            var returnUrl = Uri.EscapeDataString("/ReserveStudies/Request");
+            var loginUrl = $"/Account/LoginCallback?userId={user.Id}&token={Uri.EscapeDataString(token)}&returnUrl={returnUrl}";
+
+            NavigationManager.NavigateTo(loginUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during customer signup");
+            errorMessage = "An error occurred. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    public class CustomerSignupModel
+    {
+        [Required(ErrorMessage = "First name is required")]
+        [StringLength(50, ErrorMessage = "First name is too long")]
+        public string FirstName { get; set; } = "";
+
+        [Required(ErrorMessage = "Last name is required")]
+        [StringLength(50, ErrorMessage = "Last name is too long")]
+        public string LastName { get; set; } = "";
+
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email address")]
+        public string Email { get; set; } = "";
+
+        [Phone(ErrorMessage = "Invalid phone number")]
+        public string? Phone { get; set; }
+
+        [Required(ErrorMessage = "Organization name is required")]
+        [StringLength(200, ErrorMessage = "Organization name is too long")]
+        public string CompanyName { get; set; } = "";
+
+        public CustomerType CustomerType { get; set; } = CustomerType.HOABoard;
+
+        [Required(ErrorMessage = "Password is required")]
+        [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters")]
+        public string Password { get; set; } = "";
+
+        [Required(ErrorMessage = "Please confirm your password")]
+        [Compare(nameof(Password), ErrorMessage = "Passwords do not match")]
+        public string ConfirmPassword { get; set; } = "";
+
+        public bool AcceptTerms { get; set; } = false;
+    }
+}

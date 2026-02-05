@@ -1,0 +1,237 @@
+﻿@page "/Customer/AcceptInvite"
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Customers
+@using CRS.Services.Tenant
+@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+
+@inject ICustomerService CustomerService
+@inject ITenantContext TenantContext
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<AcceptInvite> Logger
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Accept Invitation - @(TenantContext.TenantName ?? "Reserve Study")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="py-8">
+    <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 16px;">
+        @if (isLoading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-6">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.h6">Processing invitation...</MudText>
+            </MudStack>
+        }
+        else if (invitation == null)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-6">
+                <MudIcon Icon="@Icons.Material.Filled.Error" Style="font-size: 64px; color: #f44336;" />
+                <MudText Typo="Typo.h5" Style="font-weight: 600;">Invalid Invitation</MudText>
+                <MudText Typo="Typo.body1" Style="color: #666; text-align: center;">
+                    @errorMessage
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">
+                    Go to Dashboard
+                </MudButton>
+            </MudStack>
+        }
+        else if (accepted)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-6">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="font-size: 64px; color: #4caf50;" />
+                <MudText Typo="Typo.h5" Style="font-weight: 600;">Welcome to the Team!</MudText>
+                <MudText Typo="Typo.body1" Style="color: #666; text-align: center;">
+                    You've successfully joined <strong>@invitation.CustomerAccount?.Name</strong>.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/Customer/Profile">
+                    Go to My Account
+                </MudButton>
+            </MudStack>
+        }
+        else if (!isAuthenticated)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-6">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Style="font-size: 64px; color: #6366f1;" />
+                <MudText Typo="Typo.h5" Style="font-weight: 600;">You're Invited!</MudText>
+                <MudText Typo="Typo.body1" Style="color: #666; text-align: center;">
+                    You've been invited to join <strong>@invitation.CustomerAccount?.Name</strong> as a <strong>@GetRoleLabel(invitation.Role)</strong>.
+                </MudText>
+                
+                <MudDivider Class="my-4" Style="width: 100%;" />
+                
+                <MudText Typo="Typo.body2" Style="color: #666; text-align: center;">
+                    Please sign in or create an account to accept this invitation.
+                </MudText>
+
+                <MudStack Row="true" Spacing="2" Class="mt-2">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary"
+                               Href="@($"/Account/Login?returnUrl={Uri.EscapeDataString($"/Customer/AcceptInvite?token={token}")}")">
+                        Sign In
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               Href="@($"/signup/customer?returnUrl={Uri.EscapeDataString($"/Customer/AcceptInvite?token={token}")}")">
+                        Create Account
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        }
+        else
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="pa-6">
+                <MudIcon Icon="@Icons.Material.Filled.GroupAdd" Style="font-size: 64px; color: #6366f1;" />
+                <MudText Typo="Typo.h5" Style="font-weight: 600;">Join @invitation.CustomerAccount?.Name?</MudText>
+                <MudText Typo="Typo.body1" Style="color: #666; text-align: center;">
+                    You've been invited as a <strong>@GetRoleLabel(invitation.Role)</strong>.
+                </MudText>
+
+                <MudPaper Elevation="0" Class="pa-4 mt-2" Style="background-color: #f8fafc; border-radius: 12px; width: 100%;">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.body2">
+                            <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" Class="mr-1" />
+                            @invitation.CustomerAccount?.Name
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            <MudIcon Icon="@Icons.Material.Filled.Badge" Size="Size.Small" Class="mr-1" />
+                            Role: @GetRoleLabel(invitation.Role)
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+
+                <MudStack Row="true" Spacing="2" Class="mt-4">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Default"
+                               Href="/">
+                        Decline
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary"
+                               OnClick="AcceptInvitation"
+                               Disabled="@isAccepting">
+                        @if (isAccepting)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Accept Invitation
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? token { get; set; }
+
+    private CustomerAccountInvitation? invitation;
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+    private bool accepted = false;
+    private bool isAccepting = false;
+    private string? errorMessage;
+    private Guid? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(token))
+            {
+                errorMessage = "No invitation token provided.";
+                isLoading = false;
+                return;
+            }
+
+            // Check authentication
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+            
+            if (isAuthenticated)
+            {
+                var userIdString = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (Guid.TryParse(userIdString, out var userId))
+                {
+                    currentUserId = userId;
+                }
+            }
+
+            // Get invitation
+            invitation = await CustomerService.GetInvitationByTokenAsync(token);
+
+            if (invitation == null)
+            {
+                errorMessage = "This invitation link is invalid or has already been used.";
+            }
+            else if (invitation.Status != InvitationStatus.Pending)
+            {
+                errorMessage = invitation.Status switch
+                {
+                    InvitationStatus.Accepted => "This invitation has already been accepted.",
+                    InvitationStatus.Expired => "This invitation has expired.",
+                    InvitationStatus.Revoked => "This invitation has been revoked.",
+                    _ => "This invitation is no longer valid."
+                };
+                invitation = null;
+            }
+            else if (invitation.ExpiresAt < DateTime.UtcNow)
+            {
+                errorMessage = "This invitation has expired.";
+                invitation = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading invitation");
+            errorMessage = "An error occurred while loading the invitation.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task AcceptInvitation()
+    {
+        if (invitation == null || !currentUserId.HasValue || string.IsNullOrEmpty(token)) return;
+
+        isAccepting = true;
+        try
+        {
+            var result = await CustomerService.AcceptInvitationAsync(token, currentUserId.Value);
+
+            if (result != null)
+            {
+                accepted = true;
+                Snackbar.Add($"Welcome to {invitation.CustomerAccount?.Name}!", Severity.Success);
+            }
+            else
+            {
+                errorMessage = "Failed to accept the invitation. Please try again.";
+                invitation = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error accepting invitation");
+            Snackbar.Add("Error accepting invitation", Severity.Error);
+        }
+        finally
+        {
+            isAccepting = false;
+        }
+    }
+
+    private static string GetRoleLabel(CustomerAccountRole role) => role switch
+    {
+        CustomerAccountRole.Owner => "Owner",
+        CustomerAccountRole.Admin => "Admin",
+        CustomerAccountRole.Member => "Member",
+        CustomerAccountRole.Viewer => "Viewer",
+        _ => role.ToString()
+    };
+}
