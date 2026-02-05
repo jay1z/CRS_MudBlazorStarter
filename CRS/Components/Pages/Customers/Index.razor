@@ -1,0 +1,497 @@
+﻿@page "/Customers"
+@using CRS.Models
+@using CRS.Services.Customers
+@attribute [Authorize(Policy = "RequireTenantStaff")]
+
+@inject ICustomerService CustomerService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Customers - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <div>
+                <MudText Typo="Typo.h4" Style="font-weight: 700;">Customers</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Manage your client accounts and relationships</MudText>
+            </div>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenCreateDialog">
+                New Customer
+            </MudButton>
+        </MudStack>
+
+        <!-- Search and Stats -->
+        <MudGrid>
+            <MudItem xs="12" md="8">
+                <MudTextField @bind-Value="searchQuery"
+                              Placeholder="Search customers by name, email, or contact..."
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true"
+                              DebounceInterval="300"
+                              OnDebounceIntervalElapsed="OnSearchChanged" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-3" Elevation="2" Style="border-left: 4px solid #10b981;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <div>
+                            <MudText Typo="Typo.caption" Style="color: #666;">Total Customers</MudText>
+                            <MudText Typo="Typo.h5" Style="font-weight: 700; color: #10b981;">@customers.Count</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.PeopleAlt" Style="font-size: 40px; color: #10b981; opacity: 0.3;" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Customers Table -->
+        <MudPaper Elevation="2" Class="pa-0" Style="border-radius: 12px; overflow: hidden;">
+            @if (isLoading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+            
+            @if (!customers.Any() && !isLoading)
+            {
+                <MudPaper Elevation="0" Class="pa-8" Style="text-align: center;">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        <MudIcon Icon="@Icons.Material.Filled.PersonAddAlt1" Style="font-size: 64px; color: #ccc;" />
+                        <MudText Typo="Typo.h6" Style="font-weight: 600;">No customers yet</MudText>
+                        <MudText Typo="Typo.body2" Style="color: #666;">
+                            Add your first customer to start tracking client relationships
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="OpenCreateDialog">
+                            Add Your First Customer
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            }
+            else
+            {
+                <MudTable Items="@filteredCustomers" Hover="true" Dense="false" Elevation="0">
+                    <HeaderContent>
+                        <MudTh Style="font-weight: 600;">Customer</MudTh>
+                        <MudTh Style="font-weight: 600;">Type</MudTh>
+                        <MudTh Style="font-weight: 600;">Contact</MudTh>
+                        <MudTh Style="font-weight: 600; text-align: center;">Properties</MudTh>
+                        <MudTh Style="font-weight: 600; text-align: center;">Studies</MudTh>
+                        <MudTh Style="font-weight: 600; text-align: right;">Revenue</MudTh>
+                        <MudTh Style="font-weight: 600; width: 120px;">Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Customer">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1" Style="font-weight: 600;">@context.Customer.Name</MudText>
+                                @if (!string.IsNullOrEmpty(context.Customer.City))
+                                {
+                                    <MudText Typo="Typo.caption" Style="color: #999;">
+                                        @context.Customer.City@(string.IsNullOrEmpty(context.Customer.State) ? "" : $", {context.Customer.State}")
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Type">
+                            <MudChip T="string" 
+                                     Size="Size.Small" 
+                                     Color="@GetTypeColor(context.Customer.Type)"
+                                     Variant="Variant.Outlined">
+                                @GetTypeName(context.Customer.Type)
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Contact">
+                            <MudStack Spacing="0">
+                                @if (!string.IsNullOrEmpty(context.Customer.ContactName))
+                                {
+                                    <MudText Typo="Typo.body2">@context.Customer.ContactName</MudText>
+                                }
+                                @if (!string.IsNullOrEmpty(context.Customer.Email))
+                                {
+                                    <MudLink Href="@($"mailto:{context.Customer.Email}")" Typo="Typo.caption" Style="color: #666;">
+                                        @context.Customer.Email
+                                    </MudLink>
+                                }
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Properties" Style="text-align: center;">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                                @context.CommunityCount
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Studies" Style="text-align: center;">
+                            @if (context.ActiveStudyCount > 0)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                                    @context.ActiveStudyCount active
+                                </MudChip>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Style="color: #999;">-</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Revenue" Style="text-align: right;">
+                            <MudText Typo="Typo.body2" Style="font-weight: 600; color: #10b981;">
+                                @context.TotalRevenue.ToString("C0")
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudStack Row="true" Spacing="1">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                               Size="Size.Small"
+                                               Color="Color.Default"
+                                               OnClick="@(() => OpenEditDialog(context.Customer))"
+                                               Title="Edit" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                               Size="Size.Small"
+                                               Color="Color.Info"
+                                               OnClick="@(() => ViewCustomer(context.Customer))"
+                                               Title="View Details" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Size="Size.Small"
+                                               Color="Color.Error"
+                                               OnClick="@(() => DeleteCustomer(context.Customer))"
+                                               Title="Delete" />
+                            </MudStack>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+<!-- Create/Edit Customer Dialog -->
+<MudDialog @bind-Visible="showCustomerDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2" />
+            @(editingCustomer == null ? "New Customer" : "Edit Customer")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="mt-2">
+            <MudTabPanel Text="Basic Info" Icon="@Icons.Material.Filled.Person">
+                <MudStack Spacing="3" Class="pa-4">
+                    <MudTextField @bind-Value="formName"
+                                  Label="Customer Name"
+                                  Placeholder="e.g., Sunset HOA or ABC Management"
+                                  Variant="Variant.Outlined"
+                                  Required="true" />
+                    
+                    <MudSelect @bind-Value="formType" 
+                               Label="Customer Type" 
+                               Variant="Variant.Outlined">
+                        <MudSelectItem Value="CustomerType.HOABoard">HOA Board</MudSelectItem>
+                        <MudSelectItem Value="CustomerType.ManagementCompany">Management Company</MudSelectItem>
+                        <MudSelectItem Value="CustomerType.PropertyOwner">Property Owner</MudSelectItem>
+                        <MudSelectItem Value="CustomerType.Developer">Developer</MudSelectItem>
+                        <MudSelectItem Value="CustomerType.Other">Other</MudSelectItem>
+                    </MudSelect>
+                    
+                    <MudTextField @bind-Value="formContactName"
+                                  Label="Primary Contact Name"
+                                  Variant="Variant.Outlined" />
+                    
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="formEmail"
+                                          Label="Email"
+                                          InputType="InputType.Email"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="formPhone"
+                                          Label="Phone"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                    </MudGrid>
+                    
+                    <MudTextField @bind-Value="formWebsite"
+                                  Label="Website"
+                                  Variant="Variant.Outlined" />
+                </MudStack>
+            </MudTabPanel>
+            
+            <MudTabPanel Text="Address" Icon="@Icons.Material.Filled.LocationOn">
+                <MudStack Spacing="3" Class="pa-4">
+                    <MudTextField @bind-Value="formAddressLine1"
+                                  Label="Address Line 1"
+                                  Variant="Variant.Outlined" />
+                    
+                    <MudTextField @bind-Value="formAddressLine2"
+                                  Label="Address Line 2"
+                                  Variant="Variant.Outlined" />
+                    
+                    <MudGrid>
+                        <MudItem xs="12" md="5">
+                            <MudTextField @bind-Value="formCity"
+                                          Label="City"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="formState"
+                                          Label="State"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudTextField @bind-Value="formPostalCode"
+                                          Label="ZIP Code"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                    </MudGrid>
+                </MudStack>
+            </MudTabPanel>
+            
+            <MudTabPanel Text="Billing" Icon="@Icons.Material.Filled.Receipt">
+                <MudStack Spacing="3" Class="pa-4">
+                    <MudTextField @bind-Value="formTaxId"
+                                  Label="Tax ID / EIN"
+                                  Variant="Variant.Outlined" />
+                    
+                    <MudTextField @bind-Value="formPaymentTerms"
+                                  Label="Payment Terms"
+                                  Placeholder="e.g., Net 30"
+                                  Variant="Variant.Outlined" />
+                    
+                    <MudTextField @bind-Value="formNotes"
+                                  Label="Internal Notes"
+                                  Lines="4"
+                                  Variant="Variant.Outlined" />
+                </MudStack>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCustomerDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="SaveCustomer"
+                   Disabled="@string.IsNullOrWhiteSpace(formName)">
+            @(editingCustomer == null ? "Create" : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<CustomerWithStats> customers = [];
+    private List<CustomerWithStats> filteredCustomers = [];
+    private bool isLoading = true;
+    private string searchQuery = "";
+    
+    // Dialog state
+    private bool showCustomerDialog = false;
+    private CustomerAccount? editingCustomer;
+    
+    // Form fields
+    private string formName = "";
+    private CustomerType formType = CustomerType.HOABoard;
+    private string formContactName = "";
+    private string formEmail = "";
+    private string formPhone = "";
+    private string formWebsite = "";
+    private string formAddressLine1 = "";
+    private string formAddressLine2 = "";
+    private string formCity = "";
+    private string formState = "";
+    private string formPostalCode = "";
+    private string formTaxId = "";
+    private string formPaymentTerms = "";
+    private string formNotes = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+    }
+
+    private async Task LoadCustomers()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            customers = await CustomerService.GetCustomersWithStatsAsync();
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading customers: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredCustomers = customers;
+        }
+        else
+        {
+            var query = searchQuery.ToLower();
+            filteredCustomers = customers
+                .Where(c => c.Customer.Name.ToLower().Contains(query) ||
+                           (c.Customer.Email?.ToLower().Contains(query) ?? false) ||
+                           (c.Customer.ContactName?.ToLower().Contains(query) ?? false))
+                .ToList();
+        }
+    }
+
+    private void OnSearchChanged()
+    {
+        ApplyFilter();
+        StateHasChanged();
+    }
+
+    private void OpenCreateDialog()
+    {
+        editingCustomer = null;
+        ClearForm();
+        showCustomerDialog = true;
+    }
+
+    private void OpenEditDialog(CustomerAccount customer)
+    {
+        editingCustomer = customer;
+        formName = customer.Name;
+        formType = customer.Type;
+        formContactName = customer.ContactName ?? "";
+        formEmail = customer.Email ?? "";
+        formPhone = customer.Phone ?? "";
+        formWebsite = customer.Website ?? "";
+        formAddressLine1 = customer.AddressLine1 ?? "";
+        formAddressLine2 = customer.AddressLine2 ?? "";
+        formCity = customer.City ?? "";
+        formState = customer.State ?? "";
+        formPostalCode = customer.PostalCode ?? "";
+        formTaxId = customer.TaxId ?? "";
+        formPaymentTerms = customer.PaymentTerms ?? "";
+        formNotes = customer.Notes ?? "";
+        showCustomerDialog = true;
+    }
+
+    private void CloseCustomerDialog()
+    {
+        showCustomerDialog = false;
+        editingCustomer = null;
+        ClearForm();
+    }
+
+    private void ClearForm()
+    {
+        formName = "";
+        formType = CustomerType.HOABoard;
+        formContactName = "";
+        formEmail = "";
+        formPhone = "";
+        formWebsite = "";
+        formAddressLine1 = "";
+        formAddressLine2 = "";
+        formCity = "";
+        formState = "";
+        formPostalCode = "";
+        formTaxId = "";
+        formPaymentTerms = "";
+        formNotes = "";
+    }
+
+    private async Task SaveCustomer()
+    {
+        try
+        {
+            var customer = editingCustomer ?? new CustomerAccount();
+            customer.Name = formName;
+            customer.Type = formType;
+            customer.ContactName = string.IsNullOrWhiteSpace(formContactName) ? null : formContactName;
+            customer.Email = string.IsNullOrWhiteSpace(formEmail) ? null : formEmail;
+            customer.Phone = string.IsNullOrWhiteSpace(formPhone) ? null : formPhone;
+            customer.Website = string.IsNullOrWhiteSpace(formWebsite) ? null : formWebsite;
+            customer.AddressLine1 = string.IsNullOrWhiteSpace(formAddressLine1) ? null : formAddressLine1;
+            customer.AddressLine2 = string.IsNullOrWhiteSpace(formAddressLine2) ? null : formAddressLine2;
+            customer.City = string.IsNullOrWhiteSpace(formCity) ? null : formCity;
+            customer.State = string.IsNullOrWhiteSpace(formState) ? null : formState;
+            customer.PostalCode = string.IsNullOrWhiteSpace(formPostalCode) ? null : formPostalCode;
+            customer.TaxId = string.IsNullOrWhiteSpace(formTaxId) ? null : formTaxId;
+            customer.PaymentTerms = string.IsNullOrWhiteSpace(formPaymentTerms) ? null : formPaymentTerms;
+            customer.Notes = string.IsNullOrWhiteSpace(formNotes) ? null : formNotes;
+
+            if (editingCustomer == null)
+            {
+                await CustomerService.CreateAsync(customer);
+                Snackbar.Add("Customer created successfully", Severity.Success);
+            }
+            else
+            {
+                await CustomerService.UpdateAsync(customer);
+                Snackbar.Add("Customer updated successfully", Severity.Success);
+            }
+
+            CloseCustomerDialog();
+            await LoadCustomers();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ViewCustomer(CustomerAccount customer)
+    {
+        NavigationManager.NavigateTo($"/Customers/{customer.Id}");
+    }
+
+    private async Task DeleteCustomer(CustomerAccount customer)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Customer",
+            $"Are you sure you want to delete \"{customer.Name}\"? This will not delete associated communities.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm != true) return;
+
+        try
+        {
+            await CustomerService.DeleteAsync(customer.Id);
+            Snackbar.Add("Customer deleted", Severity.Success);
+            await LoadCustomers();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static Color GetTypeColor(CustomerType type) => type switch
+    {
+        CustomerType.HOABoard => Color.Primary,
+        CustomerType.ManagementCompany => Color.Info,
+        CustomerType.PropertyOwner => Color.Success,
+        CustomerType.Developer => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static string GetTypeName(CustomerType type) => type switch
+    {
+        CustomerType.HOABoard => "HOA Board",
+        CustomerType.ManagementCompany => "Management Co.",
+        CustomerType.PropertyOwner => "Property Owner",
+        CustomerType.Developer => "Developer",
+        CustomerType.Other => "Other",
+        _ => type.ToString()
+    };
+}

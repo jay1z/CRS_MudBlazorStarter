@@ -27,14 +27,21 @@
 
         // SaaS Refactor: Tenant scope
         public int TenantId { get; set; }
-        
+
+        /// <summary>
+        /// The customer account that owns/manages this community.
+        /// Optional for backwards compatibility - new communities should always have a customer.
+        /// </summary>
+        public Guid? CustomerAccountId { get; set; }
+        public CustomerAccount? CustomerAccount { get; set; }
+
         // Additional community details
         public string? PhoneNumber { get; set; }
         public string? Email { get; set; }
         public int? NumberOfUnits { get; set; }
         public int? YearBuilt { get; set; }
         public string? Description { get; set; }
-        
+
         // Demo Mode
         public bool IsDemo { get; set; } = false;
 

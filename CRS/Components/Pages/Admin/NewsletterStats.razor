@@ -1,0 +1,246 @@
+﻿@page "/admin/newsletter/stats"
+@using CRS.Models
+@using CRS.Services.Interfaces
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
+
+@inject INewsletterService NewsletterService
+@inject ISnackbar Snackbar
+
+<PageTitle>Newsletter Statistics - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <div>
+                <MudText Typo="Typo.h4" Style="font-weight: 700;">Newsletter Statistics</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Subscriber analytics and campaign performance</MudText>
+            </div>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="LoadData"
+                       Disabled="@isLoading">
+                Refresh
+            </MudButton>
+        </MudStack>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (subscriberStats != null)
+        {
+            <!-- Main Stats Cards -->
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-4" Elevation="2" Style="border-left: 4px solid #1976d2;">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: #666;">Total Subscribers</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" />
+                            </MudStack>
+                            <MudText Typo="Typo.h3" Style="font-weight: 700; color: #1976d2;">@subscriberStats.TotalSubscribers</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">All time</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-4" Elevation="2" Style="border-left: 4px solid #388e3c;">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: #666;">Confirmed</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                            </MudStack>
+                            <MudText Typo="Typo.h3" Style="font-weight: 700; color: #388e3c;">@subscriberStats.ConfirmedSubscribers</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">
+                                @(subscriberStats.TotalSubscribers > 0 ? $"{(subscriberStats.ConfirmedSubscribers * 100 / subscriberStats.TotalSubscribers)}% of total" : "0%")
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-4" Elevation="2" Style="border-left: 4px solid #f57c00;">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: #666;">Pending Confirmation</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Color="Color.Warning" />
+                            </MudStack>
+                            <MudText Typo="Typo.h3" Style="font-weight: 700; color: #f57c00;">@subscriberStats.UnconfirmedSubscribers</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">Awaiting double opt-in</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-4" Elevation="2" Style="border-left: 4px solid #d32f2f;">
+                        <MudStack Spacing="1">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.caption" Style="color: #666;">Unsubscribed</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.PersonOff" Color="Color.Error" />
+                            </MudStack>
+                            <MudText Typo="Typo.h3" Style="font-weight: 700; color: #d32f2f;">@subscriberStats.UnsubscribedCount</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">Opted out</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <!-- 30-Day Trends -->
+            <MudPaper Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-4">Last 30 Days</MudText>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <MudAvatar Color="Color.Success" Size="Size.Large">
+                                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" />
+                            </MudAvatar>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h5" Style="font-weight: 700; color: #388e3c;">+@subscriberStats.Last30DaysNew</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">New Subscribers</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <MudAvatar Color="Color.Error" Size="Size.Large">
+                                <MudIcon Icon="@Icons.Material.Filled.TrendingDown" />
+                            </MudAvatar>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h5" Style="font-weight: 700; color: #d32f2f;">-@subscriberStats.Last30DaysUnsubscribed</MudText>
+                                <MudText Typo="Typo.body2" Style="color: #666;">Unsubscribed</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+
+                @{
+                    var netGrowth = subscriberStats.Last30DaysNew - subscriberStats.Last30DaysUnsubscribed;
+                    var growthColor = netGrowth >= 0 ? "#388e3c" : "#d32f2f";
+                    var growthIcon = netGrowth >= 0 ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward;
+                }
+                <MudDivider Class="my-4" />
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="2">
+                    <MudIcon Icon="@growthIcon" Style="@($"color: {growthColor};")" />
+                    <MudText Typo="Typo.h6" Style="@($"color: {growthColor}; font-weight: 700;")">
+                        Net Growth: @(netGrowth >= 0 ? "+" : "")@netGrowth
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Campaign Stats -->
+            <MudPaper Elevation="2" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-4">Campaign Performance</MudText>
+                @if (campaigns.Any())
+                {
+                    <MudTable Items="@campaigns.Take(10)" Hover="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Campaign</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh>Sent</MudTh>
+                            <MudTh>Failed</MudTh>
+                            <MudTh>Date</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Campaign">
+                                <MudText Typo="Typo.body2" Style="font-weight: 600;">@context.Name</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #999;">@context.Subject</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Status">
+                                <MudChip T="string" 
+                                         Color="@GetStatusColor(context.Status)" 
+                                         Size="Size.Small"
+                                         Variant="Variant.Filled">
+                                    @context.Status
+                                </MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="Sent">
+                                @if (context.Status == CampaignStatus.Sent)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Success">@context.SentCount</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Style="color: #999;">-</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Failed">
+                                @if (context.Status == CampaignStatus.Sent && context.FailedCount > 0)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Error">@context.FailedCount</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Style="color: #999;">-</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Date">
+                                <MudText Typo="Typo.body2">
+                                    @(context.SendingCompletedAt?.ToString("MMM dd, yyyy") ?? context.CreatedAt.ToString("MMM dd, yyyy"))
+                                </MudText>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                        No campaigns sent yet. <MudLink Href="/admin/newsletter">Create your first campaign</MudLink>
+                    </MudAlert>
+                }
+            </MudPaper>
+
+            <!-- Quick Actions -->
+            <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           StartIcon="@Icons.Material.Filled.Campaign"
+                           Href="/admin/newsletter">
+                    Manage Campaigns
+                </MudButton>
+            </MudStack>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private Services.Interfaces.NewsletterStats? subscriberStats;
+    private List<NewsletterCampaign> campaigns = [];
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            subscriberStats = await NewsletterService.GetStatsAsync();
+            campaigns = await NewsletterService.GetCampaignsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading stats: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private static Color GetStatusColor(CampaignStatus status) => status switch
+    {
+        CampaignStatus.Draft => Color.Default,
+        CampaignStatus.Scheduled => Color.Info,
+        CampaignStatus.Sending => Color.Warning,
+        CampaignStatus.Sent => Color.Success,
+        CampaignStatus.Failed => Color.Error,
+        CampaignStatus.Cancelled => Color.Secondary,
+        _ => Color.Default
+    };
+}

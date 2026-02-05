@@ -1,0 +1,307 @@
+﻿@page "/Customers/{CustomerId:guid}"
+@using CRS.Models
+@using CRS.Services.Customers
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize(Policy = "RequireTenantStaff")]
+
+@inject ICustomerService CustomerService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(customer?.Name ?? "Customer") - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (customer == null)
+    {
+        <MudAlert Severity="Severity.Error">Customer not found</MudAlert>
+    }
+    else
+    {
+        <MudStack Spacing="4">
+            <!-- Header -->
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                <MudStack Spacing="1">
+                    <MudBreadcrumbs Items="_breadcrumbs" Class="pa-0" />
+                    <MudText Typo="Typo.h4" Style="font-weight: 700;">@customer.Name</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="@GetTypeColor(customer.Type)" Variant="Variant.Outlined">
+                        @GetTypeName(customer.Type)
+                    </MudChip>
+                </MudStack>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               Href="@($"/Customers?edit={customer.Id}")">
+                        Edit
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+
+            <MudGrid Spacing="3">
+                <!-- Contact Info -->
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; height: 100%;">
+                        <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.ContactPhone" Class="mr-2" Style="vertical-align: middle;" />
+                            Contact Information
+                        </MudText>
+                        
+                        @if (!string.IsNullOrEmpty(customer.ContactName))
+                        {
+                            <MudStack Row="true" Spacing="2" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Style="color: #999;" />
+                                <MudText Typo="Typo.body2">@customer.ContactName</MudText>
+                            </MudStack>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(customer.Email))
+                        {
+                            <MudStack Row="true" Spacing="2" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" Style="color: #999;" />
+                                <MudLink Href="@($"mailto:{customer.Email}")" Typo="Typo.body2">@customer.Email</MudLink>
+                            </MudStack>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(customer.Phone))
+                        {
+                            <MudStack Row="true" Spacing="2" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" Style="color: #999;" />
+                                <MudLink Href="@($"tel:{customer.Phone}")" Typo="Typo.body2">@customer.Phone</MudLink>
+                            </MudStack>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(customer.Website))
+                        {
+                            <MudStack Row="true" Spacing="2" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Language" Size="Size.Small" Style="color: #999;" />
+                                <MudLink Href="@customer.Website" Target="_blank" Typo="Typo.body2">@customer.Website</MudLink>
+                            </MudStack>
+                        }
+                        
+                        @if (string.IsNullOrEmpty(customer.ContactName) && string.IsNullOrEmpty(customer.Email) && 
+                             string.IsNullOrEmpty(customer.Phone) && string.IsNullOrEmpty(customer.Website))
+                        {
+                            <MudText Typo="Typo.body2" Style="color: #999;">No contact information</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Address -->
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; height: 100%;">
+                        <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Class="mr-2" Style="vertical-align: middle;" />
+                            Address
+                        </MudText>
+                        
+                        @if (!string.IsNullOrEmpty(customer.AddressLine1))
+                        {
+                            <MudText Typo="Typo.body2">@customer.AddressLine1</MudText>
+                            @if (!string.IsNullOrEmpty(customer.AddressLine2))
+                            {
+                                <MudText Typo="Typo.body2">@customer.AddressLine2</MudText>
+                            }
+                            <MudText Typo="Typo.body2">
+                                @customer.City@(string.IsNullOrEmpty(customer.State) ? "" : $", {customer.State}") @customer.PostalCode
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Style="color: #999;">No address on file</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Billing -->
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; height: 100%;">
+                        <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight: 600;">
+                            <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" Style="vertical-align: middle;" />
+                            Billing
+                        </MudText>
+                        
+                        @if (!string.IsNullOrEmpty(customer.TaxId))
+                        {
+                            <MudStack Row="true" Spacing="2" Class="mb-2">
+                                <MudText Typo="Typo.caption" Style="color: #999; min-width: 80px;">Tax ID:</MudText>
+                                <MudText Typo="Typo.body2">@customer.TaxId</MudText>
+                            </MudStack>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(customer.PaymentTerms))
+                        {
+                            <MudStack Row="true" Spacing="2" Class="mb-2">
+                                <MudText Typo="Typo.caption" Style="color: #999; min-width: 80px;">Terms:</MudText>
+                                <MudText Typo="Typo.body2">@customer.PaymentTerms</MudText>
+                            </MudStack>
+                        }
+                        
+                        <MudDivider Class="my-2" />
+                        
+                        <MudStack Row="true" Spacing="2">
+                            <MudText Typo="Typo.caption" Style="color: #999; min-width: 80px;">Revenue:</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 600; color: #10b981;">@totalRevenue.ToString("C")</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Communities -->
+            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                        <MudIcon Icon="@Icons.Material.Filled.HomeWork" Class="mr-2" Style="vertical-align: middle;" />
+                        Properties (@communities.Count)
+                    </MudText>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               Href="/Communities/Create">
+                        Add Property
+                    </MudButton>
+                </MudStack>
+                
+                @if (!communities.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                        No properties associated with this customer yet.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="@communities" Hover="true" Dense="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Property Name</MudTh>
+                            <MudTh>Location</MudTh>
+                            <MudTh>Units</MudTh>
+                            <MudTh Style="width: 100px;">Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Property Name">
+                                <MudText Typo="Typo.body2" Style="font-weight: 600;">@context.Name</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Location">
+                                <MudText Typo="Typo.body2" Style="color: #666;">
+                                    @(context.PhysicalAddress?.City ?? "N/A"), @(context.PhysicalAddress?.State ?? "")
+                                </MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Units">
+                                <MudText Typo="Typo.body2">@(context.NumberOfUnits?.ToString() ?? "-")</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                               Size="Size.Small"
+                                               Href="@($"/Communities/{context.Id}")"
+                                               Title="View Property" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudPaper>
+
+            <!-- Notes -->
+            @if (!string.IsNullOrEmpty(customer.Notes))
+            {
+                <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+                    <MudText Typo="Typo.h6" Class="mb-3" Style="font-weight: 600;">
+                        <MudIcon Icon="@Icons.Material.Filled.Notes" Class="mr-2" Style="vertical-align: middle;" />
+                        Internal Notes
+                    </MudText>
+                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@customer.Notes</MudText>
+                </MudPaper>
+            }
+        </MudStack>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid CustomerId { get; set; }
+    
+    private CustomerAccount? customer;
+    private List<Community> communities = [];
+    private decimal totalRevenue = 0;
+    private bool isLoading = true;
+    
+    private List<BreadcrumbItem> _breadcrumbs = new()
+    {
+        new BreadcrumbItem("Customers", "/Customers"),
+        new BreadcrumbItem("Details", null, disabled: true)
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomer();
+    }
+
+    private async Task LoadCustomer()
+    {
+        isLoading = true;
+        
+        try
+        {
+            customer = await CustomerService.GetByIdAsync(CustomerId);
+            
+            if (customer != null)
+            {
+                _breadcrumbs = new()
+                {
+                    new BreadcrumbItem("Customers", "/Customers"),
+                    new BreadcrumbItem(customer.Name, null, disabled: true)
+                };
+                
+                await using var db = await DbFactory.CreateDbContextAsync();
+                
+                communities = await db.Communities
+                    .Include(c => c.PhysicalAddress)
+                    .Where(c => c.CustomerAccountId == customer.Id)
+                    .OrderBy(c => c.Name)
+                    .ToListAsync();
+                
+                // Calculate total revenue
+                var communityIds = communities.Select(c => c.Id).ToList();
+                if (communityIds.Any())
+                {
+                    totalRevenue = await db.Invoices
+                        .Where(i => i.ReserveStudy != null && 
+                                   i.ReserveStudy.CommunityId.HasValue && communityIds.Contains(i.ReserveStudy.CommunityId.Value) &&
+                                   i.Status == InvoiceStatus.Paid)
+                        .SumAsync(i => i.TotalAmount);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading customer: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private static Color GetTypeColor(CustomerType type) => type switch
+    {
+        CustomerType.HOABoard => Color.Primary,
+        CustomerType.ManagementCompany => Color.Info,
+        CustomerType.PropertyOwner => Color.Success,
+        CustomerType.Developer => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static string GetTypeName(CustomerType type) => type switch
+    {
+        CustomerType.HOABoard => "HOA Board",
+        CustomerType.ManagementCompany => "Management Company",
+        CustomerType.PropertyOwner => "Property Owner",
+        CustomerType.Developer => "Developer",
+        CustomerType.Other => "Other",
+        _ => type.ToString()
+    };
+}

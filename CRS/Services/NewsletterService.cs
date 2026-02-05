@@ -573,5 +573,41 @@ public class NewsletterService : INewsletterService
             .Replace("{{subscriber_email}}", "preview@example.com");
     }
 
+    public async Task<ScheduledCampaignProcessResult> ProcessScheduledCampaignsAsync(CancellationToken ct = default)
+    {
+        await using var context = await _dbFactory.CreateDbContextAsync(ct);
+
+        // Find all scheduled campaigns that are due
+        var dueCampaigns = await context.NewsletterCampaigns
+            .Where(c => c.Status == CampaignStatus.Scheduled 
+                     && c.ScheduledAt != null 
+                     && c.ScheduledAt <= DateTime.UtcNow
+                     && c.DeletedAt == null)
+            .ToListAsync(ct);
+
+        if (dueCampaigns.Count == 0)
+        {
+            return new ScheduledCampaignProcessResult(0, 0, 0);
+        }
+
+        int totalSent = 0;
+        int totalFailed = 0;
+
+        foreach (var campaign in dueCampaigns)
+        {
+            _logger.LogInformation("Processing scheduled campaign: {CampaignId} ({Name})", campaign.Id, campaign.Name);
+
+            var result = await SendCampaignAsync(campaign.Id, ct);
+            totalSent += result.SentCount;
+            totalFailed += result.FailedCount;
+        }
+
+        return new ScheduledCampaignProcessResult(
+            CampaignsProcessed: dueCampaigns.Count,
+            TotalSent: totalSent,
+            TotalFailed: totalFailed
+        );
+    }
+
     #endregion
 }

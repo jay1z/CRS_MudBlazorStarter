@@ -153,8 +153,23 @@ public interface INewsletterService
     /// </summary>
     Task<string> GetCampaignPreviewAsync(Guid campaignId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Processes all scheduled campaigns that are due to be sent.
+    /// Called by the background scheduler job.
+    /// </summary>
+    Task<ScheduledCampaignProcessResult> ProcessScheduledCampaignsAsync(CancellationToken ct = default);
+
     #endregion
 }
+
+/// <summary>
+/// Result of processing scheduled campaigns.
+/// </summary>
+public record ScheduledCampaignProcessResult(
+    int CampaignsProcessed,
+    int TotalSent,
+    int TotalFailed
+);
 
 /// <summary>
 /// Result of a newsletter subscription attempt.

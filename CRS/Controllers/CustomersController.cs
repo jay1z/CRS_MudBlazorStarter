@@ -16,24 +16,39 @@ namespace CRS.Controllers {
         }
 
         [HttpGet]
-        public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default) {
-            // For simplicity, return all active customers (no paging implemented yet)
-            // In real app, add paging to service
-            var customers = new List<CustomerAccount>(); // Placeholder
-            return Ok(new { customers, page, pageSize });
+        public async Task<IActionResult> List(CancellationToken ct = default) {
+            var customers = await _customers.GetAllAsync(ct: ct);
+            return Ok(customers);
         }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CustomerAccount acct, CancellationToken ct) {
             if (acct == null) return BadRequest("account required");
-            var created = await _customers.CreateCustomerAsync(acct, ct);
+            var created = await _customers.CreateAsync(acct, ct);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id, CancellationToken ct) {
-            // Placeholder
-            return NotFound();
+            var customer = await _customers.GetByIdAsync(id, ct);
+            if (customer == null) return NotFound();
+            return Ok(customer);
+        }
+
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] CustomerAccount acct, CancellationToken ct) {
+            if (acct == null) return BadRequest("account required");
+            acct.Id = id;
+            var updated = await _customers.UpdateAsync(acct, ct);
+            if (updated == null) return NotFound();
+            return Ok(updated);
+        }
+
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Delete(Guid id, CancellationToken ct) {
+            var success = await _customers.DeleteAsync(id, ct);
+            if (!success) return NotFound();
+            return NoContent();
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿@page "/admin/newsletter"
 @using CRS.Models
 @using CRS.Services.Interfaces
-@attribute [Authorize(Policy = "RequireSuperAdmin")]
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
 @inject INewsletterService NewsletterService
 @inject ISnackbar Snackbar
@@ -88,9 +88,9 @@
                         <MudTh>Name</MudTh>
                         <MudTh>Subject</MudTh>
                         <MudTh>Status</MudTh>
+                        <MudTh>Scheduled</MudTh>
                         <MudTh>Sent</MudTh>
-                        <MudTh>Created</MudTh>
-                        <MudTh Style="width: 150px;">Actions</MudTh>
+                        <MudTh Style="width: 180px;">Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Name">
@@ -105,6 +105,19 @@
                                 @context.Status
                             </MudChip>
                         </MudTd>
+                        <MudTd DataLabel="Scheduled">
+                            @if (context.ScheduledAt.HasValue)
+                            {
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body2">@context.ScheduledAt.Value.ToLocalTime().ToString("MMM dd, yyyy")</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #999;">@context.ScheduledAt.Value.ToLocalTime().ToString("h:mm tt")</MudText>
+                                </MudStack>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Style="color: #999;">-</MudText>
+                            }
+                        </MudTd>
                         <MudTd DataLabel="Sent">
                             @if (context.Status == CampaignStatus.Sent)
                             {
@@ -114,9 +127,6 @@
                             {
                                 <MudText Typo="Typo.body2" Style="color: #999;">-</MudText>
                             }
-                        </MudTd>
-                        <MudTd DataLabel="Created">
-                            <MudText Typo="Typo.body2">@context.CreatedAt.ToString("MMM dd, yyyy")</MudText>
                         </MudTd>
                         <MudTd DataLabel="Actions">
                             <MudStack Row="true" Spacing="1">
@@ -132,6 +142,19 @@
                                                    Color="Color.Primary"
                                                    OnClick="@(() => SendCampaign(context))"
                                                    Title="Send Now" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Schedule"
+                                                   Size="Size.Small"
+                                                   Color="Color.Info"
+                                                   OnClick="@(() => OpenScheduleDialog(context))"
+                                                   Title="Schedule" />
+                                }
+                                @if (context.Status == CampaignStatus.Scheduled)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Cancel"
+                                                   Size="Size.Small"
+                                                   Color="Color.Warning"
+                                                   OnClick="@(() => CancelScheduledCampaign(context))"
+                                                   Title="Cancel Schedule" />
                                 }
                                 <MudIconButton Icon="@Icons.Material.Filled.Preview"
                                                Size="Size.Small"
@@ -229,16 +252,73 @@
     </DialogActions>
 </MudDialog>
 
+<!-- Schedule Dialog -->
+<MudDialog @bind-Visible="showScheduleDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-2" />
+            Schedule Campaign
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+                Schedule "<strong>@schedulingCampaign?.Name</strong>" to be sent automatically at the specified date and time.
+            </MudAlert>
+
+            <MudDatePicker @bind-Date="scheduleDate"
+                           Label="Send Date"
+                           Variant="Variant.Outlined"
+                           MinDate="DateTime.Today"
+                           Required="true" />
+
+            <MudTimePicker @bind-Time="scheduleTime"
+                           Label="Send Time"
+                           Variant="Variant.Outlined"
+                           Required="true" />
+
+            @if (scheduleDate.HasValue && scheduleTime.HasValue)
+            {
+                var scheduledDateTime = scheduleDate.Value.Add(scheduleTime.Value);
+                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Dense="true">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Event" />
+                        <MudText Typo="Typo.body2">
+                            Campaign will be sent on <strong>@scheduledDateTime.ToString("dddd, MMMM dd, yyyy")</strong> at <strong>@scheduledDateTime.ToString("h:mm tt")</strong>
+                        </MudText>
+                    </MudStack>
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseScheduleDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   StartIcon="@Icons.Material.Filled.Schedule"
+                   OnClick="ConfirmSchedule"
+                   Disabled="@(!scheduleDate.HasValue || !scheduleTime.HasValue)">
+            Schedule
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     private List<NewsletterCampaign> campaigns = [];
-    private NewsletterStats? stats;
+    private Services.Interfaces.NewsletterStats? stats;
     private bool isLoading = true;
-    
+
     // Dialog state
     private bool showCampaignDialog = false;
     private bool showPreviewDialog = false;
+    private bool showScheduleDialog = false;
     private NewsletterCampaign? editingCampaign;
-    
+    private NewsletterCampaign? schedulingCampaign;
+
+    // Schedule fields
+    private DateTime? scheduleDate;
+    private TimeSpan? scheduleTime;
+
     // Form fields
     private string campaignName = "";
     private string campaignSubject = "";
@@ -384,6 +464,82 @@
         }
     }
 
+    private void OpenScheduleDialog(NewsletterCampaign campaign)
+    {
+        schedulingCampaign = campaign;
+        // Default to tomorrow at 9 AM
+        scheduleDate = DateTime.Today.AddDays(1);
+        scheduleTime = new TimeSpan(9, 0, 0);
+        showScheduleDialog = true;
+    }
+
+    private void CloseScheduleDialog()
+    {
+        showScheduleDialog = false;
+        schedulingCampaign = null;
+        scheduleDate = null;
+        scheduleTime = null;
+    }
+
+    private async Task ConfirmSchedule()
+    {
+        if (schedulingCampaign == null || !scheduleDate.HasValue || !scheduleTime.HasValue) return;
+
+        try
+        {
+            var scheduledDateTime = scheduleDate.Value.Add(scheduleTime.Value);
+
+            // Convert to UTC for storage
+            var utcScheduledTime = scheduledDateTime.ToUniversalTime();
+
+            var success = await NewsletterService.ScheduleCampaignAsync(schedulingCampaign.Id, utcScheduledTime);
+
+            if (success)
+            {
+                Snackbar.Add($"Campaign scheduled for {scheduledDateTime:MMM dd, yyyy h:mm tt}", Severity.Success);
+                CloseScheduleDialog();
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add("Failed to schedule campaign", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CancelScheduledCampaign(NewsletterCampaign campaign)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Cancel Scheduled Campaign",
+            $"Are you sure you want to cancel the scheduled send for \"{campaign.Name}\"? The campaign will be moved back to Draft status.",
+            yesText: "Cancel Schedule",
+            cancelText: "Keep Scheduled");
+
+        if (confirm != true) return;
+
+        try
+        {
+            var success = await NewsletterService.CancelCampaignAsync(campaign.Id);
+            if (success)
+            {
+                Snackbar.Add("Campaign schedule cancelled", Severity.Success);
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add("Failed to cancel schedule", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
     private static Color GetStatusColor(CampaignStatus status) => status switch
     {
         CampaignStatus.Draft => Color.Default,
@@ -397,7 +553,7 @@
 
     private static string GetDefaultTemplate() => """
         <p>Hi {{subscriber_name}},</p>
-        
+
         <p>Welcome to our latest newsletter! Here's what's new:</p>
         
         <h3>📊 Industry Insights</h3>

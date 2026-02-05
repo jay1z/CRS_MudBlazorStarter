@@ -16,7 +16,7 @@
 
     <AuthorizeView Policy="RequirePlatformAdmin" Context="platAuth">
         <Authorized>
-            <MudNavGroup Title="Platform" Expanded="true">
+            <MudNavGroup Title="Platform Admin" Expanded="true">
                 <MudNavLink Href="/Admin/Tenants" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Apartment">Tenants</MudNavLink>
                 <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Users & Roles</MudNavLink>
                 <MudNavLink Href="/Admin/SuperAdmins" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.VerifiedUser">SuperAdmins</MudNavLink>
@@ -24,16 +24,15 @@
             </MudNavGroup>
 
             <MudDivider />
-            <MudNavGroup Title="Platform Tools" Expanded="false">
-                <MudNavLink Href="/reserve-calculator/demo" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Calculate">Reserve Calculator</MudNavLink>
+            <MudNavGroup Title="Marketing" Expanded="true">
                 <MudNavLink Href="/admin/newsletter" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Campaign">Newsletter</MudNavLink>
-                <MudNavLink Href="/dbmanager" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Storage">Database Manager</MudNavLink>
-                <MudNavLink Href="/Admin/Audit" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.History">Audit Logs</MudNavLink>
             </MudNavGroup>
 
             <MudDivider />
-            <MudNavGroup Title="Support" Expanded="false">
-                <MudNavLink Href="/Admin/Support/Tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Support Tickets</MudNavLink>
+            <MudNavGroup Title="Platform Tools" Expanded="false">
+                <MudNavLink Href="/reserve-calculator/demo" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Calculate">Calculator</MudNavLink>
+                <MudNavLink Href="/dbmanager" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Storage">Database</MudNavLink>
+                <MudNavLink Href="/Admin/Audit" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.History">Audit Logs</MudNavLink>
             </MudNavGroup>
 
             <MudDivider />

@@ -5,6 +5,7 @@
 @using CRS.Models.Security
 @using CRS.Services
 @using CRS.Services.Tenant
+@using CRS.Services.Customers
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
@@ -13,6 +14,7 @@
 @inject UserStateService UserState
 @inject ITenantContext TenantContext
 @inject ITenantUserRoleService RoleService
+@inject ICustomerService CustomerService
 @inject UserManager<ApplicationUser> UserManager
 @inject ISnackbar Snackbar
 @inject ILogger<Step1Create> Logger
@@ -117,6 +119,43 @@
                               AdornmentIcon="@Icons.Material.TwoTone.LocationCity"
                               Immediate="true" />
             </MudItem>
+
+            <!-- Customer Selection -->
+            @if (_isStaff)
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6" Class="mb-2 mt-2">Customer Account</MudText>
+                    <MudText Typo="Typo.caption" Class="text-muted mb-2">
+                        Link this property to a customer account (HOA board, management company, etc.)
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudGrid>
+                        <MudItem xs="12" sm="8">
+                            <MudAutocomplete T="CustomerAccount"
+                                             Label="Select or Create Customer"
+                                             Value="_selectedCustomer"
+                                             ValueChanged="OnCustomerChanged"
+                                             SearchFunc="SearchCustomers"
+                                             ToStringFunc="@(c => c == null ? "" : c.Name)"
+                                             ShowProgressIndicator="true"
+                                             Clearable="true"
+                                             AdornmentIcon="@Icons.Material.Filled.Business"
+                                             Placeholder="Type to search customers..." />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="OpenNewCustomerDialog"
+                                       FullWidth="true"
+                                       Style="height: 56px;">
+                                New Customer
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+            }
 
             <!-- PHYSICAL ADDRESS SECTION -->
             <MudItem xs="12">
@@ -239,6 +278,48 @@
     </MudGrid>
 </MudForm>
 
+<!-- Quick Customer Create Dialog -->
+<MudDialog @bind-Visible="_showNewCustomerDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2" />
+            Quick Add Customer
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_newCustomerName"
+                          Label="Customer Name"
+                          Required="true"
+                          Placeholder="e.g., Sunset HOA or ABC Management"
+                          Variant="Variant.Outlined" />
+
+            <MudSelect @bind-Value="_newCustomerType" 
+                       Label="Customer Type" 
+                       Variant="Variant.Outlined">
+                <MudSelectItem Value="CustomerType.HOABoard">HOA Board</MudSelectItem>
+                <MudSelectItem Value="CustomerType.ManagementCompany">Management Company</MudSelectItem>
+                <MudSelectItem Value="CustomerType.PropertyOwner">Property Owner</MudSelectItem>
+                <MudSelectItem Value="CustomerType.Developer">Developer</MudSelectItem>
+                <MudSelectItem Value="CustomerType.Other">Other</MudSelectItem>
+            </MudSelect>
+
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                You can add more details later from the Customers page.
+            </MudAlert>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showNewCustomerDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="CreateQuickCustomer"
+                   Disabled="@string.IsNullOrWhiteSpace(_newCustomerName)">
+            Create
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     [Parameter]
     public ReserveStudy Model { get; set; }
@@ -265,6 +346,13 @@
     private bool _isHoaUser;
     private List<ApplicationUser> _hoaUsers = new();
 
+    // Customer selection
+    private CustomerAccount? _selectedCustomer;
+    private List<CustomerAccount> _customers = new();
+    private bool _showNewCustomerDialog = false;
+    private string _newCustomerName = "";
+    private CustomerType _newCustomerType = CustomerType.HOABoard;
+
     private List<string> States = new() {
         "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
         "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS",
@@ -287,22 +375,23 @@
         // Load HOA users for staff
         if (_isStaff) {
             await LoadHoaUsers();
+            await LoadCustomers();
         }
-        
+
         await LoadUserCommunities();
         InitializeAddresses();
     }
     
     private async Task LoadHoaUsers() {
         if (!TenantContext.TenantId.HasValue) return;
-        
+
         var tenantId = TenantContext.TenantId.Value;
-        
+
         try {
             // Use UserManager to get users in HOA roles (same approach as HOAUsers.razor)
             var hoaUsers = await UserManager.GetUsersInRoleAsync("HOAUser");
             var hoaAuditors = await UserManager.GetUsersInRoleAsync("HOAAuditor");
-            
+
             // Combine and filter by tenant
             _hoaUsers = hoaUsers.Concat(hoaAuditors)
                 .Where(u => u.TenantId == tenantId)
@@ -310,12 +399,76 @@
                 .OrderBy(u => u.LastName)
                 .ThenBy(u => u.FirstName)
                 .ToList();
-                
+
             Logger.LogInformation("LoadHoaUsers: Found {Count} HOA users for tenant {TenantId}", _hoaUsers.Count, tenantId);
         }
         catch (Exception ex) {
             Logger.LogError(ex, "LoadHoaUsers: Error loading HOA users");
             _hoaUsers = new List<ApplicationUser>();
+        }
+    }
+
+    private async Task LoadCustomers() {
+        try {
+            _customers = await CustomerService.GetAllAsync();
+            Logger.LogInformation("LoadCustomers: Found {Count} customers", _customers.Count);
+        }
+        catch (Exception ex) {
+            Logger.LogError(ex, "LoadCustomers: Error loading customers");
+            _customers = new List<CustomerAccount>();
+        }
+    }
+
+    private async Task<IEnumerable<CustomerAccount>> SearchCustomers(string searchText, CancellationToken ct) {
+        if (string.IsNullOrWhiteSpace(searchText)) {
+            return _customers.Take(10);
+        }
+
+        var lowerSearch = searchText.ToLower();
+        return _customers
+            .Where(c => c.Name.ToLower().Contains(lowerSearch) ||
+                       (c.ContactName?.ToLower().Contains(lowerSearch) ?? false))
+            .Take(10);
+    }
+
+    private void OnCustomerChanged(CustomerAccount? customer) {
+        _selectedCustomer = customer;
+        if (Model.Community != null && customer != null) {
+            Model.Community.CustomerAccountId = customer.Id;
+        }
+        StateHasChanged();
+    }
+
+    private void OpenNewCustomerDialog() {
+        _newCustomerName = "";
+        _newCustomerType = CustomerType.HOABoard;
+        _showNewCustomerDialog = true;
+    }
+
+    private async Task CreateQuickCustomer() {
+        if (string.IsNullOrWhiteSpace(_newCustomerName)) return;
+
+        try {
+            var newCustomer = new CustomerAccount {
+                Name = _newCustomerName,
+                Type = _newCustomerType
+            };
+
+            var created = await CustomerService.CreateAsync(newCustomer);
+            _customers.Add(created);
+            _selectedCustomer = created;
+
+            if (Model.Community != null) {
+                Model.Community.CustomerAccountId = created.Id;
+            }
+
+            _showNewCustomerDialog = false;
+            Snackbar.Add($"Customer '{created.Name}' created", Severity.Success);
+            StateHasChanged();
+        }
+        catch (Exception ex) {
+            Logger.LogError(ex, "Error creating customer");
+            Snackbar.Add($"Error creating customer: {ex.Message}", Severity.Error);
         }
     }
     

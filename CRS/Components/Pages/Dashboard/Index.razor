@@ -430,6 +430,19 @@
             </MudItem>
 
             <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 kpi-clickable" Elevation="2" Style="border-radius: 12px; border-left: 4px solid #10b981;" @onclick="@(() => NavigationManager.NavigateTo("/Customers"))">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Filled.PeopleAlt" Style="color: #10b981;" />
+                            <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Style="color: #9ca3af;" />
+                        </MudStack>
+                        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #1f2937;">@KpiCustomerAccounts</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #6b7280;">Customers</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="6" sm="4" md="2">
                 <MudPaper Class="pa-4 kpi-clickable" Elevation="2" Style="border-radius: 12px; border-left: 4px solid #f59e0b;" @onclick="@(() => NavigationManager.NavigateTo("/Invoices"))">
                     <MudStack Spacing="1">
                         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -474,19 +487,6 @@
                     </MudStack>
                 </MudPaper>
             </MudItem>
-
-                <MudItem xs="6" sm="4" md="2">
-                    <MudPaper Class="pa-4 kpi-clickable" Elevation="2" Style="border-radius: 12px; border-left: 4px solid #06b6d4;" @onclick="@(() => NavigationManager.NavigateTo("/Reports/Aging"))">
-                        <MudStack Spacing="1">
-                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.Assessment" Style="color: #06b6d4;" />
-                                <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Style="color: #9ca3af;" />
-                            </MudStack>
-                            <MudText Typo="Typo.h6" Style="font-weight: 600; color: #1f2937;">A/R Aging</MudText>
-                            <MudText Typo="Typo.caption" Style="color: #6b7280;">Report</MudText>
-                        </MudStack>
-                    </MudPaper>
-                </MudItem>
                 </MudGrid>
 
             <!-- OVERDUE ALERT BANNER -->
@@ -1061,10 +1061,11 @@ private async Task<TenantKpisVm?> LoadKpiDataAsync(int tenantId)
                          rs.IsComplete && 
                          rs.DateCreated.HasValue &&
                          rs.DateCreated.Value > DateTime.UtcNow.AddMonths(-6));
-        
-    // TODO: Count customer accounts when the model is available
-    var customerAccounts = 0;
-        
+
+    // Count customer accounts for this tenant
+    var customerAccounts = await context.CustomerAccounts
+        .CountAsync(ca => ca.TenantId == tenantId && ca.IsActive);
+
     return new TenantKpisVm 
     { 
         Properties = properties, 

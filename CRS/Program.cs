@@ -58,7 +58,7 @@ app.Services.UseScheduler(scheduler =>
         .Schedule<CRS.Jobs.LateInterestInvocable>()
         .DailyAtHour(3)
         .PreventOverlapping(nameof(CRS.Jobs.LateInterestInvocable));
-        
+
     // Run auto-archive job daily at 4 AM
     scheduler
         .Schedule<CRS.Jobs.AutoArchiveInvocable>()
@@ -70,6 +70,12 @@ app.Services.UseScheduler(scheduler =>
         .Schedule<CRS.Jobs.InvoiceReminderInvocable>()
         .DailyAtHour(8)
         .PreventOverlapping(nameof(CRS.Jobs.InvoiceReminderInvocable));
+
+    // Run newsletter scheduler every 5 minutes to process scheduled campaigns
+    scheduler
+        .Schedule<CRS.Jobs.NewsletterSchedulerJob>()
+        .EveryFiveMinutes()
+        .PreventOverlapping(nameof(CRS.Jobs.NewsletterSchedulerJob));
 });
 
 var provider = app.Services;
@@ -256,16 +262,19 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<ReserveStudyCompletedListener>();
     builder.Services.AddScoped<SiteVisitScheduledListener>();
     builder.Services.AddEvents();
-    
+
     // Register lifecycle job
     builder.Services.AddScoped<CRS.Jobs.TenantLifecycleJob>();
 
     // Register invoice jobs
     builder.Services.AddScoped<CRS.Jobs.LateInterestInvocable>();
     builder.Services.AddScoped<CRS.Jobs.InvoiceReminderInvocable>();
-    
+
     // Register auto-archive job
     builder.Services.AddScoped<CRS.Jobs.AutoArchiveInvocable>();
+
+    // Register newsletter scheduler job
+    builder.Services.AddScoped<CRS.Jobs.NewsletterSchedulerJob>();
 
     // Phase 1: Register audit log archiving background service
     builder.Services.AddHostedService<AuditLogArchiveService>();
