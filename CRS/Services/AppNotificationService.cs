@@ -14,13 +14,19 @@ public class AppNotificationService : IAppNotificationService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
+    private readonly ISignalRService _signalRService;
+    private readonly ILogger<AppNotificationService> _logger;
 
     public AppNotificationService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
-        ITenantContext tenantContext)
+        ITenantContext tenantContext,
+        ISignalRService signalRService,
+        ILogger<AppNotificationService> logger)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
+        _signalRService = signalRService;
+        _logger = logger;
     }
 
     public async Task<Notification> CreateAsync(Notification notification, CancellationToken ct = default)
@@ -36,11 +42,21 @@ public class AppNotificationService : IAppNotificationService
         context.Notifications.Add(notification);
         await context.SaveChangesAsync(ct);
 
-        // TODO: Add SignalR push notification when SendToUserAsync is available
-        // if (_signalRService != null)
-        // {
-        //     await _signalRService.SendToUserAsync(notification.UserId.ToString(), "NotificationReceived", notification);
-        // }
+        // Send real-time notification via SignalR
+        try
+        {
+            await _signalRService.SendNotificationToUserAsync(notification.UserId, notification);
+
+            // Also update the unread count
+            var unreadCount = await context.Notifications
+                .CountAsync(n => n.UserId == notification.UserId && !n.IsRead && n.DateDeleted == null, ct);
+            await _signalRService.NotifyUnreadCountAsync(notification.UserId, unreadCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send SignalR notification to user {UserId}", notification.UserId);
+            // Don't throw - notification is saved, SignalR is best-effort
+        }
 
         return notification;
     }

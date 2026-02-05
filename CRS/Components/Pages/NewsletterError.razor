@@ -1,0 +1,58 @@
+﻿@page "/newsletter-error"
+@layout EmptyLayout
+@inject NavigationManager Nav
+
+<PageTitle>Newsletter Error - ALX Reserve Cloud</PageTitle>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Message { get; set; }
+    
+    private string GetErrorMessage() => Message?.ToLower() switch
+    {
+        "expired" => "This confirmation link has expired. Please subscribe again to receive a new confirmation email.",
+        "invalid" => "This link appears to be invalid. Please check the link and try again.",
+        "not-found" => "We couldn't find this subscription. It may have already been removed.",
+        _ => "Something went wrong. Please try subscribing again."
+    };
+}
+
+<div style="min-height: 100vh; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%); display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <MudPaper Elevation="3" Class="pa-8" Style="max-width: 500px; width: 100%; text-align: center; border-radius: 16px;">
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Style="font-size: 40px; color: white;" />
+        </div>
+        
+        <MudText Typo="Typo.h4" Class="mb-2" Style="font-weight: 700; color: #1a1a1a;">
+            Oops! Something Went Wrong
+        </MudText>
+        
+        <MudText Typo="Typo.body1" Class="mb-6" Style="color: #666;">
+            @GetErrorMessage()
+        </MudText>
+        
+        <MudStack Spacing="3">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Warning" 
+                       Size="Size.Large" 
+                       FullWidth="true"
+                       Href="/#newsletter"
+                       Style="text-transform: none; font-weight: 600;">
+                Subscribe Again
+            </MudButton>
+            
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Default" 
+                       Size="Size.Large" 
+                       FullWidth="true"
+                       Href="/"
+                       Style="text-transform: none;">
+                Back to Home
+            </MudButton>
+        </MudStack>
+        
+        <MudText Typo="Typo.caption" Class="mt-6" Style="color: #aaa;">
+            Need help? Contact support@reservecloud.com
+        </MudText>
+    </MudPaper>
+</div>

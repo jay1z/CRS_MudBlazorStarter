@@ -1,0 +1,272 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+@using MudBlazor
+
+@inject IReserveStudyService ReserveStudyService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Email" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Send Report to Client</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <!-- Report Info -->
+            <MudPaper Elevation="0" Class="pa-3" Style="background: #f5f5f5; border-radius: 8px;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Primary" />
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">@ReportTitle</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">Version @ReportVersion</MudText>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Recipient Email -->
+            <MudTextField @bind-Value="recipientEmail"
+                          Label="Recipient Email"
+                          Placeholder="client@example.com"
+                          Variant="Variant.Outlined"
+                          InputType="InputType.Email"
+                          Required="true"
+                          RequiredError="Email address is required"
+                          Validation="@(new Func<string, string?>(ValidateEmail))"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Email" />
+
+            <!-- CC Email (optional) -->
+            <MudTextField @bind-Value="ccEmail"
+                          Label="CC (optional)"
+                          Placeholder="additional@example.com"
+                          Variant="Variant.Outlined"
+                          InputType="InputType.Email"
+                          HelperText="Send a copy to another recipient"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.PersonAdd" />
+
+            <!-- Subject -->
+            <MudTextField @bind-Value="subject"
+                          Label="Subject"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="Subject is required"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Subject" />
+
+            <!-- Personal Message -->
+            <MudTextField @bind-Value="personalMessage"
+                          Label="Personal Message (optional)"
+                          Variant="Variant.Outlined"
+                          Lines="4"
+                          Placeholder="Add a personal note to the email..."
+                          HelperText="This message will be included in the email body" />
+
+            <!-- Options -->
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">Options</MudText>
+                <MudCheckBox @bind-Value="includeDownloadLink" 
+                             Label="Include secure download link" 
+                             Color="Color.Primary"
+                             Dense="true" />
+                <MudCheckBox @bind-Value="attachReport" 
+                             Label="Attach report as PDF" 
+                             Color="Color.Primary"
+                             Dense="true"
+                             Disabled="@(FileSizeBytes > MaxAttachmentSize)" />
+                @if (FileSizeBytes > MaxAttachmentSize)
+                {
+                    <MudText Typo="Typo.caption" Style="color: #f57c00; margin-left: 32px;">
+                        Report file is too large to attach (@FormatFileSize(FileSizeBytes)). Use download link instead.
+                    </MudText>
+                }
+            </MudStack>
+
+            <!-- Preview -->
+            <MudExpansionPanels Elevation="0">
+                <MudExpansionPanel Text="Preview Email" Style="background: #fafafa;">
+                    <MudPaper Elevation="0" Class="pa-3" Style="background: white; border: 1px solid #e0e0e0; border-radius: 4px;">
+                        <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">TO:</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-2">@(string.IsNullOrEmpty(recipientEmail) ? "(recipient)" : recipientEmail)</MudText>
+                        
+                        @if (!string.IsNullOrWhiteSpace(ccEmail))
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">CC:</MudText>
+                            <MudText Typo="Typo.body2" Class="mb-2">@ccEmail</MudText>
+                        }
+                        
+                        <MudText Typo="Typo.caption" Style="color: #666; font-weight: 600;">SUBJECT:</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-2">@subject</MudText>
+                        
+                        <MudDivider Class="my-2" />
+                        
+                        <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">
+Dear @(string.IsNullOrEmpty(CommunityName) ? "Client" : CommunityName),
+
+Your @ReportTitle is now available.
+
+@if (!string.IsNullOrWhiteSpace(personalMessage))
+{
+@personalMessage
+
+}
+@if (includeDownloadLink)
+{
+<text>You can download your report using the secure link below:
+[Download Report]
+
+This link will expire in 7 days.</text>
+}
+@if (attachReport && FileSizeBytes <= MaxAttachmentSize)
+{
+<text>
+The report is also attached to this email for your convenience.</text>
+}
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+@(string.IsNullOrEmpty(TenantName) ? "Reserve Study Team" : TenantName)
+                        </MudText>
+                    </MudPaper>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="Submit"
+                   Disabled="@(!IsValid)"
+                   StartIcon="@Icons.Material.Filled.Send">
+            Send Email
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Guid ReserveStudyId { get; set; }
+
+    [Parameter]
+    public string ReportTitle { get; set; } = "Report";
+
+    [Parameter]
+    public string ReportVersion { get; set; } = "1.0";
+
+    [Parameter]
+    public string? DefaultRecipientEmail { get; set; }
+
+    [Parameter]
+    public string? CommunityName { get; set; }
+
+    [Parameter]
+    public string? TenantName { get; set; }
+
+    [Parameter]
+    public long FileSizeBytes { get; set; }
+
+    // Form fields
+    private string recipientEmail = "";
+    private string ccEmail = "";
+    private string subject = "";
+    private string personalMessage = "";
+    private bool includeDownloadLink = true;
+    private bool attachReport = false;
+
+    // Constants
+    private const long MaxAttachmentSize = 10 * 1024 * 1024; // 10 MB
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Set default recipient from study contact if available
+        if (!string.IsNullOrEmpty(DefaultRecipientEmail))
+        {
+            recipientEmail = DefaultRecipientEmail;
+        }
+        else
+        {
+            // Try to get from reserve study
+            try
+            {
+                var study = await ReserveStudyService.GetReserveStudyByIdAsync(ReserveStudyId);
+                if (study?.Contact?.Email != null)
+                {
+                    recipientEmail = study.Contact.Email;
+                }
+            }
+            catch
+            {
+                // Ignore - user can enter manually
+            }
+        }
+
+        // Set default subject
+        subject = $"Your {ReportTitle} is Ready - {CommunityName ?? "Reserve Study"}";
+
+        // Auto-enable attachment if file is small enough
+        attachReport = FileSizeBytes > 0 && FileSizeBytes <= MaxAttachmentSize;
+    }
+
+    private bool IsValid => 
+        !string.IsNullOrWhiteSpace(recipientEmail) && 
+        ValidateEmail(recipientEmail) == null &&
+        !string.IsNullOrWhiteSpace(subject) &&
+        (includeDownloadLink || attachReport);
+
+    private string? ValidateEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return "Email is required";
+        
+        if (!email.Contains('@') || !email.Contains('.'))
+            return "Please enter a valid email address";
+        
+        return null;
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+
+    private void Submit()
+    {
+        if (!IsValid) return;
+
+        var result = new SendReportResult
+        {
+            RecipientEmail = recipientEmail.Trim(),
+            CcEmail = string.IsNullOrWhiteSpace(ccEmail) ? null : ccEmail.Trim(),
+            Subject = subject.Trim(),
+            PersonalMessage = string.IsNullOrWhiteSpace(personalMessage) ? null : personalMessage.Trim(),
+            IncludeDownloadLink = includeDownloadLink,
+            AttachReport = attachReport && FileSizeBytes <= MaxAttachmentSize
+        };
+
+        MudDialog?.Close(DialogResult.Ok(result));
+    }
+
+    /// <summary>
+    /// Result returned from the dialog when user clicks Send.
+    /// </summary>
+    public class SendReportResult
+    {
+        public string RecipientEmail { get; set; } = "";
+        public string? CcEmail { get; set; }
+        public string Subject { get; set; } = "";
+        public string? PersonalMessage { get; set; }
+        public bool IncludeDownloadLink { get; set; } = true;
+        public bool AttachReport { get; set; } = false;
+    }
+}

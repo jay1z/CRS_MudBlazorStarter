@@ -1,0 +1,139 @@
+﻿@using CRS.Models.Emails
+@model BillingNotificationEmail
+
+@{
+    var daysUntilDataDeletion = Model.GracePeriodEndsAt.HasValue 
+        ? Math.Max(0, (int)(Model.GracePeriodEndsAt.Value - DateTime.UtcNow).TotalDays) 
+        : 30;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Account Suspended - @Model.TenantName</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%;">
+                    
+                    <!-- Logo -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 24px 40px; border-radius: 16px 16px 0 0; border: 1px solid #e5e7eb; border-bottom: none; text-align: center;">
+                            <h2 style="margin: 0; color: #FF8C00; font-size: 24px; font-weight: 700;">ALX Reserve Cloud</h2>
+                        </td>
+                    </tr>
+                    
+                    <!-- Header with Error Color -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 40px; text-align: center;">
+                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; line-height: 64px;">
+                                <span style="font-size: 32px;">🔒</span>
+                            </div>
+                            <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 28px; font-weight: 700;">Account Suspended</h1>
+                            <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 16px;">Your subscription has been paused</p>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 32px 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            
+                            <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Hi@(string.IsNullOrEmpty(Model.OwnerName) ? "" : $" {Model.OwnerName}"),
+                            </p>
+                            
+                            <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Due to continued payment issues, your <strong>@Model.TenantName</strong> account has been temporarily suspended. 
+                                Don't worry — your data is safe and you can reactivate at any time by updating your payment method.
+                            </p>
+
+                            <!-- Critical Warning Box -->
+                            <div style="background-color: #fef2f2; border: 2px solid #dc2626; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td style="vertical-align: top; padding-right: 12px;">
+                                            <span style="font-size: 24px;">⚠️</span>
+                                        </td>
+                                        <td>
+                                            <p style="margin: 0 0 8px 0; color: #991b1b; font-size: 16px; font-weight: 600;">
+                                                Data retention period: @daysUntilDataDeletion days
+                                            </p>
+                                            <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.5;">
+                                                Your reserve studies, reports, and all associated data will be permanently deleted after 
+                                                @if (Model.GracePeriodEndsAt.HasValue)
+                                                {
+                                                    <strong>@Model.GracePeriodEndsAt.Value.ToString("MMMM d, yyyy")</strong>
+                                                }
+                                                else
+                                                {
+                                                    <span>the retention period ends</span>
+                                                }
+                                                if the account is not reactivated.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- What's Affected -->
+                            <h3 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600;">What's affected?</h3>
+                            <ul style="margin: 0 0 24px 0; padding-left: 20px; color: #4b5563; font-size: 15px; line-height: 1.8;">
+                                <li>You cannot access your dashboard or create new studies</li>
+                                <li>Your team members cannot log in</li>
+                                <li>Client portals are temporarily unavailable</li>
+                                <li>Scheduled reports and reminders are paused</li>
+                            </ul>
+
+                            <!-- What's Safe -->
+                            <h3 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600;">What's safe?</h3>
+                            <div style="background-color: #ecfdf5; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                                <ul style="margin: 0; padding-left: 20px; color: #065f46; font-size: 15px; line-height: 1.8;">
+                                    <li>✓ All your reserve studies and reports are preserved</li>
+                                    <li>✓ Client information and history is retained</li>
+                                    <li>✓ Photos, documents, and attachments are safe</li>
+                                    <li>✓ Instant reactivation when payment is resolved</li>
+                                </ul>
+                            </div>
+
+                            <!-- CTA Button -->
+                            @if (!string.IsNullOrEmpty(Model.UpdatePaymentUrl))
+                            {
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td align="center" style="padding: 8px 0 24px 0;">
+                                            <a href="@Model.UpdatePaymentUrl" style="display: inline-block; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4);">
+                                                Reactivate My Account
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            }
+
+                            <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center;">
+                                Need help? Contact us at <a href="mailto:@Model.SupportEmail" style="color: #FF8C00;">@Model.SupportEmail</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 24px 40px; border-radius: 0 0 16px 16px; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
+                            <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">
+                                <strong>ALX Reserve Cloud</strong>
+                            </p>
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                                This is an automated billing notification.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

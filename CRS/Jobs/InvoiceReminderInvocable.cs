@@ -6,6 +6,7 @@ using CRS.Models.Email;
 using CRS.Models.Emails;
 using CRS.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace CRS.Jobs;
 
@@ -20,6 +21,7 @@ public class InvoiceReminderInvocable : IInvocable
     private readonly IMailer _mailer;
     private readonly IInvoiceService _invoiceService;
     private readonly ILogger<InvoiceReminderInvocable> _logger;
+    private readonly IConfiguration _configuration;
 
     // Default reminder schedule: days relative to due date (negative = before, positive = after)
     // Used as fallback when tenant doesn't specify ReminderFrequencyDays
@@ -29,12 +31,14 @@ public class InvoiceReminderInvocable : IInvocable
         IDbContextFactory<ApplicationDbContext> dbFactory,
         IMailer mailer,
         IInvoiceService invoiceService,
-        ILogger<InvoiceReminderInvocable> logger)
+        ILogger<InvoiceReminderInvocable> logger,
+        IConfiguration configuration)
     {
         _dbFactory = dbFactory;
         _mailer = mailer;
         _invoiceService = invoiceService;
         _logger = logger;
+        _configuration = configuration;
     }
 
     public async Task Invoke()
@@ -167,13 +171,16 @@ public class InvoiceReminderInvocable : IInvocable
             Math.Abs(daysOverdue),
             isOverdue ? "overdue" : "until due");
 
+        // Get base URL from configuration
+        var baseUrl = _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://app.reservecloud.com";
+
         // Create email model
         var emailModel = new InvoiceEmail
         {
             Invoice = invoice,
             ReserveStudy = invoice.ReserveStudy,
-            BaseUrl = "https://app.reservecloud.com", // TODO: Get from configuration
-            InvoiceViewUrl = $"https://app.reservecloud.com/Invoices/{invoice.Id}",
+            BaseUrl = baseUrl,
+            InvoiceViewUrl = $"{baseUrl}/Invoices/{invoice.Id}",
             IsReminder = true,
             DaysPastDue = isOverdue ? daysOverdue : 0
         };

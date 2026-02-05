@@ -1,7 +1,12 @@
-﻿using CRS.Data;
+﻿using Coravel.Mailer.Mail.Interfaces;
+
+using CRS.Data;
 using CRS.Models;
+using CRS.Models.Email;
+using CRS.Models.Emails;
 using CRS.Models.Workflow;
 using CRS.Services.Interfaces;
+using CRS.Services.Storage;
 using CRS.Services.Tenant;
 
 using Microsoft.EntityFrameworkCore;
@@ -18,17 +23,23 @@ public class GeneratedReportService : IGeneratedReportService
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
     private readonly IReserveStudyWorkflowService _workflowService;
+    private readonly IMailer _mailer;
+    private readonly IDocumentStorageService _storageService;
     private readonly ILogger<GeneratedReportService> _logger;
 
     public GeneratedReportService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
         ITenantContext tenantContext,
         IReserveStudyWorkflowService workflowService,
+        IMailer mailer,
+        IDocumentStorageService storageService,
         ILogger<GeneratedReportService> logger)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
         _workflowService = workflowService;
+        _mailer = mailer;
+        _storageService = storageService;
         _logger = logger;
     }
 
@@ -282,6 +293,25 @@ public class GeneratedReportService : IGeneratedReportService
         report.DateModified = DateTime.UtcNow;
 
         await context.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> MarkAsSupersededAsync(Guid id, CancellationToken ct = default)
+    {
+        if (!_tenantContext.TenantId.HasValue) return false;
+
+        await using var context = await _dbFactory.CreateDbContextAsync(ct);
+
+        var report = await context.GeneratedReports
+            .FirstOrDefaultAsync(r => r.Id == id && r.DateDeleted == null, ct);
+
+        if (report == null) return false;
+
+        report.Status = ReportStatus.Superseded;
+        report.DateModified = DateTime.UtcNow;
+
+        await context.SaveChangesAsync(ct);
+        _logger.LogInformation("Report {ReportId} marked as superseded", id);
         return true;
     }
 
@@ -702,4 +732,170 @@ public class GeneratedReportService : IGeneratedReportService
         }
 
         #endregion
+
+        #region Email Delivery
+
+        /// <inheritdoc />
+        public async Task<bool> SendToClientAsync(
+            Guid reportId,
+            string recipientEmail,
+            string subject,
+            string? personalMessage,
+            string? ccEmail,
+            bool includeDownloadLink,
+            bool attachReport,
+            Guid sentByUserId,
+            string baseUrl,
+            CancellationToken ct = default)
+        {
+            if (!_tenantContext.TenantId.HasValue) return false;
+
+            try
+            {
+                await using var context = await _dbFactory.CreateDbContextAsync(ct);
+
+                // Load report with related data
+                var report = await context.GeneratedReports
+                    .Include(r => r.ReserveStudy)
+                        .ThenInclude(rs => rs!.Community)
+                    .FirstOrDefaultAsync(r => r.Id == reportId && r.DateDeleted == null, ct);
+
+                if (report == null)
+                {
+                    _logger.LogWarning("Report {ReportId} not found for email delivery", reportId);
+                    return false;
+                }
+
+                // Get tenant info for branding
+                var tenant = await context.Tenants
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.Id == _tenantContext.TenantId.Value, ct);
+
+                // Parse branding JSON if available
+                TenantBrandingData? branding = null;
+                if (!string.IsNullOrEmpty(tenant?.BrandingJson))
+                {
+                    try
+                    {
+                        branding = System.Text.Json.JsonSerializer.Deserialize<TenantBrandingData>(
+                            tenant.BrandingJson, 
+                            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    }
+                    catch { /* Ignore parse errors */ }
+                }
+
+                var tenantInfo = new TenantEmailInfo
+                {
+                    CompanyName = tenant?.Name ?? "Reserve Study Services",
+                    FromEmail = branding?.Email ?? "no-reply@reservecloud.com",
+                    Phone = branding?.Phone,
+                    Website = branding?.Website,
+                    Address = branding?.Address,
+                    LogoUrl = branding?.LogoUrl,
+                    PrimaryColor = branding?.Primary ?? "#667eea",
+                    SecondaryColor = branding?.Secondary ?? "#764ba2"
+                };
+
+                // Generate download URL if requested (7 days expiry)
+                string? downloadUrl = null;
+                if (includeDownloadLink && !string.IsNullOrEmpty(report.StorageUrl))
+                {
+                    downloadUrl = _storageService.GetSasUrl(report.StorageUrl, TimeSpan.FromDays(7));
+                }
+
+                // Get attachment data if requested
+                byte[]? attachmentData = null;
+                string? attachmentFilename = null;
+                if (attachReport && !string.IsNullOrEmpty(report.StorageUrl))
+                {
+                    try
+                    {
+                        attachmentData = await _storageService.DownloadAsync(report.StorageUrl, ct);
+                        attachmentFilename = $"{GetReportTypeDisplayName(report.Type)}_{report.ReserveStudy?.Community?.Name ?? "Report"}_v{report.Version}.pdf";
+                        // Clean filename
+                        attachmentFilename = string.Join("_", attachmentFilename.Split(Path.GetInvalidFileNameChars()));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to download report attachment for {ReportId}", reportId);
+                        // Continue without attachment
+                    }
+                }
+
+                // Build email model
+                var emailModel = new ReportEmail
+                {
+                    Report = report,
+                    ReserveStudy = report.ReserveStudy,
+                    PersonalMessage = personalMessage,
+                    BaseUrl = baseUrl.TrimEnd('/'),
+                    DownloadUrl = downloadUrl,
+                    IncludeDownloadLink = includeDownloadLink && !string.IsNullOrEmpty(downloadUrl),
+                    CommunityName = report.ReserveStudy?.Community?.Name,
+                    ReportTypeName = GetReportTypeDisplayName(report.Type),
+                    Version = report.Version,
+                    TenantInfo = tenantInfo
+                };
+
+                // Send email
+                var mailable = new ReportMailable(
+                    emailModel, 
+                    recipientEmail, 
+                    subject,
+                    ccEmail,
+                    attachmentData,
+                    attachmentFilename);
+
+                await _mailer.SendAsync(mailable);
+
+                // Update report record
+                report.SentToClientAt = DateTime.UtcNow;
+                report.SentToEmail = recipientEmail;
+                report.DateModified = DateTime.UtcNow;
+
+                await context.SaveChangesAsync(ct);
+
+                _logger.LogInformation(
+                    "Sent report {ReportId} ({ReportType} v{Version}) to {Email} for study {StudyId}",
+                    reportId, report.Type, report.Version, recipientEmail, report.ReserveStudyId);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send report {ReportId} to {Email}", reportId, recipientEmail);
+                return false;
+            }
+        }
+
+        private static string GetReportTypeDisplayName(ReportType type) => type switch
+        {
+            ReportType.Draft => "Draft Report",
+            ReportType.Final => "Final Report",
+            ReportType.ExecutiveSummary => "Executive Summary",
+            ReportType.FundingPlan => "Funding Plan",
+            ReportType.ComponentInventory => "Component Inventory",
+            ReportType.FullReport => "Full Report",
+            ReportType.UpdateReport => "Update Report",
+            ReportType.Addendum => "Addendum",
+            ReportType.CorrectionNotice => "Correction Notice",
+            _ => type.ToString()
+        };
+
+        #endregion
+
+        /// <summary>
+        /// Helper class for parsing tenant branding JSON.
+        /// </summary>
+        private sealed class TenantBrandingData
+        {
+            public string? Primary { get; set; }
+            public string? Secondary { get; set; }
+            public string? LogoUrl { get; set; }
+            public string? Address { get; set; }
+            public string? Phone { get; set; }
+            public string? Email { get; set; }
+            public string? Website { get; set; }
+            public string? Tagline { get; set; }
+        }
     }

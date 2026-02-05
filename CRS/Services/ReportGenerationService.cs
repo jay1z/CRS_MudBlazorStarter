@@ -310,9 +310,10 @@ public class ReportGenerationService : IReportGenerationService
                 return ReportGenerationResult.Failure("Reserve study not found.");
             }
 
-            // Step 2b: Load narrative if available (for full reports)
+            // Step 2b: Load narrative if available (for full reports with narrative sections)
             var narrative = await _narrativeService.GetByStudyIdAsync(studyId);
-            // TODO: Pass narrative to PDF service when generating full reports with narrative sections
+            // Note: For FullReport type, use GenerateNarrativeReportAsync which handles narrative integration
+            // For FundingPlan reports, narrative is available but not currently embedded in the PDF
 
             // Step 3: Run calculation
             ReserveStudyResult calculationResult;
@@ -331,18 +332,8 @@ public class ReportGenerationService : IReportGenerationService
                     $"Calculation failed: {calculationResult.ErrorMessage}");
             }
 
-            // Step 4: Generate report files
-            var pdfOptions = new ReserveStudyReportOptions
-            {
-                Title = options.CustomTitle ?? "Reserve Study Funding Plan",
-                CommunityName = study.Community?.Name ?? study.Name,
-                PreparedBy = study.PreparedBy,
-                PreparedDate = DateTime.UtcNow,
-                IncludeSummary = true,
-                IncludeCashFlowTable = true,
-                IncludeAllocation = true,
-                IncludeComponents = true
-            };
+            // Step 4: Generate report files with options based on report type
+            var pdfOptions = BuildReportOptions(options.ReportType, study, options.CustomTitle);
 
             string? pdfStorageUrl = null;
             string? excelStorageUrl = null;
@@ -410,10 +401,18 @@ public class ReportGenerationService : IReportGenerationService
                 GeneratedByUserId = generatedByUserId,
                 GeneratedAt = DateTime.UtcNow,
                 Notes = options.Notes,
+                SupersedesReportId = options.SupersedesReportId, // Link to superseded report
                 OutputFormat = options.GeneratePdf && options.GenerateExcel 
                     ? "PDF,Excel" 
                     : options.GeneratePdf ? "PDF" : "Excel"
             };
+
+            // If this report supersedes another, mark the old report as Superseded
+            if (options.SupersedesReportId.HasValue)
+            {
+                await _reportService.MarkAsSupersededAsync(options.SupersedesReportId.Value);
+                _logger.LogInformation("Report {OldReportId} marked as superseded by new report", options.SupersedesReportId.Value);
+            }
 
             var savedReport = await _reportService.CreateAsync(report);
 
@@ -498,6 +497,70 @@ public class ReportGenerationService : IReportGenerationService
             ReportType.CorrectionNotice => "Correction Notice",
             _ => type.ToString()
         };
+
+        /// <summary>
+        /// Builds PDF report options based on the report type.
+        /// Different report types have different content and formatting requirements.
+        /// </summary>
+        private static ReserveStudyReportOptions BuildReportOptions(ReportType reportType, ReserveStudy study, string? customTitle)
+        {
+            var communityName = study.Community?.Name ?? study.Name;
+
+            return reportType switch
+            {
+                // Executive Summary: Condensed 1-2 page report with key metrics only
+                ReportType.ExecutiveSummary => new ReserveStudyReportOptions
+                {
+                    Title = customTitle ?? "Executive Summary",
+                    CommunityName = communityName,
+                    PreparedBy = study.PreparedBy,
+                    PreparedDate = DateTime.UtcNow,
+                    IsExecutiveSummary = true,
+                    IncludeSummary = true,
+                    IncludeFundStatus = true,
+                    IncludeFirstYearSummary = true,
+                    IncludeCashFlowTable = false,      // No detailed cash flow in exec summary
+                    IncludeAllocation = false,         // No allocation breakdown
+                    IncludeComponents = false,         // No component details
+                    MaxYearsToShow = 5,                // Show only 5 years if any table is included
+                    IsDraft = false
+                },
+
+                // Draft: Full report with DRAFT watermark
+                ReportType.Draft => new ReserveStudyReportOptions
+                {
+                    Title = customTitle ?? "Reserve Study Funding Plan - DRAFT",
+                    CommunityName = communityName,
+                    PreparedBy = study.PreparedBy,
+                    PreparedDate = DateTime.UtcNow,
+                    IsDraft = true,
+                    IncludeSummary = true,
+                    IncludeFundStatus = true,
+                    IncludeFirstYearSummary = true,
+                    IncludeCashFlowTable = true,
+                    IncludeAllocation = true,
+                    IncludeComponents = true,
+                    MaxYearsToShow = null              // Show all years
+                },
+
+                // Funding Plan (default): Full detailed report
+                ReportType.FundingPlan or ReportType.Final or _ => new ReserveStudyReportOptions
+                {
+                    Title = customTitle ?? "Reserve Study Funding Plan",
+                    CommunityName = communityName,
+                    PreparedBy = study.PreparedBy,
+                    PreparedDate = DateTime.UtcNow,
+                    IsDraft = false,
+                    IncludeSummary = true,
+                    IncludeFundStatus = true,
+                    IncludeFirstYearSummary = true,
+                    IncludeCashFlowTable = true,
+                    IncludeAllocation = true,
+                    IncludeComponents = true,
+                    MaxYearsToShow = null              // Show all years
+                }
+            };
+        }
 
         /// <inheritdoc />
         public async Task<ReportGenerationResult> GenerateNarrativeReportAsync(

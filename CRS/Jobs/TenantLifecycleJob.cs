@@ -1,8 +1,12 @@
 ﻿using CRS.Data;
 using CRS.Models;
+using CRS.Models.Email;
+using CRS.Models.Emails;
+using CRS.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Coravel.Invocable;
+using Coravel.Mailer.Mail.Interfaces;
 
 namespace CRS.Jobs {
     /// <summary>
@@ -13,14 +17,18 @@ namespace CRS.Jobs {
     public class TenantLifecycleJob : IInvocable {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
         private readonly ILogger<TenantLifecycleJob> _logger;
-        // TODO: Inject IEmailService when email notification service is implemented
-        // private readonly IEmailService _emailService;
+        private readonly IMailer _mailer;
+        private readonly ITenantArchiveService _archiveService;
 
         public TenantLifecycleJob(
             IDbContextFactory<ApplicationDbContext> dbFactory,
-            ILogger<TenantLifecycleJob> logger) {
+            ILogger<TenantLifecycleJob> logger,
+            IMailer mailer,
+            ITenantArchiveService archiveService) {
             _dbFactory = dbFactory;
             _logger = logger;
+            _mailer = mailer;
+            _archiveService = archiveService;
         }
 
         /// <summary>
@@ -75,8 +83,8 @@ namespace CRS.Jobs {
                 _logger.LogInformation("Tenant {TenantId} ({Name}) entered GracePeriod. Read-only access until {EndsAt}", 
                     tenant.Id, tenant.Name, tenant.GracePeriodEndsAt);
 
-                // TODO: Send grace period notification email
-                // await _emailService.SendGracePeriodNoticeAsync(tenant);
+                // Send grace period notification email
+                await SendBillingNotificationAsync(db, tenant, BillingNotificationType.GracePeriodStarted);
             }
 
             if (tenants.Any()) {
@@ -110,8 +118,8 @@ namespace CRS.Jobs {
                 _logger.LogInformation("Tenant {TenantId} ({Name}) suspended. Data will be retained for 90 days.", 
                     tenant.Id, tenant.Name);
 
-                // TODO: Send suspension notification email
-                // await _emailService.SendSuspensionNoticeAsync(tenant);
+                // Send suspension notification email
+                await SendBillingNotificationAsync(db, tenant, BillingNotificationType.AccountSuspended);
             }
 
             if (tenants.Any()) {
@@ -149,8 +157,8 @@ namespace CRS.Jobs {
                 _logger.LogWarning("Tenant {TenantId} ({Name}) marked for deletion. Data will be permanently deleted on {DeletionDate}", 
                     tenant.Id, tenant.Name, tenant.DeletionScheduledAt);
 
-                // TODO: Send deletion warning email
-                // await _emailService.SendDeletionWarningEmailAsync(tenant);
+                // Send deletion warning email (reuses suspension template with deletion date)
+                await SendBillingNotificationAsync(db, tenant, BillingNotificationType.AccountSuspended);
             }
 
             if (tenants.Any()) {
@@ -179,8 +187,12 @@ namespace CRS.Jobs {
                 _logger.LogInformation("Tenant {TenantId} ({Name}) will be deleted in {Days} days", 
                     tenant.Id, tenant.Name, daysUntilDeletion);
 
-                // TODO: Send final deletion reminder emails (at 30, 14, 7, 3, 1 days before)
-                // await _emailService.SendFinalDeletionReminderAsync(tenant, daysUntilDeletion);
+                // Send final deletion reminder emails at specific intervals (30, 14, 7, 3, 1 days before)
+                if (daysUntilDeletion == 30 || daysUntilDeletion == 14 || daysUntilDeletion == 7 || 
+                    daysUntilDeletion == 3 || daysUntilDeletion == 1)
+                {
+                    await SendBillingNotificationAsync(db, tenant, BillingNotificationType.AccountSuspended);
+                }
             }
 
             // Permanently delete tenants whose deletion date has arrived
@@ -209,24 +221,38 @@ namespace CRS.Jobs {
                 tenant.Id, tenant.Name);
 
             try {
-                // 1. Archive financial records (legal requirement for accounting/tax purposes)
-                // TODO: Implement archival to cold storage or separate archive database
-                // await ArchiveFinancialRecordsAsync(tenant);
+                // 1. Archive financial records to cold storage (legal requirement for accounting/tax purposes)
+                var archiveResult = await _archiveService.ArchiveTenantDataAsync(
+                    tenant.Id, 
+                    tenant.DeletionReason ?? "permanent_deletion");
+
+                if (archiveResult.Success)
+                {
+                    _logger.LogInformation(
+                        "Archived tenant {TenantId} data: {Invoices} invoices, {Payments} payments, {Reports} reports",
+                        tenant.Id, archiveResult.InvoicesArchived, archiveResult.PaymentsArchived, archiveResult.ReportsArchived);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Failed to archive tenant {TenantId} data: {Error}. Proceeding with deletion anyway.",
+                        tenant.Id, archiveResult.ErrorMessage);
+                }
 
                 // 2. Delete all tenant-scoped data
                 // Note: This is a simplified version. In production, you should:
                 // - Delete in correct order to respect foreign keys
                 // - Use bulk delete operations for performance
                 // - Consider archiving instead of deleting for audit trail
-                
+
                 // Delete communities and related data
                 var communities = await db.Communities.Where(c => c.TenantId == tenant.Id).ToListAsync();
                 db.Communities.RemoveRange(communities);
-                
+
                 // Delete reserve studies
                 var studies = await db.ReserveStudies.Where(r => r.TenantId == tenant.Id).ToListAsync();
                 db.ReserveStudies.RemoveRange(studies);
-                
+
                 // Delete contacts
                 var contacts = await db.Contacts.Where(c => c.TenantId == tenant.Id).ToListAsync();
                 db.Contacts.RemoveRange(contacts);
@@ -281,6 +307,74 @@ namespace CRS.Jobs {
             };
 
             return stats;
+        }
+
+        /// <summary>
+        /// Sends a billing notification email to the tenant owner.
+        /// </summary>
+        private async Task SendBillingNotificationAsync(
+            ApplicationDbContext db,
+            Tenant tenant, 
+            BillingNotificationType notificationType)
+        {
+            try
+            {
+                // Get owner email - prefer OwnerId lookup, fallback to PendingOwnerEmail
+                string? ownerEmail = null;
+                string? ownerName = null;
+
+                if (!string.IsNullOrEmpty(tenant.OwnerId) && Guid.TryParse(tenant.OwnerId, out var ownerId))
+                {
+                    var owner = await db.Users.FirstOrDefaultAsync(u => u.Id == ownerId);
+                    if (owner != null)
+                    {
+                        ownerEmail = owner.Email;
+                        ownerName = owner.FullName;
+                    }
+                }
+
+                ownerEmail ??= tenant.PendingOwnerEmail;
+
+                if (string.IsNullOrEmpty(ownerEmail))
+                {
+                    _logger.LogWarning("Cannot send billing notification for tenant {TenantId}: no owner email found", tenant.Id);
+                    return;
+                }
+
+                // Build URLs
+                var billingPortalUrl = $"https://{tenant.Subdomain}.reservecloud.com/account/billing";
+                var dashboardUrl = $"https://{tenant.Subdomain}.reservecloud.com";
+
+                var email = new BillingNotificationEmail
+                {
+                    NotificationType = notificationType,
+                    TenantName = tenant.Name,
+                    OwnerEmail = ownerEmail,
+                    OwnerName = ownerName,
+                    PlanName = tenant.Tier?.ToString(),
+                    GracePeriodEndsAt = tenant.GracePeriodEndsAt,
+                    SuspendedAt = tenant.SuspendedAt,
+                    ReactivatedAt = tenant.LastReactivatedAt,
+                    ReactivationCount = tenant.ReactivationCount,
+                    UpdatePaymentUrl = billingPortalUrl,
+                    BillingPortalUrl = billingPortalUrl,
+                    DashboardUrl = dashboardUrl
+                };
+
+                var mailable = new BillingNotificationMailable(email);
+                await _mailer.SendAsync(mailable);
+
+                _logger.LogInformation(
+                    "Sent {NotificationType} email to {Email} for tenant {TenantId}",
+                    notificationType, ownerEmail, tenant.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, 
+                    "Failed to send {NotificationType} email for tenant {TenantId}", 
+                    notificationType, tenant.Id);
+                // Don't rethrow - notification failure shouldn't break lifecycle job
+            }
         }
     }
 

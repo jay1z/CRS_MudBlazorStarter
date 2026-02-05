@@ -1,0 +1,43 @@
+﻿@page "/newsletter-unsubscribed"
+@layout EmptyLayout
+@inject NavigationManager Nav
+
+<PageTitle>Unsubscribed - ALX Reserve Cloud</PageTitle>
+
+<div style="min-height: 100vh; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%); display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <MudPaper Elevation="3" Class="pa-8" Style="max-width: 500px; width: 100%; text-align: center; border-radius: 16px;">
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+            <MudIcon Icon="@Icons.Material.Filled.MailOutline" Style="font-size: 40px; color: white;" />
+        </div>
+        
+        <MudText Typo="Typo.h4" Class="mb-2" Style="font-weight: 700; color: #1a1a1a;">
+            You've Been Unsubscribed
+        </MudText>
+        
+        <MudText Typo="Typo.body1" Class="mb-6" Style="color: #666;">
+            We're sorry to see you go! You've been removed from our newsletter list 
+            and won't receive any more emails from us.
+        </MudText>
+        
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-6" Style="text-align: left;">
+            <MudText Typo="Typo.body2">
+                Changed your mind? You can always resubscribe from our homepage.
+            </MudText>
+        </MudAlert>
+        
+        <MudStack Spacing="3">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Warning" 
+                       Size="Size.Large" 
+                       FullWidth="true"
+                       Href="/"
+                       Style="text-transform: none; font-weight: 600;">
+                Back to Home
+            </MudButton>
+        </MudStack>
+        
+        <MudText Typo="Typo.caption" Class="mt-6" Style="color: #aaa;">
+            We appreciate you trying ALX Reserve Cloud!
+        </MudText>
+    </MudPaper>
+</div>

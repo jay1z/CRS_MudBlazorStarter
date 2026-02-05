@@ -30,6 +30,32 @@ public class ReserveStudyReportOptions
     public bool IncludeAllocation { get; set; } = true;
     public bool IncludeComponents { get; set; } = true;
     public string? LogoPath { get; set; }
+
+    /// <summary>
+    /// If true, adds a "DRAFT" watermark to all pages.
+    /// </summary>
+    public bool IsDraft { get; set; } = false;
+
+    /// <summary>
+    /// If true, generates a condensed Executive Summary format (1-2 pages).
+    /// </summary>
+    public bool IsExecutiveSummary { get; set; } = false;
+
+    /// <summary>
+    /// Maximum years to show in cash flow table. Null = show all years.
+    /// For Executive Summary, typically 5 years; for full reports, 30 years.
+    /// </summary>
+    public int? MaxYearsToShow { get; set; }
+
+    /// <summary>
+    /// If true, includes the full first-year financial breakdown table.
+    /// </summary>
+    public bool IncludeFirstYearSummary { get; set; } = true;
+
+    /// <summary>
+    /// If true, includes the fund status section (percent funded, ideal balance).
+    /// </summary>
+    public bool IncludeFundStatus { get; set; } = true;
 }
 
 /// <summary>
@@ -97,15 +123,36 @@ public class ReserveStudyPdfService : IReserveStudyPdfService
     {
         container.PaddingTop(15).Column(column =>
         {
+            // Draft watermark overlay
+            if (options.IsDraft)
+            {
+                column.Item().Text("DRAFT").FontSize(72).FontColor(Colors.Grey.Lighten2).Bold()
+                    .AlignCenter();
+            }
+
             if (options.IncludeSummary)
             {
-                column.Item().Element(c => ComposeSummary(c, result));
+                column.Item().Element(c => ComposeSummary(c, result, options));
+                column.Item().PaddingTop(20);
+            }
+
+            // Fund Status section (Current Fund Status table) for Executive Summary
+            if (options.IncludeFundStatus && options.IsExecutiveSummary)
+            {
+                column.Item().Element(c => ComposeFundStatus(c, result));
+                column.Item().PaddingTop(20);
+            }
+
+            // First Year Summary table for Executive Summary
+            if (options.IncludeFirstYearSummary && options.IsExecutiveSummary && result.Years.Count > 0)
+            {
+                column.Item().Element(c => ComposeFirstYearSummary(c, result));
                 column.Item().PaddingTop(20);
             }
 
             if (options.IncludeCashFlowTable)
             {
-                column.Item().Element(c => ComposeCashFlowTable(c, result));
+                column.Item().Element(c => ComposeCashFlowTable(c, result, options));
                 column.Item().PaddingTop(20);
             }
 
@@ -116,7 +163,7 @@ public class ReserveStudyPdfService : IReserveStudyPdfService
         });
     }
 
-    private void ComposeSummary(IContainer container, ReserveStudyResult result)
+    private void ComposeSummary(IContainer container, ReserveStudyResult result, ReserveStudyReportOptions options)
     {
         container.Column(column =>
         {
@@ -185,53 +232,135 @@ public class ReserveStudyPdfService : IReserveStudyPdfService
         });
     }
 
-    private void ComposeCashFlowTable(IContainer container, ReserveStudyResult result)
-    {
-        container.Column(column =>
+        /// <summary>
+        /// Composes the Current Fund Status section showing percent funded, ideal balance, etc.
+        /// </summary>
+        private void ComposeFundStatus(IContainer container, ReserveStudyResult result)
         {
-            column.Item().Text("30-Year Cash Flow Projection").Bold().FontSize(14).FontColor(Colors.Blue.Darken2);
-            column.Item().PaddingTop(10);
-
-            column.Item().Table(table =>
+            container.Column(column =>
             {
-                // Define columns
-                table.ColumnsDefinition(columns =>
+                column.Item().Text("Current Fund Status").Bold().FontSize(14).FontColor(Colors.Blue.Darken2);
+                column.Item().PaddingTop(10);
+
+                column.Item().Table(table =>
                 {
-                    columns.ConstantColumn(50);  // Year
-                    columns.RelativeColumn();    // Beginning
-                    columns.RelativeColumn();    // Contributions
-                    columns.RelativeColumn();    // Interest
-                    columns.RelativeColumn();    // Expenditures
-                    columns.RelativeColumn();    // Ending
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.RelativeColumn(2);  // Label
+                        columns.RelativeColumn();   // Value
+                    });
+
+                    void AddRow(string label, string value, string? bgColor = null)
+                    {
+                        var bg = bgColor ?? Colors.White;
+                        table.Cell().Background(bg).Border(1).BorderColor(Colors.Grey.Lighten2)
+                            .Padding(8).Text(label).Bold().FontSize(10).FontColor(Colors.White);
+                        table.Cell().Border(1).BorderColor(Colors.Grey.Lighten2)
+                            .Padding(8).Text(value).FontSize(10);
+                    }
+
+                    AddRow("Starting Reserve Balance", result.StartingBalance.ToString("C2"), Colors.Blue.Darken3);
+                    AddRow("Ideal (Fully Funded) Balance", result.FullyFundedBalance.ToString("C2"), Colors.Blue.Darken3);
+                    AddRow("Percent Funded", $"{result.PercentFunded:N0}%", Colors.Blue.Darken3);
+                    AddRow("Fund Status", result.IsFullyFunded ? "Fully Funded" : "Below Target", Colors.Blue.Darken3);
                 });
-
-                // Header
-                table.Header(header =>
-                {
-                    header.Cell().Background(Colors.Blue.Darken2).Padding(5).Text("Year").Bold().FontColor(Colors.White).FontSize(9);
-                    header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Beginning").Bold().FontColor(Colors.White).FontSize(9);
-                    header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Contributions").Bold().FontColor(Colors.White).FontSize(9);
-                    header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Interest").Bold().FontColor(Colors.White).FontSize(9);
-                    header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Expenditures").Bold().FontColor(Colors.White).FontSize(9);
-                    header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Ending").Bold().FontColor(Colors.White).FontSize(9);
-                });
-
-                // Data rows
-                foreach (var year in result.Years)
-                {
-                    var bgColor = year.YearIndex % 2 == 0 ? Colors.Grey.Lighten4 : Colors.White;
-                    var endingColor = year.EndingBalance >= 0 ? Colors.Black : Colors.Red.Darken2;
-
-                    table.Cell().Background(bgColor).Padding(4).Text(year.CalendarYear.ToString()).FontSize(9);
-                    table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.BeginningBalance.ToString("N0")).FontSize(9);
-                    table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.Contribution.ToString("N0")).FontSize(9).FontColor(Colors.Green.Darken2);
-                    table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.InterestEarned.ToString("N0")).FontSize(9).FontColor(Colors.Blue.Darken1);
-                    table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.Expenditures.ToString("N0")).FontSize(9).FontColor(Colors.Red.Darken1);
-                    table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.EndingBalance.ToString("N0")).Bold().FontSize(9).FontColor(endingColor);
-                }
             });
-        });
-    }
+        }
+
+        /// <summary>
+        /// Composes the First Year Summary table.
+        /// </summary>
+        private void ComposeFirstYearSummary(IContainer container, ReserveStudyResult result)
+        {
+            container.Column(column =>
+            {
+                column.Item().Text("First Year Summary").Bold().FontSize(14).FontColor(Colors.Blue.Darken2);
+                column.Item().PaddingTop(10);
+
+                var firstYear = result.Years.FirstOrDefault();
+                if (firstYear == null) return;
+
+                column.Item().Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.RelativeColumn(2);  // Label
+                        columns.RelativeColumn();   // Value
+                    });
+
+                    void AddRow(string label, string value, string? bgColor = null)
+                    {
+                        var bg = bgColor ?? Colors.White;
+                        table.Cell().Background(bg).Border(1).BorderColor(Colors.Grey.Lighten2)
+                            .Padding(8).Text(label).Bold().FontSize(10).FontColor(Colors.White);
+                        table.Cell().Border(1).BorderColor(Colors.Grey.Lighten2)
+                            .Padding(8).Text(value).FontSize(10);
+                    }
+
+                    AddRow("Beginning Balance", firstYear.BeginningBalance.ToString("C2"), Colors.Blue.Darken3);
+                    AddRow("Annual Contribution", firstYear.Contribution.ToString("C2"), Colors.Blue.Darken3);
+                    AddRow("Interest Earned", firstYear.InterestEarned.ToString("C2"), Colors.Blue.Darken3);
+                    AddRow("Projected Expenditures", firstYear.Expenditures.ToString("C2"), Colors.Blue.Darken3);
+                    AddRow("Ending Balance", firstYear.EndingBalance.ToString("C2"), Colors.Blue.Darken3);
+                });
+            });
+        }
+
+        private void ComposeCashFlowTable(IContainer container, ReserveStudyResult result, ReserveStudyReportOptions options)
+        {
+            container.Column(column =>
+            {
+                var yearsToShow = options.MaxYearsToShow.HasValue
+                    ? result.Years.Take(options.MaxYearsToShow.Value).ToList()
+                    : result.Years.ToList();
+
+                var title = options.MaxYearsToShow.HasValue
+                    ? $"{options.MaxYearsToShow.Value}-Year Cash Flow Projection"
+                    : $"{result.ProjectionYears}-Year Cash Flow Projection";
+
+                column.Item().Text(title).Bold().FontSize(14).FontColor(Colors.Blue.Darken2);
+                column.Item().PaddingTop(10);
+
+                column.Item().Table(table =>
+                {
+                    // Define columns
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.ConstantColumn(50);  // Year
+                        columns.RelativeColumn();    // Beginning
+                        columns.RelativeColumn();    // Contributions
+                        columns.RelativeColumn();    // Interest
+                        columns.RelativeColumn();    // Expenditures
+                        columns.RelativeColumn();    // Ending
+                    });
+
+                    // Header
+                    table.Header(header =>
+                    {
+                        header.Cell().Background(Colors.Blue.Darken2).Padding(5).Text("Year").Bold().FontColor(Colors.White).FontSize(9);
+                        header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Beginning").Bold().FontColor(Colors.White).FontSize(9);
+                        header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Contributions").Bold().FontColor(Colors.White).FontSize(9);
+                        header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Interest").Bold().FontColor(Colors.White).FontSize(9);
+                        header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Expenditures").Bold().FontColor(Colors.White).FontSize(9);
+                        header.Cell().Background(Colors.Blue.Darken2).Padding(5).AlignRight().Text("Ending").Bold().FontColor(Colors.White).FontSize(9);
+                    });
+
+                    // Data rows (limited by MaxYearsToShow if set)
+                    foreach (var year in yearsToShow)
+                    {
+                        var bgColor = year.YearIndex % 2 == 0 ? Colors.Grey.Lighten4 : Colors.White;
+                        var endingColor = year.EndingBalance >= 0 ? Colors.Black : Colors.Red.Darken2;
+
+                        table.Cell().Background(bgColor).Padding(4).Text(year.CalendarYear.ToString()).FontSize(9);
+                        table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.BeginningBalance.ToString("N0")).FontSize(9);
+                        table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.Contribution.ToString("N0")).FontSize(9).FontColor(Colors.Green.Darken2);
+                        table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.InterestEarned.ToString("N0")).FontSize(9).FontColor(Colors.Blue.Darken1);
+                        table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.Expenditures.ToString("N0")).FontSize(9).FontColor(Colors.Red.Darken1);
+                        table.Cell().Background(bgColor).Padding(4).AlignRight().Text(year.EndingBalance.ToString("N0")).Bold().FontSize(9).FontColor(endingColor);
+                    }
+                });
+            });
+        }
 
     private void ComposeAllocation(IContainer container, ReserveStudyResult result)
     {

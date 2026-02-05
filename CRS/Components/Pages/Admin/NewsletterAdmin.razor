@@ -1,0 +1,416 @@
+﻿@page "/admin/newsletter"
+@using CRS.Models
+@using CRS.Services.Interfaces
+@attribute [Authorize(Policy = "RequireSuperAdmin")]
+
+@inject INewsletterService NewsletterService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Newsletter Management - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <div>
+                <MudText Typo="Typo.h4" Style="font-weight: 700;">Newsletter Management</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Create and send newsletters to your subscribers</MudText>
+            </div>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenCreateDialog">
+                New Campaign
+            </MudButton>
+        </MudStack>
+
+        <!-- Stats Cards -->
+        @if (stats != null)
+        {
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.caption" Style="color: #666;">Total Subscribers</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 700; color: #1976d2;">@stats.TotalSubscribers</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.caption" Style="color: #666;">Confirmed</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 700; color: #388e3c;">@stats.ConfirmedSubscribers</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.caption" Style="color: #666;">Pending Confirmation</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 700; color: #f57c00;">@stats.UnconfirmedSubscribers</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-4" Elevation="2">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.caption" Style="color: #666;">New (30 days)</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 700; color: #7b1fa2;">@stats.Last30DaysNew</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        }
+
+        <!-- Campaigns List -->
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-4">Campaigns</MudText>
+            
+            @if (isLoading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+            else if (!campaigns.Any())
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Campaign" Style="font-size: 48px; color: #999;" />
+                        <MudText>No campaigns yet. Create your first newsletter campaign!</MudText>
+                    </MudStack>
+                </MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@campaigns" Hover="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Subject</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Sent</MudTh>
+                        <MudTh>Created</MudTh>
+                        <MudTh Style="width: 150px;">Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Name">
+                            <MudText Typo="Typo.body2" Style="font-weight: 600;">@context.Name</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Subject">@context.Subject</MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" 
+                                     Color="@GetStatusColor(context.Status)" 
+                                     Size="Size.Small"
+                                     Variant="Variant.Filled">
+                                @context.Status
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Sent">
+                            @if (context.Status == CampaignStatus.Sent)
+                            {
+                                <MudText Typo="Typo.body2">@context.SentCount / @context.TargetCount</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Style="color: #999;">-</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Created">
+                            <MudText Typo="Typo.body2">@context.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudStack Row="true" Spacing="1">
+                                @if (context.Status == CampaignStatus.Draft)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Size="Size.Small"
+                                                   Color="Color.Default"
+                                                   OnClick="@(() => OpenEditDialog(context))"
+                                                   Title="Edit" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Send"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="@(() => SendCampaign(context))"
+                                                   Title="Send Now" />
+                                }
+                                <MudIconButton Icon="@Icons.Material.Filled.Preview"
+                                               Size="Size.Small"
+                                               Color="Color.Info"
+                                               OnClick="@(() => PreviewCampaign(context))"
+                                               Title="Preview" />
+                                @if (context.Status == CampaignStatus.Draft || context.Status == CampaignStatus.Scheduled)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => DeleteCampaign(context))"
+                                                   Title="Delete" />
+                                }
+                            </MudStack>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+<!-- Create/Edit Campaign Dialog -->
+<MudDialog @bind-Visible="showCampaignDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Campaign" Class="mr-2" />
+            @(editingCampaign == null ? "Create Campaign" : "Edit Campaign")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="campaignName"
+                          Label="Campaign Name"
+                          Placeholder="e.g., March 2025 Newsletter"
+                          Variant="Variant.Outlined"
+                          Required="true" />
+
+            <MudTextField @bind-Value="campaignSubject"
+                          Label="Email Subject"
+                          Placeholder="e.g., Industry Updates & New Features"
+                          Variant="Variant.Outlined"
+                          Required="true" />
+
+            <MudTextField @bind-Value="campaignPreview"
+                          Label="Preview Text"
+                          Placeholder="Brief text shown in email client preview..."
+                          Variant="Variant.Outlined"
+                          HelperText="This text appears in email client previews" />
+
+            <MudTextField @bind-Value="campaignContent"
+                          Label="Email Content (HTML)"
+                          Placeholder="<p>Hello {{subscriber_name}},</p><p>Your newsletter content here...</p>"
+                          Variant="Variant.Outlined"
+                          Lines="12"
+                          Required="true" />
+
+            <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Text">
+                <MudText Typo="Typo.caption">
+                    <strong>Available placeholders:</strong> 
+                    <code>{{subscriber_name}}</code>, 
+                    <code>{{subscriber_email}}</code>, 
+                    <code>{{unsubscribe_url}}</code>
+                </MudText>
+            </MudAlert>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCampaignDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="SaveCampaign"
+                   Disabled="@(string.IsNullOrWhiteSpace(campaignName) || string.IsNullOrWhiteSpace(campaignSubject) || string.IsNullOrWhiteSpace(campaignContent))">
+            @(editingCampaign == null ? "Create" : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Preview Dialog -->
+<MudDialog @bind-Visible="showPreviewDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Preview" Class="mr-2" />
+            Campaign Preview
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudPaper Elevation="0" Style="background: #f5f5f5; padding: 16px; border-radius: 8px;">
+            @((MarkupString)previewHtml)
+        </MudPaper>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => showPreviewDialog = false)">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<NewsletterCampaign> campaigns = [];
+    private NewsletterStats? stats;
+    private bool isLoading = true;
+    
+    // Dialog state
+    private bool showCampaignDialog = false;
+    private bool showPreviewDialog = false;
+    private NewsletterCampaign? editingCampaign;
+    
+    // Form fields
+    private string campaignName = "";
+    private string campaignSubject = "";
+    private string campaignPreview = "";
+    private string campaignContent = "";
+    private string previewHtml = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            campaigns = await NewsletterService.GetCampaignsAsync();
+            stats = await NewsletterService.GetStatsAsync();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        editingCampaign = null;
+        campaignName = "";
+        campaignSubject = "";
+        campaignPreview = "";
+        campaignContent = GetDefaultTemplate();
+        showCampaignDialog = true;
+    }
+
+    private void OpenEditDialog(NewsletterCampaign campaign)
+    {
+        editingCampaign = campaign;
+        campaignName = campaign.Name;
+        campaignSubject = campaign.Subject;
+        campaignPreview = campaign.PreviewText ?? "";
+        campaignContent = campaign.HtmlContent;
+        showCampaignDialog = true;
+    }
+
+    private void CloseCampaignDialog()
+    {
+        showCampaignDialog = false;
+        editingCampaign = null;
+    }
+
+    private async Task SaveCampaign()
+    {
+        try
+        {
+            if (editingCampaign == null)
+            {
+                await NewsletterService.CreateCampaignAsync(
+                    campaignName,
+                    campaignSubject,
+                    campaignContent,
+                    string.IsNullOrWhiteSpace(campaignPreview) ? null : campaignPreview);
+                Snackbar.Add("Campaign created successfully", Severity.Success);
+            }
+            else
+            {
+                await NewsletterService.UpdateCampaignAsync(
+                    editingCampaign.Id,
+                    campaignName,
+                    campaignSubject,
+                    campaignContent,
+                    string.IsNullOrWhiteSpace(campaignPreview) ? null : campaignPreview);
+                Snackbar.Add("Campaign updated successfully", Severity.Success);
+            }
+
+            CloseCampaignDialog();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SendCampaign(NewsletterCampaign campaign)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Send Campaign",
+            $"Are you sure you want to send \"{campaign.Name}\" to all {stats?.ConfirmedSubscribers ?? 0} confirmed subscribers? This action cannot be undone.",
+            yesText: "Send Now",
+            cancelText: "Cancel");
+
+        if (confirm != true) return;
+
+        try
+        {
+            Snackbar.Add("Sending campaign...", Severity.Info);
+            var result = await NewsletterService.SendCampaignAsync(campaign.Id);
+
+            if (result.Success)
+            {
+                Snackbar.Add($"Campaign sent successfully! {result.SentCount}/{result.TargetCount} emails delivered.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Campaign failed: {result.ErrorMessage}", Severity.Error);
+            }
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error sending campaign: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task PreviewCampaign(NewsletterCampaign campaign)
+    {
+        previewHtml = await NewsletterService.GetCampaignPreviewAsync(campaign.Id);
+        showPreviewDialog = true;
+    }
+
+    private async Task DeleteCampaign(NewsletterCampaign campaign)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Campaign",
+            $"Are you sure you want to delete \"{campaign.Name}\"?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm != true) return;
+
+        try
+        {
+            await NewsletterService.DeleteCampaignAsync(campaign.Id);
+            Snackbar.Add("Campaign deleted", Severity.Success);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static Color GetStatusColor(CampaignStatus status) => status switch
+    {
+        CampaignStatus.Draft => Color.Default,
+        CampaignStatus.Scheduled => Color.Info,
+        CampaignStatus.Sending => Color.Warning,
+        CampaignStatus.Sent => Color.Success,
+        CampaignStatus.Failed => Color.Error,
+        CampaignStatus.Cancelled => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private static string GetDefaultTemplate() => """
+        <p>Hi {{subscriber_name}},</p>
+        
+        <p>Welcome to our latest newsletter! Here's what's new:</p>
+        
+        <h3>📊 Industry Insights</h3>
+        <p>Your content here...</p>
+        
+        <h3>🚀 New Features</h3>
+        <p>Your content here...</p>
+        
+        <h3>💡 Tips & Best Practices</h3>
+        <p>Your content here...</p>
+        
+        <p>Thanks for being part of our community!</p>
+        
+        <p>Best regards,<br>The ALX Reserve Cloud Team</p>
+        """;
+}

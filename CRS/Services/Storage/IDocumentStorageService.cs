@@ -55,6 +55,11 @@ public interface IDocumentStorageService
         CancellationToken ct = default);
 
     /// <summary>
+    /// Downloads a document from storage.
+    /// </summary>
+    Task<byte[]> DownloadAsync(string storageUrl, CancellationToken ct = default);
+
+    /// <summary>
     /// Deletes a document from storage.
     /// </summary>
     Task<bool> DeleteAsync(string storageUrl, CancellationToken ct = default);

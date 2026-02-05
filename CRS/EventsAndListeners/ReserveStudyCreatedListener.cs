@@ -63,9 +63,9 @@ namespace CRS.EventsAndListeners {
                 emailRecipients.Add(reserveStudy.PointOfContact.Email);
             }
             
-            // Fallback if no recipients
-            if (emailRecipients.Count == 0) {
-                emailRecipients.Add("emailme@jasonzurowski.com"); // TODO: Configure default admin email
+            // Fallback to tenant's default notification email
+            if (emailRecipients.Count == 0 && !string.IsNullOrEmpty(reserveStudyEmail.TenantInfo?.DefaultNotificationEmail)) {
+                emailRecipients.Add(reserveStudyEmail.TenantInfo.DefaultNotificationEmail);
             }
 
             await _mailer.SendAsync(

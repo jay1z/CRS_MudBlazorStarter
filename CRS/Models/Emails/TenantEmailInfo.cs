@@ -61,6 +61,12 @@ public class TenantEmailInfo {
     public string? Subdomain { get; set; }
 
     /// <summary>
+    /// Default email address for system notifications when no specific recipient is available.
+    /// Used as a fallback when a reserve study has no assigned specialist or contact.
+    /// </summary>
+    public string? DefaultNotificationEmail { get; set; }
+
+    /// <summary>
     /// Whether this tenant has valid branding configured
     /// </summary>
     public bool HasBranding => !string.IsNullOrWhiteSpace(CompanyName) || !string.IsNullOrWhiteSpace(FromEmail);

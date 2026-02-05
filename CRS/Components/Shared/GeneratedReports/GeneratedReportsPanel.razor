@@ -6,12 +6,16 @@
 
 @inject IGeneratedReportService ReportService
 @inject IReportGenerationService GenerationService
+@inject IReportZipService ZipService
 @inject IDocumentStorageService DocumentStorage
 @inject INarrativeStateService NarrativeStateService
+@inject INarrativeService NarrativeService
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject IServiceProvider Services
 
 <MudPaper Elevation="0" Class="pa-4">
     <MudStack Spacing="3">
@@ -24,13 +28,28 @@
             <AuthorizeView Policy="RequireTenantStaff">
                 <Authorized>
                     <MudStack Row="true" Spacing="2">
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Default"
-                                   Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Preview"
-                                   OnClick="OpenPreviewDialog">
-                            Preview Narrative
-                        </MudButton>
+                        @if (hasNarrative)
+                        {
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Preview"
+                                       OnClick="OpenPreviewDialog">
+                                Preview Narrative
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudTooltip Text="No narrative has been created yet. Go to the Narrative tab to create one.">
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Default"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Preview"
+                                           Disabled="true">
+                                    Preview Narrative
+                                </MudButton>
+                            </MudTooltip>
+                        }
                         @if (canGenerateReports)
                         {
                                                 <MudButton Variant="Variant.Filled" 
@@ -248,39 +267,61 @@
         <!-- Stats Row -->
         @if (reports.Any())
         {
-            <MudStack Row="true" Spacing="3" Style="flex-wrap: wrap;">
-                <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">
-                    @reports.Count Total
-                </MudChip>
-                <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">
-                    @reports.Count(r => r.Status == ReportStatus.Published) Published
-                </MudChip>
-                @{
-                    var pendingReviewCount = reports.Count(r => r.Status == ReportStatus.PendingReview);
-                }
-                @if (pendingReviewCount > 0)
-                {
-                    <AuthorizeView Policy="RequireTenantOwner">
-                        <Authorized>
-                            <MudChip T="string" Color="Color.Info" Variant="Variant.Filled">
-                                <MudIcon Icon="@Icons.Material.Filled.RateReview" Size="Size.Small" Class="mr-1" />
-                                @pendingReviewCount Pending Review
-                            </MudChip>
-                        </Authorized>
-                    </AuthorizeView>
-                }
-                <MudChip T="string" Color="Color.Warning" Variant="Variant.Outlined">
-                    @reports.Count(r => r.Status == ReportStatus.Draft) Drafts
-                </MudChip>
-                @{
-                    // Only count reports needing revision that don't have a newer version
-                    var revisionCount = reports.Count(r => r.Status == ReportStatus.RevisionRequired && !HasNewerReportVersion(r));
-                }
-                @if (revisionCount > 0)
-                {
-                    <MudChip T="string" Color="Color.Error" Variant="Variant.Outlined">
-                        @revisionCount Needs Revision
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="flex-wrap: wrap;">
+                <MudStack Row="true" Spacing="3" Style="flex-wrap: wrap;">
+                    <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">
+                        @reports.Count Total
                     </MudChip>
+                    <MudChip T="string" Color="Color.Success" Variant="Variant.Outlined">
+                        @reports.Count(r => r.Status == ReportStatus.Published) Published
+                    </MudChip>
+                    @{
+                        var pendingReviewCount = reports.Count(r => r.Status == ReportStatus.PendingReview);
+                    }
+                    @if (pendingReviewCount > 0)
+                    {
+                        <AuthorizeView Policy="RequireTenantOwner">
+                            <Authorized>
+                                <MudChip T="string" Color="Color.Info" Variant="Variant.Filled">
+                                    <MudIcon Icon="@Icons.Material.Filled.RateReview" Size="Size.Small" Class="mr-1" />
+                                    @pendingReviewCount Pending Review
+                                </MudChip>
+                            </Authorized>
+                        </AuthorizeView>
+                    }
+                    <MudChip T="string" Color="Color.Warning" Variant="Variant.Outlined">
+                        @reports.Count(r => r.Status == ReportStatus.Draft) Drafts
+                    </MudChip>
+                    @{
+                        // Only count reports needing revision that don't have a newer version
+                        var revisionCount = reports.Count(r => r.Status == ReportStatus.RevisionRequired && !HasNewerReportVersion(r));
+                    }
+                    @if (revisionCount > 0)
+                    {
+                        <MudChip T="string" Color="Color.Error" Variant="Variant.Outlined">
+                            @revisionCount Needs Revision
+                        </MudChip>
+                    }
+                </MudStack>
+
+                @if (reports.Count > 1)
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.FolderZip"
+                               OnClick="DownloadAllAsZip"
+                               Disabled="@isDownloadingZip">
+                        @if (isDownloadingZip)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Creating ZIP...</span>
+                        }
+                        else
+                        {
+                            <span>Download All (ZIP)</span>
+                        }
+                    </MudButton>
                 }
             </MudStack>
         }
@@ -566,18 +607,29 @@
 
             @if (newReportType == ReportType.FullReport)
             {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                    <MudText Typo="Typo.body2">
-                        <strong>Full Narrative Report</strong> generates a complete PDF document using your narrative templates including cover page, executive summary, narrative sections, photos, charts, and appendices.
-                    </MudText>
-                </MudAlert>
+                @if (!hasNarrative)
+                {
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                        <MudText Typo="Typo.body2">
+                            <strong>No narrative created.</strong> You must create and save a narrative in the Narrative tab before generating a Full Narrative Report.
+                        </MudText>
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                        <MudText Typo="Typo.body2">
+                            <strong>Full Narrative Report</strong> generates a complete PDF document using your narrative templates including cover page, executive summary, narrative sections, photos, charts, and appendices.
+                        </MudText>
+                    </MudAlert>
 
-                <MudText Typo="Typo.subtitle2">Include Sections</MudText>
-                <MudStack Row="true" Spacing="4">
-                    <MudCheckBox T="bool" @bind-Value="includePhotos" Label="Photos" Color="Color.Primary" />
-                    <MudCheckBox T="bool" @bind-Value="includeCharts" Label="Charts" Color="Color.Primary" />
-                    <MudCheckBox T="bool" @bind-Value="includeTables" Label="Tables" Color="Color.Primary" />
-                </MudStack>
+                    <MudText Typo="Typo.subtitle2">Include Sections</MudText>
+                    <MudStack Row="true" Spacing="4">
+                        <MudCheckBox T="bool" @bind-Value="includePhotos" Label="Photos" Color="Color.Primary" />
+                        <MudCheckBox T="bool" @bind-Value="includeCharts" Label="Charts" Color="Color.Primary" />
+                        <MudCheckBox T="bool" @bind-Value="includeTables" Label="Tables" Color="Color.Primary" />
+                    </MudStack>
+                }
             }
             else
             {
@@ -619,7 +671,7 @@
         <MudButton Variant="Variant.Filled" 
                    Color="Color.Primary" 
                    OnClick="GenerateReport"
-                   Disabled="@(newReportType != ReportType.FullReport && !generatePdf && !generateExcel)">
+                   Disabled="@(IsGenerateButtonDisabled())">
             <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Class="mr-1" />
             Generate
         </MudButton>
@@ -634,6 +686,7 @@
     private bool isLoading = true;
     private bool isGenerating = false;
     private bool canGenerateReports = false;
+    private bool hasNarrative = false;
     private string workflowGateMessage = "Checking workflow status...";
     private StudyDataValidationResult? validationResult;
 
@@ -642,6 +695,9 @@
     private bool showElementData = false;
     private bool showServiceContacts = false;
 
+    // ZIP download state
+    private bool isDownloadingZip = false;
+
     // Dialog state
     private bool showGenerateDialog = false;
     private ReportType newReportType = ReportType.FundingPlan;
@@ -649,6 +705,7 @@
     private bool generatePdf = true;
     private bool generateExcel = true;
     private bool showAllElementData = false;
+    private Guid? revisingReportId = null; // Track which report is being revised
 
     // Narrative report options
     private bool includePhotos = true;
@@ -659,6 +716,7 @@
     {
         await LoadReports();
         await CheckWorkflowGate();
+        await CheckNarrativeExistsAsync();
     }
 
     private async Task CheckWorkflowGate()
@@ -690,6 +748,39 @@
         }
     }
 
+    private async Task CheckNarrativeExistsAsync()
+    {
+        try
+        {
+            var narrative = await NarrativeService.GetByStudyIdAsync(ReserveStudyId);
+            hasNarrative = narrative != null;
+
+            // If narrative exists and is in a non-editable state (Approved, Published, etc.),
+            // clear any stale dirty state that may have persisted incorrectly
+            if (narrative != null && !IsNarrativeEditable(narrative.Status))
+            {
+                if (NarrativeStateService.HasUnsavedChangesForStudy(ReserveStudyId))
+                {
+                    NarrativeStateService.MarkClean();
+                }
+            }
+        }
+        catch
+        {
+            hasNarrative = false;
+        }
+    }
+
+    /// <summary>
+    /// Checks if a narrative with the given status can be edited.
+    /// </summary>
+    private static bool IsNarrativeEditable(NarrativeStatus status)
+    {
+        return status == NarrativeStatus.Draft || 
+               status == NarrativeStatus.InProgress || 
+               status == NarrativeStatus.RevisionRequired;
+    }
+
     private async Task LoadReports()
     {
         try
@@ -708,6 +799,18 @@
         }
     }
 
+    private bool IsGenerateButtonDisabled()
+    {
+        // Full Narrative Report requires a saved narrative
+        if (newReportType == ReportType.FullReport)
+        {
+            return !hasNarrative;
+        }
+
+        // Other report types require at least one output format
+        return !generatePdf && !generateExcel;
+    }
+
     private void OpenGenerateDialog()
     {
         newReportType = ReportType.FundingPlan;
@@ -717,6 +820,7 @@
         includePhotos = true;
         includeCharts = true;
         includeTables = true;
+        revisingReportId = null; // Clear any previous revision tracking
         showGenerateDialog = true;
     }
 
@@ -756,6 +860,7 @@
     private void CloseGenerateDialog()
     {
         showGenerateDialog = false;
+        revisingReportId = null; // Clear the revision tracking
     }
 
     private async Task GenerateReport()
@@ -810,7 +915,8 @@
                     ReportType = newReportType,
                     Notes = newReportNotes,
                     GeneratePdf = generatePdf,
-                    GenerateExcel = generateExcel
+                    GenerateExcel = generateExcel,
+                    SupersedesReportId = revisingReportId // Link to report being revised
                 };
 
                 result = await GenerationService.GenerateReportAsync(ReserveStudyId, userId, options);
@@ -912,7 +1018,7 @@
         }
     }
 
-    private async Task ReviseReport(GeneratedReport report)
+    private Task ReviseReport(GeneratedReport report)
     {
         // Open the generate dialog pre-filled with the same report type
         // The specialist can adjust parameters and regenerate
@@ -920,10 +1026,10 @@
         newReportNotes = $"Revision of report v{report.Version}. Original notes: {report.InternalNotes}";
         generatePdf = true;
         generateExcel = true;
+        revisingReportId = report.Id; // Track which report is being revised
         showGenerateDialog = true;
 
-        // The new report will supersede this one when generated
-        // TODO: Consider adding SupersedesReportId tracking when generating
+        return Task.CompletedTask;
     }
 
     private async Task PublishReport(GeneratedReport report)
@@ -945,8 +1051,125 @@
 
     private async Task SendToClient(GeneratedReport report)
     {
-        // TODO: Open email dialog to send report to client
-        Snackbar.Add("Email functionality coming soon", Severity.Info);
+        // Get report details for the dialog
+        var study = await GetStudyDetailsAsync();
+        var communityName = study?.Community?.Name;
+        var defaultEmail = study?.Contact?.Email;
+
+        var parameters = new DialogParameters
+        {
+            ["ReserveStudyId"] = ReserveStudyId,
+            ["ReportTitle"] = GetReportTypeDisplayName(report.Type),
+            ["ReportVersion"] = report.Version,
+            ["CommunityName"] = communityName,
+            ["DefaultRecipientEmail"] = defaultEmail,
+            ["FileSizeBytes"] = report.FileSizeBytes
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialog = await DialogService.ShowAsync<SendReportToClientDialog>("Send Report", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is SendReportToClientDialog.SendReportResult sendResult)
+        {
+            try
+            {
+                await UserState.InitializeAsync();
+                var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+                var baseUrl = NavigationManager.BaseUri;
+
+                var success = await ReportService.SendToClientAsync(
+                    report.Id,
+                    sendResult.RecipientEmail,
+                    sendResult.Subject,
+                    sendResult.PersonalMessage,
+                    sendResult.CcEmail,
+                    sendResult.IncludeDownloadLink,
+                    sendResult.AttachReport,
+                    userId,
+                    baseUrl);
+
+                if (success)
+                {
+                    report.SentToClientAt = DateTime.UtcNow;
+                    report.SentToEmail = sendResult.RecipientEmail;
+                    Snackbar.Add($"Report sent to {sendResult.RecipientEmail}", Severity.Success);
+                    StateHasChanged();
+                }
+                else
+                {
+                    Snackbar.Add("Failed to send report. Please try again.", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error sending report: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task<ReserveStudy?> GetStudyDetailsAsync()
+    {
+        try
+        {
+            await using var scope = Services.CreateAsyncScope();
+            var studyService = scope.ServiceProvider.GetRequiredService<IReserveStudyService>();
+            return await studyService.GetReserveStudyByIdAsync(ReserveStudyId);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task DownloadAllAsZip()
+    {
+        if (reports.Count < 2)
+        {
+            Snackbar.Add("Select at least 2 reports to create a ZIP file", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            isDownloadingZip = true;
+            StateHasChanged();
+
+            // Get all non-superseded report IDs
+            var reportIds = reports
+                .Where(r => r.Status != ReportStatus.Superseded && !string.IsNullOrEmpty(r.StorageUrl))
+                .Select(r => r.Id)
+                .ToList();
+
+            if (reportIds.Count == 0)
+            {
+                Snackbar.Add("No downloadable reports found", Severity.Warning);
+                return;
+            }
+
+            var result = await ZipService.CreateZipAsync(reportIds);
+
+            // Trigger browser download via JS interop
+            var base64 = Convert.ToBase64String(result.ZipBytes);
+            await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", result.FileName, base64, "application/zip");
+
+            Snackbar.Add($"Downloaded {result.ReportCount} reports as ZIP", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating ZIP: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isDownloadingZip = false;
+            StateHasChanged();
+        }
     }
 
     private void DownloadReport(GeneratedReport report)

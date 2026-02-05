@@ -52,10 +52,21 @@ namespace CRS.Models {
         // Demo Mode: Mark demo tenants and track soft delete
         public bool IsDemo { get; set; } = false;
         public DateTime? DateDeleted { get; set; }
-        
+
         // Owner reference for demo cleanup
         public string? OwnerId { get; set; }
-        
+
+        // ═══════════════════════════════════════════════════════════════
+        // NOTIFICATION SETTINGS
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Default email address for system notifications when no specific recipient is available.
+        /// Used as a fallback when a reserve study has no assigned specialist or contact.
+        /// </summary>
+        [MaxLength(256)]
+        public string? DefaultNotificationEmail { get; set; }
+
         // Workflow Settings: Auto-accept new reserve study requests
         /// <summary>
         /// When enabled, new reserve study requests from HOA users are automatically approved

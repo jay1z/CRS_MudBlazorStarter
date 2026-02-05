@@ -216,6 +216,15 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // System-wide settings
     builder.Services.AddScoped<CRS.Services.Interfaces.ISystemSettingsService, CRS.Services.SystemSettingsService>();
 
+    // Newsletter/Marketing Services
+    builder.Services.AddScoped<CRS.Services.Interfaces.INewsletterService, CRS.Services.NewsletterService>();
+
+    // Report ZIP Service
+    builder.Services.AddScoped<CRS.Services.Interfaces.IReportZipService, CRS.Services.ReportZipService>();
+
+    // Tenant Archive Service (for cold storage before deletion)
+    builder.Services.AddScoped<CRS.Services.Interfaces.ITenantArchiveService, CRS.Services.TenantArchiveService>();
+
     // License validation service (required by Login.razor)
     builder.Services.AddScoped<ILicenseValidationService, LicenseValidationService>();
 

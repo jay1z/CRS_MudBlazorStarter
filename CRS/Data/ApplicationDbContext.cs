@@ -1037,6 +1037,10 @@ namespace CRS.Data {
         public DbSet<PaymentRecord> PaymentRecords { get; set; }
         public DbSet<CreditMemo> CreditMemos { get; set; }
         public DbSet<TenantInvoiceSettings> TenantInvoiceSettings { get; set; }
+
+        // Marketing
+        public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
+        public DbSet<NewsletterCampaign> NewsletterCampaigns { get; set; }
         #endregion
 
         #region Seed Data

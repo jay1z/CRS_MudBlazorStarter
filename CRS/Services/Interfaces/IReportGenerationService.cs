@@ -135,6 +135,12 @@ public class ReportGenerationOptions
     /// Scenario ID to use for calculation. If null, uses study data directly.
     /// </summary>
     public int? ScenarioId { get; set; }
+
+    /// <summary>
+    /// ID of the report being revised/superseded. When set, the new report will
+    /// be linked to the old report and the old report will be marked as Superseded.
+    /// </summary>
+    public Guid? SupersedesReportId { get; set; }
 }
 
 /// <summary>

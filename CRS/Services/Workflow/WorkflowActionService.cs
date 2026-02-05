@@ -433,19 +433,28 @@ public class WorkflowActionService : IWorkflowActionService
                  "Financial information must be reviewed."),
                  
             StageValidation.SiteVisitDateSelected => 
-                (true, null), // TODO: Implement site visit date check
-                 
+                (study.SiteVisitDate != null, 
+                 "Site visit date must be scheduled."),
+
             StageValidation.SiteVisitPhotosUploaded => 
-                (true, null), // TODO: Implement photo check
-                
+                (await db.SiteVisitPhotos.AnyAsync(p => p.ReserveStudyId == study.Id && p.DateDeleted == null), 
+                 "At least one site visit photo must be uploaded."),
+
             StageValidation.SiteVisitDataComplete => 
-                (true, null), // TODO: Implement data completeness check
-                
+                await ValidateSiteVisitDataAsync(db, study),
+
             StageValidation.FundingPlanCreated => 
-                (true, null), // TODO: Implement funding plan check
-                
+                (await db.GeneratedReports.AnyAsync(r => r.ReserveStudyId == study.Id && 
+                                                         r.Type == ReportType.FundingPlan && 
+                                                         r.DateDeleted == null), 
+                 "A funding plan report must be generated."),
+
             StageValidation.FundingPlanComplete => 
-                (true, null), // TODO: Implement funding plan completion check
+                (await db.GeneratedReports.AnyAsync(r => r.ReserveStudyId == study.Id && 
+                                                         r.Type == ReportType.FundingPlan && 
+                                                         r.DateDeleted == null &&
+                                                         (r.Status == ReportStatus.Approved || r.Status == ReportStatus.Published)), 
+                 "A funding plan report must be approved or published."),
                 
             StageValidation.NarrativeCreated => 
                 (await db.Narratives.AnyAsync(n => n.ReserveStudyId == study.Id && n.DateDeleted == null), 
@@ -498,6 +507,36 @@ public class WorkflowActionService : IWorkflowActionService
             }
         }
         
+        return (true, null);
+    }
+
+    private async Task<(bool IsValid, string? Error)> ValidateSiteVisitDataAsync(ApplicationDbContext db, ReserveStudy study)
+    {
+        // Check if site visit date is set
+        if (study.SiteVisitDate == null)
+        {
+            return (false, "Site visit date must be scheduled.");
+        }
+
+        // Check if site visit has been completed (date is in the past)
+        if (study.SiteVisitDate > DateTime.UtcNow.Date)
+        {
+            return (false, "Site visit date has not yet passed. Please complete the site visit first.");
+        }
+
+        // Check if at least one element exists with data
+        var hasElements = await db.ReserveStudyBuildingElements
+            .AnyAsync(e => e.ReserveStudyId == study.Id && e.DateDeleted == null) ||
+            await db.ReserveStudyCommonElements
+            .AnyAsync(e => e.ReserveStudyId == study.Id && e.DateDeleted == null) ||
+            await db.ReserveStudyAdditionalElements
+            .AnyAsync(e => e.ReserveStudyId == study.Id && e.DateDeleted == null);
+
+        if (!hasElements)
+        {
+            return (false, "At least one building, common, or additional element must be added before proceeding.");
+        }
+
         return (true, null);
     }
 

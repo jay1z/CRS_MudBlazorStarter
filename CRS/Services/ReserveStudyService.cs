@@ -767,7 +767,8 @@ namespace CRS.Services {
 
             var tenantInfo = new TenantEmailInfo {
                 CompanyName = tenant.Name,
-                Subdomain = tenant.Subdomain
+                Subdomain = tenant.Subdomain,
+                DefaultNotificationEmail = tenant.DefaultNotificationEmail
             };
 
             // Parse branding JSON to extract company contact info

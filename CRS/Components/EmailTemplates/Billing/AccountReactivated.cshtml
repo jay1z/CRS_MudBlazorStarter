@@ -1,0 +1,127 @@
+﻿@using CRS.Models.Emails
+@model BillingNotificationEmail
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Account Reactivated - @Model.TenantName</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%;">
+                    
+                    <!-- Logo -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 24px 40px; border-radius: 16px 16px 0 0; border: 1px solid #e5e7eb; border-bottom: none; text-align: center;">
+                            <h2 style="margin: 0; color: #FF8C00; font-size: 24px; font-weight: 700;">ALX Reserve Cloud</h2>
+                        </td>
+                    </tr>
+                    
+                    <!-- Header with Success Color -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 40px; text-align: center;">
+                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; line-height: 64px;">
+                                <span style="font-size: 32px;">🎉</span>
+                            </div>
+                            <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 28px; font-weight: 700;">Welcome Back!</h1>
+                            <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 16px;">Your account has been reactivated</p>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 32px 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            
+                            <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Hi@(string.IsNullOrEmpty(Model.OwnerName) ? "" : $" {Model.OwnerName}"),
+                            </p>
+                            
+                            <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Great news! Your payment has been processed successfully and your <strong>@Model.TenantName</strong> account 
+                                is now fully active again. All your data, reserve studies, and reports are exactly as you left them.
+                            </p>
+
+                            <!-- Success Box -->
+                            <div style="background-color: #ecfdf5; border: 1px solid #16a34a; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td style="vertical-align: top; padding-right: 12px;">
+                                            <span style="font-size: 24px;">✅</span>
+                                        </td>
+                                        <td>
+                                            <p style="margin: 0 0 8px 0; color: #065f46; font-size: 16px; font-weight: 600;">
+                                                Account fully restored
+                                            </p>
+                                            <p style="margin: 0; color: #065f46; font-size: 14px; line-height: 1.5;">
+                                                Your subscription is active and all features are available. Your team members can log in immediately.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- What's Restored -->
+                            <h3 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600;">Everything is back to normal:</h3>
+                            <ul style="margin: 0 0 24px 0; padding-left: 20px; color: #4b5563; font-size: 15px; line-height: 1.8;">
+                                <li>✓ Full dashboard access restored</li>
+                                <li>✓ All reserve studies and reports available</li>
+                                <li>✓ Client portals are back online</li>
+                                <li>✓ Team member access enabled</li>
+                                <li>✓ Scheduled reports and reminders resumed</li>
+                            </ul>
+
+                            <!-- CTA Button -->
+                            @if (!string.IsNullOrEmpty(Model.DashboardUrl))
+                            {
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td align="center" style="padding: 8px 0 24px 0;">
+                                            <a href="@Model.DashboardUrl" style="display: inline-block; background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(255, 140, 0, 0.4);">
+                                                Go to Dashboard
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            }
+
+                            <!-- Prevent Future Issues -->
+                            <div style="background-color: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                                <p style="margin: 0 0 8px 0; color: #374151; font-size: 14px; font-weight: 600;">💡 Tip: Prevent future interruptions</p>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                                    Consider adding a backup payment method or updating your card details before expiration to ensure uninterrupted service.
+                                    @if (!string.IsNullOrEmpty(Model.BillingPortalUrl))
+                                    {
+                                        <a href="@Model.BillingPortalUrl" style="color: #FF8C00;">Manage billing settings →</a>
+                                    }
+                                </p>
+                            </div>
+
+                            <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                Thank you for being a valued customer. If you have any questions, we're here to help at 
+                                <a href="mailto:@Model.SupportEmail" style="color: #FF8C00;">@Model.SupportEmail</a>.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 24px 40px; border-radius: 0 0 16px 16px; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
+                            <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">
+                                <strong>ALX Reserve Cloud</strong>
+                            </p>
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                                This is an automated billing notification.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

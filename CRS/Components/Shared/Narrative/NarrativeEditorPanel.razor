@@ -14,6 +14,7 @@
 @inject ITenantContext TenantContext
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <MudPaper Elevation="0" Class="pa-4">
     <MudStack Spacing="3">
@@ -239,7 +240,7 @@
                                               Placeholder="@sect.Placeholder"
                                               Immediate="false"
                                               DebounceInterval="500"
-                                              TextChanged="@(() => NarrativeStateService.MarkDirty())"
+                                              TextChanged="@(() => OnTextChanged(sect))"
                                               OnBlur="@(() => SaveSection(sect))"
                                               Disabled="@(!CanEdit())" />
                             </MudStack>
@@ -281,6 +282,7 @@
     private bool isSaving = false;
     private Dictionary<string, string> originalContent = new();
     private bool requireNarrativeReview = false;
+    private bool isInitialized = false; // Flag to prevent marking dirty during initial render
 
     protected override async Task OnInitializedAsync()
     {
@@ -289,6 +291,9 @@
 
         // Register with state service for cross-component communication
         NarrativeStateService.RegisterEditor(ReserveStudyId, SaveAllSectionsAsync);
+
+        // Mark initialization complete after first render cycle
+        isInitialized = true;
     }
 
     private async Task LoadTenantSettings()
@@ -317,6 +322,13 @@
                 InitializeSections();
                 CaptureOriginalContent();
                 validationResult = await NarrativeService.ValidateAsync(narrative.Id);
+
+                // If narrative is in a non-editable state (Approved, Published, etc.), 
+                // clear any lingering dirty state from previous edits
+                if (!CanEdit())
+                {
+                    NarrativeStateService.MarkClean();
+                }
             }
         }
         catch (Exception ex)
@@ -416,6 +428,34 @@
         foreach (var section in sections)
         {
             originalContent[section.Name] = section.Content;
+        }
+    }
+
+    /// <summary>
+    /// Called when text changes in a section. Only marks dirty if:
+    /// 1. Initialization is complete (prevents marking dirty during initial bind)
+    /// 2. The content actually differs from the original saved content
+    /// </summary>
+    private void OnTextChanged(NarrativeSection section)
+    {
+        // Don't mark dirty during initial render/bind
+        if (!isInitialized) return;
+
+        // Only mark dirty if content actually differs from the original
+        if (originalContent.TryGetValue(section.Name, out var original))
+        {
+            if (section.Content != original)
+            {
+                NarrativeStateService.MarkDirty();
+            }
+        }
+        else
+        {
+            // No original content (new section?) - mark dirty if there's any content
+            if (!string.IsNullOrEmpty(section.Content))
+            {
+                NarrativeStateService.MarkDirty();
+            }
         }
     }
 
@@ -536,6 +576,10 @@
         {
             await NarrativeService.SubmitForReviewAsync(narrative.Id);
             narrative.Status = NarrativeStatus.PendingReview;
+
+            // Clear dirty state when submitting for review
+            NarrativeStateService.MarkClean();
+
             Snackbar.Add("Narrative submitted for review", Severity.Success);
         }
         catch (Exception ex)
@@ -552,9 +596,14 @@
         {
             await UserState.InitializeAsync();
             var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
-            
+
             await NarrativeService.ApproveAsync(narrative.Id, userId);
             narrative.Status = NarrativeStatus.Approved;
+
+            // Clear dirty state since approved narratives are no longer editable
+            // and any changes have been implicitly accepted
+            NarrativeStateService.MarkClean();
+
             Snackbar.Add("Narrative approved", Severity.Success);
         }
         catch (Exception ex)
@@ -567,19 +616,37 @@
     {
         if (narrative == null) return;
 
-        // TODO: Show dialog for revision notes
-        try
+        var parameters = new DialogParameters
         {
-            await UserState.InitializeAsync();
-            var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
-            
-            await NarrativeService.RequestRevisionsAsync(narrative.Id, userId, "Please review and revise the content.");
-            narrative.Status = NarrativeStatus.RevisionRequired;
-            Snackbar.Add("Revisions requested", Severity.Success);
-        }
-        catch (Exception ex)
+            ["ReportTitle"] = "Narrative"
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialog = await DialogService.ShowAsync<CRS.Components.Shared.GeneratedReports.RequestRevisionsDialog>(
+            "Request Narrative Revisions", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string revisionNotes)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            try
+            {
+                await UserState.InitializeAsync();
+                var userId = UserState.CurrentUser?.Id ?? Guid.Empty;
+
+                await NarrativeService.RequestRevisionsAsync(narrative.Id, userId, revisionNotes);
+                narrative.Status = NarrativeStatus.RevisionRequired;
+                Snackbar.Add("Revisions requested - the specialist has been notified", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
         }
     }
 

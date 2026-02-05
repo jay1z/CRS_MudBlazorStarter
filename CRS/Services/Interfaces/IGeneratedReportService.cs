@@ -73,6 +73,13 @@ public interface IGeneratedReportService
     Task<bool> RequestRevisionsAsync(Guid id, Guid reviewedByUserId, string? notes = null, CancellationToken ct = default);
 
     /// <summary>
+    /// Marks a report as superseded by a newer version.
+    /// </summary>
+    /// <param name="id">The report ID to mark as superseded.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task<bool> MarkAsSupersededAsync(Guid id, CancellationToken ct = default);
+
+    /// <summary>
     /// Publishes a report to the client.
     /// </summary>
     Task<bool> PublishAsync(Guid id, Guid publishedByUserId, CancellationToken ct = default);
@@ -148,4 +155,34 @@ public interface IGeneratedReportService
         /// <param name="reserveStudyId">The reserve study ID.</param>
         /// <param name="ct">Cancellation token.</param>
         Task<bool> ArchiveStudyAsync(Guid reserveStudyId, CancellationToken ct = default);
+
+        // ═══════════════════════════════════════════════════════════════
+        // EMAIL DELIVERY METHODS
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Sends a report to the client via email.
+        /// </summary>
+        /// <param name="reportId">The report ID to send.</param>
+        /// <param name="recipientEmail">Primary recipient email address.</param>
+        /// <param name="subject">Email subject line.</param>
+        /// <param name="personalMessage">Optional personal message to include.</param>
+        /// <param name="ccEmail">Optional CC email address.</param>
+        /// <param name="includeDownloadLink">Whether to include a secure download link.</param>
+        /// <param name="attachReport">Whether to attach the report PDF to the email.</param>
+        /// <param name="sentByUserId">The user ID of the person sending the email.</param>
+        /// <param name="baseUrl">Base URL for generating download links.</param>
+        /// <param name="ct">Cancellation token.</param>
+        /// <returns>True if email was sent successfully.</returns>
+        Task<bool> SendToClientAsync(
+            Guid reportId,
+            string recipientEmail,
+            string subject,
+            string? personalMessage,
+            string? ccEmail,
+            bool includeDownloadLink,
+            bool attachReport,
+            Guid sentByUserId,
+            string baseUrl,
+            CancellationToken ct = default);
     }

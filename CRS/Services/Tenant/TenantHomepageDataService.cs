@@ -22,7 +22,7 @@ namespace CRS.Services.Tenant {
             var properties = await db.Communities.CountAsync(c => c.TenantId == tid, ct);
             var studiesActive = await db.ReserveStudies.CountAsync(r => r.Community != null && r.Community.TenantId == tid && !r.IsComplete, ct);
             var reportsRecent = await db.ReserveStudies.CountAsync(r => r.Community != null && r.Community.TenantId == tid && r.IsComplete && r.DateCreated > DateTime.UtcNow.AddMonths(-6), ct);
-            var accounts = 0; // TODO: implement CustomerAccounts count when model is available
+            var accounts = await db.CustomerAccounts.CountAsync(c => c.TenantId == tid && c.IsActive, ct);
             return new TenantKpisVm { Properties = properties, StudiesActive = studiesActive, ReportsRecent = reportsRecent, CustomerAccounts = accounts };
         }
 

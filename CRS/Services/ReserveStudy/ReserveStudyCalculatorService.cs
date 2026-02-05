@@ -106,8 +106,9 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
     {
         await using var context = await _dbFactory.CreateDbContextAsync();
 
-        // Load study with financial info first
+        // Load study with financial info first (use AsNoTracking since this is read-only)
         var study = await context.ReserveStudies
+            .AsNoTracking()
             .Include(s => s.FinancialInfo)
             .Include(s => s.CurrentProposal)
             .FirstOrDefaultAsync(s => s.Id == studyId);
@@ -199,8 +200,9 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
         if (!createIfMissing)
             return null;
 
-        // Load study with financial info
+        // Load study with financial info (don't need to track since we're just reading)
         var study = await context.ReserveStudies
+            .AsNoTracking()
             .Include(s => s.FinancialInfo)
             .FirstOrDefaultAsync(s => s.Id == studyId);
 
@@ -208,7 +210,9 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
             return null;
 
         // Load elements directly (more reliable for composite-key junction tables)
+        // Use AsNoTracking to avoid tracking conflicts when multiple elements share the same options
         study.ReserveStudyBuildingElements = await context.ReserveStudyBuildingElements
+            .AsNoTracking()
             .Where(e => e.ReserveStudyId == studyId)
             .Include(e => e.BuildingElement)
             .Include(e => e.MinUsefulLifeOption)
@@ -218,6 +222,7 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
             .ToListAsync();
 
         study.ReserveStudyCommonElements = await context.ReserveStudyCommonElements
+            .AsNoTracking()
             .Where(e => e.ReserveStudyId == studyId)
             .Include(e => e.CommonElement)
             .Include(e => e.MinUsefulLifeOption)
@@ -227,6 +232,7 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
             .ToListAsync();
 
         study.ReserveStudyAdditionalElements = await context.ReserveStudyAdditionalElements
+            .AsNoTracking()
             .Where(e => e.ReserveStudyId == studyId)
             .Include(e => e.MinUsefulLifeOption)
             .Include(e => e.MaxUsefulLifeOption)

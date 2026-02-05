@@ -124,6 +124,8 @@ namespace CRS.Services {
         private class NullSignalRService : ISignalRService {
             public Task NotifyTaskUpdated(Guid studyId) => Task.CompletedTask;
             public Task NotifyTaskModified(Guid studyId, KanbanTask task) => Task.CompletedTask;
+            public Task SendNotificationToUserAsync(Guid userId, Notification notification) => Task.CompletedTask;
+            public Task NotifyUnreadCountAsync(Guid userId, int unreadCount) => Task.CompletedTask;
         }
     }
 }

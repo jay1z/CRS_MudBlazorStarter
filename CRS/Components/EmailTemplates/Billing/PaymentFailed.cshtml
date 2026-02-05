@@ -1,0 +1,143 @@
+﻿@using CRS.Models.Emails
+@model BillingNotificationEmail
+
+@{
+    var isGracePeriod = Model.NotificationType == BillingNotificationType.GracePeriodStarted;
+    var title = isGracePeriod ? "Payment Issue Detected" : "Payment Failed";
+    var emoji = "⚠️";
+    var amountFormatted = Model.AmountDue.HasValue ? Model.AmountDue.Value.ToString("C") : "your subscription";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>@title - @Model.TenantName</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%;">
+                    
+                    <!-- Logo -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 24px 40px; border-radius: 16px 16px 0 0; border: 1px solid #e5e7eb; border-bottom: none; text-align: center;">
+                            <h2 style="margin: 0; color: #FF8C00; font-size: 24px; font-weight: 700;">ALX Reserve Cloud</h2>
+                        </td>
+                    </tr>
+                    
+                    <!-- Header with Warning Color -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px; text-align: center;">
+                            <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; line-height: 64px;">
+                                <span style="font-size: 32px;">@emoji</span>
+                            </div>
+                            <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 28px; font-weight: 700;">@title</h1>
+                            <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 16px;">Action required to maintain your account</p>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 32px 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            
+                            <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                Hi@(string.IsNullOrEmpty(Model.OwnerName) ? "" : $" {Model.OwnerName}"),
+                            </p>
+                            
+                            <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                We were unable to process the payment for your <strong>@Model.TenantName</strong> account.
+                                @if (Model.AmountDue.HasValue)
+                                {
+                                    <span>The amount of <strong>@amountFormatted</strong> could not be charged to your payment method.</span>
+                                }
+                            </p>
+
+                            <!-- Warning Box -->
+                            <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td style="vertical-align: top; padding-right: 12px;">
+                                            <span style="font-size: 24px;">⏰</span>
+                                        </td>
+                                        <td>
+                                            <p style="margin: 0 0 8px 0; color: #92400e; font-size: 16px; font-weight: 600;">
+                                                @if (Model.DaysRemaining.HasValue)
+                                                {
+                                                    <span>@Model.DaysRemaining days remaining to update payment</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Please update your payment method soon</span>
+                                                }
+                                            </p>
+                                            <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.5;">
+                                                Your account remains active, but continued payment failures may result in service interruption.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <!-- What Happens Next -->
+                            <h3 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600;">What happens next?</h3>
+                            <ul style="margin: 0 0 24px 0; padding-left: 20px; color: #4b5563; font-size: 15px; line-height: 1.8;">
+                                <li>We'll automatically retry the payment in a few days</li>
+                                <li>Your account remains fully accessible during this time</li>
+                                <li>If payment continues to fail, your account may be suspended after the grace period</li>
+                            </ul>
+
+                            <!-- CTA Button -->
+                            @if (!string.IsNullOrEmpty(Model.UpdatePaymentUrl))
+                            {
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td align="center" style="padding: 8px 0 24px 0;">
+                                            <a href="@Model.UpdatePaymentUrl" style="display: inline-block; background: linear-gradient(135deg, #FF8C00 0%, #FF6B00 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(255, 140, 0, 0.4);">
+                                                Update Payment Method
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            }
+
+                            <!-- Alternative Actions -->
+                            <div style="background-color: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                                <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">Other options:</p>
+                                <ul style="margin: 0; padding-left: 20px; color: #6b7280; font-size: 14px; line-height: 1.8;">
+                                    @if (!string.IsNullOrEmpty(Model.BillingPortalUrl))
+                                    {
+                                        <li><a href="@Model.BillingPortalUrl" style="color: #FF8C00;">View billing history and manage subscription</a></li>
+                                    }
+                                    <li>Contact your bank to ensure the card is active</li>
+                                    <li>Reply to this email if you need assistance</li>
+                                </ul>
+                            </div>
+
+                            <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                If you believe this is an error or have any questions, please contact us at 
+                                <a href="mailto:@Model.SupportEmail" style="color: #FF8C00;">@Model.SupportEmail</a>.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 24px 40px; border-radius: 0 0 16px 16px; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
+                            <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">
+                                <strong>ALX Reserve Cloud</strong>
+                            </p>
+                            <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                                This is an automated billing notification. Please do not reply directly to this email.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

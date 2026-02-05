@@ -1,8 +1,10 @@
 ﻿using CRS.Data;
 using CRS.Models;
+using CRS.Services.Billing;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
+using Stripe;
 
 namespace CRS.Services;
 
@@ -13,15 +15,18 @@ public class CreditMemoService : ICreditMemoService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
     private readonly ITenantContext _tenantContext;
+    private readonly IStripeClientFactory _stripeClientFactory;
     private readonly ILogger<CreditMemoService> _logger;
 
     public CreditMemoService(
         IDbContextFactory<ApplicationDbContext> dbFactory,
         ITenantContext tenantContext,
+        IStripeClientFactory stripeClientFactory,
         ILogger<CreditMemoService> logger)
     {
         _dbFactory = dbFactory;
         _tenantContext = tenantContext;
+        _stripeClientFactory = stripeClientFactory;
         _logger = logger;
     }
 
@@ -200,21 +205,58 @@ public class CreditMemoService : ICreditMemoService
             throw new InvalidOperationException("Cannot process Stripe refund - no Stripe payment on invoice");
         }
 
-        // TODO: Implement Stripe refund processing
-        // For now, just mark as refunded without actually processing Stripe
-        _logger.LogWarning("Stripe refund processing not yet implemented - marking as refunded manually");
+        try
+        {
+            // Create Stripe refund
+            var client = _stripeClientFactory.CreateClient();
+            var refundService = new RefundService(client);
 
-        creditMemo.IsRefunded = true;
-        creditMemo.RefundedAt = DateTime.UtcNow;
-        creditMemo.DateModified = DateTime.UtcNow;
+            // Convert amount to cents (Stripe uses smallest currency unit)
+            var amountInCents = (long)(creditMemo.Amount * 100);
 
-        await context.SaveChangesAsync(ct);
+            var refundOptions = new RefundCreateOptions
+            {
+                PaymentIntent = creditMemo.Invoice.StripePaymentIntentId,
+                Amount = amountInCents,
+                Reason = creditMemo.Reason switch
+                {
+                    CreditMemoReason.Duplicate_Payment => "duplicate",
+                    CreditMemoReason.Cancelled_Service => "requested_by_customer",
+                    _ => "requested_by_customer"
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    ["credit_memo_id"] = creditMemo.Id.ToString(),
+                    ["credit_memo_number"] = creditMemo.CreditMemoNumber ?? "",
+                    ["invoice_id"] = creditMemo.InvoiceId.ToString(),
+                    ["invoice_number"] = creditMemo.Invoice.InvoiceNumber ?? ""
+                }
+            };
 
-        _logger.LogInformation(
-            "Marked credit memo {CreditMemoNumber} as refunded",
-            creditMemo.CreditMemoNumber);
+            var refund = await refundService.CreateAsync(refundOptions, cancellationToken: ct);
 
-        return creditMemo;
+            // Update credit memo with refund info
+            creditMemo.StripeRefundId = refund.Id;
+            creditMemo.IsRefunded = true;
+            creditMemo.RefundedAt = DateTime.UtcNow;
+            creditMemo.DateModified = DateTime.UtcNow;
+
+            await context.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "Processed Stripe refund {RefundId} for credit memo {CreditMemoNumber}, amount: {Amount}",
+                refund.Id, creditMemo.CreditMemoNumber, creditMemo.Amount);
+
+            return creditMemo;
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogError(ex, 
+                "Stripe refund failed for credit memo {CreditMemoNumber}: {Message}", 
+                creditMemo.CreditMemoNumber, ex.Message);
+
+            throw new InvalidOperationException($"Stripe refund failed: {ex.Message}", ex);
+        }
     }
 
     public async Task<string> GenerateCreditMemoNumberAsync(CancellationToken ct = default)

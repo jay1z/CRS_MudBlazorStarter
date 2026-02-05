@@ -1,0 +1,52 @@
+﻿@page "/newsletter-confirmed"
+@layout EmptyLayout
+@inject NavigationManager Nav
+
+<PageTitle>Subscription Confirmed - ALX Reserve Cloud</PageTitle>
+
+<div style="min-height: 100vh; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%); display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <MudPaper Elevation="3" Class="pa-8" Style="max-width: 500px; width: 100%; text-align: center; border-radius: 16px;">
+        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+            <MudIcon Icon="@Icons.Material.Filled.Check" Style="font-size: 40px; color: white;" />
+        </div>
+        
+        <MudText Typo="Typo.h4" Class="mb-2" Style="font-weight: 700; color: #1a1a1a;">
+            You're All Set! 🎉
+        </MudText>
+        
+        <MudText Typo="Typo.body1" Class="mb-6" Style="color: #666;">
+            Your newsletter subscription has been confirmed. Get ready for industry insights, 
+            product updates, and tips delivered straight to your inbox!
+        </MudText>
+        
+        <MudDivider Class="my-6" />
+        
+        <MudText Typo="Typo.body2" Class="mb-4" Style="color: #888;">
+            What's next?
+        </MudText>
+        
+        <MudStack Spacing="3">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Warning" 
+                       Size="Size.Large" 
+                       FullWidth="true"
+                       Href="/tenant/signup"
+                       Style="text-transform: none; font-weight: 600;">
+                Start Your Free Trial
+            </MudButton>
+            
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Default" 
+                       Size="Size.Large" 
+                       FullWidth="true"
+                       Href="/"
+                       Style="text-transform: none;">
+                Back to Home
+            </MudButton>
+        </MudStack>
+        
+        <MudText Typo="Typo.caption" Class="mt-6" Style="color: #aaa;">
+            Questions? Contact us at support@reservecloud.com
+        </MudText>
+    </MudPaper>
+</div>

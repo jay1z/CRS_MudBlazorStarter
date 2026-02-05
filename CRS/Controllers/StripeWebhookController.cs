@@ -7,11 +7,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Stripe;
 using Stripe.Checkout;
-using Coravel.Mailer.Mail.Interfaces; // mailer retained for potential future notifications
-using CRS.Services.Email; // BasicMailable (unused here but kept if needed later)
-using CRS.Services.Provisioning; // owner provisioning service
-using CRS.Models; // for SubscriptionStatus enum
-
+using Coravel.Mailer.Mail.Interfaces;
+using CRS.Services.Email;
+using CRS.Services.Provisioning;
+using CRS.Models;
+using CRS.Models.Email;
+using CRS.Models.Emails;
 using CRS.Services.Interfaces;
 
 namespace CRS.Controllers {
@@ -383,10 +384,10 @@ namespace CRS.Controllers {
             
             _logger.LogInformation("Subscription deleted for tenant {TenantId} - entering Suspended state. Data will be retained until {GracePeriodEnd}", 
                 tenant.Id, tenant.GracePeriodEndsAt);
-            
-            // TODO: Send suspension notification email
-            // await _emailService.SendSuspensionNoticeAsync(tenant);
-            
+
+            // Send suspension notification email
+            await SendBillingNotificationAsync(tenant, BillingNotificationType.AccountSuspended);
+
                 await _db.SaveChangesAsync(ct);
             }
 
@@ -428,9 +429,9 @@ namespace CRS.Controllers {
                     tenant.LastReactivatedAt = DateTime.UtcNow;
                     _logger.LogInformation("Payment succeeded for tenant {TenantId} - account reactivated (reactivation #{Count})", 
                         tenant.Id, tenant.ReactivationCount);
-                    
-                    // TODO: Send reactivation success email
-                    // await _emailService.SendReactivationSuccessEmailAsync(tenant);
+
+                    // Send reactivation success email
+                    await SendBillingNotificationAsync(tenant, BillingNotificationType.AccountReactivated);
                 } else {
                     _logger.LogInformation("Payment succeeded for tenant {TenantId}", tenant.Id);
                 }
@@ -444,9 +445,9 @@ namespace CRS.Controllers {
                     tenant.SubscriptionStatus = SubscriptionStatus.PastDue;
                     tenant.IsActive = true; // Keep active during Stripe's automatic retry period (7 days)
                     _logger.LogWarning("Payment failed for tenant {TenantId} - entering PastDue status. Stripe will retry automatically.", tenant.Id);
-                    
-                    // TODO: Send payment failed notification email
-                    // await _emailService.SendPaymentFailedEmailAsync(tenant);
+
+                    // Send payment failed notification email
+                    await SendBillingNotificationAsync(tenant, BillingNotificationType.PaymentFailed, invoice.AmountDue / 100m);
                 } else {
                     _logger.LogWarning("Payment failed again for tenant {TenantId} (already in PastDue)", tenant.Id);
                 }
@@ -531,5 +532,77 @@ namespace CRS.Controllers {
                                         "incomplete" => CRS.Models.SubscriptionStatus.Incomplete,
                                         _ => CRS.Models.SubscriptionStatus.None
                                     };
+
+        /// <summary>
+        /// Sends a billing notification email to the tenant owner.
+        /// </summary>
+        private async Task SendBillingNotificationAsync(
+            Tenant tenant, 
+            BillingNotificationType notificationType, 
+            decimal? amountDue = null)
+        {
+            try
+            {
+                // Get owner email - prefer OwnerId lookup, fallback to PendingOwnerEmail
+                string? ownerEmail = null;
+                string? ownerName = null;
+
+                if (!string.IsNullOrEmpty(tenant.OwnerId) && Guid.TryParse(tenant.OwnerId, out var ownerId))
+                {
+                    var owner = await _db.Users.FirstOrDefaultAsync(u => u.Id == ownerId);
+                    if (owner != null)
+                    {
+                        ownerEmail = owner.Email;
+                        ownerName = owner.FullName;
+                    }
+                }
+
+                ownerEmail ??= tenant.PendingOwnerEmail;
+
+                if (string.IsNullOrEmpty(ownerEmail))
+                {
+                    _logger.LogWarning("Cannot send billing notification for tenant {TenantId}: no owner email found", tenant.Id);
+                    return;
+                }
+
+                // Build billing portal URL
+                var billingPortalUrl = !string.IsNullOrEmpty(tenant.StripeCustomerId)
+                    ? $"https://{tenant.Subdomain}.reservecloud.com/account/billing"
+                    : null;
+
+                var dashboardUrl = $"https://{tenant.Subdomain}.reservecloud.com";
+
+                var email = new BillingNotificationEmail
+                {
+                    NotificationType = notificationType,
+                    TenantName = tenant.Name,
+                    OwnerEmail = ownerEmail,
+                    OwnerName = ownerName,
+                    PlanName = tenant.Tier?.ToString(),
+                    AmountDue = amountDue,
+                    GracePeriodEndsAt = tenant.GracePeriodEndsAt,
+                    SuspendedAt = tenant.SuspendedAt,
+                    ReactivatedAt = tenant.LastReactivatedAt,
+                    ReactivationCount = tenant.ReactivationCount,
+                    UpdatePaymentUrl = billingPortalUrl,
+                    BillingPortalUrl = billingPortalUrl,
+                    DashboardUrl = dashboardUrl
+                };
+
+                var mailable = new BillingNotificationMailable(email);
+                await _mailer.SendAsync(mailable);
+
+                _logger.LogInformation(
+                    "Sent {NotificationType} email to {Email} for tenant {TenantId}",
+                    notificationType, ownerEmail, tenant.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, 
+                    "Failed to send {NotificationType} email for tenant {TenantId}", 
+                    notificationType, tenant.Id);
+                // Don't rethrow - billing notification failure shouldn't break webhook processing
+            }
+        }
                                 }
                             }

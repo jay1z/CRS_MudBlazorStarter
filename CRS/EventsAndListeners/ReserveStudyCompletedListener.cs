@@ -48,9 +48,9 @@ namespace CRS.EventsAndListeners {
                 recipients.Add(study.Contact.Email);
             }
             
-            // Fallback
-            if (recipients.Count == 0) {
-                recipients.Add("emailme@jasonzurowski.com"); // TODO: Configure default
+            // Fallback to tenant's default notification email
+            if (recipients.Count == 0 && !string.IsNullOrEmpty(email.TenantInfo?.DefaultNotificationEmail)) {
+                recipients.Add(email.TenantInfo.DefaultNotificationEmail);
             }
 
             await _mailer.SendAsync(

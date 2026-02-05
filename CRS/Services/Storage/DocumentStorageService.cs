@@ -91,6 +91,18 @@ public class DocumentStorageService : IDocumentStorageService
         );
     }
 
+    public async Task<byte[]> DownloadAsync(string storageUrl, CancellationToken ct = default)
+    {
+        var containerClient = await GetContainerClientAsync(ct);
+        var blobClient = containerClient.GetBlobClient(storageUrl);
+
+        using var stream = new MemoryStream();
+        await blobClient.DownloadToAsync(stream, ct);
+
+        _logger.LogInformation("Downloaded document: {BlobName}", storageUrl);
+        return stream.ToArray();
+    }
+
     public async Task<bool> DeleteAsync(string storageUrl, CancellationToken ct = default)
     {
         try
@@ -179,6 +191,12 @@ public class NullDocumentStorageService : IDocumentStorageService
             ContentType: contentType,
             FileSizeBytes: fileBytes.Length
         ));
+    }
+
+    public Task<byte[]> DownloadAsync(string storageUrl, CancellationToken ct = default)
+    {
+        _logger.LogWarning("DocumentStorageService not configured - returning empty bytes");
+        return Task.FromResult(Array.Empty<byte>());
     }
 
     public Task<bool> DeleteAsync(string storageUrl, CancellationToken ct = default)

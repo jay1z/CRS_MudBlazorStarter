@@ -1,8 +1,11 @@
 ﻿@layout EmptyLayout
 @using CRS.Components.Shared
+@using CRS.Services.Interfaces
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
+@inject INewsletterService NewsletterService
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>ALX Reserve Cloud - SaaS</PageTitle>
 
@@ -1584,25 +1587,48 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
             Snackbar.Add("Please enter a valid email address.", Severity.Warning);
             return;
         }
-        
+
         subscribeLoading = true;
         StateHasChanged();
-        
-        // Simulate API call delay
-        await Task.Delay(1000);
-        
+
         try
         {
-            // TODO: Integrate with your email service provider (e.g., Mailchimp, SendGrid, SendInBlue)
-            // Example:
-            // await EmailService.SubscribeAsync(emailCapture);
-            
-            Snackbar.Add("🎉 Successfully subscribed! Check your email for confirmation.", Severity.Success);
-            emailCapture = "";
+            // Get client info for GDPR compliance
+            var ipAddress = HttpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+            var userAgent = HttpContextAccessor.HttpContext?.Request?.Headers["User-Agent"].ToString();
+
+            var result = await NewsletterService.SubscribeAsync(
+                emailCapture,
+                name: null,
+                company: null,
+                source: "homepage",
+                ipAddress: ipAddress,
+                userAgent: userAgent);
+
+            if (result.Success)
+            {
+                if (result.AlreadySubscribed)
+                {
+                    Snackbar.Add("You're already subscribed! 🎉", Severity.Info);
+                }
+                else if (result.ConfirmationRequired)
+                {
+                    Snackbar.Add("🎉 Almost there! Check your email to confirm your subscription.", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("🎉 Successfully subscribed!", Severity.Success);
+                }
+                emailCapture = "";
+            }
+            else
+            {
+                Snackbar.Add(result.Message, Severity.Warning);
+            }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Oops! Something went wrong. Please try again.", Severity.Error);
+            Snackbar.Add("Oops! Something went wrong. Please try again.", Severity.Error);
         }
         finally
         {
