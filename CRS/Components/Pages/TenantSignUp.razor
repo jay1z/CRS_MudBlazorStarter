@@ -440,7 +440,7 @@ private string? emailError = null;
 private string? emailMessage = null;
 
 private readonly (string Text, string Value)[] PlanOptions = new[] {
-    ("Starter", "Startup"),
+    ("Startup", "Startup"),
     ("Professional", "Pro"),
     ("Enterprise", "Enterprise")
 };
@@ -654,7 +654,7 @@ protected override void OnParametersSet()
 
         return planValue switch
         {
-            "Startup" => "Starter",
+            "Startup" => "Startup",
             "Pro" => "Professional",
             "Enterprise" => "Enterprise",
             _ => "Professional" // Fallback if value doesn't match

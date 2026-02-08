@@ -170,39 +170,6 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "CustomerAccounts",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TenantId = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                    Type = table.Column<int>(type: "int", nullable: false),
-                    ContactName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    AddressLine1 = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    AddressLine2 = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    State = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    PostalCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
-                    Website = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    TaxId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    PaymentTerms = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CustomerAccounts", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "ElementOptions",
                 columns: table => new
                 {
@@ -614,6 +581,13 @@ namespace CRS.Migrations
                     ReactivationCount = table.Column<int>(type: "int", nullable: false),
                     LastReactivatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     LastPaymentFailureAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PlatformFeeRateOverride = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    StripeConnectAccountId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StripeConnectOnboardingComplete = table.Column<bool>(type: "bit", nullable: false),
+                    StripeConnectPayoutsEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    StripeConnectCardPaymentsEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    StripeConnectCreatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    StripeConnectLastSyncedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDemo = table.Column<bool>(type: "bit", nullable: false),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
                     OwnerId = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -900,6 +874,45 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CustomerAccounts",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    ContactName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    AddressLine1 = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    AddressLine2 = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    City = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    State = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PostalCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    Website = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    TaxId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PaymentTerms = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomerAccounts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CustomerAccounts_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Notifications",
                 columns: table => new
                 {
@@ -1012,51 +1025,6 @@ namespace CRS.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Communities",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    PhysicalAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    MailingAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    TenantId = table.Column<int>(type: "int", nullable: false),
-                    CustomerAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NumberOfUnits = table.Column<int>(type: "int", nullable: true),
-                    YearBuilt = table.Column<int>(type: "int", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
-                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Communities", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Communities_Addresses_MailingAddressId",
-                        column: x => x.MailingAddressId,
-                        principalTable: "Addresses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Communities_Addresses_PhysicalAddressId",
-                        column: x => x.PhysicalAddressId,
-                        principalTable: "Addresses",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Communities_CustomerAccounts_CustomerAccountId",
-                        column: x => x.CustomerAccountId,
-                        principalTable: "CustomerAccounts",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -1236,6 +1204,106 @@ namespace CRS.Migrations
                         name: "FK_ContactXContactGroups_Contacts_ContactId",
                         column: x => x.ContactId,
                         principalTable: "Contacts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Communities",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AnnualMeetingDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PhysicalAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MailingAddressId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    TenantId = table.Column<int>(type: "int", nullable: false),
+                    CustomerAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NumberOfUnits = table.Column<int>(type: "int", nullable: true),
+                    YearBuilt = table.Column<int>(type: "int", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDemo = table.Column<bool>(type: "bit", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Communities", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Communities_Addresses_MailingAddressId",
+                        column: x => x.MailingAddressId,
+                        principalTable: "Addresses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Communities_Addresses_PhysicalAddressId",
+                        column: x => x.PhysicalAddressId,
+                        principalTable: "Addresses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Communities_CustomerAccounts_CustomerAccountId",
+                        column: x => x.CustomerAccountId,
+                        principalTable: "CustomerAccounts",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CustomerAccountInvitations",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CustomerAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Role = table.Column<int>(type: "int", nullable: false),
+                    Token = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    InvitedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AcceptedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AcceptedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomerAccountInvitations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CustomerAccountInvitations_CustomerAccounts_CustomerAccountId",
+                        column: x => x.CustomerAccountId,
+                        principalTable: "CustomerAccounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CustomerAccountUsers",
+                columns: table => new
+                {
+                    CustomerAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Role = table.Column<int>(type: "int", nullable: false),
+                    JoinedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    InvitedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomerAccountUsers", x => new { x.CustomerAccountId, x.UserId });
+                    table.ForeignKey(
+                        name: "FK_CustomerAccountUsers_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CustomerAccountUsers_CustomerAccounts_CustomerAccountId",
+                        column: x => x.CustomerAccountId,
+                        principalTable: "CustomerAccounts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1795,6 +1863,12 @@ namespace CRS.Migrations
                     IncludeDigitalDelivery = table.Column<bool>(type: "bit", nullable: false),
                     IncludeComponentInventory = table.Column<bool>(type: "bit", nullable: false),
                     IncludeFundingPlans = table.Column<bool>(type: "bit", nullable: false),
+                    IsDeclined = table.Column<bool>(type: "bit", nullable: false),
+                    DateDeclined = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeclinedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeclineReasonCategory = table.Column<int>(type: "int", nullable: true),
+                    DeclineComments = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RevisionRequested = table.Column<bool>(type: "bit", nullable: false),
                     IsAmendment = table.Column<bool>(type: "bit", nullable: false),
                     OriginalProposalId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     AmendmentNumber = table.Column<int>(type: "int", nullable: false),
@@ -2674,9 +2748,40 @@ namespace CRS.Migrations
                 column: "ReserveStudyId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CustomerAccountInvitation_Account_Email_Status",
+                table: "CustomerAccountInvitations",
+                columns: new[] { "CustomerAccountId", "Email", "Status" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomerAccountInvitation_Status_Expires",
+                table: "CustomerAccountInvitations",
+                columns: new[] { "Status", "ExpiresAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomerAccountInvitation_Token",
+                table: "CustomerAccountInvitations",
+                column: "Token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CustomerAccounts_TenantId",
                 table: "CustomerAccounts",
                 column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomerAccounts_UserId",
+                table: "CustomerAccounts",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomerAccountUser_Account_Role_Active",
+                table: "CustomerAccountUsers",
+                columns: new[] { "CustomerAccountId", "Role", "IsActive" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CustomerAccountUser_User",
+                table: "CustomerAccountUsers",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DemoSessions_DemoTenantId",
@@ -3673,6 +3778,10 @@ namespace CRS.Migrations
                 table: "Contacts");
 
             migrationBuilder.DropForeignKey(
+                name: "FK_CustomerAccounts_AspNetUsers_UserId",
+                table: "CustomerAccounts");
+
+            migrationBuilder.DropForeignKey(
                 name: "FK_PropertyManagers_AspNetUsers_ApplicationUserId",
                 table: "PropertyManagers");
 
@@ -3724,6 +3833,12 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "CreditMemos");
+
+            migrationBuilder.DropTable(
+                name: "CustomerAccountInvitations");
+
+            migrationBuilder.DropTable(
+                name: "CustomerAccountUsers");
 
             migrationBuilder.DropTable(
                 name: "DemoSessions");
