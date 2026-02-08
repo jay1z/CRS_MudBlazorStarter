@@ -251,50 +251,132 @@ namespace CRS.Services {
         public async Task<bool> PermanentlyDeleteReserveStudyAsync(Guid id) {
             using var context = await _dbFactory.CreateDbContextAsync();
 
-            var reserveStudy = await context.ReserveStudies
-                .IgnoreQueryFilters()
-                .Include(rs => rs.Proposals)
-                .Include(rs => rs.FinancialInfo)
-                .Include(rs => rs.StudyRequest)
-                .Include(rs => rs.ReserveStudyBuildingElements)
-                .Include(rs => rs.ReserveStudyCommonElements)
-                .Include(rs => rs.ReserveStudyAdditionalElements)
-                .FirstOrDefaultAsync(rs => rs.Id == id && !rs.IsActive);
+            try {
+                var reserveStudy = await context.ReserveStudies
+                    .IgnoreQueryFilters()
+                    .Include(rs => rs.Proposals)
+                    .Include(rs => rs.FinancialInfo)
+                    .Include(rs => rs.StudyRequest)
+                    .Include(rs => rs.ReserveStudyBuildingElements!)
+                        .ThenInclude(be => be.ServiceContact)
+                    .Include(rs => rs.ReserveStudyCommonElements!)
+                        .ThenInclude(ce => ce.ServiceContact)
+                    .Include(rs => rs.ReserveStudyAdditionalElements!)
+                        .ThenInclude(ae => ae.ServiceContact)
+                    .FirstOrDefaultAsync(rs => rs.Id == id && !rs.IsActive);
 
-            if (reserveStudy == null) {
-                return false;
-            }
+                if (reserveStudy == null) {
+                    _logger.LogWarning("PermanentlyDeleteReserveStudyAsync: Study {Id} not found or is active", id);
+                    return false;
+                }
 
-            // Break circular dependency: ReserveStudy.CurrentProposalId <-> Proposal.ReserveStudyId
-            // Must nullify CurrentProposalId before deleting proposals
-            if (reserveStudy.CurrentProposalId != null) {
-                reserveStudy.CurrentProposalId = null;
+                _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Starting deletion of study {Id}", id);
+
+                // Break circular dependency: ReserveStudy.CurrentProposalId <-> Proposal.ReserveStudyId
+                if (reserveStudy.CurrentProposalId != null) {
+                    _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Clearing CurrentProposalId");
+                    reserveStudy.CurrentProposalId = null;
+                    await context.SaveChangesAsync();
+                }
+
+                // Remove ServiceContacts from building elements first
+                if (reserveStudy.ReserveStudyBuildingElements?.Any() == true) {
+                    var serviceContacts = reserveStudy.ReserveStudyBuildingElements
+                        .Where(e => e.ServiceContact != null)
+                        .Select(e => e.ServiceContact!)
+                        .ToList();
+                    if (serviceContacts.Any()) {
+                        _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} building element service contacts", serviceContacts.Count);
+                        context.RemoveRange(serviceContacts);
+                    }
+                    _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} building elements", reserveStudy.ReserveStudyBuildingElements.Count);
+                    context.RemoveRange(reserveStudy.ReserveStudyBuildingElements);
+                }
+
+                // Remove ServiceContacts from common elements first
+                if (reserveStudy.ReserveStudyCommonElements?.Any() == true) {
+                    var serviceContacts = reserveStudy.ReserveStudyCommonElements
+                        .Where(e => e.ServiceContact != null)
+                        .Select(e => e.ServiceContact!)
+                        .ToList();
+                    if (serviceContacts.Any()) {
+                        _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} common element service contacts", serviceContacts.Count);
+                        context.RemoveRange(serviceContacts);
+                    }
+                    _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} common elements", reserveStudy.ReserveStudyCommonElements.Count);
+                    context.RemoveRange(reserveStudy.ReserveStudyCommonElements);
+                }
+
+                // Remove ServiceContacts from additional elements first
+                if (reserveStudy.ReserveStudyAdditionalElements?.Any() == true) {
+                    var serviceContacts = reserveStudy.ReserveStudyAdditionalElements
+                        .Where(e => e.ServiceContact != null)
+                        .Select(e => e.ServiceContact!)
+                        .ToList();
+                    if (serviceContacts.Any()) {
+                        _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} additional element service contacts", serviceContacts.Count);
+                        context.RemoveRange(serviceContacts);
+                    }
+                    _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} additional elements", reserveStudy.ReserveStudyAdditionalElements.Count);
+                    context.RemoveRange(reserveStudy.ReserveStudyAdditionalElements);
+                }
+
+                if (reserveStudy.Proposals?.Any() == true) {
+                    // Delete ProposalAcceptances before deleting Proposals (FK constraint)
+                    var proposalIds = reserveStudy.Proposals.Select(p => p.Id).ToList();
+                    var proposalAcceptances = await context.Set<CRS.Models.ProposalAcceptance>()
+                        .Where(pa => pa.ProposalId.HasValue && proposalIds.Contains(pa.ProposalId.Value))
+                        .ToListAsync();
+                    if (proposalAcceptances.Any()) {
+                        _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} proposal acceptances", proposalAcceptances.Count);
+                        context.RemoveRange(proposalAcceptances);
+                    }
+
+                    _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} proposals", reserveStudy.Proposals.Count);
+                    context.RemoveRange(reserveStudy.Proposals);
+                }
+
+                if (reserveStudy.FinancialInfo != null) {
+                    _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing FinancialInfo");
+                    context.Remove(reserveStudy.FinancialInfo);
+                }
+
+                // Delete StudyStatusHistory records before deleting StudyRequest (FK constraint)
+                if (reserveStudy.StudyRequest != null) {
+                    var statusHistory = await context.Set<CRS.Models.Workflow.StudyStatusHistory>()
+                        .Where(h => h.RequestId == reserveStudy.StudyRequest.Id)
+                        .ToListAsync();
+                    if (statusHistory.Any()) {
+                        _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} status history records", statusHistory.Count);
+                        context.RemoveRange(statusHistory);
+                    }
+                    _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing StudyRequest");
+                    context.Remove(reserveStudy.StudyRequest);
+                }
+
+                // Delete any AccessTokens referencing this study
+                var accessTokens = await context.Set<AccessToken>()
+                    .Where(t => t.RequestId == id)
+                    .ToListAsync();
+                if (accessTokens.Any()) {
+                    _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing {Count} access tokens", accessTokens.Count);
+                    context.RemoveRange(accessTokens);
+                }
+
+                _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Removing ReserveStudy");
+                context.ReserveStudies.Remove(reserveStudy);
+
                 await context.SaveChangesAsync();
+                _logger.LogInformation("PermanentlyDeleteReserveStudyAsync: Successfully deleted study {Id}", id);
+                return true;
             }
-
-            // Remove related entities first to avoid FK constraint violations
-            if (reserveStudy.ReserveStudyBuildingElements?.Any() == true) {
-                context.RemoveRange(reserveStudy.ReserveStudyBuildingElements);
+            catch (Exception ex) {
+                _logger.LogError(ex, "PermanentlyDeleteReserveStudyAsync: Failed to delete study {Id}. Error: {Message}", id, ex.Message);
+                if (ex.InnerException != null) {
+                    _logger.LogError("PermanentlyDeleteReserveStudyAsync: Inner exception: {InnerMessage}", ex.InnerException.Message);
+                }
+                throw; // Re-throw so the UI gets the error
             }
-            if (reserveStudy.ReserveStudyCommonElements?.Any() == true) {
-                context.RemoveRange(reserveStudy.ReserveStudyCommonElements);
-            }
-            if (reserveStudy.ReserveStudyAdditionalElements?.Any() == true) {
-                context.RemoveRange(reserveStudy.ReserveStudyAdditionalElements);
-            }
-            if (reserveStudy.Proposals?.Any() == true) {
-                context.RemoveRange(reserveStudy.Proposals);
-            }
-            if (reserveStudy.FinancialInfo != null) {
-                context.Remove(reserveStudy.FinancialInfo);
-            }
-            if (reserveStudy.StudyRequest != null) {
-                context.Remove(reserveStudy.StudyRequest);
-            }
-
-            context.ReserveStudies.Remove(reserveStudy);
-            await context.SaveChangesAsync();
-            return true;
         }
 
         /// <summary>
