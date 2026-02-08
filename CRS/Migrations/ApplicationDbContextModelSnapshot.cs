@@ -3021,6 +3021,9 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("DateCreated")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DateDeclined")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("DateDeleted")
                         .HasColumnType("datetime2");
 
@@ -3032,6 +3035,15 @@ namespace CRS.Migrations
 
                     b.Property<DateTime?>("DateSent")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("DeclineComments")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DeclineReasonCategory")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DeclinedBy")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("DeliveryTimeframe")
                         .HasColumnType("nvarchar(max)");
@@ -3063,6 +3075,9 @@ namespace CRS.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeclined")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsDepositNonRefundable")
@@ -3110,6 +3125,9 @@ namespace CRS.Migrations
 
                     b.Property<string>("ReviewedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("RevisionRequested")
+                        .HasColumnType("bit");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -4659,6 +4677,9 @@ namespace CRS.Migrations
                     b.Property<string>("PendingOwnerEmail")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal?>("PlatformFeeRateOverride")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime?>("ProvisionedAt")
                         .HasColumnType("datetime2");
 
@@ -4723,6 +4744,24 @@ namespace CRS.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
+
+                    b.Property<string>("StripeConnectAccountId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("StripeConnectCardPaymentsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("StripeConnectCreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("StripeConnectLastSyncedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("StripeConnectOnboardingComplete")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("StripeConnectPayoutsEnabled")
+                        .HasColumnType("bit");
 
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("nvarchar(max)");
@@ -5643,8 +5682,7 @@ namespace CRS.Migrations
                     b.HasOne("CRS.Models.CustomerAccount", "CustomerAccount")
                         .WithMany("Invitations")
                         .HasForeignKey("CustomerAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("CustomerAccount");
                 });
@@ -5654,8 +5692,7 @@ namespace CRS.Migrations
                     b.HasOne("CRS.Models.CustomerAccount", "CustomerAccount")
                         .WithMany("CustomerAccountUsers")
                         .HasForeignKey("CustomerAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("CRS.Data.ApplicationUser", "User")
                         .WithMany()

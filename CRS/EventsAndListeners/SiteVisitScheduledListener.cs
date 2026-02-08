@@ -2,23 +2,28 @@
 using Coravel.Mailer.Mail;
 using Coravel.Mailer.Mail.Interfaces;
 
+using CRS.Data;
 using CRS.Models;
 using CRS.Models.Emails;
 using CRS.Services.Email;
 using CRS.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRS.EventsAndListeners {
     public class SiteVisitScheduledListener : IListener<SiteVisitScheduledEvent> {
         private readonly IMailer _mailer;
         private readonly IReserveStudyService _reserveStudyService;
+        private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
         private readonly ILogger<SiteVisitScheduledListener> _logger;
 
         public SiteVisitScheduledListener(
             IMailer mailer, 
             IReserveStudyService reserveStudyService,
+            IDbContextFactory<ApplicationDbContext> dbFactory,
             ILogger<SiteVisitScheduledListener> logger) {
             _mailer = mailer;
             _reserveStudyService = reserveStudyService;
+            _dbFactory = dbFactory;
             _logger = logger;
         }
 
@@ -29,13 +34,28 @@ namespace CRS.EventsAndListeners {
                 return;
             }
 
+            // Reload study with all needed navigation properties
+            await using var db = await _dbFactory.CreateDbContextAsync();
+            study = await db.ReserveStudies
+                .Include(s => s.User)
+                .Include(s => s.Community)
+                .Include(s => s.Contact)
+                .Include(s => s.PropertyManager)
+                .FirstOrDefaultAsync(s => s.Id == study.Id);
+
+            if (study == null)
+            {
+                _logger.LogWarning("Could not find study {StudyId} for site visit scheduled email", broadcasted.ReserveStudy?.Id);
+                return;
+            }
+
             var siteVisitDate = broadcasted.SiteVisitDate;
             var message = $"Your site visit has been scheduled for {siteVisitDate:dddd, MMMM dd, yyyy} at {siteVisitDate:h:mm tt}. " +
                           $"Our specialist will visit {study.Community?.Name} to assess the property's common elements and building components.";
 
             var email = await _reserveStudyService.MapToReserveStudyEmailAsync(study, message);
             email.SiteVisitDate = siteVisitDate;
-            
+
             // Build subject with tenant company name
             var companyName = email.TenantInfo?.CompanyName ?? "ALX Reserve Cloud";
             var subject = $"[{companyName}] Site Visit Scheduled - {study.Community?.Name}";
@@ -45,7 +65,7 @@ namespace CRS.EventsAndListeners {
             if (!string.IsNullOrEmpty(study.Contact?.Email)) {
                 recipients.Add(study.Contact.Email);
             }
-            
+
             // Also notify study owner
             if (!string.IsNullOrEmpty(study.User?.Email) && 
                 !recipients.Contains(study.User.Email, StringComparer.OrdinalIgnoreCase)) {
@@ -70,6 +90,7 @@ namespace CRS.EventsAndListeners {
                     string.Join(", ", recipients), study.Id);
             } catch (Exception ex) {
                 _logger.LogError(ex, "Failed to send site visit scheduled email for study {StudyId}", study.Id);
+                throw;
             }
         }
     }

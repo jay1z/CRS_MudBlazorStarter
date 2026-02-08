@@ -83,6 +83,7 @@ IEventRegistration registration = provider.ConfigureEvents();
 registration.Register<ReserveStudyCreatedEvent>().Subscribe<ReserveStudyCreatedListener>();
 registration.Register<ProposalSentEvent>().Subscribe<ProposalSentListener>();
 registration.Register<ProposalApprovedEvent>().Subscribe<ProposalApprovedListener>();
+registration.Register<ProposalDeclinedEvent>().Subscribe<ProposalDeclinedListener>();
 registration.Register<FinancialInfoRequestedEvent>().Subscribe<FinancialInfoRequestedListener>();
 registration.Register<FinancialInfoSubmittedEvent>().Subscribe<FinancialInfoSubmittedListener>();
 registration.Register<ReserveStudyCompletedEvent>().Subscribe<ReserveStudyCompletedListener>();
@@ -219,6 +220,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<CRS.Services.Interfaces.ICreditMemoService, CRS.Services.CreditMemoService>();
     builder.Services.AddScoped<CRS.Services.ICreditMemoPdfService, CRS.Services.CreditMemoPdfService>();
 
+    // Stripe Connect Service (for tenant payment processing)
+    builder.Services.AddScoped<CRS.Services.Billing.IStripeConnectService, CRS.Services.Billing.StripeConnectService>();
+
     // System-wide settings
     builder.Services.AddScoped<CRS.Services.Interfaces.ISystemSettingsService, CRS.Services.SystemSettingsService>();
 
@@ -257,6 +261,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<ReserveStudyCreatedListener>();
     builder.Services.AddScoped<ProposalSentListener>();
     builder.Services.AddScoped<ProposalApprovedListener>();
+    builder.Services.AddScoped<ProposalDeclinedListener>();
     builder.Services.AddScoped<FinancialInfoRequestedListener>();
     builder.Services.AddScoped<FinancialInfoSubmittedListener>();
     builder.Services.AddScoped<ReserveStudyCompletedListener>();

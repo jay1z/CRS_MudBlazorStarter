@@ -1,4 +1,4 @@
-﻿@using CRS.Services.Interfaces
+@using CRS.Services.Interfaces
 @using CRS.Services.Tenant
 @using CRS.Data
 @using CRS.Models.Workflow
@@ -46,7 +46,7 @@ else if (pendingAmendments.Count > 0)
                     <MudButton Variant="Variant.Text" 
                                Color="Color.Inherit" 
                                Size="Size.Small"
-                               Href="@($"/ReserveStudies/{amendment.ReserveStudyId}/Amendment")"
+                               Href="@($"/ReserveStudies/Amendment/{amendment.ReserveStudyId}")"
                                Style="text-decoration: underline;">
                         Review Now
                     </MudButton>

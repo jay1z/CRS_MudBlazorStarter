@@ -228,11 +228,29 @@ public static class StageConfiguration
             AvailableActions = StageAction.Advance | StageAction.Reject,
             RequiredValidations = new[] { StageValidation.SignedAcceptanceReceived },
             DefaultNextStage = StudyStatus.ProposalAccepted,
-            AlternativeTransitions = new() { [StageAction.Reject] = StudyStatus.RequestCancelled },
+            AlternativeTransitions = new() { 
+                [StageAction.Reject] = StudyStatus.ProposalDeclined 
+            },
             NotifyOnEnter = StageActor.HOA,
             NotifyOnExit = StageActor.Staff | StageActor.Specialist,
             ActionRequiredMessage = "Review the proposal and accept or decline.",
             WaitingMessage = "Waiting for client to review and accept the proposal."
+        },
+
+        [StudyStatus.ProposalDeclined] = new StageConfig
+        {
+            Status = StudyStatus.ProposalDeclined,
+            DisplayName = "Proposal Declined",
+            Phase = "Proposal",
+            AdvancedBy = StageActor.Staff | StageActor.Specialist,
+            AvailableActions = StageAction.Advance | StageAction.Cancel,
+            DefaultNextStage = StudyStatus.ProposalCreated, // Can create revision
+            AlternativeTransitions = new() { 
+                [StageAction.Cancel] = StudyStatus.RequestCancelled 
+            },
+            NotifyOnEnter = StageActor.Staff | StageActor.Specialist,
+            ActionRequiredMessage = "Review decline feedback and create a revised proposal or cancel the study.",
+            WaitingMessage = "The proposal was declined. A revised proposal may be prepared."
         },
 
         [StudyStatus.ProposalAccepted] = new StageConfig

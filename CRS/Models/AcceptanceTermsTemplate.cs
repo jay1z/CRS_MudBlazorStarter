@@ -125,27 +125,37 @@ public enum TermsType
     /// Terms for accepting a reserve study proposal.
     /// </summary>
     ProposalAcceptance = 0,
-    
+
     /// <summary>
     /// Terms of service for platform usage.
     /// </summary>
     TermsOfService = 1,
-    
+
     /// <summary>
     /// Privacy policy acceptance.
     /// </summary>
     PrivacyPolicy = 2,
-    
+
     /// <summary>
     /// Data processing agreement.
     /// </summary>
     DataProcessingAgreement = 3,
-    
+
     /// <summary>
     /// Service level agreement.
     /// </summary>
     ServiceLevelAgreement = 4,
-    
+
+    /// <summary>
+    /// End User License Agreement.
+    /// </summary>
+    EULA = 5,
+
+    /// <summary>
+    /// Payment processing terms and fee agreement.
+    /// </summary>
+    PaymentProcessingTerms = 6,
+
     /// <summary>
     /// Other/custom terms.
     /// </summary>

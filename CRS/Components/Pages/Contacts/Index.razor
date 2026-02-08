@@ -223,13 +223,24 @@
         try {
             await using var context = await DbFactory.CreateDbContextAsync();
 
-            contacts = await context.Contacts
+            // Load contacts and deduplicate in memory to avoid EF Core GroupBy translation issues
+            var allContacts = await context.Contacts
                 .AsNoTracking()
                 .Where(c => !c.DateDeleted.HasValue)
                 .OrderBy(c => c.LastName)
                 .ThenBy(c => c.FirstName)
-                .AsSplitQuery()
                 .ToListAsync();
+
+            // Deduplicate by email/name/phone in memory
+            contacts = allContacts
+                .GroupBy(c => new { 
+                    Email = c.Email?.ToLowerInvariant(), 
+                    c.FirstName, 
+                    c.LastName, 
+                    c.Phone 
+                })
+                .Select(g => g.First())
+                .ToList();
         }
         catch (Exception ex) {
             Snackbar.Add($"Error loading contacts: {ex.Message}", Severity.Error);
@@ -252,19 +263,19 @@
     }
 
     private async Task ConfirmDelete(Contact contact) {
-        // var parameters = new DialogParameters
-        //     {
-        //     { "ContentText", $"Are you sure you want to delete contact '{contact.FirstName} {contact.LastName}'? This action cannot be undone." },
-        //     { "ButtonText", "Delete" },
-        //     { "Color", Color.Error }
-        // };
+        var parameters = new DialogParameters<CRS.Components.Dialogs.ConfirmationDialog> {
+            { x => x.ContentText, $"Are you sure you want to delete contact '{contact.FirstName} {contact.LastName}'? This action cannot be undone." },
+            { x => x.ButtonText, "Delete" },
+            { x => x.Color, Color.Error }
+        };
 
-        // var dialog = await DialogService.ShowAsync<MudBlazor.Dialog>("Confirm Delete", parameters);
-        // var result = await dialog.Result;
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialog = await DialogService.ShowAsync<CRS.Components.Dialogs.ConfirmationDialog>("Confirm Delete", parameters, options);
+        var result = await dialog.Result;
 
-        // if (!result.Canceled) {
-        //     await DeleteContact(contact);
-        // }
+        if (result != null && !result.Canceled) {
+            await DeleteContact(contact);
+        }
     }
 
     private async Task DeleteContact(Contact contact) {
@@ -290,15 +301,29 @@
     }
 
     private async Task ViewServiceContactElements(Guid serviceContactId) {
-        // // This dialog would show the elements associated with this service contact
-        // var parameters = new DialogParameters
-        //     {
-        //     { "ServiceContactId", serviceContactId }
-        // };
+        var serviceContact = serviceContacts.FirstOrDefault(c => c.Id == serviceContactId);
+        var contactName = serviceContact != null 
+            ? $"{serviceContact.FirstName} {serviceContact.LastName}".Trim()
+            : "Service Contact";
 
-        // var dialog = await DialogService.ShowAsync<MudBlazor.Dialog>("Elements Using This Service Contact", parameters);
-        // await dialog.Result;
+        if (string.IsNullOrWhiteSpace(contactName) && serviceContact != null) {
+            contactName = serviceContact.CompanyName ?? "Service Contact";
+        }
 
-        // // No need to handle the result since this is just a view dialog
+        var parameters = new DialogParameters<CRS.Components.Dialogs.ServiceContactElementsDialog> {
+            { x => x.ServiceContactId, serviceContactId },
+            { x => x.ServiceContactName, contactName }
+        };
+
+        var options = new DialogOptions { 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogService.ShowAsync<CRS.Components.Dialogs.ServiceContactElementsDialog>(
+            "Elements Using This Service Contact", 
+            parameters, 
+            options);
     }
 }

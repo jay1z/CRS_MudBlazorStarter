@@ -81,14 +81,30 @@ namespace CRS.Controllers {
                         case "customer.subscription.deleted":
                             await HandleSubscriptionDeletedAsync(stripeEvent, ct);
                             break;
+                        case "customer.subscription.trial_will_end":
+                            await HandleTrialWillEndAsync(stripeEvent, ct);
+                            break;
                         case "invoice.payment_succeeded":
                             await HandleInvoicePaymentAsync(stripeEvent, true, ct);
                             break;
                         case "invoice.payment_failed":
                             await HandleInvoicePaymentAsync(stripeEvent, false, ct);
                             break;
+                        case "invoice.upcoming":
+                            await HandleInvoiceUpcomingAsync(stripeEvent, ct);
+                            break;
                         case "payment_intent.succeeded":
                             await HandlePaymentIntentSucceededAsync(stripeEvent, ct);
+                            break;
+                        case "charge.dispute.created":
+                            await HandleChargeDisputeCreatedAsync(stripeEvent, ct);
+                            break;
+                        // Stripe Connect account events
+                        case "account.updated":
+                            await HandleConnectAccountUpdatedAsync(stripeEvent, ct);
+                            break;
+                        case "account.application.deauthorized":
+                            await HandleConnectAccountDeauthorizedAsync(stripeEvent, ct);
                             break;
                         default:
                             _logger.LogInformation("Unhandled Stripe event type {Type}; ignoring", stripeEvent.Type);
@@ -530,8 +546,114 @@ namespace CRS.Controllers {
                                         "canceled" => CRS.Models.SubscriptionStatus.Canceled,
                                         "unpaid" => CRS.Models.SubscriptionStatus.Unpaid,
                                         "incomplete" => CRS.Models.SubscriptionStatus.Incomplete,
+                                        "paused" => CRS.Models.SubscriptionStatus.Paused,
                                         _ => CRS.Models.SubscriptionStatus.None
                                     };
+
+        /// <summary>
+        /// Handles the customer.subscription.trial_will_end webhook.
+        /// Sent 3 days before a trial ends - use to notify customer.
+        /// </summary>
+        private async Task HandleTrialWillEndAsync(Event stripeEvent, CancellationToken ct) {
+            var subscription = stripeEvent.Data.Object as Subscription;
+            if (subscription == null) {
+                _logger.LogWarning("Subscription is null for trial_will_end event {EventId}", stripeEvent.Id);
+                return;
+            }
+
+            var tenant = await _db.Tenants.FirstOrDefaultAsync(
+                t => t.StripeSubscriptionId == subscription.Id || t.StripeCustomerId == subscription.CustomerId, ct);
+
+            if (tenant == null) {
+                _logger.LogWarning("No tenant found for subscription {SubId} trial ending", subscription.Id);
+                return;
+            }
+
+            _logger.LogInformation("Trial ending in 3 days for tenant {TenantId} ({Name}), subscription {SubId}",
+                tenant.Id, tenant.Name, subscription.Id);
+
+            // Send trial ending notification
+            await SendBillingNotificationAsync(tenant, BillingNotificationType.TrialEnding);
+        }
+
+        /// <summary>
+        /// Handles the invoice.upcoming webhook.
+        /// Sent ~3 days before the next invoice is created - useful for notifying customers.
+        /// </summary>
+        private async Task HandleInvoiceUpcomingAsync(Event stripeEvent, CancellationToken ct) {
+            var invoice = stripeEvent.Data.Object as Stripe.Invoice;
+            if (invoice == null) {
+                _logger.LogWarning("Invoice is null for invoice.upcoming event {EventId}", stripeEvent.Id);
+                return;
+            }
+
+            var customerId = invoice.CustomerId;
+            if (string.IsNullOrWhiteSpace(customerId)) {
+                _logger.LogWarning("Invoice.upcoming has no customer ID for event {EventId}", stripeEvent.Id);
+                return;
+            }
+
+            var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.StripeCustomerId == customerId, ct);
+            if (tenant == null) {
+                _logger.LogWarning("No tenant found for Stripe customer {CustomerId} (upcoming invoice)", customerId);
+                return;
+            }
+
+            var amountDue = invoice.AmountDue / 100m; // Convert cents to dollars
+            _logger.LogInformation("Upcoming invoice for tenant {TenantId} ({Name}): {Amount:C} due on {DueDate}",
+                tenant.Id, tenant.Name, amountDue, invoice.DueDate);
+
+            // Optionally send upcoming invoice notification
+            // await SendBillingNotificationAsync(tenant, BillingNotificationType.UpcomingInvoice, amountDue);
+        }
+
+        /// <summary>
+        /// Handles the charge.dispute.created webhook.
+        /// Sent when a customer disputes a charge (chargeback) - critical to handle promptly.
+        /// </summary>
+        private async Task HandleChargeDisputeCreatedAsync(Event stripeEvent, CancellationToken ct) {
+            var dispute = stripeEvent.Data.Object as Stripe.Dispute;
+            if (dispute == null) {
+                _logger.LogWarning("Dispute is null for charge.dispute.created event {EventId}", stripeEvent.Id);
+                return;
+            }
+
+            // Get the charge to find the customer
+            var chargeId = dispute.ChargeId;
+            string? customerId = null;
+
+            if (!string.IsNullOrWhiteSpace(chargeId)) {
+                try {
+                    var client = _stripeClientFactory.CreateClient();
+                    var chargeService = new ChargeService(client);
+                    var charge = await chargeService.GetAsync(chargeId, cancellationToken: ct);
+                    customerId = charge?.CustomerId;
+                } catch (Exception ex) {
+                    _logger.LogError(ex, "Failed to fetch charge {ChargeId} for dispute", chargeId);
+                }
+            }
+
+            Tenant? tenant = null;
+            if (!string.IsNullOrWhiteSpace(customerId)) {
+                tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.StripeCustomerId == customerId, ct);
+            }
+
+            var disputeAmount = dispute.Amount / 100m;
+
+            _logger.LogCritical(
+                "CHARGEBACK DISPUTE CREATED: Dispute {DisputeId} for {Amount:C} - Tenant: {TenantName} ({TenantId}), Charge: {ChargeId}, Reason: {Reason}, Status: {Status}",
+                dispute.Id, disputeAmount, tenant?.Name ?? "UNKNOWN", tenant?.Id, chargeId, dispute.Reason, dispute.Status);
+
+            // If tenant found, mark for review
+            if (tenant != null) {
+                // You might want to add a flag to the tenant for disputes pending review
+                // tenant.HasPendingDispute = true;
+                // await _db.SaveChangesAsync(ct);
+
+                // Send critical notification to admin
+                await SendBillingNotificationAsync(tenant, BillingNotificationType.DisputeCreated, disputeAmount);
+            }
+        }
 
         /// <summary>
         /// Sends a billing notification email to the tenant owner.
@@ -603,6 +725,94 @@ namespace CRS.Controllers {
                     notificationType, tenant.Id);
                 // Don't rethrow - billing notification failure shouldn't break webhook processing
             }
+        }
+
+        /// <summary>
+        /// Handles account.updated webhook for Stripe Connect accounts.
+        /// Syncs the connected account status (onboarding complete, payouts enabled, etc.)
+        /// </summary>
+        private async Task HandleConnectAccountUpdatedAsync(Event stripeEvent, CancellationToken ct) {
+            var account = stripeEvent.Data.Object as Stripe.Account;
+            if (account == null) {
+                _logger.LogWarning("Account is null for account.updated event {EventId}", stripeEvent.Id);
+                return;
+            }
+
+            _logger.LogInformation(
+                "Stripe Connect account updated: {AccountId} payouts={PayoutsEnabled} details_submitted={DetailsSubmitted}",
+                account.Id, account.PayoutsEnabled, account.DetailsSubmitted);
+
+            // Find the tenant with this Connect account
+            var tenant = await _db.Tenants.FirstOrDefaultAsync(
+                t => t.StripeConnectAccountId == account.Id, ct);
+
+            if (tenant == null) {
+                _logger.LogWarning("No tenant found for Connect account {AccountId}", account.Id);
+                return;
+            }
+
+            // Update tenant with current Connect status
+            tenant.StripeConnectPayoutsEnabled = account.PayoutsEnabled;
+            tenant.StripeConnectCardPaymentsEnabled = account.Capabilities?.CardPayments == "active";
+
+            // Check if onboarding is complete
+            var hasCurrentlyDue = account.Requirements?.CurrentlyDue?.Any() ?? false;
+            var hasPastDue = account.Requirements?.PastDue?.Any() ?? false;
+            var wasOnboardingComplete = tenant.StripeConnectOnboardingComplete;
+            tenant.StripeConnectOnboardingComplete = !hasCurrentlyDue && !hasPastDue && account.DetailsSubmitted == true;
+
+            tenant.StripeConnectLastSyncedAt = DateTime.UtcNow;
+            tenant.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "Updated Connect status for tenant {TenantId}: Onboarding={Onboarding} (was {WasOnboarding}), Payouts={Payouts}, Cards={Cards}",
+                tenant.Id, tenant.StripeConnectOnboardingComplete, wasOnboardingComplete,
+                tenant.StripeConnectPayoutsEnabled, tenant.StripeConnectCardPaymentsEnabled);
+
+            // If onboarding just completed, we could send a notification
+            if (tenant.StripeConnectOnboardingComplete && !wasOnboardingComplete) {
+                _logger.LogInformation(
+                    "Stripe Connect onboarding completed for tenant {TenantId} ({TenantName})",
+                    tenant.Id, tenant.Name);
+                // TODO: Send email notification that they can now accept payments
+            }
+        }
+
+        /// <summary>
+        /// Handles account.application.deauthorized webhook.
+        /// This is called when a connected account disconnects from your platform.
+        /// </summary>
+        private async Task HandleConnectAccountDeauthorizedAsync(Event stripeEvent, CancellationToken ct) {
+            var account = stripeEvent.Data.Object as Stripe.Account;
+            if (account == null) {
+                _logger.LogWarning("Account is null for account.application.deauthorized event {EventId}", stripeEvent.Id);
+                return;
+            }
+
+            _logger.LogWarning("Stripe Connect account deauthorized: {AccountId}", account.Id);
+
+            var tenant = await _db.Tenants.FirstOrDefaultAsync(
+                t => t.StripeConnectAccountId == account.Id, ct);
+
+            if (tenant == null) {
+                _logger.LogWarning("No tenant found for deauthorized Connect account {AccountId}", account.Id);
+                return;
+            }
+
+            // Mark the Connect account as deauthorized - tenant can reconnect later
+            tenant.StripeConnectOnboardingComplete = false;
+            tenant.StripeConnectPayoutsEnabled = false;
+            tenant.StripeConnectCardPaymentsEnabled = false;
+            tenant.StripeConnectLastSyncedAt = DateTime.UtcNow;
+            tenant.UpdatedAt = DateTime.UtcNow;
+            // Don't clear the StripeConnectAccountId - keep for reference
+
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogWarning(
+                "Marked Connect account as deauthorized for tenant {TenantId} ({TenantName}). Account ID preserved: {AccountId}",
+                tenant.Id, tenant.Name, account.Id);
         }
                                 }
                             }

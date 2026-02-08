@@ -52,13 +52,19 @@ namespace CRS.Services.Workflow {
                 StudyStatus.ProposalSent,
                 StudyStatus.RequestCancelled 
             },
-            
+
             [StudyStatus.ProposalSent] = new() { 
-                StudyStatus.ProposalAccepted, 
+                StudyStatus.ProposalAccepted,
+                StudyStatus.ProposalDeclined,  // Customer declines proposal
                 StudyStatus.RequestCancelled 
             },
-            
-            [StudyStatus.ProposalAccepted] = new() { 
+
+            [StudyStatus.ProposalDeclined] = new() {
+                StudyStatus.ProposalCreated,   // Create revised proposal
+                StudyStatus.RequestCancelled   // Cancel the study
+            },
+
+            [StudyStatus.ProposalAccepted] = new() {
                 StudyStatus.ServiceContactsRequested,
                 StudyStatus.FinancialInfoRequested,
                 StudyStatus.FundingPlanReady, // Amendment acceptance - skip to funding plan when amendment is accepted

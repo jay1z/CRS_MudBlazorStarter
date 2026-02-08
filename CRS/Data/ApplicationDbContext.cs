@@ -430,9 +430,13 @@ namespace CRS.Data {
                     .HasDatabaseName("IX_CustomerAccountUser_User");
                 entity.HasIndex(e => new { e.CustomerAccountId, e.Role, e.IsActive })
                     .HasDatabaseName("IX_CustomerAccountUser_Account_Role_Active");
+                // Configure as optional to avoid EF Core query filter conflicts
+                // CustomerAccount has a tenant filter, so navigating from CustomerAccountUser
+                // to CustomerAccount could filter out the required entity unexpectedly
                 entity.HasOne(e => e.CustomerAccount)
                     .WithMany(c => c.CustomerAccountUsers)
                     .HasForeignKey(e => e.CustomerAccountId)
+                    .IsRequired(false)
                     .OnDelete(DeleteBehavior.Cascade);
                 entity.HasOne(e => e.User)
                     .WithMany()
@@ -450,9 +454,12 @@ namespace CRS.Data {
                     .HasDatabaseName("IX_CustomerAccountInvitation_Token");
                 entity.HasIndex(e => new { e.Status, e.ExpiresAt })
                     .HasDatabaseName("IX_CustomerAccountInvitation_Status_Expires");
+                // Configure as optional relationship to avoid EF Core query filter conflicts
+                // CustomerAccount has a tenant filter, invitations are looked up by token cross-tenant
                 entity.HasOne(e => e.CustomerAccount)
                     .WithMany(c => c.Invitations)
                     .HasForeignKey(e => e.CustomerAccountId)
+                    .IsRequired(false)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

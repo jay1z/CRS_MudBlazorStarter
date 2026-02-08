@@ -15,6 +15,20 @@ namespace CRS.Services.Billing {
         Task ApplySubscriptionUpdateAsync(string subscriptionId, string customerId, SubscriptionTier? tier, SubscriptionStatus status, CancellationToken ct = default);
         Task<string> CreateDeferredTenantCheckoutSessionAsync(string companyName, string subdomain, string adminEmail, SubscriptionTier tier, BillingInterval interval, CancellationToken ct = default);
         Task<IReadOnlyList<InvoiceDto>> GetRecentInvoicesAsync(int tenantId, int max = 10, CancellationToken ct = default);
+        Task<bool> PauseSubscriptionAsync(int tenantId, CancellationToken ct = default);
+        Task<bool> ResumeSubscriptionAsync(int tenantId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Gets the platform fee rate for a tenant based on their subscription tier.
+        /// Returns the rate as a decimal (e.g., 0.015 = 1.5%)
+        /// </summary>
+        Task<decimal> GetPlatformFeeRateAsync(int tenantId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Gets the platform fee rate for a subscription tier without tenant lookup.
+        /// Returns the rate as a decimal (e.g., 0.015 = 1.5%)
+        /// </summary>
+        decimal GetPlatformFeeRate(SubscriptionTier? tier);
     }
 
     public class BillingService : IBillingService {
@@ -88,14 +102,24 @@ namespace CRS.Services.Billing {
 
             var client = _clientFactory.CreateClient();
             var sessionService = new SessionService(client);
-            var session = await sessionService.CreateAsync(new SessionCreateOptions {
+
+            var sessionOptions = new SessionCreateOptions {
                 Mode = "subscription",
                 Customer = tenant.StripeCustomerId,
                 SuccessUrl = (_urlOptions.SuccessUrl ?? "https://localhost:5001/billing/success") + ( _urlOptions.SuccessUrl?.Contains("?") == true ? "&" : "?" ) + "tenantId=" + tenant.Id + "&token=" + tenant.SignupToken + "&session_id={CHECKOUT_SESSION_ID}",
                 CancelUrl = _urlOptions.CancelUrl ?? "https://localhost:5001/pricing",
                 LineItems = new List<SessionLineItemOptions> { new() { Price = priceId, Quantity = 1 } },
+                // Enable promo/coupon codes at checkout
+                AllowPromotionCodes = _stripeOptions.AllowPromotionCodes,
                 Metadata = new Dictionary<string, string> { ["tenant_id"] = tenant.Id.ToString(), ["tier"] = tier.ToString(), ["interval"] = interval.ToString(), ["admin_email"] = tenant.PendingOwnerEmail ?? string.Empty }
-            }, null, ct);
+            };
+
+            // Enable automatic tax calculation if configured
+            if (_stripeOptions.EnableAutomaticTax) {
+                sessionOptions.AutomaticTax = new SessionAutomaticTaxOptions { Enabled = true };
+            }
+
+            var session = await sessionService.CreateAsync(sessionOptions, null, ct);
             _logger.LogInformation("Created checkout session {SessionId} for tenant {TenantId} tier {Tier} interval {Interval}", session.Id, tenant.Id, tier, interval);
             return session.Url;
         }
@@ -168,12 +192,14 @@ namespace CRS.Services.Billing {
             
             var successUrl = successBase + "/?deferred=1&session_id={CHECKOUT_SESSION_ID}";
 
-            var session = await sessionService.CreateAsync(new SessionCreateOptions {
+            var sessionOptions = new SessionCreateOptions {
                 Mode = "subscription",
                 SuccessUrl = successUrl,
                 CancelUrl = _urlOptions.CancelUrl ?? "https://localhost:7056/tenant/signup?canceled=1",
                 LineItems = new List<SessionLineItemOptions> { new() { Price = priceId, Quantity = 1 } },
                 CustomerEmail = adminEmail,
+                // Enable promo/coupon codes at checkout
+                AllowPromotionCodes = _stripeOptions.AllowPromotionCodes,
                 Metadata = new Dictionary<string, string> {
                     ["company_name"] = companyName,
                     ["subdomain"] = subdomain,
@@ -183,6 +209,8 @@ namespace CRS.Services.Billing {
                     ["deferred_tenant"] = "true"
                 },
                 SubscriptionData = new SessionSubscriptionDataOptions {
+                    // Add free trial period if configured
+                    TrialPeriodDays = _stripeOptions.TrialPeriodDays > 0 ? _stripeOptions.TrialPeriodDays : null,
                     Metadata = new Dictionary<string, string> {
                         ["company_name"] = companyName,
                         ["subdomain"] = subdomain,
@@ -192,9 +220,100 @@ namespace CRS.Services.Billing {
                         ["deferred_tenant"] = "true"
                     }
                 }
-            }, null, ct);
+            };
+
+            // Enable automatic tax calculation if configured
+            if (_stripeOptions.EnableAutomaticTax) {
+                sessionOptions.AutomaticTax = new SessionAutomaticTaxOptions { Enabled = true };
+            }
+
+            var session = await sessionService.CreateAsync(sessionOptions, null, ct);
             _logger.LogInformation("Created deferred checkout session {SessionId} for subdomain {Subdomain}", session.Id, subdomain);
             return session.Url;
+        }
+
+        /// <summary>
+        /// Pauses a subscription at the end of the current billing period.
+        /// The customer retains access until the period ends, then enters a paused state.
+        /// </summary>
+        public async Task<bool> PauseSubscriptionAsync(int tenantId, CancellationToken ct = default) {
+            var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.StripeSubscriptionId)) {
+                _logger.LogWarning("Cannot pause subscription: tenant {TenantId} not found or has no subscription", tenantId);
+                return false;
+            }
+
+            try {
+                var client = _clientFactory.CreateClient();
+                var subscriptionService = new SubscriptionService(client);
+
+                // Pause collection - stops billing but keeps subscription active
+                var updateOptions = new SubscriptionUpdateOptions {
+                    PauseCollection = new SubscriptionPauseCollectionOptions {
+                        Behavior = "mark_uncollectible" // or "keep_as_draft" or "void"
+                    }
+                };
+
+                await subscriptionService.UpdateAsync(tenant.StripeSubscriptionId, updateOptions, cancellationToken: ct);
+
+                tenant.SubscriptionStatus = SubscriptionStatus.Paused;
+                tenant.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Paused subscription {SubscriptionId} for tenant {TenantId}", tenant.StripeSubscriptionId, tenantId);
+                return true;
+            } catch (StripeException ex) {
+                _logger.LogError(ex, "Failed to pause subscription for tenant {TenantId}: {Message}", tenantId, ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Resumes a paused subscription. Billing will resume at the next billing cycle.
+        /// </summary>
+        public async Task<bool> ResumeSubscriptionAsync(int tenantId, CancellationToken ct = default) {
+            var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.StripeSubscriptionId)) {
+                _logger.LogWarning("Cannot resume subscription: tenant {TenantId} not found or has no subscription", tenantId);
+                return false;
+            }
+
+            try {
+                var client = _clientFactory.CreateClient();
+                var subscriptionService = new SubscriptionService(client);
+
+                // Resume the paused subscription
+                // Note: ResumeAsync is used for subscriptions paused via pause_collection
+                var subscription = await subscriptionService.ResumeAsync(tenant.StripeSubscriptionId, new SubscriptionResumeOptions {
+                    BillingCycleAnchor = SubscriptionBillingCycleAnchor.Now
+                }, cancellationToken: ct);
+
+                tenant.SubscriptionStatus = SubscriptionStatus.Active;
+                tenant.IsActive = true;
+                tenant.UpdatedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Resumed subscription {SubscriptionId} for tenant {TenantId}", tenant.StripeSubscriptionId, tenantId);
+                return true;
+            } catch (StripeException ex) {
+                _logger.LogError(ex, "Failed to resume subscription for tenant {TenantId}: {Message}", tenantId, ex.Message);
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<decimal> GetPlatformFeeRateAsync(int tenantId, CancellationToken ct = default) {
+            var tenant = await _db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, ct);
+            if (tenant == null) {
+                _logger.LogWarning("Tenant {TenantId} not found, returning default Pro rate", tenantId);
+                return SubscriptionTierDefaults.ProPlatformFeeRate;
+            }
+            return SubscriptionTierDefaults.GetPlatformFeeRate(tenant);
+        }
+
+        /// <inheritdoc />
+        public decimal GetPlatformFeeRate(SubscriptionTier? tier) {
+            return SubscriptionTierDefaults.GetPlatformFeeRate(tier);
         }
     }
 }

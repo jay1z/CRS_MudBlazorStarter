@@ -36,6 +36,12 @@ public class BillingNotificationMailable : Mailable<BillingNotificationEmail>
             $"🔒 Account Suspended: {_email.TenantName}",
         BillingNotificationType.AccountReactivated => 
             $"✅ Welcome Back! {_email.TenantName} Account Reactivated",
+        BillingNotificationType.TrialEnding => 
+            $"⏰ Your Trial Ends in 3 Days - {_email.TenantName}",
+        BillingNotificationType.UpcomingInvoice => 
+            $"📋 Upcoming Invoice - {_email.TenantName}",
+        BillingNotificationType.DisputeCreated => 
+            $"🚨 URGENT: Chargeback Dispute Created - {_email.TenantName}",
         _ => $"Billing Notification - {_email.TenantName}"
     };
 
@@ -45,6 +51,9 @@ public class BillingNotificationMailable : Mailable<BillingNotificationEmail>
         BillingNotificationType.GracePeriodStarted => "~/Components/EmailTemplates/Billing/PaymentFailed.cshtml",
         BillingNotificationType.AccountSuspended => "~/Components/EmailTemplates/Billing/AccountSuspended.cshtml",
         BillingNotificationType.AccountReactivated => "~/Components/EmailTemplates/Billing/AccountReactivated.cshtml",
+        BillingNotificationType.TrialEnding => "~/Components/EmailTemplates/Billing/TrialEnding.cshtml",
+        BillingNotificationType.UpcomingInvoice => "~/Components/EmailTemplates/Billing/TrialEnding.cshtml", // Reuse for now
+        BillingNotificationType.DisputeCreated => "~/Components/EmailTemplates/Billing/AccountSuspended.cshtml", // Reuse for now
         _ => "~/Components/EmailTemplates/Billing/PaymentFailed.cshtml"
     };
 }

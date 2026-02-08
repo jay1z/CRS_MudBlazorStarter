@@ -1,0 +1,401 @@
+﻿@page "/privacy"
+@page "/privacy-policy"
+@attribute [CRS.Components.Layout.HideNav]
+
+<PageTitle>Privacy Policy - ALX Reserve Cloud</PageTitle>
+
+<!-- Hero Section -->
+<div style="background: linear-gradient(135deg, #6A3D9A 0%, #4a2875 100%); padding: 60px 0 40px;">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <div style="text-align: center; color: white;">
+            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Large" Class="mb-4" />
+            <MudText Typo="Typo.h3" Class="fw-bold mb-3">
+                Privacy Policy
+            </MudText>
+            <MudText Typo="Typo.subtitle1" Style="opacity: 0.9;">
+                Last Updated: @DateTime.UtcNow.ToString("MMMM d, yyyy")
+            </MudText>
+        </div>
+    </MudContainer>
+</div>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-8">
+    <MudPaper Elevation="2" Class="pa-6 pa-md-8">
+        
+        <!-- Introduction -->
+        <MudText Typo="Typo.body1" Class="mb-6">
+            ALX Reserve Cloud ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains 
+            how we collect, use, disclose, and safeguard your information when you use our reserve study management platform 
+            and related services (the "Service").
+        </MudText>
+
+        <!-- Table of Contents -->
+        <MudText Typo="Typo.h5" Class="fw-bold mb-4">Table of Contents</MudText>
+        <MudList T="string" Dense="true" Class="mb-6">
+            <MudListItem T="string"><MudLink Href="/privacy#information-collected">1. Information We Collect</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#how-we-use">2. How We Use Your Information</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#information-sharing">3. Information Sharing & Disclosure</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#data-retention">4. Data Retention</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#data-security">5. Data Security</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#your-rights">6. Your Rights & Choices</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#cookies">7. Cookies & Tracking Technologies</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#third-party">8. Third-Party Services</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#children">9. Children's Privacy</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#international">10. International Data Transfers</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#california">11. California Privacy Rights</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#changes">12. Changes to This Policy</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/privacy#contact">13. Contact Us</MudLink></MudListItem>
+        </MudList>
+
+        <MudDivider Class="my-6" />
+
+        <!-- Section 1: Information We Collect -->
+        <section id="information-collected" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">1. Information We Collect</MudText>
+            
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">1.1 Information You Provide</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We collect information you provide directly to us, including:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-4">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Person" IconColor="Color.Primary">
+                    <strong>Account Information:</strong> Name, email address, phone number, company name, job title
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Business" IconColor="Color.Primary">
+                    <strong>Business Information:</strong> Company address, tax identification numbers, professional licenses
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Payment" IconColor="Color.Primary">
+                    <strong>Payment Information:</strong> Credit card numbers, bank account details (processed securely through Stripe)
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Home" IconColor="Color.Primary">
+                    <strong>Community/Property Data:</strong> HOA names, addresses, property details, financial information
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Description" IconColor="Color.Primary">
+                    <strong>Reserve Study Data:</strong> Component inventories, cost estimates, funding plans, uploaded documents
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Chat" IconColor="Color.Primary">
+                    <strong>Communications:</strong> Support tickets, emails, feedback, and other correspondence
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">1.2 Information Collected Automatically</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                When you use our Service, we automatically collect certain information:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-4">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Computer" IconColor="Color.Secondary">
+                    <strong>Device Information:</strong> IP address, browser type, operating system, device identifiers
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Analytics" IconColor="Color.Secondary">
+                    <strong>Usage Data:</strong> Pages visited, features used, time spent, click patterns
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.LocationOn" IconColor="Color.Secondary">
+                    <strong>Location Data:</strong> General geographic location based on IP address
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.History" IconColor="Color.Secondary">
+                    <strong>Log Data:</strong> Access times, error logs, referring URLs
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">1.3 Information from Third Parties</MudText>
+            <MudText Typo="Typo.body1">
+                We may receive information from third-party services you connect to your account, such as payment processors 
+                (Stripe), identity verification services, and business data providers.
+            </MudText>
+        </section>
+
+        <!-- Section 2: How We Use Your Information -->
+        <section id="how-we-use" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">2. How We Use Your Information</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We use the information we collect for the following purposes:
+            </MudText>
+            <MudList T="string" Dense="false">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    <strong>Provide and maintain the Service:</strong> Process reserve studies, generate reports, manage accounts
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    <strong>Process transactions:</strong> Handle payments, invoices, and payouts
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    <strong>Communicate with you:</strong> Send service notifications, updates, and marketing (with consent)
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    <strong>Improve our Service:</strong> Analyze usage patterns, develop new features, fix bugs
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    <strong>Ensure security:</strong> Detect fraud, prevent abuse, protect user accounts
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    <strong>Legal compliance:</strong> Comply with applicable laws, regulations, and legal processes
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    <strong>Customer support:</strong> Respond to inquiries and resolve issues
+                </MudListItem>
+            </MudList>
+        </section>
+
+        <!-- Section 3: Information Sharing & Disclosure -->
+        <section id="information-sharing" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">3. Information Sharing & Disclosure</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We do not sell your personal information. We may share your information in the following circumstances:
+            </MudText>
+            
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">3.1 Service Providers</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We share information with third-party vendors who help us operate our Service, including:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-4">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Payment processors (Stripe) for transaction processing
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Cloud hosting providers (Microsoft Azure) for data storage
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Email service providers for communications
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Analytics providers for usage analysis
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">3.2 With Your Consent</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We may share information when you direct us to do so, such as sharing reserve studies with your clients 
+                (HOAs, property managers).
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">3.3 Legal Requirements</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We may disclose information if required by law, court order, or governmental regulation, or if we believe 
+                disclosure is necessary to protect our rights, your safety, or the safety of others.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">3.4 Business Transfers</MudText>
+            <MudText Typo="Typo.body1">
+                In the event of a merger, acquisition, or sale of assets, your information may be transferred to the 
+                acquiring entity. We will notify you of any such change.
+            </MudText>
+        </section>
+
+        <!-- Section 4: Data Retention -->
+        <section id="data-retention" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">4. Data Retention</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We retain your information for as long as necessary to provide the Service and fulfill the purposes 
+                described in this Policy. Specifically:
+            </MudText>
+            <MudList T="string" Dense="false">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Account data:</strong> Retained while your account is active, plus 30 days after deletion
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Reserve study data:</strong> Retained for 7 years after creation for compliance purposes
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Financial records:</strong> Retained for 7 years as required by tax regulations
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Log data:</strong> Retained for 90 days for security and troubleshooting
+                </MudListItem>
+            </MudList>
+        </section>
+
+        <!-- Section 5: Data Security -->
+        <section id="data-security" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">5. Data Security</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We implement industry-standard security measures to protect your information:
+            </MudText>
+            <MudList T="string" Dense="false">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Lock" IconColor="Color.Success">
+                    <strong>Encryption:</strong> TLS 1.3 for data in transit, AES-256 for data at rest
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Shield" IconColor="Color.Success">
+                    <strong>Access Controls:</strong> Role-based access, multi-factor authentication
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Security" IconColor="Color.Success">
+                    <strong>Infrastructure:</strong> SOC 2 compliant cloud hosting, regular security audits
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Backup" IconColor="Color.Success">
+                    <strong>Backups:</strong> Daily encrypted backups with geographic redundancy
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.MonitorHeart" IconColor="Color.Success">
+                    <strong>Monitoring:</strong> 24/7 intrusion detection and security monitoring
+                </MudListItem>
+            </MudList>
+        </section>
+
+        <!-- Section 6: Your Rights & Choices -->
+        <section id="your-rights" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">6. Your Rights & Choices</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Depending on your location, you may have the following rights regarding your personal information:
+            </MudText>
+            <MudList T="string" Dense="false">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Visibility" IconColor="Color.Primary">
+                    <strong>Access:</strong> Request a copy of your personal data
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Edit" IconColor="Color.Primary">
+                    <strong>Correction:</strong> Request correction of inaccurate data
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Delete" IconColor="Color.Primary">
+                    <strong>Deletion:</strong> Request deletion of your personal data (subject to legal retention requirements)
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Download" IconColor="Color.Primary">
+                    <strong>Portability:</strong> Request your data in a machine-readable format
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.DoNotDisturb" IconColor="Color.Primary">
+                    <strong>Opt-out:</strong> Unsubscribe from marketing communications
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Block" IconColor="Color.Primary">
+                    <strong>Restriction:</strong> Request limitation of data processing
+                </MudListItem>
+            </MudList>
+            <MudText Typo="Typo.body1" Class="mt-3">
+                To exercise these rights, please contact us at privacy@alxreservecloud.com. We will respond within 30 days.
+            </MudText>
+        </section>
+
+        <!-- Section 7: Cookies & Tracking Technologies -->
+        <section id="cookies" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">7. Cookies & Tracking Technologies</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We use cookies and similar technologies to:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-3">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Essential cookies:</strong> Required for the Service to function (authentication, security)
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Functional cookies:</strong> Remember your preferences and settings
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Analytics cookies:</strong> Help us understand how you use the Service
+                </MudListItem>
+            </MudList>
+            <MudText Typo="Typo.body1">
+                You can manage cookie preferences through your browser settings. Note that disabling certain cookies may 
+                affect the functionality of the Service.
+            </MudText>
+        </section>
+
+        <!-- Section 8: Third-Party Services -->
+        <section id="third-party" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">8. Third-Party Services</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Our Service integrates with third-party services that have their own privacy policies:
+            </MudText>
+            <MudList T="string" Dense="false">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Stripe:</strong> <MudLink Href="https://stripe.com/privacy" Target="_blank">stripe.com/privacy</MudLink>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Microsoft Azure:</strong> <MudLink Href="https://privacy.microsoft.com" Target="_blank">privacy.microsoft.com</MudLink>
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Google Analytics:</strong> <MudLink Href="https://policies.google.com/privacy" Target="_blank">policies.google.com/privacy</MudLink>
+                </MudListItem>
+            </MudList>
+        </section>
+
+        <!-- Section 9: Children's Privacy -->
+        <section id="children" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">9. Children's Privacy</MudText>
+            <MudText Typo="Typo.body1">
+                The Service is not intended for individuals under 18 years of age. We do not knowingly collect personal 
+                information from children. If we become aware that we have collected personal information from a child 
+                without parental consent, we will take steps to delete that information.
+            </MudText>
+        </section>
+
+        <!-- Section 10: International Data Transfers -->
+        <section id="international" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">10. International Data Transfers</MudText>
+            <MudText Typo="Typo.body1">
+                Your information may be transferred to and processed in countries other than your country of residence. 
+                These countries may have different data protection laws. We implement appropriate safeguards, including 
+                Standard Contractual Clauses, to protect your information during international transfers.
+            </MudText>
+        </section>
+
+        <!-- Section 11: California Privacy Rights -->
+        <section id="california" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">11. California Privacy Rights (CCPA/CPRA)</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA) 
+                and California Privacy Rights Act (CPRA):
+            </MudText>
+            <MudList T="string" Dense="false">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Right to know what personal information is collected, used, shared, or sold
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Right to delete personal information held by businesses
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Right to opt-out of sale or sharing of personal information (we do not sell personal information)
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Right to non-discrimination for exercising privacy rights
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Right to correct inaccurate personal information
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Right to limit use of sensitive personal information
+                </MudListItem>
+            </MudList>
+        </section>
+
+        <!-- Section 12: Changes to This Policy -->
+        <section id="changes" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">12. Changes to This Policy</MudText>
+            <MudText Typo="Typo.body1">
+                We may update this Privacy Policy from time to time. We will notify you of any material changes by posting 
+                the new Privacy Policy on this page and updating the "Last Updated" date. We encourage you to review this 
+                Privacy Policy periodically.
+            </MudText>
+        </section>
+
+        <!-- Section 13: Contact Us -->
+        <section id="contact" class="mb-4">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">13. Contact Us</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                If you have questions about this Privacy Policy or our data practices, please contact us:
+            </MudText>
+            <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f8f9fa;">
+                <MudText Typo="Typo.body1" Class="fw-bold">ALX Reserve Cloud - Privacy Team</MudText>
+                <MudText Typo="Typo.body2">Email: privacy@alxreservecloud.com</MudText>
+                <MudText Typo="Typo.body2">Data Protection Officer: dpo@alxreservecloud.com</MudText>
+            </MudPaper>
+        </section>
+
+        <MudDivider Class="my-6" />
+
+        <!-- Footer Note -->
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: #e3f2fd; border-radius: 8px;">
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                Your privacy matters to us. If you have any concerns about how your data is handled, please don't hesitate 
+                to contact our privacy team.
+            </MudText>
+        </MudPaper>
+
+    </MudPaper>
+
+    <!-- Back to Home -->
+    <div class="d-flex justify-center mt-6 gap-4">
+        <MudButton Href="/" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack">
+            Back to Home
+        </MudButton>
+        <MudButton Href="/terms" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Gavel">
+            Terms of Service
+        </MudButton>
+    </div>
+</MudContainer>
+
+@code {
+    // Component can be extended with consent management, version tracking, etc.
+}

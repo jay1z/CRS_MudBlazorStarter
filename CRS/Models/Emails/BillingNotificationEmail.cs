@@ -111,5 +111,20 @@ public enum BillingNotificationType
     /// <summary>
     /// Account has been reactivated after payment.
     /// </summary>
-    AccountReactivated
+    AccountReactivated,
+
+    /// <summary>
+    /// Trial subscription ending in 3 days.
+    /// </summary>
+    TrialEnding,
+
+    /// <summary>
+    /// Upcoming invoice notification.
+    /// </summary>
+    UpcomingInvoice,
+
+    /// <summary>
+    /// Chargeback dispute created - critical alert.
+    /// </summary>
+    DisputeCreated
 }

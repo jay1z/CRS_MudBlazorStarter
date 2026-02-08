@@ -160,7 +160,7 @@
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Invoice #">
-                    <MudLink Href="@($"/Invoices/{context.Id}")" Style="font-weight: 600;">
+                    <MudLink Href="@($"/Invoices/Details/{context.Id}")" Style="font-weight: 600;">
                         @context.InvoiceNumber
                     </MudLink>
                 </MudTd>
@@ -191,16 +191,30 @@
                     </MudStack>
                 </MudTd>
                 <MudTd DataLabel="Status">
-                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled">
-                        @context.Status
-                    </MudChip>
+                    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled">
+                            @context.Status
+                        </MudChip>
+                        @if (!string.IsNullOrEmpty(context.StripePaymentIntentId))
+                        {
+                            <MudTooltip Text="Paid via Stripe">
+                                <MudIcon Icon="@Icons.Material.Filled.CreditScore" Size="Size.Small" Style="color: #635BFF;" />
+                            </MudTooltip>
+                        }
+                        else if (!string.IsNullOrEmpty(context.PaymentUrl) && context.Status != InvoiceStatus.Paid && context.Status != InvoiceStatus.Voided)
+                        {
+                            <MudTooltip Text="Online payment available">
+                                <MudIcon Icon="@Icons.Material.Filled.CreditCard" Size="Size.Small" Color="Color.Success" />
+                            </MudTooltip>
+                        }
+                    </MudStack>
                 </MudTd>
                 <MudTd>
                     <MudStack Row="true" Spacing="1">
                         <MudTooltip Text="View Details">
                             <MudIconButton Icon="@Icons.Material.Filled.Visibility"
                                            Size="Size.Small"
-                                           Href="@($"/Invoices/{context.Id}")" />
+                                           Href="@($"/Invoices/Details/{context.Id}")" />
                         </MudTooltip>
                         <MudTooltip Text="Download PDF">
                             <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf"
@@ -214,7 +228,7 @@
                                 <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
                                                Size="Size.Small"
                                                Color="Color.Primary"
-                                               Href="@($"/ReserveStudies/{context.ReserveStudyId}/Details")" />
+                                               Href="@($"/ReserveStudies/Details/{context.ReserveStudyId}")" />
                             </MudTooltip>
                         }
                     </MudStack>
@@ -437,7 +451,7 @@
                             Invoice = invoice,
                             ReserveStudy = invoice.ReserveStudy,
                             BaseUrl = baseUrl,
-                            InvoiceViewUrl = $"{baseUrl}/Invoices/{invoice.Id}",
+                            InvoiceViewUrl = $"{baseUrl}/Invoices/Details/{invoice.Id}",
                             IsReminder = true,
                             DaysPastDue = daysOverdue
                         };

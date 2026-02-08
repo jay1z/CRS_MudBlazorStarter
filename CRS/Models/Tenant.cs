@@ -48,7 +48,48 @@ namespace CRS.Models {
         public int ReactivationCount { get; set; } = 0; // How many times account was reactivated
         public DateTime? LastReactivatedAt { get; set; } // Last time subscription was restored
         public DateTime? LastPaymentFailureAt { get; set; } // Track when payment last failed
-        
+
+        // Payment Processing: Platform fee rate (percentage as decimal, e.g., 0.015 = 1.5%)
+        // Can be overridden per-tenant for custom Enterprise pricing
+        public decimal? PlatformFeeRateOverride { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════
+        // STRIPE CONNECT - Payment Processing for Tenant's Clients
+        // Allows tenants to collect payments from HOA clients via Stripe
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Stripe Connect Account ID (acct_xxx) for receiving payments from clients.
+        /// This is separate from StripeCustomerId which is for the tenant's own subscription.
+        /// </summary>
+        public string? StripeConnectAccountId { get; set; }
+
+        /// <summary>
+        /// Whether the tenant has completed Stripe Connect onboarding and can receive payments.
+        /// </summary>
+        public bool StripeConnectOnboardingComplete { get; set; } = false;
+
+        /// <summary>
+        /// Whether Stripe has enabled payouts for this connected account.
+        /// May be false even after onboarding if additional verification is needed.
+        /// </summary>
+        public bool StripeConnectPayoutsEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Whether the connected account can process card payments.
+        /// </summary>
+        public bool StripeConnectCardPaymentsEnabled { get; set; } = false;
+
+        /// <summary>
+        /// When Stripe Connect was first set up for this tenant.
+        /// </summary>
+        public DateTime? StripeConnectCreatedAt { get; set; }
+
+        /// <summary>
+        /// Last time we synced the Connect account status from Stripe.
+        /// </summary>
+        public DateTime? StripeConnectLastSyncedAt { get; set; }
+
         // Demo Mode: Mark demo tenants and track soft delete
         public bool IsDemo { get; set; } = false;
         public DateTime? DateDeleted { get; set; }
@@ -236,7 +277,8 @@ namespace CRS.Models {
         Trialing = 6,
         GracePeriod = 7, // Read-only access, data preserved (Days 8-30)
         Suspended = 8, // No access, data preserved (Days 31-90)
-        MarkedForDeletion = 9 // Soft delete, pending permanent deletion (Days 91-365)
+        MarkedForDeletion = 9, // Soft delete, pending permanent deletion (Days 91-365)
+        Paused = 10 // Subscription paused by user, billing stopped but data preserved
     }
 
     public static class SubscriptionTierDefaults {
@@ -248,11 +290,37 @@ namespace CRS.Models {
         public const int EnterpriseMinCommunities = 100;
         public const int EnterpriseMinSpecialistUsers = 20;
 
+        // Payment Processing Platform Fee Rates (percentage as decimal)
+        public const decimal StartupPlatformFeeRate = 0.020m;    // 2.0%
+        public const decimal ProPlatformFeeRate = 0.015m;        // 1.5%
+        public const decimal EnterprisePlatformFeeRate = 0.010m; // 1.0%
+
         public static (int communities, int specialists) GetLimits(SubscriptionTier tier) => tier switch {
             SubscriptionTier.Startup => (StartupMaxCommunities, StartupMaxSpecialistUsers),
             SubscriptionTier.Pro => (ProMaxCommunities, ProMaxSpecialistUsers),
             SubscriptionTier.Enterprise => (EnterpriseMinCommunities, EnterpriseMinSpecialistUsers),
             _ => (0, 0)
         };
+
+        /// <summary>
+        /// Gets the platform fee rate for payment processing based on subscription tier.
+        /// Returns the rate as a decimal (e.g., 0.015 = 1.5%)
+        /// </summary>
+        public static decimal GetPlatformFeeRate(SubscriptionTier? tier) => tier switch {
+            SubscriptionTier.Startup => StartupPlatformFeeRate,
+            SubscriptionTier.Pro => ProPlatformFeeRate,
+            SubscriptionTier.Enterprise => EnterprisePlatformFeeRate,
+            _ => ProPlatformFeeRate // Default to Pro rate for unknown/null
+        };
+
+        /// <summary>
+        /// Gets the platform fee rate for a tenant, considering custom overrides.
+        /// </summary>
+        public static decimal GetPlatformFeeRate(Tenant tenant) {
+            // Allow per-tenant override (useful for Enterprise custom pricing)
+            if (tenant.PlatformFeeRateOverride.HasValue)
+                return tenant.PlatformFeeRateOverride.Value;
+            return GetPlatformFeeRate(tenant.Tier);
+        }
     }
 }

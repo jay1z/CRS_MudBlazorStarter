@@ -1,4 +1,4 @@
-﻿@page "/ReserveStudies/{Id:guid}/History"
+﻿@page "/ReserveStudies/History/{Id:guid}"
 @attribute [Authorize]
 
 @using CRS.Data
@@ -80,5 +80,5 @@
  }
  }
 
- private void GoBack() => NavigationManager.NavigateTo($"/ReserveStudies/{Id}/Details");
+ private void GoBack() => NavigationManager.NavigateTo($"/ReserveStudies/Details/{Id}");
 }

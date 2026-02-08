@@ -1,0 +1,387 @@
+﻿@page "/MyDocuments"
+@attribute [Authorize(Policy = "RequireHOAUser")]
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Customers
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+
+@inject ICustomerService CustomerService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<MyDocuments> Logger
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+
+<PageTitle>My Documents - @(TenantContext.TenantName ?? "Reserve Study")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" Style="vertical-align: middle;" />
+            My Documents
+        </MudText>
+    </MudStack>
+
+    <!-- Filter Tabs -->
+    <MudTabs @bind-ActivePanelIndex="activeTab" Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+        <MudTabPanel Text="All Documents" Icon="@Icons.Material.Filled.FolderOpen" BadgeData="@documents?.Count" BadgeColor="Color.Primary">
+            @RenderDocumentList(documents)
+        </MudTabPanel>
+        <MudTabPanel Text="By Community" Icon="@Icons.Material.Filled.Business">
+            @RenderByCommunity()
+        </MudTabPanel>
+        <MudTabPanel Text="By Type" Icon="@Icons.Material.Filled.Category">
+            @RenderByType()
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    private int activeTab = 0;
+    private CustomerAccount? customer;
+    private List<Document>? documents;
+    private List<Community>? communities;
+    private Dictionary<Guid, List<Document>> documentsByCommunity = new();
+    private Dictionary<DocumentType, List<Document>> documentsByType = new();
+    private bool isLoading = true;
+    private Guid? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdString = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (Guid.TryParse(userIdString, out var userId))
+            {
+                currentUserId = userId;
+                customer = await CustomerService.GetByUserIdAsync(userId);
+                await LoadDocuments();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading documents");
+            Snackbar.Add("Error loading documents", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadDocuments()
+    {
+        if (!currentUserId.HasValue) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tenantId = TenantContext.TenantId ?? 0;
+
+        // Get community IDs associated with this user (via studies or customer account)
+        var studyCommunityIds = await db.ReserveStudies
+            .Where(rs => rs.TenantId == tenantId &&
+                        rs.CommunityId.HasValue &&
+                        (rs.RequestedByUserId == currentUserId || rs.ApplicationUserId == currentUserId))
+            .Select(rs => rs.CommunityId!.Value)
+            .Distinct()
+            .ToListAsync();
+
+        var customerCommunityIds = customer?.Communities?
+            .Where(c => c.IsActive)
+            .Select(c => c.Id)
+            .ToList() ?? new List<Guid>();
+
+        var allCommunityIds = studyCommunityIds.Union(customerCommunityIds).Distinct().ToList();
+
+        if (!allCommunityIds.Any())
+        {
+            documents = new List<Document>();
+            return;
+        }
+
+        // Load communities
+        communities = await db.Communities
+            .Where(c => allCommunityIds.Contains(c.Id) && c.IsActive)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        // Load documents that are public and associated with user's communities or studies
+        documents = await db.Documents
+            .Include(d => d.Community)
+            .Include(d => d.ReserveStudy)
+            .Where(d => d.TenantId == tenantId &&
+                       d.DateDeleted == null &&
+                       d.IsPublic &&
+                       (d.CommunityId.HasValue && allCommunityIds.Contains(d.CommunityId.Value) ||
+                        d.ReserveStudy != null && d.ReserveStudy.CommunityId.HasValue && allCommunityIds.Contains(d.ReserveStudy.CommunityId.Value)))
+            .OrderByDescending(d => d.DateCreated)
+            .ToListAsync();
+
+        // Group by community
+        documentsByCommunity = documents
+            .Where(d => d.CommunityId.HasValue || d.ReserveStudy?.CommunityId != null)
+            .GroupBy(d => d.CommunityId ?? d.ReserveStudy?.CommunityId ?? Guid.Empty)
+            .Where(g => g.Key != Guid.Empty)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Group by type
+        documentsByType = documents
+            .GroupBy(d => d.Type)
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private RenderFragment RenderDocumentList(List<Document>? docs) => __builder =>
+    {
+        if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="60px" Class="mb-2" />
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="60px" Class="mb-2" />
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="60px" />
+        }
+        else if (docs == null || !docs.Any())
+        {
+            <MudPaper Elevation="0" Class="pa-8" Style="text-align: center; background-color: #fafafa;">
+                <MudIcon Icon="@Icons.Material.Filled.FolderOff" Style="font-size: 64px; color: #ccc;" Class="mb-4" />
+                <MudText Typo="Typo.h6" Class="mb-2">No Documents Yet</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">
+                    Documents shared with you will appear here.
+                </MudText>
+            </MudPaper>
+        }
+        else
+        {
+            <MudTable Items="@docs" Hover="true" Dense="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Document</MudTh>
+                    <MudTh>Type</MudTh>
+                    <MudTh>Community</MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Size</MudTh>
+                    <MudTh Style="text-align: right;">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Document">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@GetFileIcon(context.ContentType)" Color="@GetFileColor(context.ContentType)" />
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2"><strong>@(context.OriginalFileName ?? context.FileName)</strong></MudText>
+                                @if (!string.IsNullOrEmpty(context.Description))
+                                {
+                                    <MudText Typo="Typo.caption" Style="color: #666;">@context.Description</MudText>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd DataLabel="Type">
+                        <MudChip T="string" Size="Size.Small" Color="@GetTypeColor(context.Type)">
+                            @GetTypeLabel(context.Type)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Community">
+                        <MudText Typo="Typo.body2">@(context.Community?.Name ?? context.ReserveStudy?.Community?.Name ?? "—")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Date">
+                        <MudText Typo="Typo.body2">@(context.DateCreated?.ToString("MMM d, yyyy") ?? "—")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Size">
+                        <MudText Typo="Typo.body2">@FormatFileSize(context.FileSizeBytes)</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Actions" Style="text-align: right;">
+                        <MudIconButton Icon="@Icons.Material.Filled.Download"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       OnClick="@(() => DownloadDocument(context))"
+                                       Title="Download" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                       Color="Color.Default"
+                                       Size="Size.Small"
+                                       OnClick="@(() => ViewDocument(context))"
+                                       Title="View" />
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 10, 25, 50 }" />
+                </PagerContent>
+            </MudTable>
+        }
+    };
+
+    private RenderFragment RenderByCommunity() => __builder =>
+    {
+        if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (!documentsByCommunity.Any())
+        {
+            <MudAlert Severity="Severity.Info">No documents found.</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                @foreach (var community in communities ?? new List<Community>())
+                {
+                    if (documentsByCommunity.TryGetValue(community.Id, out var communityDocs) && communityDocs.Any())
+                    {
+                        <MudExpansionPanels Elevation="1">
+                            <MudExpansionPanel Text="@community.Name" MaxHeight="500">
+                                <TitleContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Business" />
+                                        <MudText><strong>@community.Name</strong></MudText>
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">@communityDocs.Count</MudChip>
+                                    </MudStack>
+                                </TitleContent>
+                                <ChildContent>
+                                    @RenderDocumentList(communityDocs)
+                                </ChildContent>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
+                }
+            </MudStack>
+        }
+    };
+
+    private RenderFragment RenderByType() => __builder =>
+    {
+        if (isLoading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (!documentsByType.Any())
+        {
+            <MudAlert Severity="Severity.Info">No documents found.</MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                @foreach (var kvp in documentsByType)
+                {
+                    <MudExpansionPanels Elevation="1">
+                        <MudExpansionPanel MaxHeight="500">
+                            <TitleContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@GetTypeIcon(kvp.Key)" Color="@GetTypeColor(kvp.Key)" />
+                                    <MudText><strong>@GetTypeLabel(kvp.Key)</strong></MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">@kvp.Value.Count</MudChip>
+                                </MudStack>
+                            </TitleContent>
+                            <ChildContent>
+                                @RenderDocumentList(kvp.Value)
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                }
+            </MudStack>
+        }
+    };
+
+    private async Task DownloadDocument(Document doc)
+    {
+        if (string.IsNullOrEmpty(doc.StorageUrl))
+        {
+            Snackbar.Add("Document not available for download", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("open", doc.StorageUrl, "_blank");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error downloading document {DocumentId}", doc.Id);
+            Snackbar.Add("Error downloading document", Severity.Error);
+        }
+    }
+
+    private async Task ViewDocument(Document doc)
+    {
+        await DownloadDocument(doc); // For now, same as download
+    }
+
+    private static string GetFileIcon(string? contentType) => contentType?.ToLower() switch
+    {
+        "application/pdf" => Icons.Custom.FileFormats.FilePdf,
+        "application/msword" or "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => Icons.Custom.FileFormats.FileWord,
+        "application/vnd.ms-excel" or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => Icons.Custom.FileFormats.FileExcel,
+        "image/jpeg" or "image/png" or "image/gif" => Icons.Custom.FileFormats.FileImage,
+        _ => Icons.Material.Filled.InsertDriveFile
+    };
+
+    private static Color GetFileColor(string? contentType) => contentType?.ToLower() switch
+    {
+        "application/pdf" => Color.Error,
+        "application/msword" or "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => Color.Primary,
+        "application/vnd.ms-excel" or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => Color.Success,
+        "image/jpeg" or "image/png" or "image/gif" => Color.Info,
+        _ => Color.Default
+    };
+
+    private static Color GetTypeColor(DocumentType type) => type switch
+    {
+        DocumentType.Report => Color.Primary,
+        DocumentType.Invoice => Color.Success,
+        DocumentType.Photo => Color.Info,
+        DocumentType.Contract => Color.Warning,
+        DocumentType.FinancialStatement => Color.Success,
+        DocumentType.ProposalDocument => Color.Primary,
+        DocumentType.SiteVisitNotes => Color.Info,
+        DocumentType.Insurance => Color.Warning,
+        DocumentType.Warranty => Color.Secondary,
+        DocumentType.MaintenanceRecord => Color.Default,
+        _ => Color.Default
+    };
+
+    private static string GetTypeIcon(DocumentType type) => type switch
+    {
+        DocumentType.Report => Icons.Material.Filled.Assessment,
+        DocumentType.Invoice => Icons.Material.Filled.Receipt,
+        DocumentType.Photo => Icons.Material.Filled.Photo,
+        DocumentType.Contract => Icons.Material.Filled.Gavel,
+        DocumentType.FinancialStatement => Icons.Material.Filled.AccountBalance,
+        DocumentType.ProposalDocument => Icons.Material.Filled.Description,
+        DocumentType.SiteVisitNotes => Icons.Material.Filled.EditNote,
+        DocumentType.Insurance => Icons.Material.Filled.Security,
+        DocumentType.Warranty => Icons.Material.Filled.Verified,
+        DocumentType.MaintenanceRecord => Icons.Material.Filled.Build,
+        _ => Icons.Material.Filled.Folder
+    };
+
+    private static string GetTypeLabel(DocumentType type) => type switch
+    {
+        DocumentType.Report => "Report",
+        DocumentType.Invoice => "Invoice",
+        DocumentType.Photo => "Photo",
+        DocumentType.Contract => "Contract",
+        DocumentType.FinancialStatement => "Financial Statement",
+        DocumentType.ProposalDocument => "Proposal",
+        DocumentType.SiteVisitNotes => "Site Visit Notes",
+        DocumentType.Insurance => "Insurance",
+        DocumentType.Warranty => "Warranty",
+        DocumentType.MaintenanceRecord => "Maintenance",
+        _ => "Other"
+    };
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

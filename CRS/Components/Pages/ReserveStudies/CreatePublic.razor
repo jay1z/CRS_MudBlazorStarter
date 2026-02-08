@@ -366,10 +366,11 @@ else {
 
         // Link community to customer account for HOA users
         var userId = GetCurrentUserId(UserState.ClaimsPrincipal);
+        CustomerAccount? customerAccount = null;
         if (userId.HasValue) {
-            var customerAccount = await CustomerService.GetByUserIdAsync(userId.Value);
+            customerAccount = await CustomerService.GetByUserIdAsync(userId.Value);
             if (customerAccount != null && Model?.Community != null) {
-                // Set the customer account on the community
+                // Set the customer account on the community (for new communities)
                 Model.Community.CustomerAccountId = customerAccount.Id;
                 Logger.LogInformation("PrepareModelForSubmission: Linking community to customer {CustomerId}", customerAccount.Id);
             }
@@ -381,8 +382,9 @@ else {
             Model.CommunityId = Model.Community.Id;
             Logger.LogInformation("PrepareModelForSubmission: Setting CommunityId to {CommunityId}", Model.CommunityId);
 
-            // Detach only if user selected an existing community
-            if (isExistingCommunity) {
+            // For existing communities, link to customer account in database
+            if (isExistingCommunity && customerAccount != null) {
+                await CustomerService.LinkCommunityAsync(customerAccount.Id, Model.Community.Id);
                 Model.Community = null;
             }
         }

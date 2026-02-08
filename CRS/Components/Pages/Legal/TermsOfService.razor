@@ -1,0 +1,631 @@
+﻿@page "/terms"
+@page "/terms-of-service"
+@page "/eula"
+@attribute [CRS.Components.Layout.HideNav]
+
+<PageTitle>Terms of Service - ALX Reserve Cloud</PageTitle>
+
+<!-- Hero Section -->
+<div style="background: linear-gradient(135deg, #6A3D9A 0%, #4a2875 100%); padding: 60px 0 40px;">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <div style="text-align: center; color: white;">
+            <MudIcon Icon="@Icons.Material.Filled.Gavel" Size="Size.Large" Class="mb-4" />
+            <MudText Typo="Typo.h3" Class="fw-bold mb-3">
+                Terms of Service & End User License Agreement
+            </MudText>
+            <MudText Typo="Typo.subtitle1" Style="opacity: 0.9;">
+                Last Updated: @DateTime.UtcNow.ToString("MMMM d, yyyy")
+            </MudText>
+        </div>
+    </MudContainer>
+</div>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-8">
+    <MudPaper Elevation="2" Class="pa-6 pa-md-8">
+        
+        <!-- Table of Contents -->
+        <MudText Typo="Typo.h5" Class="fw-bold mb-4">Table of Contents</MudText>
+        <MudList T="string" Dense="true" Class="mb-6">
+            <MudListItem T="string"><MudLink Href="/terms#acceptance">1. Acceptance of Terms</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#definitions">2. Definitions</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#license">3. License Grant</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#account">4. Account Registration</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#subscription">5. Subscription Plans & Billing</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#payment-processing">6. Payment Processing Services</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#acceptable-use">7. Acceptable Use</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#data">8. Data Ownership & Privacy</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#intellectual-property">9. Intellectual Property</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#disclaimers">10. Disclaimers & Limitations</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#termination">11. Termination</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#indemnification">12. Indemnification</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#governing-law">13. Governing Law</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#changes">14. Changes to Terms</MudLink></MudListItem>
+            <MudListItem T="string"><MudLink Href="/terms#contact">15. Contact Information</MudLink></MudListItem>
+        </MudList>
+
+        <MudDivider Class="my-6" />
+
+        <!-- Section 1: Acceptance of Terms -->
+        <section id="acceptance" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">1. Acceptance of Terms</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Welcome to ALX Reserve Cloud ("Service," "Platform," "we," "us," or "our"). By accessing or using our website, 
+                software, applications, or any related services, you ("User," "you," "Customer," or "Subscriber") agree to be 
+                bound by these Terms of Service and End User License Agreement (collectively, "Agreement" or "Terms").
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                <strong>PLEASE READ THESE TERMS CAREFULLY BEFORE USING THE SERVICE.</strong> If you do not agree to all of the 
+                terms and conditions of this Agreement, you may not access or use the Service.
+            </MudText>
+            <MudText Typo="Typo.body1">
+                By clicking "I Accept," creating an account, or using the Service, you acknowledge that you have read, understood, 
+                and agree to be bound by this Agreement, including any additional terms, policies, and guidelines referenced herein.
+            </MudText>
+        </section>
+
+        <!-- Section 2: Definitions -->
+        <section id="definitions" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">2. Definitions</MudText>
+            <MudList T="string" Dense="false">
+                <MudListItem T="string">
+                    <strong>"Service"</strong> refers to the ALX Reserve Cloud platform, including all web applications, 
+                    mobile applications, APIs, and related tools for reserve study management.
+                </MudListItem>
+                <MudListItem T="string">
+                    <strong>"Customer"</strong> or <strong>"Tenant"</strong> refers to reserve study professionals, companies, 
+                    or organizations that subscribe to the Service to manage their reserve study business.
+                </MudListItem>
+                <MudListItem T="string">
+                    <strong>"End User"</strong> refers to HOA board members, property managers, or other individuals who 
+                    interact with reserve studies through the platform.
+                </MudListItem>
+                <MudListItem T="string">
+                    <strong>"Content"</strong> refers to all data, text, images, documents, reserve studies, financial 
+                    projections, and other materials uploaded, created, or transmitted through the Service.
+                </MudListItem>
+                <MudListItem T="string">
+                    <strong>"Payment Processing Services"</strong> refers to the optional feature allowing Customers to 
+                    collect payments from their clients through the Platform.
+                </MudListItem>
+            </MudList>
+        </section>
+
+        <!-- Section 3: License Grant -->
+        <section id="license" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">3. License Grant</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Subject to your compliance with this Agreement and payment of applicable fees, we grant you a limited, 
+                non-exclusive, non-transferable, revocable license to:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-3">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    Access and use the Service for your internal business purposes
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    Create, manage, and deliver reserve studies to your clients
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    Store and manage client data within the platform
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    Generate reports and documentation as permitted by your subscription plan
+                </MudListItem>
+            </MudList>
+            <MudText Typo="Typo.body1">
+                This license does not include the right to sublicense, sell, resell, or commercially exploit the Service 
+                or any portion thereof, except as expressly authorized in writing by us.
+            </MudText>
+        </section>
+
+        <!-- Section 4: Account Registration -->
+        <section id="account" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">4. Account Registration</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                To use certain features of the Service, you must register for an account. When you register, you agree to:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-3">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Provide accurate, current, and complete information during registration
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Maintain and promptly update your account information
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Maintain the security and confidentiality of your login credentials
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Accept responsibility for all activities that occur under your account
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Notify us immediately of any unauthorized access or security breach
+                </MudListItem>
+            </MudList>
+            <MudText Typo="Typo.body1">
+                You must be at least 18 years old and have the legal authority to enter into this Agreement. If you are 
+                registering on behalf of an organization, you represent that you have authority to bind that organization 
+                to these Terms.
+            </MudText>
+        </section>
+
+        <!-- Section 5: Subscription Plans & Billing -->
+        <section id="subscription" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">5. Subscription Plans & Billing</MudText>
+            
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">5.1 Subscription Tiers</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                The Service is offered through various subscription plans with different features, limitations, and pricing. 
+                Details of current plans are available on our Pricing page. We reserve the right to modify subscription 
+                plans, features, and pricing with 30 days' notice.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">5.2 Free Trial</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We may offer a free trial period. At the end of your trial, you must subscribe to a paid plan to continue 
+                using the Service. If you do not subscribe, your access may be restricted or your data may be deleted after 
+                a grace period.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">5.3 Payment Terms</MudText>
+            <MudList T="string" Dense="false" Class="mb-3">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Subscription fees are billed in advance on a monthly or annual basis
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    All fees are non-refundable except as expressly stated herein or required by law
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    We use third-party payment processors (e.g., Stripe) to process payments securely
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    You are responsible for all applicable taxes
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">5.4 Automatic Renewal</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Subscriptions automatically renew at the end of each billing period unless you cancel before the renewal date. 
+                You may cancel your subscription at any time through your account settings.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">5.5 Failed Payments</MudText>
+            <MudText Typo="Typo.body1">
+                If a payment fails, we will notify you and may retry the charge. If payment is not received within 14 days, 
+                we may suspend or terminate your account.
+            </MudText>
+        </section>
+
+        <!-- Section 6: Payment Processing Services - THE KEY SECTION -->
+        <section id="payment-processing" class="mb-8">
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold">Important: Payment Processing Fee Schedule</MudText>
+            </MudAlert>
+            
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">6. Payment Processing Services</MudText>
+            
+            <MudText Typo="Typo.body1" Class="mb-3">
+                ALX Reserve Cloud offers optional Payment Processing Services that allow Customers to collect payments from 
+                their clients (HOAs, property managers, etc.) directly through the Platform. By enabling and using these 
+                Payment Processing Services, you agree to the following additional terms:
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">6.1 Payment Processing Fees</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                When you collect payments through our Platform, the following fees apply based on your subscription plan and payment method:
+            </MudText>
+
+            <!-- Tiered Platform Fees by Subscription -->
+            <MudPaper Elevation="1" Class="pa-4 mb-4" Style="background-color: #fff3e0;">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-3" Style="color: #FF8C00;">
+                    <MudIcon Icon="@Icons.Material.Filled.Loyalty" Size="Size.Small" Class="mr-1" />
+                    Platform Fee by Subscription Tier
+                </MudText>
+                <MudSimpleTable Dense="true" Bordered="true" Style="background-color: white;">
+                    <thead>
+                        <tr>
+                            <th>Subscription Plan</th>
+                            <th>Platform Fee</th>
+                            <th>Best For</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Starter</strong></td>
+                            <td><strong>2.0%</strong></td>
+                            <td>Getting started, lower payment volume</td>
+                        </tr>
+                        <tr style="background-color: #e8f5e9;">
+                            <td><strong>Professional</strong> ⭐</td>
+                            <td><strong>1.5%</strong></td>
+                            <td>Growing business, best value</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Enterprise</strong></td>
+                            <td><strong>1.0%</strong></td>
+                            <td>High volume, premium support</td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+
+            <MudPaper Elevation="1" Class="pa-4 mb-4" Style="background-color: #f8f9fa;">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-3" Style="color: #28a745;">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Size="Size.Small" Class="mr-1" />
+                    ACH Bank Transfer (Recommended for Large Payments)
+                </MudText>
+                <MudSimpleTable Dense="true" Bordered="true" Style="background-color: white;" Class="mb-4">
+                    <thead>
+                        <tr>
+                            <th>Fee Type</th>
+                            <th>Starter</th>
+                            <th>Professional</th>
+                            <th>Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Platform Fee</strong></td>
+                            <td>2.0%</td>
+                            <td><strong>1.5%</strong></td>
+                            <td>1.0%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Stripe ACH Fee</strong></td>
+                            <td colspan="3" style="text-align: center;">0.8% (max $5.00)</td>
+                        </tr>
+                        <tr style="background-color: #e8f5e9;">
+                            <td><strong>Total Effective Rate</strong></td>
+                            <td>~2.8%</td>
+                            <td><strong>~2.3%</strong></td>
+                            <td>~1.8%</td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+
+                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-3" Style="color: #6A3D9A;">
+                    <MudIcon Icon="@Icons.Material.Filled.CreditCard" Size="Size.Small" Class="mr-1" />
+                    Credit/Debit Card
+                </MudText>
+                <MudSimpleTable Dense="true" Bordered="true" Style="background-color: white;">
+                    <thead>
+                        <tr>
+                            <th>Fee Type</th>
+                            <th>Starter</th>
+                            <th>Professional</th>
+                            <th>Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Platform Fee</strong></td>
+                            <td>2.0%</td>
+                            <td><strong>1.5%</strong></td>
+                            <td>1.0%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Stripe Card Fee</strong></td>
+                            <td colspan="3" style="text-align: center;">2.9% + $0.30</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total Effective Rate</strong></td>
+                            <td>4.9% + $0.30</td>
+                            <td><strong>4.4% + $0.30</strong></td>
+                            <td>3.9% + $0.30</td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+
+            <MudAlert Severity="Severity.Success" Dense="true" Class="mb-4">
+                <MudText Typo="Typo.body2">
+                    <strong>Pro Tip:</strong> Upgrade to Professional or Enterprise to save on payment processing fees! 
+                    For a $10,000 payment, Enterprise saves $100 vs Starter.
+                </MudText>
+            </MudAlert>
+
+            <MudText Typo="Typo.body2" Class="mb-4" Style="color: #666;">
+                <em><strong>Example: $5,000 payment via ACH on Professional plan:</strong></em><br/>
+                • Platform fee: $75 (1.5%) + Stripe ACH: $5 (capped) = <strong>$80 total fees</strong> → You receive <strong>$4,920</strong>
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">6.2 Fee Deduction</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Payment processing fees are automatically deducted from each transaction before funds are transferred to 
+                your designated bank account. You will receive the net amount after all applicable fees have been deducted.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">6.3 Payout Schedule</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Funds collected through the Platform will be transferred to your connected bank account according to the 
+                following schedule:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-3">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Standard Payout:</strong> 2-7 business days after successful payment
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>New Accounts:</strong> Initial payouts may be held for up to 14 days for verification
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    <strong>Large Transactions:</strong> Payments exceeding $10,000 may require additional verification
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">6.4 Refunds and Chargebacks</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                You are responsible for managing refunds and disputes with your clients. In the event of a chargeback:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-3">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning">
+                    A chargeback fee of $15.00 will be assessed per disputed transaction
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning">
+                    The disputed amount will be deducted from your pending payouts or charged to your payment method on file
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning">
+                    Excessive chargebacks (more than 1% of transactions) may result in suspension of Payment Processing Services
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">6.5 Stripe Connect</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Payment Processing Services are provided through Stripe Connect. By using these services, you also agree to 
+                <MudLink Href="https://stripe.com/connect-account/legal" Target="_blank">Stripe's Connected Account Agreement</MudLink> 
+                and <MudLink Href="https://stripe.com/legal" Target="_blank">Stripe's Terms of Service</MudLink>.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">6.6 Compliance Requirements</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                By using Payment Processing Services, you agree to:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-3">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    Provide accurate business and banking information
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    Comply with all applicable laws, including anti-money laundering (AML) regulations
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    Not use Payment Processing Services for illegal activities
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                    Provide documentation upon request for verification purposes
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">6.7 Fee Modifications</MudText>
+            <MudText Typo="Typo.body1">
+                We reserve the right to modify Payment Processing fees with 30 days' prior notice. Continued use of 
+                Payment Processing Services after the effective date of fee changes constitutes acceptance of the new fees. 
+                You may discontinue using Payment Processing Services at any time.
+            </MudText>
+        </section>
+
+        <!-- Section 7: Acceptable Use -->
+        <section id="acceptable-use" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">7. Acceptable Use</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                You agree to use the Service only for lawful purposes and in accordance with this Agreement. You agree NOT to:
+            </MudText>
+            <MudList T="string" Dense="false">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Close" IconColor="Color.Error">
+                    Violate any applicable laws, regulations, or third-party rights
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Close" IconColor="Color.Error">
+                    Upload or transmit viruses, malware, or other harmful code
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Close" IconColor="Color.Error">
+                    Attempt to gain unauthorized access to the Service or other accounts
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Close" IconColor="Color.Error">
+                    Interfere with or disrupt the Service or servers
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Close" IconColor="Color.Error">
+                    Reverse engineer, decompile, or disassemble any portion of the Service
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Close" IconColor="Color.Error">
+                    Use the Service to send spam or unsolicited communications
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Close" IconColor="Color.Error">
+                    Misrepresent your identity or affiliation with any person or entity
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Close" IconColor="Color.Error">
+                    Use automated tools to access the Service without our written consent
+                </MudListItem>
+            </MudList>
+        </section>
+
+        <!-- Section 8: Data Ownership & Privacy -->
+        <section id="data" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">8. Data Ownership & Privacy</MudText>
+            
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">8.1 Your Data</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                You retain all ownership rights to the Content you upload to the Service. By uploading Content, you grant 
+                us a limited license to store, process, and display your Content solely to provide the Service to you.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">8.2 Data Security</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We implement industry-standard security measures to protect your data, including encryption in transit and 
+                at rest, regular security audits, and access controls. However, no method of transmission over the Internet 
+                is 100% secure.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">8.3 Data Export</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                You may export your data at any time through the Service's export features. Upon termination, you will 
+                have 30 days to export your data before it may be permanently deleted.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">8.4 Privacy Policy</MudText>
+            <MudText Typo="Typo.body1">
+                Our collection and use of personal information is governed by our 
+                <MudLink Href="/privacy">Privacy Policy</MudLink>, which is incorporated into this Agreement by reference.
+            </MudText>
+        </section>
+
+        <!-- Section 9: Intellectual Property -->
+        <section id="intellectual-property" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">9. Intellectual Property</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                The Service, including its original content, features, functionality, design, logos, and trademarks, is 
+                owned by ALX Reserve Cloud and is protected by international copyright, trademark, patent, trade secret, 
+                and other intellectual property laws.
+            </MudText>
+            <MudText Typo="Typo.body1">
+                Nothing in this Agreement grants you any rights to use our trademarks, service marks, or logos without 
+                our prior written consent.
+            </MudText>
+        </section>
+
+        <!-- Section 10: Disclaimers & Limitations -->
+        <section id="disclaimers" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">10. Disclaimers & Limitations of Liability</MudText>
+            
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">10.1 Disclaimer of Warranties</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3" Style="text-transform: uppercase; font-size: 0.85rem;">
+                THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR 
+                IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR 
+                PURPOSE, NON-INFRINGEMENT, OR COURSE OF PERFORMANCE.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">10.2 Limitation of Liability</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3" Style="text-transform: uppercase; font-size: 0.85rem;">
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL ALX RESERVE CLOUD, ITS DIRECTORS, EMPLOYEES, 
+                PARTNERS, AGENTS, SUPPLIERS, OR AFFILIATES BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, 
+                OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER 
+                INTANGIBLE LOSSES, RESULTING FROM YOUR ACCESS TO OR USE OF OR INABILITY TO ACCESS OR USE THE SERVICE.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">10.3 Cap on Liability</MudText>
+            <MudText Typo="Typo.body1">
+                Our total liability for any claims arising under this Agreement shall not exceed the total amount of fees 
+                paid by you to us during the twelve (12) months preceding the claim.
+            </MudText>
+        </section>
+
+        <!-- Section 11: Termination -->
+        <section id="termination" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">11. Termination</MudText>
+            
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">11.1 Termination by You</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                You may terminate your account at any time by canceling your subscription through your account settings 
+                or by contacting our support team. Termination will be effective at the end of your current billing period.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">11.2 Termination by Us</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We may suspend or terminate your account immediately, without prior notice or liability, for any reason, 
+                including but not limited to:
+            </MudText>
+            <MudList T="string" Dense="false" Class="mb-3">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Breach of this Agreement
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Non-payment of fees
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    Fraudulent or illegal activity
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                    At our sole discretion if we discontinue the Service
+                </MudListItem>
+            </MudList>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">11.3 Effect of Termination</MudText>
+            <MudText Typo="Typo.body1">
+                Upon termination, your right to use the Service will immediately cease. You will have 30 days to export 
+                your data. All provisions that by their nature should survive termination shall survive, including 
+                ownership provisions, warranty disclaimers, indemnity, and limitations of liability.
+            </MudText>
+        </section>
+
+        <!-- Section 12: Indemnification -->
+        <section id="indemnification" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">12. Indemnification</MudText>
+            <MudText Typo="Typo.body1">
+                You agree to defend, indemnify, and hold harmless ALX Reserve Cloud and its licensees, licensors, 
+                employees, contractors, agents, officers, and directors from and against any and all claims, damages, 
+                obligations, losses, liabilities, costs, or debt, and expenses (including but not limited to attorney's 
+                fees) arising from: (a) your use of and access to the Service; (b) your violation of any term of this 
+                Agreement; (c) your violation of any third-party right, including without limitation any copyright, 
+                property, or privacy right; or (d) any claim that your Content caused damage to a third party.
+            </MudText>
+        </section>
+
+        <!-- Section 13: Governing Law -->
+        <section id="governing-law" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">13. Governing Law & Dispute Resolution</MudText>
+            
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">13.1 Governing Law</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                This Agreement shall be governed by and construed in accordance with the laws of the State of California, 
+                United States, without regard to its conflict of law provisions.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">13.2 Dispute Resolution</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Any disputes arising out of or relating to this Agreement shall first be attempted to be resolved through 
+                good-faith negotiation. If negotiation fails, the parties agree to submit to binding arbitration in 
+                accordance with the rules of the American Arbitration Association.
+            </MudText>
+
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">13.3 Class Action Waiver</MudText>
+            <MudText Typo="Typo.body1">
+                You agree that any dispute resolution proceedings will be conducted only on an individual basis and not 
+                in a class, consolidated, or representative action.
+            </MudText>
+        </section>
+
+        <!-- Section 14: Changes to Terms -->
+        <section id="changes" class="mb-8">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">14. Changes to Terms</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                We reserve the right to modify or replace these Terms at any time at our sole discretion. If a revision 
+                is material, we will provide at least 30 days' notice prior to any new terms taking effect by posting 
+                the new Terms on this page and notifying you via email.
+            </MudText>
+            <MudText Typo="Typo.body1">
+                Your continued use of the Service after the effective date of the revised Terms constitutes acceptance 
+                of the revised Terms. If you do not agree to the new terms, you must stop using the Service.
+            </MudText>
+        </section>
+
+        <!-- Section 15: Contact Information -->
+        <section id="contact" class="mb-4">
+            <MudText Typo="Typo.h5" Class="fw-bold mb-3">15. Contact Information</MudText>
+            <MudText Typo="Typo.body1" Class="mb-3">
+                If you have any questions about these Terms, please contact us:
+            </MudText>
+            <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f8f9fa;">
+                <MudText Typo="Typo.body1" Class="fw-bold">ALX Reserve Cloud</MudText>
+                <MudText Typo="Typo.body2">Email: legal@alxreservecloud.com</MudText>
+                <MudText Typo="Typo.body2">Support: support@alxreservecloud.com</MudText>
+            </MudPaper>
+        </section>
+
+        <MudDivider Class="my-6" />
+
+        <!-- Acceptance Footer -->
+        <MudPaper Elevation="0" Class="pa-4" Style="background-color: #e8f5e9; border-radius: 8px;">
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                By using ALX Reserve Cloud, you acknowledge that you have read, understood, and agree to be bound by 
+                these Terms of Service and End User License Agreement.
+            </MudText>
+        </MudPaper>
+
+    </MudPaper>
+
+    <!-- Back to Home -->
+    <div class="d-flex justify-center mt-6">
+        <MudButton Href="/" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack">
+            Back to Home
+        </MudButton>
+    </div>
+</MudContainer>
+
+@code {
+    // Component can be extended with version tracking, acceptance logging, etc.
+}

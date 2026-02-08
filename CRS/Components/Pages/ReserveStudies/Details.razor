@@ -1,4 +1,4 @@
-﻿@page "/ReserveStudies/{Id:guid}/Details"
+﻿@page "/ReserveStudies/Details/{Id:guid}"
 @attribute [Authorize]
 
 @using CRS.Components.Custom
@@ -85,7 +85,7 @@
                         <MudButton Variant="Variant.Filled"
                                    Size="Size.Large"
                                    StartIcon="@Icons.Material.Filled.Edit"
-                                   Href="@($"/ReserveStudies/{Id}/Edit")"
+                                   Href="@($"/ReserveStudies/Edit/{Id}")"
                                    Style="background: white; color: #667eea; font-weight: 600;">
                             Edit Request
                         </MudButton>
@@ -216,9 +216,9 @@
 
                     <!-- Status Progress Card -->
                     <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px; overflow: hidden;">
-                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 16px;">
+                        <div style="background: @GetStatusColors().gradient; padding: 16px;">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudIcon Icon="@Icons.Material.Filled.Insights" Style="color: white; font-size: 32px;" />
+                                <MudIcon Icon="@GetStatusIcon()" Style="color: white; font-size: 32px;" />
                                 <div>
                                     <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9); font-weight: 600; text-transform: uppercase;">
                                         Current Status
@@ -235,11 +235,11 @@
                                 <div>
                                     <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mb-1">
                                         <MudText Typo="Typo.caption" Style="font-weight: 600;">Progress</MudText>
-                                        <MudText Typo="Typo.caption" Style="font-weight: 600; color: #10b981;">
+                                        <MudText Typo="Typo.caption" Style="@($"font-weight: 600; color: {GetStatusColors().progressColor};")">
                                             @GetProgressPercentage()%
                                         </MudText>
                                     </MudStack>
-                                    <MudProgressLinear Color="Color.Success"
+                                    <MudProgressLinear Color="@GetProgressBarColor()"
                                                        Value="@GetProgressPercentage()"
                                                        Size="Size.Medium"
                                                        Style="border-radius: 8px; height: 12px;" />
@@ -345,7 +345,7 @@
                                                        Color="Color.Primary"
                                                        FullWidth="true"
                                                        StartIcon="@Icons.Material.Filled.Edit"
-                                                       Href="@($"/ReserveStudies/{Id}/Proposal")">
+                                                       Href="@($"/ReserveStudies/Proposal/{Id}")">
                                                 Edit Proposal
                                             </MudButton>
                                         }
@@ -385,10 +385,10 @@
                             <MudCard Elevation="0">
                                 <MudCardContent>
                                     <!-- Current Status Banner -->
-                                    <MudPaper Elevation="2" Class="pa-4 mb-4" Style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px;">
+                                    <MudPaper Elevation="2" Class="pa-4 mb-4" Style="@($"background: {GetStatusColors().gradient}; border-radius: 12px;")">
                                         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                                <MudIcon Icon="@Icons.Material.Filled.Verified" Style="color: white; font-size: 48px;" />
+                                                <MudIcon Icon="@GetStatusIcon()" Style="color: white; font-size: 48px;" />
                                                 <div>
                                                     <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.9); font-weight: 600;">
                                                         CURRENT STATUS
@@ -576,7 +576,7 @@
                                                                        Color="Color.Success"
                                                                        Size="Size.Large"
                                                                        StartIcon="@Icons.Material.Filled.Description"
-                                                                       Href="@($"/ReserveStudies/{Id}/Proposal")">
+                                                                       Href="@($"/ReserveStudies/Proposal/{Id}")">
                                                                 Create Proposal
                                                             </MudButton>
                                                         </Authorized>
@@ -641,6 +641,52 @@
                                                     </AuthorizeView>
                                                 }
 
+                                                @* Create Revision button for declined proposals *@
+                                                @if (currentStatus == StudyStatus.ProposalDeclined) {
+                                                    <AuthorizeView Policy="RequireTenantStaff">
+                                                        <Authorized>
+                                                            <MudItem xs="12">
+                                                                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                                                                    <MudStack Spacing="1">
+                                                                        <MudText Typo="Typo.subtitle2">
+                                                                            <strong>Proposal Declined</strong>
+                                                                            @if (reserveStudy?.CurrentProposal?.RevisionRequested == true) {
+                                                                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">Revision Requested</MudChip>
+                                                                            }
+                                                                        </MudText>
+                                                                        @if (reserveStudy?.CurrentProposal?.DeclineReasonCategory != null) {
+                                                                            <MudText Typo="Typo.body2">
+                                                                                <strong>Reason:</strong> @GetDeclineReasonText(reserveStudy.CurrentProposal.DeclineReasonCategory)
+                                                                            </MudText>
+                                                                        }
+                                                                        @if (!string.IsNullOrWhiteSpace(reserveStudy?.CurrentProposal?.DeclineComments)) {
+                                                                            <MudText Typo="Typo.body2">
+                                                                                <strong>Comments:</strong> @reserveStudy.CurrentProposal.DeclineComments
+                                                                            </MudText>
+                                                                        }
+                                                                    </MudStack>
+                                                                </MudAlert>
+                                                                <MudStack Row="true" Spacing="2">
+                                                                    <MudButton Variant="Variant.Filled"
+                                                                               Color="Color.Primary"
+                                                                               Size="Size.Small"
+                                                                               StartIcon="@Icons.Material.Filled.Edit"
+                                                                               OnClick="CreateRevisionProposalAsync">
+                                                                        Create Revised Proposal
+                                                                    </MudButton>
+                                                                    <MudButton Variant="Variant.Outlined"
+                                                                               Color="Color.Error"
+                                                                               Size="Size.Small"
+                                                                               StartIcon="@Icons.Material.Filled.Cancel"
+                                                                               OnClick="@(() => ApplyTransition(StudyStatus.RequestCancelled))">
+                                                                        Cancel Study
+                                                                    </MudButton>
+                                                                </MudStack>
+                                                            </MudItem>
+                                                        </Authorized>
+                                                    </AuthorizeView>
+                                                }
+
                                                 @* Data collection steps - only show for statuses before ProposalAccepted *@
                                                 @* ProposalAccepted triggers automatic financial info request *@
                                                 @if ((allowedNextStudy.Contains(StudyStatus.FinancialInfoRequested) ||
@@ -700,7 +746,7 @@
                                                                        Color="Color.Success"
                                                                        Size="Size.Large"
                                                                        StartIcon="@Icons.Material.Filled.Description"
-                                                                       Href="@($"/ReserveStudies/{Id}/FinancialInfo")">
+                                                                       Href="@($"/ReserveStudies/FinancialInfo/{Id}")">
                                                                 Submit Financial Information
                                                             </MudButton>
                                                         </Authorized>
@@ -912,6 +958,7 @@
                                                                                     s != StudyStatus.ProposalApproved &&
                                                                                     s != StudyStatus.ProposalUpdated &&
                                                                                     s != StudyStatus.ProposalAccepted &&
+                                                                                    s != StudyStatus.ProposalDeclined &&
                                                                                     s != StudyStatus.FinancialInfoRequested &&
                                                                                     s != StudyStatus.FinancialInfoInProgress &&
                                                                                     s != StudyStatus.FinancialInfoReceived &&
@@ -956,6 +1003,13 @@
                                                                        OnClick="OpenAcceptProposalDialog">
                                                                 Accept Proposal
                                                             </MudButton>
+                                                            <MudButton Variant="Variant.Outlined"
+                                                                       Color="Color.Error"
+                                                                       Size="Size.Large"
+                                                                       StartIcon="@Icons.Material.Filled.Cancel"
+                                                                       OnClick="OpenDeclineProposalDialog">
+                                                                Decline Proposal
+                                                            </MudButton>
                                                         </Authorized>
                                                     </AuthorizeView>
                                                 }
@@ -987,7 +1041,7 @@
                                                                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                                                    Color="Color.Primary"
                                                                                    Size="Size.Small"
-                                                                                   Href="@($"/ReserveStudies/{Id}/FinancialInfo")"
+                                                                                   Href="@($"/ReserveStudies/FinancialInfo/{Id}")"
                                                                                    Title="Edit Financial Information" />
                                                                 }
                                                             </Authorized>
@@ -998,7 +1052,7 @@
                                                                 <MudIconButton Icon="@Icons.Material.Filled.Visibility"
                                                                                Color="Color.Default"
                                                                                Size="Size.Small"
-                                                                               Href="@($"/ReserveStudies/{Id}/FinancialInfo")"
+                                                                               Href="@($"/ReserveStudies/FinancialInfo/{Id}")"
                                                                                Title="View Financial Information" />
                                                             </Authorized>
                                                         </AuthorizeView>
@@ -1165,7 +1219,7 @@
                                                                    Color="Color.Info"
                                                                    Size="Size.Small"
                                                                    StartIcon="@Icons.Material.Filled.Visibility"
-                                                                   Href="@($"/ReserveStudies/{Id}/FinancialInfo")">
+                                                                   Href="@($"/ReserveStudies/FinancialInfo/{Id}")">
                                                             View Details
                                                         </MudButton>
                                                     </MudStack>
@@ -1582,7 +1636,7 @@
                                                 <MudButton Variant="Variant.Filled"
                                                            Color="Color.Warning"
                                                            StartIcon="@Icons.Material.Filled.Edit"
-                                                           Href="@($"/ReserveStudies/{Id}/Edit?tab=3")">
+                                                           Href="@($"/ReserveStudies/Edit/{Id}?tab=3")">
                                                     Add Service Contacts
                                                 </MudButton>
                                             </MudStack>
@@ -1607,7 +1661,7 @@
                                                                Color="Color.Primary"
                                                                Size="Size.Small"
                                                                StartIcon="@Icons.Material.Filled.Edit"
-                                                               Href="@($"/ReserveStudies/{Id}/Edit?tab=3")">
+                                                               Href="@($"/ReserveStudies/Edit/{Id}?tab=3")">
                                                         Edit Contacts
                                                     </MudButton>
                                                 }
@@ -1629,7 +1683,7 @@
                                                            Color="Color.Primary"
                                                            Size="Size.Small"
                                                            StartIcon="@Icons.Material.Filled.Edit"
-                                                           Href="@($"/ReserveStudies/{Id}/Edit?tab=3")">
+                                                           Href="@($"/ReserveStudies/Edit/{Id}?tab=3")">
                                                     Edit Contacts
                                                 </MudButton>
                                             }
@@ -1736,7 +1790,7 @@
                                                                            Color="Color.Warning"
                                                                            Size="Size.Small"
                                                                            StartIcon="@Icons.Material.Filled.Add"
-                                                                           Href="@($"/ReserveStudies/{Id}/Edit?tab=3")"
+                                                                           Href="@($"/ReserveStudies/Edit/{Id}?tab=3")"
                                                                            Class="mt-2">
                                                                     Add Contact
                                                                 </MudButton>
@@ -1904,7 +1958,7 @@
     private static readonly StudyStatus[] WorkflowStatusOrder = new[] {
         StudyStatus.RequestCreated, StudyStatus.RequestApproved, StudyStatus.ProposalCreated,
         StudyStatus.ProposalReviewed, StudyStatus.ProposalUpdated, StudyStatus.ProposalApproved,
-        StudyStatus.ProposalSent, StudyStatus.ProposalAccepted, StudyStatus.ServiceContactsRequested,
+        StudyStatus.ProposalSent, StudyStatus.ProposalDeclined, StudyStatus.ProposalAccepted, StudyStatus.ServiceContactsRequested,
         StudyStatus.FinancialInfoRequested, StudyStatus.FinancialInfoInProgress, StudyStatus.FinancialInfoSubmitted,
         StudyStatus.FinancialInfoReviewed, StudyStatus.FinancialInfoReceived, StudyStatus.SiteVisitPending,
         StudyStatus.SiteVisitScheduled, StudyStatus.SiteVisitCompleted, StudyStatus.SiteVisitDataEntered,
@@ -1990,6 +2044,58 @@
             if (acceptancePanel != null) await acceptancePanel.RefreshAsync();
             if (scopeVariancePanel != null) await scopeVariancePanel.RefreshAsync();
         }
+    }
+
+    private async Task OpenDeclineProposalDialog() {
+        if (reserveStudy == null) return;
+        var parameters = new DialogParameters { 
+            ["ReserveStudy"] = reserveStudy, 
+            ["ProposalId"] = reserveStudy.CurrentProposal?.Id 
+        };
+        var options = new DialogOptions { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+        var dialog = await DialogService.ShowAsync<CRS.Components.Shared.ProposalAcceptance.ProposalDeclineDialog>(
+            "Decline Proposal", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) {
+            Snackbar.Add("Proposal declined. The specialist has been notified.", Severity.Info);
+            await ReloadAfterChange();
+        }
+    }
+
+    private async Task CreateRevisionProposalAsync() {
+        if (reserveStudy?.CurrentProposal == null) return;
+
+        try {
+            var currentUser = UserState.CurrentUser?.UserName ?? "System";
+            var revision = await WorkflowService.CreateRevisionProposalAsync(reserveStudy.CurrentProposalId!.Value, currentUser);
+
+            if (revision != null) {
+                Snackbar.Add("Revised proposal created. You can now edit the proposal details.", Severity.Success);
+                await ReloadAfterChange();
+            } else {
+                Snackbar.Add("Failed to create revised proposal. Please try again.", Severity.Error);
+            }
+        } catch (Exception ex) {
+            Snackbar.Add($"Error creating revision: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static string GetDeclineReasonText(ProposalDeclineReason? reason) {
+        return reason switch {
+            ProposalDeclineReason.PriceTooHigh => "Price is above budget",
+            ProposalDeclineReason.ScopeInadequate => "Scope doesn't meet requirements",
+            ProposalDeclineReason.TimelineUnacceptable => "Timeline doesn't work",
+            ProposalDeclineReason.PaymentTermsUnacceptable => "Payment terms not acceptable",
+            ProposalDeclineReason.ChoseCompetitor => "Chose a different company",
+            ProposalDeclineReason.ProjectCancelled => "Project cancelled or no longer needed",
+            ProposalDeclineReason.BudgetConstraints => "Budget constraints / funding issues",
+            ProposalDeclineReason.Other => "Other reason (see comments)",
+            _ => "Not specified"
+        };
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
@@ -2139,7 +2245,7 @@
     }
 
     private async Task SendProposalAsync(Guid studyId) {
-        if (reserveStudy?.CurrentProposal == null) NavigationManager.NavigateTo($"/ReserveStudies/{studyId}/Proposal");
+        if (reserveStudy?.CurrentProposal == null) NavigationManager.NavigateTo($"/ReserveStudies/Proposal/{studyId}");
         else await ApplyTransition(StudyStatus.ProposalSent);
     }
 
@@ -2274,7 +2380,79 @@
 
     private StudyStatus GetCurrentStatus() => reserveStudy?.StudyRequest?.CurrentStatus ?? reserveStudy?.CurrentStatus ?? StudyStatus.RequestCreated;
     private StudyStatus? GetNextStatus() { var cr = StatusRank.TryGetValue(GetCurrentStatus(), out var r) ? r : -1; return KeyMilestones.FirstOrDefault(s => (StatusRank.TryGetValue(s, out var rr) ? rr : int.MaxValue) > cr); }
-    private int GetProgressPercentage() { var cr = StatusRank.TryGetValue(GetCurrentStatus(), out var r) ? r : 0; return Math.Min(100, (int)Math.Round((double)(cr + 1) / (WorkflowStatusOrder.Length - 2) * 100)); }
+    private int GetProgressPercentage() {
+        var status = GetCurrentStatus();
+        // Special cases for non-linear statuses
+        if (status == StudyStatus.ProposalDeclined) return 20; // About 20% through when proposal is declined
+        if (status == StudyStatus.RequestCancelled) return 0;
+        var cr = StatusRank.TryGetValue(status, out var r) ? r : 0;
+        return Math.Min(100, (int)Math.Round((double)(cr + 1) / (WorkflowStatusOrder.Length - 3) * 100));
+    }
+
+    /// <summary>
+    /// Gets the status banner gradient colors based on the current status urgency
+    /// </summary>
+    private (string gradient, string progressColor) GetStatusColors() {
+        var status = GetCurrentStatus();
+        return status switch {
+            // Error/Declined statuses - Red
+            StudyStatus.ProposalDeclined => ("linear-gradient(135deg, #ef4444 0%, #dc2626 100%)", "#ef4444"),
+            StudyStatus.RequestCancelled => ("linear-gradient(135deg, #6b7280 0%, #4b5563 100%)", "#6b7280"),
+
+            // Warning/Action needed - Amber/Orange
+            StudyStatus.AmendmentPending => ("linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", "#f59e0b"),
+            StudyStatus.AmendmentApproved => ("linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", "#f59e0b"),
+
+            // Awaiting client action - Blue
+            StudyStatus.ProposalSent => ("linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", "#3b82f6"),
+            StudyStatus.FinancialInfoRequested => ("linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", "#3b82f6"),
+            StudyStatus.FinancialInfoInProgress => ("linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", "#3b82f6"),
+            StudyStatus.ServiceContactsRequested => ("linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", "#3b82f6"),
+
+            // Completed - Purple
+            StudyStatus.RequestCompleted => ("linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", "#8b5cf6"),
+            StudyStatus.RequestArchived => ("linear-gradient(135deg, #6b7280 0%, #4b5563 100%)", "#6b7280"),
+
+            // Default - Green (in progress, on track)
+            _ => ("linear-gradient(135deg, #10b981 0%, #059669 100%)", "#10b981")
+        };
+    }
+
+    /// <summary>
+    /// Gets the icon for the current status
+    /// </summary>
+    private string GetStatusIcon() {
+        var status = GetCurrentStatus();
+        return status switch {
+            StudyStatus.ProposalDeclined => Icons.Material.Filled.Cancel,
+            StudyStatus.RequestCancelled => Icons.Material.Filled.Cancel,
+            StudyStatus.AmendmentPending => Icons.Material.Filled.Warning,
+            StudyStatus.AmendmentApproved => Icons.Material.Filled.PendingActions,
+            StudyStatus.RequestCompleted => Icons.Material.Filled.CheckCircle,
+            StudyStatus.RequestArchived => Icons.Material.Filled.Archive,
+            _ => Icons.Material.Filled.Insights
+        };
+    }
+
+    /// <summary>
+    /// Gets the MudBlazor Color for the progress bar based on status
+    /// </summary>
+    private Color GetProgressBarColor() {
+        var status = GetCurrentStatus();
+        return status switch {
+            StudyStatus.ProposalDeclined => Color.Error,
+            StudyStatus.RequestCancelled => Color.Dark,
+            StudyStatus.AmendmentPending => Color.Warning,
+            StudyStatus.AmendmentApproved => Color.Warning,
+            StudyStatus.ProposalSent => Color.Info,
+            StudyStatus.FinancialInfoRequested => Color.Info,
+            StudyStatus.FinancialInfoInProgress => Color.Info,
+            StudyStatus.ServiceContactsRequested => Color.Info,
+            StudyStatus.RequestCompleted => Color.Secondary,
+            StudyStatus.RequestArchived => Color.Dark,
+            _ => Color.Success
+        };
+    }
 
     private List<MilestoneInfo> GetKeyMilestones() {
         var milestones = new List<MilestoneInfo>();
@@ -2297,6 +2475,7 @@
         StudyStatus.ProposalUpdated => new NextActionInfo { ActionText = "Re-review Proposal", ActorText = "Awaiting internal review", ActorIcon = Icons.Material.Filled.RateReview },
         StudyStatus.ProposalApproved => new NextActionInfo { ActionText = "Send Proposal", ActorText = "Ready to send to client", ActorIcon = Icons.Material.Filled.Send },
         StudyStatus.ProposalSent => new NextActionInfo { ActionText = "Accept Proposal", ActorText = "Awaiting client response", ActorIcon = Icons.Material.Filled.Business },
+        StudyStatus.ProposalDeclined => new NextActionInfo { ActionText = "Create Revised Proposal", ActorText = "Action required by specialist", ActorIcon = Icons.Material.Filled.Edit },
         StudyStatus.ProposalAccepted => new NextActionInfo { ActionText = "Request Financial Info", ActorText = "Awaiting staff action", ActorIcon = Icons.Material.Filled.RequestQuote },
 
         // Data Collection Phase
@@ -2354,6 +2533,7 @@
         StudyStatus.ProposalUpdated => "The proposal has been updated and is being reviewed again.",
         StudyStatus.ProposalApproved => "The proposal has been approved and will be sent to you shortly.",
         StudyStatus.ProposalSent => "We've sent you a proposal. Please review the details and accept it to proceed with your reserve study.",
+        StudyStatus.ProposalDeclined => "The proposal was declined. Our specialist will review your feedback and prepare a revised proposal.",
         StudyStatus.ProposalAccepted => "Thank you for accepting the proposal! We'll now request some financial information to proceed.",
 
         // Data Collection Phase
@@ -2593,7 +2773,7 @@
                                        Color="Color.Primary"
                                        Size="Size.Small"
                                        StartIcon="@Icons.Material.Filled.Edit"
-                                       Href="@($"/ReserveStudies/{Id}/Proposal")">
+                                       Href="@($"/ReserveStudies/Proposal/{Id}")">
                                 Edit Proposal
                             </MudButton>
                         </Authorized>

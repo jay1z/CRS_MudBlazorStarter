@@ -451,7 +451,7 @@
 
     private void ViewCustomer(CustomerAccount customer)
     {
-        NavigationManager.NavigateTo($"/Customers/{customer.Id}");
+        NavigationManager.NavigateTo($"/Customers/Details/{customer.Id}");
     }
 
     private async Task DeleteCustomer(CustomerAccount customer)

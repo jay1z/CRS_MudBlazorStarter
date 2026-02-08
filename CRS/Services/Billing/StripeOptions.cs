@@ -19,6 +19,26 @@ namespace CRS.Services.Billing {
         public string? EnterpriseMonthlyPriceId { get; set; }
         public string? EnterpriseYearlyPriceId { get; set; }
 
+        // ═══════════════════════════════════════════════════════════════
+        // TRIAL & CHECKOUT SETTINGS
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Number of free trial days for new subscriptions. Set to 0 to disable trials.
+        /// </summary>
+        public int TrialPeriodDays { get; set; } = 14;
+
+        /// <summary>
+        /// When true, customers can enter promo/coupon codes during checkout.
+        /// </summary>
+        public bool AllowPromotionCodes { get; set; } = true;
+
+        /// <summary>
+        /// When true, Stripe Tax will automatically calculate and collect taxes.
+        /// Requires Stripe Tax to be enabled in your Stripe dashboard.
+        /// </summary>
+        public bool EnableAutomaticTax { get; set; } = false;
+
         public string? GetPriceId(CRS.Models.SubscriptionTier tier, BillingInterval interval) => (tier, interval) switch {
             (CRS.Models.SubscriptionTier.Startup, BillingInterval.Monthly) => StarterMonthlyPriceId ?? StartupPriceId,
             (CRS.Models.SubscriptionTier.Startup, BillingInterval.Yearly) => StarterYearlyPriceId,

@@ -329,7 +329,7 @@
                 Invoice = fullInvoice,
                 ReserveStudy = fullInvoice.ReserveStudy,
                 BaseUrl = baseUrl,
-                InvoiceViewUrl = $"{baseUrl}/Invoices/{fullInvoice.Id}"
+                InvoiceViewUrl = $"{baseUrl}/Invoices/Details/{fullInvoice.Id}"
             };
 
             // Note: TenantInfo would be populated from tenant context in production
@@ -387,7 +387,7 @@
                         Invoice = fullInvoice,
                         ReserveStudy = fullInvoice.ReserveStudy,
                         BaseUrl = baseUrl,
-                        InvoiceViewUrl = $"{baseUrl}/Invoices/{fullInvoice.Id}",
+                        InvoiceViewUrl = $"{baseUrl}/Invoices/Details/{fullInvoice.Id}",
                         IsReminder = true,
                         DaysPastDue = daysOverdue
                     };

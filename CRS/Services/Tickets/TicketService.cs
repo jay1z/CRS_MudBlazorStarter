@@ -74,7 +74,6 @@ public class TicketService : ITicketService
         return await query
             .Include(t => t.CreatedByUser)
             .Include(t => t.AssignedToUser)
-            .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(ct);
     }
 
@@ -102,6 +101,9 @@ public class TicketService : ITicketService
 
         if (!filter.IncludeClosed)
             query = query.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Cancelled);
+
+        // Order BEFORE applying Skip/Take to ensure consistent pagination
+        query = query.OrderByDescending(t => t.CreatedAt);
 
         var skip = (filter.Page - 1) * filter.PageSize;
         query = query.Skip(skip).Take(filter.PageSize);

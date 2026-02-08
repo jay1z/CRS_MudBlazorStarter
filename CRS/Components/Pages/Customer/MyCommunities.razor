@@ -5,9 +5,11 @@
 @using CRS.Models
 @using CRS.Services.Customers
 @using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
 
 @inject ICustomerService CustomerService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ITenantContext TenantContext
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -137,9 +139,46 @@
             if (Guid.TryParse(userIdString, out var userId))
             {
                 customer = await CustomerService.GetByUserIdAsync(userId);
-                if (customer != null)
+
+                // Load communities from multiple sources:
+                // 1. Communities directly linked to customer account (CustomerAccountId)
+                // 2. Communities from reserve studies owned by user (RequestedByUserId or ApplicationUserId)
+                await using var db = await DbFactory.CreateDbContextAsync();
+
+                var tenantId = TenantContext.TenantId ?? 0;
+
+                // Get community IDs from reserve studies owned by this user
+                var studyCommunityIds = await db.ReserveStudies
+                    .Where(rs => rs.TenantId == tenantId && 
+                                rs.CommunityId.HasValue &&
+                                (rs.RequestedByUserId == userId || rs.ApplicationUserId == userId))
+                    .Select(rs => rs.CommunityId!.Value)
+                    .Distinct()
+                    .ToListAsync();
+
+                // Get community IDs from customer account (if exists)
+                var customerCommunityIds = customer?.Communities?
+                    .Where(c => c.IsActive)
+                    .Select(c => c.Id)
+                    .ToList() ?? new List<Guid>();
+
+                // Combine both sources
+                var allCommunityIds = studyCommunityIds
+                    .Union(customerCommunityIds)
+                    .Distinct()
+                    .ToList();
+
+                if (allCommunityIds.Any())
                 {
-                    communities = customer.Communities?.Where(c => c.IsActive).ToList() ?? [];
+                    communities = await db.Communities
+                        .Include(c => c.PhysicalAddress)
+                        .Where(c => allCommunityIds.Contains(c.Id) && c.IsActive)
+                        .OrderBy(c => c.Name)
+                        .ToListAsync();
+                }
+                else
+                {
+                    communities = new List<Community>();
                 }
             }
         }

@@ -5,6 +5,7 @@ namespace CRS.Services.Interfaces {
         // Contact Methods
         Task<List<Contact>> GetUserContactsAsync(string userId);
         Task<List<ServiceContact>> GetServiceContactsAsync();
+        Task<List<Guid>> GetMatchingServiceContactIdsAsync(Guid serviceContactId);
         Task<Contact> GetContactByIdAsync(Guid contactId);
         Task<ServiceContact> GetServiceContactByIdAsync(Guid contactId);
         Task<Contact> CreateContactAsync(Contact contact);

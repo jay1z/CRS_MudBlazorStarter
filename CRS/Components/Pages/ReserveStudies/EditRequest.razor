@@ -1,4 +1,4 @@
-﻿@page "/ReserveStudies/{Id:guid}/Edit"
+@page "/ReserveStudies/Edit/{Id:guid}"
 @attribute [Authorize]
 
 @using System.Security.Claims
@@ -58,7 +58,7 @@
                 This reserve study has been completed or archived and can no longer be modified.
             </MudText>
             <MudStack Row="true" Spacing="2" Class="mt-3">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/ReserveStudies/{Id}/Details")">View Details</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"/ReserveStudies/Details/{Id}")">View Details</MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Href="/Dashboard">Go to Dashboard</MudButton>
             </MudStack>
         </MudAlert>
@@ -130,7 +130,7 @@
                     <MudItem>
                         <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                                    Disabled="isSubmitting"
-                                   Href="@($"/ReserveStudies/{Id}/Details")">
+                                   Href="@($"/ReserveStudies/Details/{Id}")">
                             <MudIcon Icon="@Icons.Material.Filled.Cancel" Class="mr-2" />
                             Cancel
                         </MudButton>
@@ -196,7 +196,7 @@
 
             // Verify user is authenticated
             if (!UserState.ClaimsPrincipal.Identity?.IsAuthenticated ?? true) {
-                NavigationManager.NavigateTo("/Account/Login?returnUrl=" + Uri.EscapeDataString($"/ReserveStudies/{Id}/Edit"), true);
+                NavigationManager.NavigateTo("/Account/Login?returnUrl=" + Uri.EscapeDataString($"/ReserveStudies/Edit/{Id}"), true);
                 return;
             }
 
@@ -347,7 +347,7 @@
             var updated = await ReserveStudyService.UpdateReserveStudyAsync(Model);
 
             Snackbar.Add("Reserve Study request updated successfully!", Severity.Success);
-            NavigationManager.NavigateTo($"/ReserveStudies/{Id}/Details");
+            NavigationManager.NavigateTo($"/ReserveStudies/Details/{Id}");
         } catch (InvalidOperationException ex) {
             Logger.LogWarning(ex, "User attempted to update non-editable reserve study {StudyId}", Id);
             Snackbar.Add(ex.Message, Severity.Warning);

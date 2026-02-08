@@ -44,8 +44,10 @@ namespace CRS.Services {
 
             try {
                 // Find audit logs older than retention period
+                // Order by CreatedAt before Take to ensure consistent batching
                 var oldLogs = await context.AuditLogs
                     .Where(log => log.CreatedAt < cutoffDate)
+                    .OrderBy(log => log.CreatedAt)
                     .Take(1000) // Process in batches to avoid memory issues
                     .ToListAsync(cancellationToken);
 

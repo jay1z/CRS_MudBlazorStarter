@@ -412,8 +412,133 @@ namespace CRS.Services {
 
             // Fire the proposal approved event
             await _dispatcher.Broadcast(new ProposalApprovedEvent(study, study.CurrentProposal));
-            
+
             return true;
+        }
+
+        public async Task<bool> DeclineProposalAsync(Guid proposalId, string declinedBy, ProposalDeclineReason reason, string? comments, bool requestRevision) {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var proposal = await db.Proposals
+                .Include(p => p.ReserveStudy)!
+                    .ThenInclude(s => s!.Community)
+                .Include(p => p.ReserveStudy)!
+                    .ThenInclude(s => s!.Contact)
+                .Include(p => p.ReserveStudy)!
+                    .ThenInclude(s => s!.PropertyManager)
+                .FirstOrDefaultAsync(p => p.Id == proposalId);
+
+            if (proposal?.ReserveStudy == null) {
+                _logger.LogWarning("DeclineProposalAsync: Proposal {ProposalId} not found or has no study", proposalId);
+                return false;
+            }
+
+            var study = proposal.ReserveStudy;
+
+            // Mark the proposal as declined
+            proposal.IsDeclined = true;
+            proposal.DateDeclined = DateTime.UtcNow;
+            proposal.DeclinedBy = declinedBy;
+            proposal.DeclineReasonCategory = reason;
+            proposal.DeclineComments = comments;
+            proposal.RevisionRequested = requestRevision;
+
+            // Transition to ProposalDeclined status
+            var sr = await EnsureStudyRequestAsync(db, study);
+            var from = sr.CurrentStatus;
+            var desired = StudyStatus.ProposalDeclined;
+
+            var ok = await _engine.TryTransitionAsync(sr, desired, declinedBy);
+            if (!ok) {
+                _logger.LogWarning(
+                    "DeclineProposalAsync: Failed to transition study {StudyId} from {FromStatus} to {ToStatus}",
+                    study.Id, from, desired);
+                return false;
+            }
+
+            study.DateModified = DateTime.UtcNow;
+            await AppendHistoryAsync(db, sr, from, desired, declinedBy);
+            await db.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Proposal {ProposalId} declined by {DeclinedBy} for study {StudyId}. Reason: {Reason}, Revision requested: {RevisionRequested}",
+                proposalId, declinedBy, study.Id, reason, requestRevision);
+
+            // Fire event for notifications
+            await _dispatcher.Broadcast(new ProposalDeclinedEvent(study, proposal, requestRevision));
+
+            return true;
+        }
+
+        public async Task<Proposal?> CreateRevisionProposalAsync(Guid originalProposalId, string createdBy) {
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var originalProposal = await db.Proposals
+                .Include(p => p.ReserveStudy)
+                .Include(p => p.Amendments)
+                .FirstOrDefaultAsync(p => p.Id == originalProposalId);
+
+            if (originalProposal?.ReserveStudy == null) {
+                _logger.LogWarning("CreateRevisionProposalAsync: Original proposal {ProposalId} not found", originalProposalId);
+                return null;
+            }
+
+            // Calculate amendment number
+            var amendmentNumber = (originalProposal.Amendments?.Count ?? 0) + 1;
+
+            // Create revision based on original
+            var revision = new Proposal {
+                ReserveStudyId = originalProposal.ReserveStudyId,
+                TenantId = originalProposal.TenantId,
+                ProposalScope = originalProposal.ProposalScope,
+                EstimatedCost = originalProposal.EstimatedCost,
+                ProposalDate = DateTime.UtcNow,
+                ServiceLevel = originalProposal.ServiceLevel,
+                DeliveryTimeframe = originalProposal.DeliveryTimeframe,
+                PaymentTerms = originalProposal.PaymentTerms,
+                PaymentSchedule = originalProposal.PaymentSchedule,
+                CustomDepositPercentage = originalProposal.CustomDepositPercentage,
+                PrepaymentDiscountPercentage = originalProposal.PrepaymentDiscountPercentage,
+                PaymentDueDays = originalProposal.PaymentDueDays,
+                EarlyPaymentDiscountPercentage = originalProposal.EarlyPaymentDiscountPercentage,
+                EarlyPaymentDiscountDays = originalProposal.EarlyPaymentDiscountDays,
+                LatePaymentInterestRate = originalProposal.LatePaymentInterestRate,
+                LatePaymentGracePeriodDays = originalProposal.LatePaymentGracePeriodDays,
+                MinimumDepositAmount = originalProposal.MinimumDepositAmount,
+                IsDepositNonRefundable = originalProposal.IsDepositNonRefundable,
+                IncludePrepaymentDiscount = originalProposal.IncludePrepaymentDiscount,
+                IncludeDigitalDelivery = originalProposal.IncludeDigitalDelivery,
+                IncludeComponentInventory = originalProposal.IncludeComponentInventory,
+                IncludeFundingPlans = originalProposal.IncludeFundingPlans,
+                // Amendment tracking
+                IsAmendment = true,
+                OriginalProposalId = originalProposalId,
+                AmendmentNumber = amendmentNumber,
+                AmendmentReason = $"Revision after decline: {originalProposal.DeclineReasonCategory}"
+            };
+
+            db.Proposals.Add(revision);
+
+            // Update the study to point to the new proposal
+            var study = originalProposal.ReserveStudy;
+            study.CurrentProposal = revision;
+            study.DateModified = DateTime.UtcNow;
+
+            // Transition back to ProposalCreated for editing
+            var sr = await EnsureStudyRequestAsync(db, study);
+            var from = sr.CurrentStatus;
+            var ok = await _engine.TryTransitionAsync(sr, StudyStatus.ProposalCreated, createdBy);
+            if (ok) {
+                await AppendHistoryAsync(db, sr, from, StudyStatus.ProposalCreated, createdBy);
+            }
+
+            await db.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Created revision proposal {RevisionId} (Amendment #{AmendmentNumber}) for original proposal {OriginalId}",
+                revision.Id, amendmentNumber, originalProposalId);
+
+            return revision;
         }
 
         public async Task<bool> ResendProposalEmailAsync(Guid reserveStudyId) {

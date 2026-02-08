@@ -7,8 +7,11 @@ namespace CRS.Services.Interfaces {
         Task<ReserveStudy> CreateReserveStudyAsync(ReserveStudy reserveStudy);
         Task<ReserveStudy> UpdateReserveStudyAsync(ReserveStudy reserveStudy);
         Task<bool> DeleteReserveStudyAsync(Guid id);
+        Task<bool> RestoreReserveStudyAsync(Guid id);
+        Task<bool> PermanentlyDeleteReserveStudyAsync(Guid id);
         Task<ReserveStudy?> GetReserveStudyByIdAsync(Guid studyId);
         Task<List<ReserveStudy>> GetAllReserveStudiesAsync();
+        Task<List<ReserveStudy>> GetDeletedReserveStudiesAsync();
         Task<List<ReserveStudy>> GetAssignedReserveStudiesAsync(Guid userId);
         Task<List<ReserveStudy>> GetOwnedReserveStudiesAsync(Guid userId);
         Task<List<ReserveStudy>> GetUserReserveStudiesAsync(ApplicationUser currentUser, IList<string> userRoles);

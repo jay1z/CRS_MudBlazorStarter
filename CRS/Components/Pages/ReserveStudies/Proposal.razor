@@ -1,4 +1,4 @@
-﻿@page "/ReserveStudies/{studyId:guid}/Proposal"
+﻿@page "/ReserveStudies/Proposal/{studyId:guid}"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @using CRS.Data
@@ -48,7 +48,7 @@
                 </CardHeaderContent>
                 <CardHeaderActions>
                     <MudTooltip Text="Return to Study Details">
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudies/{studyId}/Details")" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudies/Details/{studyId}")" />
                     </MudTooltip>
                 </CardHeaderActions>
             </MudCardHeader>
@@ -218,7 +218,7 @@
                                    Variant="Variant.Outlined"
                                    Color="Color.Primary"
                                    Class="mr-2"
-                                   OnClick="@(() => Navigation.NavigateTo($"/ReserveStudies/{studyId}/Details"))">
+                                   OnClick="@(() => Navigation.NavigateTo($"/ReserveStudies/Details/{studyId}"))">
                             Cancel
                         </MudButton>
                         <MudButton ButtonType="ButtonType.Submit"
@@ -351,7 +351,7 @@
             if (result) {
                 var message = isAmendment ? "Amendment saved successfully" : "Proposal saved successfully";
                 Snackbar.Add(message, Severity.Success);
-                Navigation.NavigateTo($"/ReserveStudies/{studyId}/Details");
+                Navigation.NavigateTo($"/ReserveStudies/Details/{studyId}");
             } else {
                 Snackbar.Add("Failed to save proposal. Please check the workflow status.", Severity.Error);
             }

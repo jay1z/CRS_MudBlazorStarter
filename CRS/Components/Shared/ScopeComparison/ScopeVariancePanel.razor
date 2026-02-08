@@ -1,4 +1,4 @@
-﻿@using CRS.Models.Workflow
+@using CRS.Models.Workflow
 @using CRS.Services.Interfaces
 @using CRS.Services.Tenant
 @using CRS.Data
@@ -28,7 +28,7 @@
                                        Color="Color.Primary" 
                                        Size="Size.Small"
                                        StartIcon="@Icons.Material.Filled.PostAdd"
-                                       Href="@($"/ReserveStudies/{ReserveStudyId}/Proposal?amendment=true")">
+                                       Href="@($"/ReserveStudies/Proposal/{ReserveStudyId}?amendment=true")">
                                 Create Amendment
                             </MudButton>
                             
@@ -201,7 +201,7 @@
                                                Color="Color.Primary" 
                                                Size="Size.Small"
                                                StartIcon="@Icons.Material.Filled.PostAdd"
-                                               Href="@($"/ReserveStudies/{ReserveStudyId}/Proposal?amendment=true")">
+                                               Href="@($"/ReserveStudies/Proposal/{ReserveStudyId}?amendment=true")">
                                         Create Proposal Amendment
                                     </MudButton>
                                 </MudStack>
@@ -246,7 +246,7 @@
                                 <MudButton Variant="Variant.Text" 
                                            Color="Color.Inherit" 
                                            Size="Size.Small"
-                                           Href="@($"/ReserveStudies/{ReserveStudyId}/Amendment")"
+                                           Href="@($"/ReserveStudies/Amendment/{ReserveStudyId}")"
                                            Style="text-decoration: underline; margin-top: 4px;">
                                     View Amendment Details
                                 </MudButton>
@@ -319,7 +319,7 @@
                                                    Color="Color.Default" 
                                                    Size="Size.Small"
                                                    StartIcon="@Icons.Material.Filled.Visibility"
-                                                   Href="@($"/ReserveStudies/{ReserveStudyId}/Amendment")">
+                                                   Href="@($"/ReserveStudies/Amendment/{ReserveStudyId}")">
                                             View Rejected Amendment
                                         </MudButton>
                                     }
@@ -571,7 +571,7 @@ private async Task LoadData()
                         Snackbar.Add("Ready to create revised amendment. Redirecting to proposal page...", Severity.Success);
 
                         // Navigate to the proposal page in amendment mode
-                        NavigationManager.NavigateTo($"/ReserveStudies/{ReserveStudyId}/Proposal?amendment=true");
+                        NavigationManager.NavigateTo($"/ReserveStudies/Proposal/{ReserveStudyId}?amendment=true");
                     }
                     catch (Exception ex)
                     {

@@ -1,0 +1,360 @@
+﻿@page "/Reports/Download"
+@attribute [Authorize(Policy = "RequireHOAUser")]
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Customers
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+
+@inject ICustomerService CustomerService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<MyReports> Logger
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+
+<PageTitle>My Reports - @(TenantContext.TenantName ?? "Reserve Study")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.Assessment" Class="mr-2" Style="vertical-align: middle;" />
+            My Reserve Study Reports
+        </MudText>
+    </MudStack>
+
+    <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+        Download your completed reserve study reports. Only finalized reports that have been published are shown here.
+    </MudText>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+        <MudGrid>
+            @for (int i = 0; i < 3; i++)
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" />
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else if (!reportsByCommunity.Any())
+    {
+        <MudPaper Elevation="2" Class="pa-8" Style="text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.FolderOff" Style="font-size: 64px; color: #ccc;" Class="mb-4" />
+            <MudText Typo="Typo.h5" Class="mb-2">No Reports Available</MudText>
+            <MudText Typo="Typo.body1" Style="color: #666;" Class="mb-4">
+                Your reserve study reports will appear here once they are finalized and published.
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/MyStudies">
+                View My Studies
+            </MudButton>
+        </MudPaper>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var communityGroup in reportsByCommunity)
+            {
+                var community = communities?.FirstOrDefault(c => c.Id == communityGroup.Key);
+                <MudItem xs="12">
+                    <MudPaper Elevation="2" Class="pa-4 mb-4">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+                            <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                                <MudIcon Icon="@Icons.Material.Filled.Business" />
+                            </MudAvatar>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.h6">@(community?.Name ?? "Community")</MudText>
+                                @if (community?.PhysicalAddress != null)
+                                {
+                                    <MudText Typo="Typo.body2" Style="color: #666;">
+                                        @community.PhysicalAddress.City, @community.PhysicalAddress.State
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudStack>
+
+                        <MudGrid>
+                            @foreach (var report in communityGroup.Value.OrderByDescending(r => r.GeneratedAt))
+                            {
+                                <MudItem xs="12" sm="6" md="4">
+                                    <MudCard Elevation="1" Class="h-100">
+                                        <MudCardHeader>
+                                            <CardHeaderAvatar>
+                                                <MudAvatar Color="@GetReportTypeColor(report.Type)" Variant="Variant.Filled" Size="Size.Small">
+                                                    <MudIcon Icon="@GetReportTypeIcon(report.Type)" Size="Size.Small" />
+                                                </MudAvatar>
+                                            </CardHeaderAvatar>
+                                            <CardHeaderContent>
+                                                <MudText Typo="Typo.body1"><strong>@(report.Title ?? GetReportTypeLabel(report.Type))</strong></MudText>
+                                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                                    Version @report.Version
+                                                </MudText>
+                                            </CardHeaderContent>
+                                        </MudCardHeader>
+                                        <MudCardContent>
+                                            <MudStack Spacing="1">
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Style="color: #666;" />
+                                                    <MudText Typo="Typo.body2">@report.GeneratedAt.ToString("MMMM d, yyyy")</MudText>
+                                                </MudStack>
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Style="color: #666;" />
+                                                    <MudText Typo="Typo.body2">@report.PageCount pages</MudText>
+                                                </MudStack>
+                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Small" Style="color: #666;" />
+                                                    <MudText Typo="Typo.body2">@FormatFileSize(report.FileSizeBytes)</MudText>
+                                                </MudStack>
+                                            </MudStack>
+                                        </MudCardContent>
+                                        <MudCardActions>
+                                            <MudButton Variant="Variant.Text" 
+                                                       Color="Color.Primary"
+                                                       StartIcon="@Icons.Custom.FileFormats.FilePdf"
+                                                       OnClick="@(() => DownloadReport(report, false))">
+                                                PDF
+                                            </MudButton>
+                                            @if (!string.IsNullOrEmpty(report.ExcelStorageUrl))
+                                            {
+                                                <MudButton Variant="Variant.Text"
+                                                           Color="Color.Success"
+                                                           StartIcon="@Icons.Custom.FileFormats.FileExcel"
+                                                           OnClick="@(() => DownloadReport(report, true))">
+                                                    Excel
+                                                </MudButton>
+                                            }
+                                        </MudCardActions>
+                                    </MudCard>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+
+        <!-- Summary Stats -->
+        <MudPaper Elevation="1" Class="pa-4 mt-4">
+            <MudGrid>
+                <MudItem xs="6" sm="3">
+                    <MudStack AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@totalReports</MudText>
+                        <MudText Typo="Typo.body2">Total Reports</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudStack AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@reportsByCommunity.Count</MudText>
+                        <MudText Typo="Typo.body2">Communities</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudStack AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@latestReportDate</MudText>
+                        <MudText Typo="Typo.body2">Latest Report</MudText>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudStack AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@FormatFileSize(totalSize)</MudText>
+                        <MudText Typo="Typo.body2">Total Size</MudText>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private CustomerAccount? customer;
+    private List<Community>? communities;
+    private Dictionary<Guid, List<GeneratedReport>> reportsByCommunity = new();
+    private bool isLoading = true;
+    private Guid? currentUserId;
+
+    private int totalReports => reportsByCommunity.Values.Sum(r => r.Count);
+    private long totalSize => reportsByCommunity.Values.SelectMany(r => r).Sum(r => r.FileSizeBytes);
+    private string latestReportDate => reportsByCommunity.Values
+        .SelectMany(r => r)
+        .OrderByDescending(r => r.GeneratedAt)
+        .FirstOrDefault()?.GeneratedAt.ToString("MMM yyyy") ?? "—";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdString = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (Guid.TryParse(userIdString, out var userId))
+            {
+                currentUserId = userId;
+                customer = await CustomerService.GetByUserIdAsync(userId);
+                await LoadReports();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading reports");
+            Snackbar.Add("Error loading reports", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadReports()
+    {
+        if (!currentUserId.HasValue) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tenantId = TenantContext.TenantId ?? 0;
+
+        // Get community IDs associated with this user
+        var studyCommunityIds = await db.ReserveStudies
+            .Where(rs => rs.TenantId == tenantId &&
+                        rs.CommunityId.HasValue &&
+                        (rs.RequestedByUserId == currentUserId || rs.ApplicationUserId == currentUserId))
+            .Select(rs => rs.CommunityId!.Value)
+            .Distinct()
+            .ToListAsync();
+
+        var customerCommunityIds = customer?.Communities?
+            .Where(c => c.IsActive)
+            .Select(c => c.Id)
+            .ToList() ?? new List<Guid>();
+
+        var allCommunityIds = studyCommunityIds.Union(customerCommunityIds).Distinct().ToList();
+
+        if (!allCommunityIds.Any())
+        {
+            return;
+        }
+
+        // Load communities
+        communities = await db.Communities
+            .Include(c => c.PhysicalAddress)
+            .Where(c => allCommunityIds.Contains(c.Id) && c.IsActive)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        // Load published reports for user's studies
+        var reports = await db.GeneratedReports
+            .Include(r => r.ReserveStudy)
+            .ThenInclude(rs => rs!.Community)
+            .Where(r => r.TenantId == tenantId &&
+                       r.DateDeleted == null &&
+                       r.IsPublishedToClient &&
+                       r.Status == ReportStatus.Published &&
+                       r.ReserveStudy != null &&
+                       r.ReserveStudy.CommunityId.HasValue &&
+                       allCommunityIds.Contains(r.ReserveStudy.CommunityId.Value))
+            .OrderByDescending(r => r.GeneratedAt)
+            .ToListAsync();
+
+        // Group by community
+        reportsByCommunity = reports
+            .Where(r => r.ReserveStudy?.CommunityId != null)
+            .GroupBy(r => r.ReserveStudy!.CommunityId!.Value)
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private async Task DownloadReport(GeneratedReport report, bool excel = false)
+    {
+        var url = excel ? report.ExcelStorageUrl : report.StorageUrl;
+
+        if (string.IsNullOrEmpty(url))
+        {
+            Snackbar.Add("Report not available for download", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            // Track download (fire and forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await using var db = await DbFactory.CreateDbContextAsync();
+                    var rep = await db.GeneratedReports.FindAsync(report.Id);
+                    if (rep != null)
+                    {
+                        rep.DownloadCount++;
+                        rep.LastDownloadedAt = DateTime.UtcNow;
+                        await db.SaveChangesAsync();
+                    }
+                }
+                catch { /* ignore tracking errors */ }
+            });
+
+            await JS.InvokeVoidAsync("open", url, "_blank");
+            Snackbar.Add("Download started", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error downloading report {ReportId}", report.Id);
+            Snackbar.Add("Error downloading report", Severity.Error);
+        }
+    }
+
+    private static Color GetReportTypeColor(ReportType type) => type switch
+    {
+        ReportType.Final or ReportType.FullReport => Color.Success,
+        ReportType.Draft => Color.Default,
+        ReportType.ExecutiveSummary => Color.Primary,
+        ReportType.FundingPlan => Color.Info,
+        ReportType.ComponentInventory => Color.Warning,
+        ReportType.UpdateReport => Color.Secondary,
+        ReportType.Addendum => Color.Info,
+        ReportType.CorrectionNotice => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string GetReportTypeIcon(ReportType type) => type switch
+    {
+        ReportType.Final or ReportType.FullReport => Icons.Material.Filled.Verified,
+        ReportType.Draft => Icons.Material.Filled.Edit,
+        ReportType.ExecutiveSummary => Icons.Material.Filled.Summarize,
+        ReportType.FundingPlan => Icons.Material.Filled.AccountBalance,
+        ReportType.ComponentInventory => Icons.Material.Filled.Inventory,
+        ReportType.UpdateReport => Icons.Material.Filled.Update,
+        ReportType.Addendum => Icons.Material.Filled.Add,
+        ReportType.CorrectionNotice => Icons.Material.Filled.Warning,
+        _ => Icons.Material.Filled.Description
+    };
+
+    private static string GetReportTypeLabel(ReportType type) => type switch
+    {
+        ReportType.Final => "Final Report",
+        ReportType.FullReport => "Full Reserve Study",
+        ReportType.Draft => "Draft Report",
+        ReportType.ExecutiveSummary => "Executive Summary",
+        ReportType.FundingPlan => "Funding Plan",
+        ReportType.ComponentInventory => "Component Inventory",
+        ReportType.UpdateReport => "Update Report",
+        ReportType.Addendum => "Addendum",
+        ReportType.CorrectionNotice => "Correction Notice",
+        _ => "Report"
+    };
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

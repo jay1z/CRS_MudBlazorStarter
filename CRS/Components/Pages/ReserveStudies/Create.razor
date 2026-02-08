@@ -303,7 +303,7 @@
             await stepper!.NextStepAsync();
 
             // Navigate to details for immediate verification and further actions
-            NavigationManager.NavigateTo($"/ReserveStudies/{created.Id}/Details");
+            NavigationManager.NavigateTo($"/ReserveStudies/Details/{created.Id}");
         } catch (Exception ex) {
             LogAndDisplayError("Error submitting form", ex);
         } finally {

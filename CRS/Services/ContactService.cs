@@ -6,57 +6,121 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CRS.Services {
     public class ContactService : IContactService {
-        private readonly ApplicationDbContext _context;
+        private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
 
-        public ContactService(ApplicationDbContext context) {
-            _context = context;
+        public ContactService(IDbContextFactory<ApplicationDbContext> dbFactory) {
+            _dbFactory = dbFactory;
         }
 
         #region Contact Methods
         public async Task<List<Contact>> GetUserContactsAsync(string userId) {
-            //if (Guid.TryParse(userId, out Guid userGuid)) {
-            return await _context.Contacts
-                //.Where(c => c.Id == userGuid && !c.DateDeleted.HasValue)
-                .Where(c => !c.DateDeleted.HasValue)
-                //.DistinctBy(c => new { c.Email })
-                .ToListAsync();
-            //}
+            await using var context = await _dbFactory.CreateDbContextAsync();
 
-            //return new List<Contact>();
+            // Load all non-deleted contacts
+            var allContacts = await context.Contacts
+                .Where(c => !c.DateDeleted.HasValue)
+                // Filter out empty contacts (created but never populated)
+                .Where(c => !string.IsNullOrWhiteSpace(c.FirstName) || 
+                           !string.IsNullOrWhiteSpace(c.LastName) || 
+                           !string.IsNullOrWhiteSpace(c.Email))
+                .ToListAsync();
+
+            // Deduplicate by name/email/phone in memory
+            return allContacts
+                .GroupBy(c => new { 
+                    FirstName = c.FirstName?.ToLowerInvariant()?.Trim(),
+                    LastName = c.LastName?.ToLowerInvariant()?.Trim(),
+                    Email = c.Email?.ToLowerInvariant()?.Trim()
+                })
+                .Select(g => g.First())
+                .OrderBy(c => c.LastName)
+                .ThenBy(c => c.FirstName)
+                .ToList();
         }
 
         public async Task<List<ServiceContact>> GetServiceContactsAsync() {
-            //return await _context.ServiceContacts.Where(c => !c.DateDeleted.HasValue).DistinctBy(c => new { c.Email }).ToListAsync();
-            return await _context.ServiceContacts
+            await using var context = await _dbFactory.CreateDbContextAsync();
+
+            // Load all non-empty service contacts
+            var allContacts = await context.ServiceContacts
                 .Where(c => !c.DateDeleted.HasValue)
-                //.DistinctBy(c => c.Email)
+                // Filter out empty service contacts (created by element initialization but never populated)
+                .Where(c => !string.IsNullOrWhiteSpace(c.FirstName) || 
+                           !string.IsNullOrWhiteSpace(c.LastName) || 
+                           !string.IsNullOrWhiteSpace(c.CompanyName) ||
+                           !string.IsNullOrWhiteSpace(c.Email))
+                .ToListAsync();
+
+            // Deduplicate by name/email/company/phone in memory
+            return allContacts
+                .GroupBy(c => new { 
+                    FirstName = c.FirstName?.ToLowerInvariant()?.Trim(),
+                    LastName = c.LastName?.ToLowerInvariant()?.Trim(),
+                    Email = c.Email?.ToLowerInvariant()?.Trim(), 
+                    CompanyName = c.CompanyName?.ToLowerInvariant()?.Trim(),
+                    Phone = c.Phone?.Trim()
+                })
+                .Select(g => g.First())
+                .OrderBy(c => c.LastName)
+                .ThenBy(c => c.FirstName)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Gets all service contact IDs that match the given service contact's identifying info.
+        /// Used for finding all elements associated with a "grouped" service contact.
+        /// </summary>
+        public async Task<List<Guid>> GetMatchingServiceContactIdsAsync(Guid serviceContactId) {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+
+            var contact = await context.ServiceContacts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == serviceContactId);
+
+            if (contact == null) return [serviceContactId];
+
+            return await context.ServiceContacts
+                .Where(c => !c.DateDeleted.HasValue)
+                .Where(c => 
+                    (c.FirstName ?? "").ToLower().Trim() == (contact.FirstName ?? "").ToLower().Trim() &&
+                    (c.LastName ?? "").ToLower().Trim() == (contact.LastName ?? "").ToLower().Trim() &&
+                    (c.Email ?? "").ToLower().Trim() == (contact.Email ?? "").ToLower().Trim() &&
+                    (c.CompanyName ?? "").ToLower().Trim() == (contact.CompanyName ?? "").ToLower().Trim() &&
+                    (c.Phone ?? "").Trim() == (contact.Phone ?? "").Trim())
+                .Select(c => c.Id)
                 .ToListAsync();
         }
 
         public async Task<Contact> GetContactByIdAsync(Guid contactId) {
-            return await _context.Contacts.FirstOrDefaultAsync(c => c.Id == contactId && !c.DateDeleted.HasValue) ?? throw new KeyNotFoundException($"Contact with ID {contactId} not found.");
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            return await context.Contacts.FirstOrDefaultAsync(c => c.Id == contactId && !c.DateDeleted.HasValue) ?? throw new KeyNotFoundException($"Contact with ID {contactId} not found.");
         }
 
         public async Task<ServiceContact> GetServiceContactByIdAsync(Guid contactId) {
-            return await _context.ServiceContacts.FirstOrDefaultAsync(c => c.Id == contactId && !c.DateDeleted.HasValue) ?? throw new KeyNotFoundException($"Service Contact with ID {contactId} not found.");
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            return await context.ServiceContacts.FirstOrDefaultAsync(c => c.Id == contactId && !c.DateDeleted.HasValue) ?? throw new KeyNotFoundException($"Service Contact with ID {contactId} not found.");
         }
 
         public async Task<Contact> CreateContactAsync(Contact contact) {
+            await using var context = await _dbFactory.CreateDbContextAsync();
             contact.DateCreated = DateTime.UtcNow;
-            _context.Contacts.Add(contact);
-            await _context.SaveChangesAsync();
+            context.Contacts.Add(contact);
+            await context.SaveChangesAsync();
             return contact;
         }
 
         public async Task<ServiceContact> CreateServiceContactAsync(ServiceContact contact) {
+            await using var context = await _dbFactory.CreateDbContextAsync();
             contact.DateCreated = DateTime.UtcNow;
-            _context.ServiceContacts.Add(contact);
-            await _context.SaveChangesAsync();
+            context.ServiceContacts.Add(contact);
+            await context.SaveChangesAsync();
             return contact;
         }
 
         public async Task<Contact> UpdateContactAsync(Contact contact) {
-            var existingContact = await GetContactByIdAsync(contact.Id);
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var existingContact = await context.Contacts.FirstOrDefaultAsync(c => c.Id == contact.Id && !c.DateDeleted.HasValue) 
+                ?? throw new KeyNotFoundException($"Contact with ID {contact.Id} not found.");
 
             // Update properties based on actual Contact model
             existingContact.FirstName = contact.FirstName;
@@ -67,13 +131,15 @@ namespace CRS.Services {
             existingContact.Extension = contact.Extension;
             existingContact.DateModified = DateTime.UtcNow;
 
-            _context.Contacts.Update(existingContact);
-            await _context.SaveChangesAsync();
+            context.Contacts.Update(existingContact);
+            await context.SaveChangesAsync();
             return existingContact;
         }
 
         public async Task<ServiceContact> UpdateServiceContactAsync(ServiceContact contact) {
-            var existingContact = await GetServiceContactByIdAsync(contact.Id);
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var existingContact = await context.ServiceContacts.FirstOrDefaultAsync(c => c.Id == contact.Id && !c.DateDeleted.HasValue)
+                ?? throw new KeyNotFoundException($"Service Contact with ID {contact.Id} not found.");
 
             // Update properties based on actual ServiceContact model
             existingContact.FirstName = contact.FirstName;
@@ -84,32 +150,37 @@ namespace CRS.Services {
             existingContact.Extension = contact.Extension;
             existingContact.DateModified = DateTime.UtcNow;
 
-            _context.ServiceContacts.Update(existingContact);
-            await _context.SaveChangesAsync();
+            context.ServiceContacts.Update(existingContact);
+            await context.SaveChangesAsync();
             return existingContact;
         }
 
         public async Task DeleteContactAsync(Guid contactId) {
-            var contact = await GetContactByIdAsync(contactId);
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var contact = await context.Contacts.FirstOrDefaultAsync(c => c.Id == contactId && !c.DateDeleted.HasValue)
+                ?? throw new KeyNotFoundException($"Contact with ID {contactId} not found.");
             // Soft delete
             contact.DateDeleted = DateTime.UtcNow;
-            _context.Contacts.Update(contact);
-            await _context.SaveChangesAsync();
+            context.Contacts.Update(contact);
+            await context.SaveChangesAsync();
         }
 
         public async Task DeleteServiceContactAsync(Guid contactId) {
-            var contact = await GetServiceContactByIdAsync(contactId);
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var contact = await context.ServiceContacts.FirstOrDefaultAsync(c => c.Id == contactId && !c.DateDeleted.HasValue)
+                ?? throw new KeyNotFoundException($"Service Contact with ID {contactId} not found.");
             // Soft delete
             contact.DateDeleted = DateTime.UtcNow;
-            _context.ServiceContacts.Update(contact);
-            await _context.SaveChangesAsync();
+            context.ServiceContacts.Update(contact);
+            await context.SaveChangesAsync();
         }
         #endregion
 
         #region Contact Group Methods
         public async Task<List<ContactGroup>> GetContactGroupsAsync(string userId) {
             if (Guid.TryParse(userId, out Guid userGuid)) {
-                return await _context.ContactGroups
+                await using var context = await _dbFactory.CreateDbContextAsync();
+                return await context.ContactGroups
                     .Where(g => g.ApplicationUserId == userGuid && !g.DateDeleted.HasValue)
                     .OrderBy(g => g.Name)
                     .ToListAsync();
@@ -119,11 +190,14 @@ namespace CRS.Services {
         }
 
         public async Task<ContactGroup> GetContactGroupByIdAsync(Guid groupId) {
-            return await _context.ContactGroups.FirstOrDefaultAsync(g => g.Id == groupId && !g.DateDeleted.HasValue) ?? throw new KeyNotFoundException($"Contact group with ID {groupId} not found.");
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            return await context.ContactGroups.FirstOrDefaultAsync(g => g.Id == groupId && !g.DateDeleted.HasValue) 
+                ?? throw new KeyNotFoundException($"Contact group with ID {groupId} not found.");
         }
 
         public async Task<List<Contact>> GetContactsByGroupIdAsync(Guid groupId) {
-            return await _context.ContactXContactGroups
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            return await context.ContactXContactGroups
                 .Where(x => x.ContactGroup.Id == groupId && !x.DateDeleted.HasValue)
                 .Select(x => x.Contact)
                 .Where(c => !c.DateDeleted.HasValue)
@@ -131,42 +205,38 @@ namespace CRS.Services {
         }
 
         public async Task<ContactGroup> CreateContactGroupAsync(ContactGroup group) {
-            // Set creation date
+            await using var context = await _dbFactory.CreateDbContextAsync();
             group.DateCreated = DateTime.UtcNow;
-
-            // Make sure ApplicationUserId is set correctly
-            //if (group.ApplicationUserId == Guid.Empty && !string.IsNullOrEmpty(group.UserId)) {
-            //    if (Guid.TryParse(group.UserId, out Guid userGuid)) {
-            //group.ApplicationUserId = userGuid;
-            //    }
-            //}
-
-            _context.ContactGroups.Add(group);
-            await _context.SaveChangesAsync();
+            context.ContactGroups.Add(group);
+            await context.SaveChangesAsync();
             return group;
         }
 
         public async Task<ContactGroup> UpdateContactGroupAsync(ContactGroup group) {
-            var existingGroup = await GetContactGroupByIdAsync(group.Id);
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var existingGroup = await context.ContactGroups.FirstOrDefaultAsync(g => g.Id == group.Id && !g.DateDeleted.HasValue)
+                ?? throw new KeyNotFoundException($"Contact group with ID {group.Id} not found.");
 
             existingGroup.Name = group.Name;
             existingGroup.Description = group.Description;
             existingGroup.DateModified = DateTime.UtcNow;
 
-            _context.ContactGroups.Update(existingGroup);
-            await _context.SaveChangesAsync();
+            context.ContactGroups.Update(existingGroup);
+            await context.SaveChangesAsync();
             return existingGroup;
         }
 
         public async Task DeleteContactGroupAsync(Guid groupId) {
-            var group = await GetContactGroupByIdAsync(groupId);
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var group = await context.ContactGroups.FirstOrDefaultAsync(g => g.Id == groupId && !g.DateDeleted.HasValue)
+                ?? throw new KeyNotFoundException($"Contact group with ID {groupId} not found.");
 
             // Soft delete the group
             group.DateDeleted = DateTime.UtcNow;
-            _context.ContactGroups.Update(group);
+            context.ContactGroups.Update(group);
 
             // Also soft delete all relationships with this group
-            var relationships = await _context.ContactXContactGroups
+            var relationships = await context.ContactXContactGroups
                 .Where(x => x.ContactGroup.Id == groupId && !x.DateDeleted.HasValue)
                 .ToListAsync();
 
@@ -174,16 +244,20 @@ namespace CRS.Services {
                 rel.DateDeleted = DateTime.UtcNow;
             }
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         public async Task AddContactToGroupAsync(Guid contactId, Guid groupId) {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+
             // Check if contact and group exist
-            var contact = await GetContactByIdAsync(contactId);
-            var group = await GetContactGroupByIdAsync(groupId);
+            var contact = await context.Contacts.FirstOrDefaultAsync(c => c.Id == contactId && !c.DateDeleted.HasValue)
+                ?? throw new KeyNotFoundException($"Contact with ID {contactId} not found.");
+            var group = await context.ContactGroups.FirstOrDefaultAsync(g => g.Id == groupId && !g.DateDeleted.HasValue)
+                ?? throw new KeyNotFoundException($"Contact group with ID {groupId} not found.");
 
             // Check if relationship already exists
-            var existingRelationship = await _context.ContactXContactGroups
+            var existingRelationship = await context.ContactXContactGroups
                 .FirstOrDefaultAsync(x => x.Contact.Id == contactId &&
                                         x.ContactGroup.Id == groupId &&
                                         !x.DateDeleted.HasValue);
@@ -200,13 +274,15 @@ namespace CRS.Services {
                 DateCreated = DateTime.UtcNow
             };
 
-            _context.ContactXContactGroups.Add(relationship);
-            await _context.SaveChangesAsync();
+            context.ContactXContactGroups.Add(relationship);
+            await context.SaveChangesAsync();
         }
 
         public async Task RemoveContactFromGroupAsync(Guid contactId, Guid groupId) {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+
             // Find the relationship
-            var relationship = await _context.ContactXContactGroups
+            var relationship = await context.ContactXContactGroups
                 .FirstOrDefaultAsync(x => x.Contact.Id == contactId &&
                                         x.ContactGroup.Id == groupId &&
                                         !x.DateDeleted.HasValue);
@@ -218,8 +294,8 @@ namespace CRS.Services {
 
             // Soft delete the relationship
             relationship.DateDeleted = DateTime.UtcNow;
-            _context.ContactXContactGroups.Update(relationship);
-            await _context.SaveChangesAsync();
+            context.ContactXContactGroups.Update(relationship);
+            await context.SaveChangesAsync();
         }
         #endregion
     }

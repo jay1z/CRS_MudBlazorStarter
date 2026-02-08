@@ -180,7 +180,7 @@ public class InvoiceReminderInvocable : IInvocable
             Invoice = invoice,
             ReserveStudy = invoice.ReserveStudy,
             BaseUrl = baseUrl,
-            InvoiceViewUrl = $"{baseUrl}/Invoices/{invoice.Id}",
+            InvoiceViewUrl = $"{baseUrl}/Invoices/Details/{invoice.Id}",
             IsReminder = true,
             DaysPastDue = isOverdue ? daysOverdue : 0
         };

@@ -1,4 +1,4 @@
-@page "/ReserveStudies/Specialist"
+﻿@page "/ReserveStudies/Specialist"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @using CRS.Models
@@ -108,7 +108,7 @@ Manage HOA Users
         }
     }
 
-    private void NavigateToDetails(Guid id) => NavigationManager.NavigateTo($"/ReserveStudies/{id}/Details");
+    private void NavigateToDetails(Guid id) => NavigationManager.NavigateTo($"/ReserveStudies/Details/{id}");
 
     private static string FormatStatus(StudyStatus status) {
         var name = Enum.GetName(typeof(StudyStatus), status) ?? status.ToString();

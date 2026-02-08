@@ -13,7 +13,8 @@ public class CustomerAccountUser
     /// The customer account
     /// </summary>
     public Guid CustomerAccountId { get; set; }
-    public CustomerAccount CustomerAccount { get; set; } = null!;
+    // Navigation configured as optional to avoid EF Core query filter conflicts
+    public CustomerAccount? CustomerAccount { get; set; }
 
     /// <summary>
     /// The user linked to this customer account

@@ -34,30 +34,18 @@
                     Manage and track all reserve study requests
                 </MudText>
             </MudStack>
-            <AuthorizeView Policy="RequireTenantStaff">
-                <Authorized>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Surface" 
-                               Size="Size.Large"
-                               StartIcon="@Icons.Material.Filled.Add"
-                               Href="/ReserveStudies/Create"
-                               Style="color: #FF8C00; font-weight: 600;">
-                        New Study
-                    </MudButton>
-                </Authorized>
-            </AuthorizeView>
             <AuthorizeView Policy="RequireHOAUser">
-                <Authorized>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Surface" 
-                               Size="Size.Large"
-                               StartIcon="@Icons.Material.Filled.RequestQuote"
-                               Href="/ReserveStudies/Request"
-                               Style="color: #FF8C00; font-weight: 600;">
-                        Request Study
-                    </MudButton>
-                </Authorized>
-            </AuthorizeView>
+                    <Authorized>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Surface" 
+                                   Size="Size.Large"
+                                   StartIcon="@Icons.Material.Filled.RequestQuote"
+                                   Href="/ReserveStudies/Request"
+                                   Style="color: #FF8C00; font-weight: 600;">
+                            Request Study
+                        </MudButton>
+                    </Authorized>
+                </AuthorizeView>
         </MudStack>
     </MudPaper>
 
@@ -145,20 +133,27 @@
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Style="flex: 1; min-width: 250px; max-width: 400px;" />
-                <MudSelect T="StudyStatus?" 
-                           @bind-Value="statusFilter" 
+                <MudSelect T="string" 
+                           Value="statusFilter" 
                            Label="Filter by Status" 
                            Variant="Variant.Outlined"
                            Margin="Margin.Dense"
-                           Style="min-width: 200px;">
-                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)null)">All Statuses</MudSelectItem>
-                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.RequestCreated)">New Request</MudSelectItem>
-                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.ProposalCreated)">Proposal Created</MudSelectItem>
-                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.ProposalSent)">Proposal Sent</MudSelectItem>
-                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.ProposalAccepted)">Proposal Accepted</MudSelectItem>
-                    <MudSelectItem T="StudyStatus?" Value="@((StudyStatus?)StudyStatus.RequestCompleted)">Completed</MudSelectItem>
+                           Style="min-width: 200px;"
+                           ValueChanged="OnStatusFilterChanged">
+                    <MudSelectItem T="string" Value="@("")">All Statuses</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("RequestCreated")">New Request</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("ProposalCreated")">Proposal Created</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("ProposalSent")">Proposal Sent</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("ProposalAccepted")">Proposal Accepted</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("RequestCompleted")">Completed</MudSelectItem>
+                    <AuthorizeView Policy="RequireTenantStaff">
+                        <Authorized>
+                            <MudDivider />
+                            <MudSelectItem T="string" Value="@("Deleted")" Style="color: #DC3545;">Deleted</MudSelectItem>
+                        </Authorized>
+                    </AuthorizeView>
                 </MudSelect>
-                @if (!string.IsNullOrEmpty(searchString) || statusFilter != null)
+                @if (!string.IsNullOrEmpty(searchString) || !string.IsNullOrEmpty(statusFilter))
                 {
                     <MudButton Variant="Variant.Text" 
                                Color="Color.Secondary" 
@@ -210,7 +205,11 @@
                         <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.CurrentStatus)">Status</MudTableSortLabel></MudTh>
                         <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.PointOfContact?.FullName)">Contact</MudTableSortLabel></MudTh>
                         <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.Specialist?.FullName)">Specialist</MudTableSortLabel></MudTh>
-                        <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.DateCreated)">Created</MudTableSortLabel></MudTh>
+                        @if (isShowingDeleted) {
+                            <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.DateDeleted)">Deleted</MudTableSortLabel></MudTh>
+                        } else {
+                            <MudTh Style="font-weight: 600;"><MudTableSortLabel T="ReserveStudy" SortBy="@(x => x.DateCreated)">Created</MudTableSortLabel></MudTh>
+                        }
                         <MudTh Style="font-weight: 600; text-align: right;">Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate Context="study">
@@ -261,37 +260,61 @@
                                 <MudText Typo="Typo.body2" Style="color: #999; font-style: italic;">Unassigned</MudText>
                             }
                         </MudTd>
-                        <MudTd DataLabel="Created">
+                        <MudTd DataLabel="@(isShowingDeleted ? "Deleted" : "Created")">
                             <MudStack Spacing="0">
-                                <MudText Typo="Typo.body2">@study.DateCreated?.ToString("MMM dd, yyyy")</MudText>
-                                <MudText Typo="Typo.caption" Style="color: #999;">@study.DateCreated?.ToString("h:mm tt")</MudText>
+                                @if (isShowingDeleted) {
+                                    <MudText Typo="Typo.body2">@study.DateDeleted?.ToString("MMM dd, yyyy")</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #999;">@study.DateDeleted?.ToString("h:mm tt")</MudText>
+                                } else {
+                                    <MudText Typo="Typo.body2">@study.DateCreated?.ToString("MMM dd, yyyy")</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #999;">@study.DateCreated?.ToString("h:mm tt")</MudText>
+                                }
                             </MudStack>
                         </MudTd>
                         <MudTd DataLabel="Actions" Style="text-align: right;">
-                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" 
-                                     Size="Size.Small" 
-                                     Dense="true"
-                                     AnchorOrigin="Origin.BottomRight"
-                                     TransformOrigin="Origin.TopRight">
-                                <MudMenuItem Icon="@Icons.Material.Filled.Visibility" 
-                                             Href="@($"/ReserveStudies/{study.Id}/Details")">
-                                    View Details
-                                </MudMenuItem>
-                                <AuthorizeView Policy="RequireTenantStaff" Context="authEdit">
-                                    <Authorized>
-                                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" 
-                                                     Href="@($"/ReserveStudies/{study.Id}/Edit")">
-                                            Edit Study
-                                        </MudMenuItem>
-                                        <MudDivider />
-                                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" 
-                                                     OnClick="@(() => OpenDeleteDialog(study))"
-                                                     IconColor="Color.Error">
-                                            Delete
-                                        </MudMenuItem>
-                                    </Authorized>
-                                </AuthorizeView>
-                            </MudMenu>
+                            @if (isShowingDeleted) {
+                                <MudStack Row="true" Spacing="1" Justify="Justify.FlexEnd">
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Success"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.RestoreFromTrash"
+                                               OnClick="@(() => RestoreStudy(study))">
+                                        Restore
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Outlined"
+                                               Color="Color.Error"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                                               OnClick="@(() => OpenPermanentDeleteDialog(study))">
+                                        Delete Forever
+                                    </MudButton>
+                                </MudStack>
+                            } else {
+                                <MudMenu Icon="@Icons.Material.Filled.MoreVert" 
+                                         Size="Size.Small" 
+                                         Dense="true"
+                                         AnchorOrigin="Origin.BottomRight"
+                                         TransformOrigin="Origin.TopRight">
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Visibility" 
+                                                 Href="@($"/ReserveStudies/Details/{study.Id}")">
+                                        View Details
+                                    </MudMenuItem>
+                                    <AuthorizeView Policy="RequireTenantStaff" Context="authEdit">
+                                        <Authorized>
+                                            <MudMenuItem Icon="@Icons.Material.Filled.Edit" 
+                                                         Href="@($"/ReserveStudies/Edit/{study.Id}")">
+                                                Edit Study
+                                            </MudMenuItem>
+                                            <MudDivider />
+                                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" 
+                                                         OnClick="@(() => OpenDeleteDialog(study))"
+                                                         IconColor="Color.Error">
+                                                Delete
+                                            </MudMenuItem>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </MudMenu>
+                            }
                         </MudTd>
                     </RowTemplate>
                     <PagerContent>
@@ -306,8 +329,9 @@
 @code {
     private List<ReserveStudy> reserveStudies = new();
     private bool isLoading = true;
+    private bool isShowingDeleted = false;
     private string searchString = "";
-    private StudyStatus? statusFilter;
+    private string statusFilter = "";
 
     protected override async Task OnParametersSetAsync() {
         await LoadData();
@@ -379,18 +403,63 @@
                     study.Specialist?.FullName?.ToLower().Contains(search) == true);
             }
 
-            // Apply status filter
-            if (statusFilter.HasValue) {
-                filtered = filtered.Where(study => study.CurrentStatus == statusFilter.Value);
+            // Apply status filter (not for deleted view - that's handled separately)
+            if (!isShowingDeleted && !string.IsNullOrEmpty(statusFilter) && Enum.TryParse<StudyStatus>(statusFilter, out var status)) {
+                filtered = filtered.Where(study => study.CurrentStatus == status);
             }
 
             return filtered;
         }
     }
 
-    private void ClearFilters() {
+    private async Task ClearFilters() {
         searchString = "";
-        statusFilter = null;
+        if (isShowingDeleted) {
+            statusFilter = "";
+            await OnStatusFilterChanged("");
+        } else {
+            statusFilter = "";
+        }
+    }
+
+    private async Task OnStatusFilterChanged(string value) {
+        statusFilter = value;
+
+        if (value == "Deleted") {
+            isShowingDeleted = true;
+            isLoading = true;
+            try {
+                reserveStudies = await ReserveStudyService.GetDeletedReserveStudiesAsync();
+            }
+            catch (Exception ex) {
+                Snackbar.Add($"Error loading deleted studies: {ex.Message}", Severity.Error);
+                reserveStudies = new List<ReserveStudy>();
+            }
+            finally {
+                isLoading = false;
+            }
+        }
+        else if (isShowingDeleted) {
+            // Switching back from deleted view to active studies
+            isShowingDeleted = false;
+            await LoadData();
+        }
+    }
+
+    private async Task RestoreStudy(ReserveStudy study) {
+        try {
+            var result = await ReserveStudyService.RestoreReserveStudyAsync(study.Id);
+            if (result) {
+                reserveStudies.Remove(study);
+                Snackbar.Add($"Reserve study for {study.Community?.Name} has been restored.", Severity.Success);
+            }
+            else {
+                Snackbar.Add("Failed to restore the reserve study.", Severity.Error);
+            }
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error restoring study: {ex.Message}", Severity.Error);
+        }
     }
 
     private int GetStatusCount(StudyStatus status) {
@@ -511,6 +580,35 @@
         }
         finally {
             isLoading = false;
+        }
+    }
+
+    private async Task OpenPermanentDeleteDialog(ReserveStudy study) {
+        var parameters = new DialogParameters {
+            { "Study", study }
+        };
+
+        var dialog = await DialogService.ShowAsync<PermanentDeleteReserveStudyDialog>("Permanently Delete Reserve Study", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled) {
+            await PermanentlyDeleteReserveStudy(study);
+        }
+    }
+
+    private async Task PermanentlyDeleteReserveStudy(ReserveStudy study) {
+        try {
+            var result = await ReserveStudyService.PermanentlyDeleteReserveStudyAsync(study.Id);
+            if (result) {
+                reserveStudies.Remove(study);
+                Snackbar.Add($"Reserve study for {study.Community?.Name} was permanently deleted.", Severity.Success);
+            }
+            else {
+                Snackbar.Add("Failed to permanently delete the reserve study.", Severity.Error);
+            }
+        }
+        catch (Exception ex) {
+            Snackbar.Add($"Error permanently deleting reserve study: {ex.Message}", Severity.Error);
         }
     }
 }

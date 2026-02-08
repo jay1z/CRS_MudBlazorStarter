@@ -117,8 +117,33 @@ namespace CRS.Controllers {
             }
         }
 
+        /// <summary>
+        /// Pauses a subscription at the end of the current billing period.
+        /// </summary>
+        [HttpPost("pause")]
+        public async Task<IActionResult> PauseSubscription([FromBody] PauseResumeRequest request, CancellationToken ct) {
+            var success = await _billing.PauseSubscriptionAsync(request.TenantId, ct);
+            if (!success) {
+                return BadRequest(new { error = "Failed to pause subscription. Tenant may not have an active subscription." });
+            }
+            return Ok(new { paused = true, tenantId = request.TenantId });
+        }
+
+        /// <summary>
+        /// Resumes a paused subscription.
+        /// </summary>
+        [HttpPost("resume")]
+        public async Task<IActionResult> ResumeSubscription([FromBody] PauseResumeRequest request, CancellationToken ct) {
+            var success = await _billing.ResumeSubscriptionAsync(request.TenantId, ct);
+            if (!success) {
+                return BadRequest(new { error = "Failed to resume subscription. Tenant may not have a paused subscription." });
+            }
+            return Ok(new { resumed = true, tenantId = request.TenantId });
+        }
+
         public record CreateCheckoutSessionRequest(int TenantId, string Tier, string Interval);
         public record PortalSessionRequest(int TenantId);
         public record CancelRequest(string SubscriptionId);
+        public record PauseResumeRequest(int TenantId);
     }
 }

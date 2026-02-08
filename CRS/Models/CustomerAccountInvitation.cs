@@ -4,6 +4,8 @@ namespace CRS.Models;
 
 /// <summary>
 /// Represents a pending invitation to join a customer account.
+/// Note: This entity does not have a tenant filter because invitations
+/// are looked up by token across tenant boundaries.
 /// </summary>
 public class CustomerAccountInvitation
 {
@@ -13,7 +15,13 @@ public class CustomerAccountInvitation
     /// The customer account being invited to
     /// </summary>
     public Guid CustomerAccountId { get; set; }
-    public CustomerAccount CustomerAccount { get; set; } = null!;
+
+    /// <summary>
+    /// Navigation property - optional to avoid EF Core query filter conflicts.
+    /// CustomerAccount has a tenant filter, so this navigation may return null
+    /// when loaded outside the tenant context.
+    /// </summary>
+    public CustomerAccount? CustomerAccount { get; set; }
 
     /// <summary>
     /// Email address of the person being invited

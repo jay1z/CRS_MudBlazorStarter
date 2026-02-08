@@ -1,0 +1,471 @@
+﻿@page "/account/payment-settings"
+@using CRS.Services.Billing
+@using CRS.Services.Tenant
+@using CRS.Models
+@using CRS.Data
+@using Microsoft.EntityFrameworkCore
+@inject IStripeConnectService ConnectService
+@inject ITenantContext TenantContext
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@attribute [Authorize(Roles = "TenantOwner,TenantAdmin")]
+
+<PageTitle>Payment Settings - @(TenantContext.TenantName ?? "ALX Reserve Cloud")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+    <MudText Typo="Typo.h4" Class="fw-bold mb-2">Payment Settings</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
+        Configure how you receive payments from your clients through Stripe Connect.
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudPaper Class="pa-8 d-flex justify-center">
+            <MudProgressCircular Indeterminate="true" />
+        </MudPaper>
+    }
+    else if (_status == null)
+    {
+        <MudAlert Severity="Severity.Error">Unable to load payment settings. Please try again.</MudAlert>
+    }
+    else
+    {
+        <!-- Stripe Connect Status Card -->
+        <MudPaper Elevation="2" Class="pa-6 mb-6">
+            <div class="d-flex align-center gap-4 mb-4">
+                <MudAvatar Color="@GetStatusColor()" Size="Size.Large">
+                    <MudIcon Icon="@GetStatusIcon()" />
+                </MudAvatar>
+                <div>
+                    <MudText Typo="Typo.h6" Class="fw-bold">Stripe Connect Account</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @GetStatusText()
+                    </MudText>
+                </div>
+            </div>
+
+            @if (!_status.HasConnectAccount)
+            {
+                <!-- No Account - Show Setup -->
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    <MudText Typo="Typo.body2">
+                        Connect your Stripe account to start accepting payments from your HOA clients. 
+                        Funds will be deposited directly to your bank account, minus a small platform fee.
+                    </MudText>
+                </MudAlert>
+
+                <div class="d-flex flex-column gap-3">
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">Platform Fees by Plan</MudText>
+                    <MudSimpleTable Dense="true" Bordered="true" Style="max-width: 500px;">
+                        <tbody>
+                            <tr class="@(_tenantTier == SubscriptionTier.Startup ? "mud-primary-text" : "")">
+                                <td>Starter Plan @(_tenantTier == SubscriptionTier.Startup ? "⭐ (Your Plan)" : "")</td>
+                                <td><strong>2.0%</strong></td>
+                            </tr>
+                            <tr class="@(_tenantTier == SubscriptionTier.Pro ? "mud-primary-text" : "")">
+                                <td>Professional Plan @(_tenantTier == SubscriptionTier.Pro ? "⭐ (Your Plan)" : "")</td>
+                                <td><strong>1.5%</strong></td>
+                            </tr>
+                            <tr class="@(_tenantTier == SubscriptionTier.Enterprise ? "mud-primary-text" : "")">
+                                <td>Enterprise Plan @(_tenantTier == SubscriptionTier.Enterprise ? "⭐ (Your Plan)" : "")</td>
+                                <td><strong>1.0%</strong></td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Plus standard Stripe fees (2.9% + $0.30 for cards, 0.8% max $5 for ACH)
+                    </MudText>
+                </div>
+
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.AccountBalanceWallet"
+                           OnClick="StartOnboarding"
+                           Disabled="_processing"
+                           Class="mt-6">
+                    @if (_processing)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Connect Stripe Account
+                </MudButton>
+            }
+            else if (!_status.OnboardingComplete || _status.RequiresAction)
+            {
+                <!-- Account exists but onboarding incomplete -->
+                <MudAlert Severity="Severity.Warning" Class="mb-4">
+                    <MudText Typo="Typo.body2">
+                        Your Stripe account setup is incomplete. Please complete the onboarding process to start accepting payments.
+                    </MudText>
+                </MudAlert>
+
+                @if (!string.IsNullOrEmpty(_status.RequirementsStatus))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                        Status: @_status.RequirementsStatus | 
+                        Payouts: @(_status.PayoutsEnabled ? "✅" : "❌") | 
+                        Card Payments: @(_status.CardPaymentsEnabled ? "✅" : "❌")
+                    </MudText>
+                }
+
+                <div class="d-flex gap-3 mt-4">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Warning" 
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               OnClick="ResumeOnboarding"
+                               Disabled="_processing">
+                        @if (_processing)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Continue Setup
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Default"
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="RefreshStatus"
+                               Disabled="_processing">
+                        Refresh Status
+                    </MudButton>
+                </div>
+            }
+            else
+            {
+                <!-- Fully connected -->
+                <MudGrid Class="mt-4">
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f5f5f5; border-radius: 8px;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Card Payments</MudText>
+                            <div class="d-flex align-center gap-2 mt-1">
+                                <MudIcon Icon="@(_status.CardPaymentsEnabled ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)" 
+                                         Color="@(_status.CardPaymentsEnabled ? Color.Success : Color.Error)" Size="Size.Small" />
+                                <MudText Typo="Typo.body1" Class="fw-bold">
+                                    @(_status.CardPaymentsEnabled ? "Active" : "Inactive")
+                                </MudText>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f5f5f5; border-radius: 8px;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Payouts</MudText>
+                            <div class="d-flex align-center gap-2 mt-1">
+                                <MudIcon Icon="@(_status.PayoutsEnabled ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)" 
+                                         Color="@(_status.PayoutsEnabled ? Color.Success : Color.Error)" Size="Size.Small" />
+                                <MudText Typo="Typo.body1" Class="fw-bold">
+                                    @(_status.PayoutsEnabled ? "Enabled" : "Disabled")
+                                </MudText>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f5f5f5; border-radius: 8px;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Platform Fee</MudText>
+                            <MudText Typo="Typo.body1" Class="fw-bold mt-1">
+                                @(GetPlatformFeeDisplay())
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f5f5f5; border-radius: 8px;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Account ID</MudText>
+                            <MudText Typo="Typo.body2" Class="fw-bold mt-1" Style="font-family: monospace;">
+                                @(_status.AccountId?[..Math.Min(15, _status.AccountId.Length)])...
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+
+                <div class="d-flex gap-3 mt-6">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Dashboard"
+                               OnClick="OpenStripeDashboard"
+                               Disabled="_processing">
+                        Open Stripe Dashboard
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Default"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="RefreshStatus"
+                               Disabled="_processing">
+                        Refresh Status
+                    </MudButton>
+                </div>
+            }
+        </MudPaper>
+
+        <!-- How It Works Section -->
+        <MudPaper Elevation="2" Class="pa-6">
+            <MudText Typo="Typo.h6" Class="fw-bold mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                How Payment Processing Works
+            </MudText>
+
+            <MudTimeline TimelinePosition="TimelinePosition.Start">
+                <MudTimelineItem Color="Color.Primary" Size="Size.Small">
+                    <MudText Typo="Typo.body2" Class="fw-bold">Client Receives Invoice</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        You send an invoice to your HOA client through ALX Reserve Cloud
+                    </MudText>
+                </MudTimelineItem>
+                <MudTimelineItem Color="Color.Primary" Size="Size.Small">
+                    <MudText Typo="Typo.body2" Class="fw-bold">Client Pays Online</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Client clicks "Pay Now" and completes payment via Stripe Checkout (card or ACH)
+                    </MudText>
+                </MudTimelineItem>
+                <MudTimelineItem Color="Color.Success" Size="Size.Small">
+                    <MudText Typo="Typo.body2" Class="fw-bold">You Receive Funds</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Funds are deposited to your bank account within 2-7 business days, minus fees
+                    </MudText>
+                </MudTimelineItem>
+            </MudTimeline>
+
+            <MudAlert Severity="Severity.Success" Dense="true" Class="mt-4">
+                <MudText Typo="Typo.body2">
+                    <strong>Pro Tip:</strong> Encourage clients to pay via ACH bank transfer to minimize fees. 
+                    ACH is capped at $5 per transaction vs. 2.9% for credit cards!
+                </MudText>
+            </MudAlert>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private StripeConnectStatus? _status;
+    private SubscriptionTier? _tenantTier;
+    private bool _loading = true;
+    private bool _processing = false;
+
+    [SupplyParameterFromQuery]
+    public string? Onboarding { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStatusAsync();
+
+        // Handle return from Stripe onboarding
+        if (!string.IsNullOrEmpty(Onboarding))
+        {
+            if (Onboarding == "complete")
+            {
+                Snackbar.Add("Stripe Connect setup completed! Syncing your account status...", Severity.Success);
+                await RefreshStatus();
+            }
+            else if (Onboarding == "refresh")
+            {
+                Snackbar.Add("Please complete the Stripe Connect setup to start accepting payments.", Severity.Warning);
+            }
+        }
+    }
+
+    private async Task LoadStatusAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            var tenantId = TenantContext.TenantId;
+            if (tenantId.HasValue)
+            {
+                _status = await ConnectService.GetAccountStatusAsync(tenantId.Value);
+
+                // Load tenant tier for fee display
+                await using var db = await DbFactory.CreateDbContextAsync();
+                var tenant = await db.Tenants.AsNoTracking()
+                    .Where(t => t.Id == tenantId.Value)
+                    .Select(t => new { t.Tier })
+                    .FirstOrDefaultAsync();
+                _tenantTier = tenant?.Tier;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading payment settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StartOnboarding()
+    {
+        _processing = true;
+        StateHasChanged();
+
+        try
+        {
+            var tenantId = TenantContext.TenantId;
+            if (!tenantId.HasValue) return;
+
+            var baseUrl = Nav.BaseUri.TrimEnd('/');
+            var returnUrl = $"{baseUrl}/account/payment-settings?onboarding=complete";
+            var refreshUrl = $"{baseUrl}/account/payment-settings?onboarding=refresh";
+
+            var result = await ConnectService.CreateAccountAndGetOnboardingUrlAsync(
+                tenantId.Value, returnUrl, refreshUrl);
+
+            if (result.Success && !string.IsNullOrEmpty(result.OnboardingUrl))
+            {
+                Nav.NavigateTo(result.OnboardingUrl, forceLoad: true);
+            }
+            else
+            {
+                Snackbar.Add(result.ErrorMessage ?? "Failed to start Stripe Connect setup", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResumeOnboarding()
+    {
+        _processing = true;
+        StateHasChanged();
+
+        try
+        {
+            var tenantId = TenantContext.TenantId;
+            if (!tenantId.HasValue) return;
+
+            var baseUrl = Nav.BaseUri.TrimEnd('/');
+            var returnUrl = $"{baseUrl}/account/payment-settings?onboarding=complete";
+            var refreshUrl = $"{baseUrl}/account/payment-settings?onboarding=refresh";
+
+            var url = await ConnectService.GetOnboardingUrlAsync(tenantId.Value, returnUrl, refreshUrl);
+
+            if (!string.IsNullOrEmpty(url))
+            {
+                Nav.NavigateTo(url, forceLoad: true);
+            }
+            else
+            {
+                Snackbar.Add("Failed to generate onboarding link", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshStatus()
+    {
+        _processing = true;
+        StateHasChanged();
+
+        try
+        {
+            var tenantId = TenantContext.TenantId;
+            if (!tenantId.HasValue) return;
+
+            _status = await ConnectService.SyncAccountStatusAsync(tenantId.Value);
+            Snackbar.Add("Status refreshed", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error refreshing status: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenStripeDashboard()
+    {
+        _processing = true;
+        StateHasChanged();
+
+        try
+        {
+            var tenantId = TenantContext.TenantId;
+            if (!tenantId.HasValue) return;
+
+            var url = await ConnectService.CreateDashboardLoginLinkAsync(tenantId.Value);
+
+            if (!string.IsNullOrEmpty(url))
+            {
+                Nav.NavigateTo(url, forceLoad: true);
+            }
+            else
+            {
+                Snackbar.Add("Failed to generate dashboard link", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+    }
+
+    private Color GetStatusColor()
+    {
+        if (_status == null || !_status.HasConnectAccount)
+            return Color.Default;
+        if (!_status.OnboardingComplete || _status.RequiresAction)
+            return Color.Warning;
+        if (_status.PayoutsEnabled && _status.CardPaymentsEnabled)
+            return Color.Success;
+        return Color.Info;
+    }
+
+    private string GetStatusIcon()
+    {
+        if (_status == null || !_status.HasConnectAccount)
+            return Icons.Material.Filled.AccountBalanceWallet;
+        if (!_status.OnboardingComplete || _status.RequiresAction)
+            return Icons.Material.Filled.Warning;
+        if (_status.PayoutsEnabled && _status.CardPaymentsEnabled)
+            return Icons.Material.Filled.CheckCircle;
+        return Icons.Material.Filled.Info;
+    }
+
+    private string GetStatusText()
+    {
+        if (_status == null || !_status.HasConnectAccount)
+            return "Not connected - Set up Stripe to accept payments from clients";
+        if (!_status.OnboardingComplete || _status.RequiresAction)
+            return "Setup incomplete - Additional information required";
+        if (_status.PayoutsEnabled && _status.CardPaymentsEnabled)
+            return "Connected and active - Ready to receive payments";
+        return "Connected - Some capabilities may be pending";
+    }
+
+    private string GetPlatformFeeDisplay()
+    {
+        return _tenantTier switch
+        {
+            SubscriptionTier.Startup => "2.0%",
+            SubscriptionTier.Pro => "1.5%",
+            SubscriptionTier.Enterprise => "1.0%",
+            _ => "1.5%"
+        };
+    }
+}

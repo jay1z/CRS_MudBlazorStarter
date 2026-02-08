@@ -230,6 +230,73 @@ namespace CRS.Services {
             return true;
         }
 
+        public async Task<bool> RestoreReserveStudyAsync(Guid id) {
+            using var context = await _dbFactory.CreateDbContextAsync();
+
+            var reserveStudy = await context.ReserveStudies
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(rs => rs.Id == id && !rs.IsActive);
+
+            if (reserveStudy == null) {
+                return false;
+            }
+
+            reserveStudy.IsActive = true;
+            reserveStudy.DateDeleted = null;
+
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> PermanentlyDeleteReserveStudyAsync(Guid id) {
+            using var context = await _dbFactory.CreateDbContextAsync();
+
+            var reserveStudy = await context.ReserveStudies
+                .IgnoreQueryFilters()
+                .Include(rs => rs.Proposals)
+                .Include(rs => rs.FinancialInfo)
+                .Include(rs => rs.StudyRequest)
+                .Include(rs => rs.ReserveStudyBuildingElements)
+                .Include(rs => rs.ReserveStudyCommonElements)
+                .Include(rs => rs.ReserveStudyAdditionalElements)
+                .FirstOrDefaultAsync(rs => rs.Id == id && !rs.IsActive);
+
+            if (reserveStudy == null) {
+                return false;
+            }
+
+            // Break circular dependency: ReserveStudy.CurrentProposalId <-> Proposal.ReserveStudyId
+            // Must nullify CurrentProposalId before deleting proposals
+            if (reserveStudy.CurrentProposalId != null) {
+                reserveStudy.CurrentProposalId = null;
+                await context.SaveChangesAsync();
+            }
+
+            // Remove related entities first to avoid FK constraint violations
+            if (reserveStudy.ReserveStudyBuildingElements?.Any() == true) {
+                context.RemoveRange(reserveStudy.ReserveStudyBuildingElements);
+            }
+            if (reserveStudy.ReserveStudyCommonElements?.Any() == true) {
+                context.RemoveRange(reserveStudy.ReserveStudyCommonElements);
+            }
+            if (reserveStudy.ReserveStudyAdditionalElements?.Any() == true) {
+                context.RemoveRange(reserveStudy.ReserveStudyAdditionalElements);
+            }
+            if (reserveStudy.Proposals?.Any() == true) {
+                context.RemoveRange(reserveStudy.Proposals);
+            }
+            if (reserveStudy.FinancialInfo != null) {
+                context.Remove(reserveStudy.FinancialInfo);
+            }
+            if (reserveStudy.StudyRequest != null) {
+                context.Remove(reserveStudy.StudyRequest);
+            }
+
+            context.ReserveStudies.Remove(reserveStudy);
+            await context.SaveChangesAsync();
+            return true;
+        }
+
         /// <summary>
         /// Updates an existing reserve study. 
         /// HOA users can only update if the proposal has not been accepted (Status < ProposalAccepted).
@@ -408,6 +475,13 @@ namespace CRS.Services {
                         }
                         element.ReserveStudyId = existingStudy.Id;
                         element.BuildingElement = null; // Prevent navigation property tracking issues
+
+                        // Handle ServiceContact - ensure it gets a new ID for new elements
+                        if (element.ServiceContact != null) {
+                            element.ServiceContact.Id = Guid.CreateVersion7();
+                            element.ServiceContact.DateCreated = DateTime.UtcNow;
+                        }
+
                         existingStudy.ReserveStudyBuildingElements ??= new List<ReserveStudyBuildingElement>();
                         existingStudy.ReserveStudyBuildingElements.Add(element);
                         context.Add(element);
@@ -442,6 +516,10 @@ namespace CRS.Services {
                 if (buildingElementsToRemove != null && buildingElementsToRemove.Any()) {
                     _logger.LogInformation("UpdateReserveStudyAsync: Removing {Count} building elements", buildingElementsToRemove.Count);
                     foreach (var element in buildingElementsToRemove) {
+                        // Remove the associated service contact if it exists
+                        if (element.ServiceContact != null) {
+                            context.Remove(element.ServiceContact);
+                        }
                         existingStudy.ReserveStudyBuildingElements?.Remove(element);
                         context.Remove(element);
                     }
@@ -464,6 +542,13 @@ namespace CRS.Services {
                         }
                         element.ReserveStudyId = existingStudy.Id;
                         element.CommonElement = null; // Prevent navigation property tracking issues
+
+                        // Handle ServiceContact - ensure it gets a new ID for new elements
+                        if (element.ServiceContact != null) {
+                            element.ServiceContact.Id = Guid.CreateVersion7();
+                            element.ServiceContact.DateCreated = DateTime.UtcNow;
+                        }
+
                         existingStudy.ReserveStudyCommonElements ??= new List<ReserveStudyCommonElement>();
                         existingStudy.ReserveStudyCommonElements.Add(element);
                         context.Add(element);
@@ -495,6 +580,10 @@ namespace CRS.Services {
                     .ToList();
                 if (commonElementsToRemove != null && commonElementsToRemove.Any()) {
                     foreach (var element in commonElementsToRemove) {
+                        // Remove the associated service contact if it exists
+                        if (element.ServiceContact != null) {
+                            context.Remove(element.ServiceContact);
+                        }
                         existingStudy.ReserveStudyCommonElements?.Remove(element);
                         context.Remove(element);
                     }
@@ -655,6 +744,27 @@ namespace CRS.Services {
                 .Include(rs => rs.StudyRequest)
                 .Where(rs => rs.IsActive)
                 .OrderBy(rs => rs.Community.Name)
+                .AsSplitQuery()
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Gets all deleted (soft-deleted) reserve studies
+        /// </summary>
+        public async Task<List<ReserveStudy>> GetDeletedReserveStudiesAsync() {
+            using var context = await _dbFactory.CreateDbContextAsync();
+            return await context.ReserveStudies
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Include(rs => rs.Community)
+                    .ThenInclude(c => c.PhysicalAddress)
+                .Include(rs => rs.Contact)
+                .Include(rs => rs.PropertyManager)
+                .Include(rs => rs.Specialist)
+                .Include(rs => rs.User)
+                .Include(rs => rs.StudyRequest)
+                .Where(rs => !rs.IsActive && rs.DateDeleted != null)
+                .OrderByDescending(rs => rs.DateDeleted)
                 .AsSplitQuery()
                 .ToListAsync();
         }

@@ -215,7 +215,7 @@
 
     private void NavigateToInvoice(Guid invoiceId)
     {
-        NavigationManager.NavigateTo($"/Invoices/{invoiceId}");
+        NavigationManager.NavigateTo($"/Invoices/Details/{invoiceId}");
     }
 
     private static Color GetDaysColor(int daysOverdue) => daysOverdue switch

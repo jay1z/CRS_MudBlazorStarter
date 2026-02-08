@@ -1,0 +1,121 @@
+﻿@namespace CRS.Components.Dialogs
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Interfaces
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IContactService ContactService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-2" />
+            Elements Using This Service Contact
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (isLoading) {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mx-auto d-block my-4" />
+        }
+        else if (!commonElements.Any() && !buildingElements.Any()) {
+            <MudAlert Severity="Severity.Info">No elements are currently using this service contact.</MudAlert>
+        }
+        else {
+            <MudText Typo="Typo.subtitle2" Class="mb-2">
+                <strong>@ServiceContactName</strong>
+            </MudText>
+            
+            @if (commonElements.Any()) {
+                <MudText Typo="Typo.body2" Class="mb-2 mt-3"><strong>Common Elements (@commonElements.Count)</strong></MudText>
+                <MudSimpleTable Dense="true" Hover="true" Class="mb-4">
+                    <thead>
+                        <tr>
+                            <th>Element</th>
+                            <th>Study</th>
+                            <th>Community</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var element in commonElements) {
+                            <tr>
+                                <td>@element.CommonElement?.Name</td>
+                                <td>@(element.ReserveStudy?.Name ?? element.ReserveStudy?.Community?.Name ?? "—")</td>
+                                <td>@element.ReserveStudy?.Community?.Name</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+
+            @if (buildingElements.Any()) {
+                <MudText Typo="Typo.body2" Class="mb-2 mt-3"><strong>Building Elements (@buildingElements.Count)</strong></MudText>
+                <MudSimpleTable Dense="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Element</th>
+                            <th>Study</th>
+                            <th>Community</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var element in buildingElements) {
+                            <tr>
+                                <td>@element.BuildingElement?.Name</td>
+                                <td>@(element.ReserveStudy?.Name ?? element.ReserveStudy?.Community?.Name ?? "—")</td>
+                                <td>@element.ReserveStudy?.Community?.Name</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Default">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Guid ServiceContactId { get; set; }
+    [Parameter] public string ServiceContactName { get; set; } = string.Empty;
+
+    private bool isLoading = true;
+    private List<ReserveStudyCommonElement> commonElements = new();
+    private List<ReserveStudyBuildingElement> buildingElements = new();
+
+    protected override async Task OnInitializedAsync() {
+        await LoadElements();
+    }
+
+    private async Task LoadElements() {
+        try {
+            await using var context = await DbFactory.CreateDbContextAsync();
+
+            // Get all matching service contact IDs (for grouped contacts)
+            var matchingIds = await ContactService.GetMatchingServiceContactIdsAsync(ServiceContactId);
+
+            commonElements = await context.ReserveStudyCommonElements
+                .AsNoTracking()
+                .Include(e => e.CommonElement)
+                .Include(e => e.ReserveStudy)
+                    .ThenInclude(s => s!.Community)
+                .Where(e => e.ServiceContact != null && matchingIds.Contains(e.ServiceContact.Id))
+                .ToListAsync();
+
+            buildingElements = await context.ReserveStudyBuildingElements
+                .AsNoTracking()
+                .Include(e => e.BuildingElement)
+                .Include(e => e.ReserveStudy)
+                    .ThenInclude(s => s!.Community)
+                .Where(e => e.ServiceContact != null && matchingIds.Contains(e.ServiceContact.Id))
+                .ToListAsync();
+        }
+        finally {
+            isLoading = false;
+        }
+    }
+
+    private void Close() => MudDialog.Cancel();
+}

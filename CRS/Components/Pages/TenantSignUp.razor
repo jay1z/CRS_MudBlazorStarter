@@ -205,7 +205,30 @@
                                 </MudText>
                             </MudStack>
                         </MudPaper>
-                        
+
+                        <!-- Terms of Service Acceptance -->
+                        <MudPaper Elevation="0" Class="pa-4" Style="@GetTermsBoxStyle()">
+                            <MudCheckBox @bind-Value="acceptedTerms" 
+                                         Color="Color.Primary" 
+                                         Dense="true"
+                                         Class="ma-0">
+                                <MudText Typo="Typo.body2" Style="line-height: 1.5;">
+                                    I have read and agree to the 
+                                    <MudLink Href="/terms" Target="_blank" Style="color: #6A3D9A; font-weight: 600;">Terms of Service & EULA</MudLink> 
+                                    and 
+                                    <MudLink Href="/privacy" Target="_blank" Style="color: #6A3D9A; font-weight: 600;">Privacy Policy</MudLink>, 
+                                    including the <MudLink Href="/terms#payment-processing" Target="_blank" Style="color: #FF8C00; font-weight: 600;">Payment Processing Fee Schedule</MudLink>.
+                                </MudText>
+                            </MudCheckBox>
+                            @if (termsError != null)
+                            {
+                                <MudText Typo="Typo.caption" Style="color: #d32f2f; margin-top: 4px; margin-left: 32px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Style="vertical-align: middle;" />
+                                    @termsError
+                                </MudText>
+                            }
+                        </MudPaper>
+
                         <!-- Submit Button -->
                         <MudButton Color="Color.Warning" 
                                    Variant="Variant.Filled" 
@@ -255,9 +278,7 @@
                 <MudDivider Class="my-4" />
                 <MudText Typo="Typo.caption" Align="Align.Center" Style="color: #999; line-height: 1.6;">
                     <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Style="vertical-align: middle;" />
-                    Your data is protected with 256-bit encryption. By continuing, you agree to our 
-                    <MudLink Href="/terms" Style="color: #FF8C00;">Terms of Service</MudLink> and 
-                    <MudLink Href="/privacy" Style="color: #FF8C00;">Privacy Policy</MudLink>.
+                    Your data is protected with 256-bit encryption.
                 </MudText>
             </MudPaper>
         </MudItem>
@@ -401,6 +422,10 @@ public string? IntervalFromQuery { get; set; }
 private SignUpModel model = new() { Interval = "Monthly", Tier = "Pro" };
 private bool _submitting = false;
 private string? _error;
+
+// Terms acceptance state
+private bool acceptedTerms = false;
+private string? termsError = null;
 
 // Subdomain validation state
 private bool? subdomainAvailable = null;
@@ -615,12 +640,18 @@ protected override void OnParametersSet()
         "Enterprise" => "Unlimited properties, dedicated support",
         _ => ""
     };
-    
+
+    private string GetTermsBoxStyle()
+    {
+        var borderColor = termsError != null ? "2px solid #d32f2f" : "1px solid #e0e0e0";
+        return $"background: #f8f9fa; border-radius: 12px; border: {borderColor};";
+    }
+
     private string GetPlanName(string? planValue)
     {
         if (string.IsNullOrWhiteSpace(planValue))
             return "Professional"; // Default fallback
-            
+
         return planValue switch
         {
             "Startup" => "Starter",
@@ -649,7 +680,16 @@ protected override void OnParametersSet()
 
     private async Task OnSubmitAsync() {
         _error = null;
-        
+        termsError = null;
+
+        // Validate Terms of Service acceptance
+        if (!acceptedTerms)
+        {
+            termsError = "You must accept the Terms of Service and Privacy Policy to continue.";
+            _error = "Please accept the Terms of Service to continue.";
+            return;
+        }
+
         // Validation
         if (string.IsNullOrWhiteSpace(model.CompanyName)) 
         { 

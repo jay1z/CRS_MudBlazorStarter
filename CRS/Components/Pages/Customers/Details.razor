@@ -1,4 +1,4 @@
-﻿@page "/Customers/{CustomerId:guid}"
+﻿@page "/Customers/Details/{CustomerId:guid}"
 @using CRS.Models
 @using CRS.Services.Customers
 @using CRS.Data
@@ -198,7 +198,7 @@
                             <MudTd DataLabel="Actions">
                                 <MudIconButton Icon="@Icons.Material.Filled.Visibility"
                                                Size="Size.Small"
-                                               Href="@($"/Communities/{context.Id}")"
+                                               Href="@($"/Communities/Details/{context.Id}")"
                                                Title="View Property" />
                             </MudTd>
                         </RowTemplate>
@@ -243,11 +243,11 @@
     private async Task LoadCustomer()
     {
         isLoading = true;
-        
+
         try
         {
             customer = await CustomerService.GetByIdAsync(CustomerId);
-            
+
             if (customer != null)
             {
                 _breadcrumbs = new()
@@ -255,22 +255,45 @@
                     new BreadcrumbItem("Customers", "/Customers"),
                     new BreadcrumbItem(customer.Name, null, disabled: true)
                 };
-                
+
                 await using var db = await DbFactory.CreateDbContextAsync();
-                
+
+                // Get directly linked communities (via CustomerAccountId)
+                var directCommunityIds = await db.Communities
+                    .Where(c => c.CustomerAccountId == customer.Id && c.IsActive)
+                    .Select(c => c.Id)
+                    .ToListAsync();
+
+                // Also get communities linked via reserve studies (legacy association)
+                var studyCommunityIds = new List<Guid>();
+                if (customer.UserId.HasValue)
+                {
+                    studyCommunityIds = await db.ReserveStudies
+                        .Where(rs => rs.CommunityId.HasValue &&
+                                    (rs.RequestedByUserId == customer.UserId || rs.ApplicationUserId == customer.UserId))
+                        .Select(rs => rs.CommunityId!.Value)
+                        .Distinct()
+                        .ToListAsync();
+                }
+
+                // Combine both sources
+                var allCommunityIds = directCommunityIds
+                    .Union(studyCommunityIds)
+                    .Distinct()
+                    .ToList();
+
                 communities = await db.Communities
                     .Include(c => c.PhysicalAddress)
-                    .Where(c => c.CustomerAccountId == customer.Id)
+                    .Where(c => allCommunityIds.Contains(c.Id) && c.IsActive)
                     .OrderBy(c => c.Name)
                     .ToListAsync();
-                
+
                 // Calculate total revenue
-                var communityIds = communities.Select(c => c.Id).ToList();
-                if (communityIds.Any())
+                if (allCommunityIds.Any())
                 {
                     totalRevenue = await db.Invoices
                         .Where(i => i.ReserveStudy != null && 
-                                   i.ReserveStudy.CommunityId.HasValue && communityIds.Contains(i.ReserveStudy.CommunityId.Value) &&
+                                   i.ReserveStudy.CommunityId.HasValue && allCommunityIds.Contains(i.ReserveStudy.CommunityId.Value) &&
                                    i.Status == InvoiceStatus.Paid)
                         .SumAsync(i => i.TotalAmount);
                 }

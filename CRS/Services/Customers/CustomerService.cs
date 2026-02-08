@@ -150,25 +150,48 @@ namespace CRS.Services.Customers {
 
             foreach (var customer in customers)
             {
-                var communityIds = customer.Communities.Select(c => c.Id).ToList();
+                // Get directly linked communities (via CustomerAccountId)
+                var directCommunityIds = customer.Communities
+                    .Where(c => c.IsActive)
+                    .Select(c => c.Id)
+                    .ToList();
 
-                var activeStudies = communityIds.Count > 0 
+                // Also get communities linked via reserve studies (legacy association)
+                var studyCommunityIds = new List<Guid>();
+                if (customer.UserId.HasValue)
+                {
+                    studyCommunityIds = await db.ReserveStudies
+                        .Where(rs => rs.TenantId == _tenant.TenantId &&
+                                    rs.CommunityId.HasValue &&
+                                    (rs.RequestedByUserId == customer.UserId || rs.ApplicationUserId == customer.UserId))
+                        .Select(rs => rs.CommunityId!.Value)
+                        .Distinct()
+                        .ToListAsync(ct);
+                }
+
+                // Combine both sources
+                var allCommunityIds = directCommunityIds
+                    .Union(studyCommunityIds)
+                    .Distinct()
+                    .ToList();
+
+                var activeStudies = allCommunityIds.Count > 0 
                     ? await db.ReserveStudies
-                        .CountAsync(rs => rs.CommunityId.HasValue && communityIds.Contains(rs.CommunityId.Value) && rs.IsActive && !rs.IsComplete, ct)
+                        .CountAsync(rs => rs.CommunityId.HasValue && allCommunityIds.Contains(rs.CommunityId.Value) && rs.IsActive && !rs.IsComplete, ct)
                     : 0;
 
                 // Calculate total revenue from paid invoices
-                var revenue = communityIds.Count > 0
+                var revenue = allCommunityIds.Count > 0
                     ? await db.Invoices
                         .Where(i => i.ReserveStudy != null && 
-                                   i.ReserveStudy.CommunityId.HasValue && communityIds.Contains(i.ReserveStudy.CommunityId.Value) &&
+                                   i.ReserveStudy.CommunityId.HasValue && allCommunityIds.Contains(i.ReserveStudy.CommunityId.Value) &&
                                    i.Status == InvoiceStatus.Paid)
                         .SumAsync(i => i.TotalAmount, ct)
                     : 0m;
 
                 result.Add(new CustomerWithStats(
                     Customer: customer,
-                    CommunityCount: customer.Communities.Count,
+                    CommunityCount: allCommunityIds.Count,
                     ActiveStudyCount: activeStudies,
                     TotalRevenue: revenue
                 ));
@@ -562,8 +585,11 @@ namespace CRS.Services.Customers {
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
+            // Use IgnoreQueryFilters to bypass tenant filter on CustomerAccount
+            // Invitations are looked up by token across tenant boundaries
             return await db.CustomerAccountInvitations
                 .Include(i => i.CustomerAccount)
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(i => i.Token == token, ct);
         }
 
@@ -571,8 +597,10 @@ namespace CRS.Services.Customers {
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
+            // Use IgnoreQueryFilters to bypass tenant filter - invitations work across tenant boundaries
             var invitation = await db.CustomerAccountInvitations
                 .Include(i => i.CustomerAccount)
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(i => i.Token == token, ct);
 
             if (invitation == null)

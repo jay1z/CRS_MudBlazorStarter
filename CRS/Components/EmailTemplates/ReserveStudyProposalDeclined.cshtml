@@ -1,0 +1,213 @@
+﻿@using CRS.Models.Emails
+@model ReserveStudyEmail
+
+@{
+    var baseUrl = string.IsNullOrEmpty(Model.BaseUrl) ? "" : Model.BaseUrl;
+    var detailsUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/Details";
+    var communityName = Model.ReserveStudy?.Community?.Name ?? "Community";
+    var proposal = Model.ReserveStudy?.CurrentProposal;
+    var estimatedCost = proposal?.EstimatedCost ?? 0;
+    var proposalCost = estimatedCost > 0 ? estimatedCost.ToString("C") : "N/A";
+    
+    // Decline details
+    var declineReason = proposal?.DeclineReasonCategory?.ToString() ?? "Not specified";
+    var declineComments = proposal?.DeclineComments;
+    var declinedBy = proposal?.DeclinedBy ?? "Customer";
+    var declinedOn = proposal?.DateDeclined?.ToLocalTime().ToString("MMMM dd, yyyy 'at' h:mm tt") ?? "";
+    var revisionRequested = proposal?.RevisionRequested ?? false;
+    
+    // Tenant branding
+    var tenant = Model.TenantInfo;
+    var companyName = tenant?.CompanyName ?? "ALX Reserve Cloud";
+    var companyPhone = tenant?.Phone;
+    var companyEmail = tenant?.FromEmail;
+    var companyWebsite = tenant?.Website;
+    var companyAddress = tenant?.Address;
+    var companyTagline = tenant?.Tagline;
+    var logoUrl = tenant?.LogoUrl;
+    var primaryColor = tenant?.PrimaryColor ?? "#10b981";
+    var warningColor = "#f59e0b";
+    var errorColor = "#ef4444";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Proposal Declined - @communityName</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%;">
+                    
+                    <!-- Company Logo/Name Banner -->
+                    @if (!string.IsNullOrEmpty(logoUrl) || !string.IsNullOrEmpty(companyName)) {
+                        <tr>
+                            <td style="background-color: #ffffff; padding: 20px 40px; border-radius: 16px 16px 0 0; border: 1px solid #e5e7eb; border-bottom: none;">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td align="center">
+                                            @if (!string.IsNullOrEmpty(logoUrl)) {
+                                                <img src="@logoUrl" alt="@companyName" style="max-height: 60px; max-width: 200px; margin-bottom: 8px;" />
+                                            } else {
+                                                <h2 style="margin: 0; color: @primaryColor; font-size: 24px; font-weight: 700;">@companyName</h2>
+                                            }
+                                            @if (!string.IsNullOrEmpty(companyTagline)) {
+                                                <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px;">@companyTagline</p>
+                                            }
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    }
+
+                    <!-- Community Name and Action Button -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 32px 40px 24px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; @(string.IsNullOrEmpty(logoUrl) && string.IsNullOrEmpty(companyName) ? "border-radius: 16px 16px 0 0; border-top: 1px solid #e5e7eb;" : "")">
+                            <h2 style="margin: 0 0 16px 0; color: @(revisionRequested ? warningColor : errorColor); font-size: 22px; font-weight: 700; text-align: center;">@communityName</h2>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                                <tr>
+                                    <td style="border-radius: 8px; background: linear-gradient(135deg, @primaryColor 0%, @primaryColor 100%);">
+                                        <a href="@detailsUrl" target="_blank" style="display: inline-block; padding: 16px 32px; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">@(revisionRequested ? "Create Revised Proposal →" : "View Study Details →")</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 32px 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                                @if (revisionRequested) {
+                                    @:A customer has declined the proposal for <strong>@communityName</strong> and requested a revision. Please review their feedback below and prepare an updated proposal.
+                                } else {
+                                    @:A customer has declined the proposal for <strong>@communityName</strong>. Please review their feedback below.
+                                }
+                            </p>
+
+                            <!-- Proposal Details Card -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #fef3c7; border-radius: 12px; margin-bottom: 24px;">
+                                <tr>
+                                    <td style="padding: 24px;">
+                                        <h3 style="margin: 0 0 16px 0; color: #92400e; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            📋 Declined Proposal Details
+                                        </h3>
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                            <tr>
+                                                <td style="padding: 8px 0; border-bottom: 1px solid rgba(146, 64, 14, 0.1);">
+                                                    <span style="color: #78350f; font-size: 13px;">Estimated Cost</span><br />
+                                                    <strong style="color: #78350f; font-size: 18px;">@proposalCost</strong>
+                                                </td>
+                                            </tr>
+                                            @if (!string.IsNullOrWhiteSpace(proposal?.ServiceLevel)) {
+                                                <tr>
+                                                    <td style="padding: 8px 0; border-bottom: 1px solid rgba(146, 64, 14, 0.1);">
+                                                        <span style="color: #78350f; font-size: 13px;">Service Level</span><br />
+                                                        <strong style="color: #78350f; font-size: 15px;">@proposal.ServiceLevel</strong>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Decline Reason Card -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #fef2f2; border-radius: 12px; margin-bottom: 24px;">
+                                <tr>
+                                    <td style="padding: 24px;">
+                                        <h3 style="margin: 0 0 16px 0; color: #991b1b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            ⚠️ Decline Reason
+                                        </h3>
+                                        <p style="margin: 0 0 12px 0; color: #7f1d1d; font-size: 16px; font-weight: 600;">
+                                            @GetReasonDisplayText(proposal?.DeclineReasonCategory)
+                                        </p>
+                                        @if (!string.IsNullOrWhiteSpace(declineComments)) {
+                                            <div style="background-color: #ffffff; border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 0 8px 8px 0;">
+                                                <p style="margin: 0; color: #374151; font-size: 14px; font-style: italic;">
+                                                    "@declineComments"
+                                                </p>
+                                            </div>
+                                        }
+                                        <p style="margin: 16px 0 0 0; color: #6b7280; font-size: 13px;">
+                                            Declined by <strong>@declinedBy</strong> on @declinedOn
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            @if (revisionRequested) {
+                                <!-- Revision Request Alert -->
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #ecfdf5; border-radius: 12px; margin-bottom: 24px; border: 2px solid #10b981;">
+                                    <tr>
+                                        <td style="padding: 24px;">
+                                            <h3 style="margin: 0 0 12px 0; color: #065f46; font-size: 16px;">
+                                                ✅ Customer Requested a Revision
+                                            </h3>
+                                            <p style="margin: 0; color: #047857; font-size: 14px; line-height: 1.6;">
+                                                The customer would like to receive a revised proposal. Consider reaching out to discuss their concerns and prepare an updated proposal that addresses the feedback above.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            }
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 24px 40px; border-radius: 0 0 16px 16px; border: 1px solid #e5e7eb; border-top: none;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px; font-weight: 600;">@companyName</p>
+                                        @if (!string.IsNullOrEmpty(companyAddress)) {
+                                            <p style="margin: 0 0 4px 0; color: #9ca3af; font-size: 12px;">@companyAddress</p>
+                                        }
+                                        <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                                            @if (!string.IsNullOrEmpty(companyPhone)) {
+                                                <span>@companyPhone</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(companyPhone) && !string.IsNullOrEmpty(companyEmail)) {
+                                                <span> • </span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(companyEmail)) {
+                                                <a href="mailto:@companyEmail" style="color: #9ca3af;">@companyEmail</a>
+                                            }
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
+@functions {
+    string GetReasonDisplayText(CRS.Models.ProposalDeclineReason? reason)
+    {
+        return reason switch
+        {
+            CRS.Models.ProposalDeclineReason.PriceTooHigh => "Price is above budget",
+            CRS.Models.ProposalDeclineReason.ScopeInadequate => "Scope doesn't meet requirements",
+            CRS.Models.ProposalDeclineReason.TimelineUnacceptable => "Timeline doesn't work",
+            CRS.Models.ProposalDeclineReason.PaymentTermsUnacceptable => "Payment terms not acceptable",
+            CRS.Models.ProposalDeclineReason.ChoseCompetitor => "Chose a different company",
+            CRS.Models.ProposalDeclineReason.ProjectCancelled => "Project cancelled or no longer needed",
+            CRS.Models.ProposalDeclineReason.BudgetConstraints => "Budget constraints / funding issues",
+            CRS.Models.ProposalDeclineReason.Other => "Other reason (see comments)",
+            _ => "Not specified"
+        };
+    }
+}

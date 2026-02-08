@@ -86,13 +86,81 @@
         @if (includePropertyManager && Model != null) {
             <!-- Property Manager Selection Type -->
             <MudItem xs="12">
-                <MudRadioGroup @bind-Value="useExistingPropertyManager">
-                    <MudRadio T="bool" Value="false" Color="Color.Primary">Enter New Property Manager</MudRadio>
-                    <MudRadio T="bool" Value="true" Color="Color.Primary">Select Existing Property Manager</MudRadio>
+                <MudRadioGroup @bind-Value="propertyManagerMode">
+                    <MudRadio T="PropertyManagerModeEnum" Value="PropertyManagerModeEnum.UseMyAccount" Color="Color.Primary" Disabled="@(!CanUseMyAccount)">
+                        Use My Account Info
+                        @if (!CanUseMyAccount)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-2">(Profile incomplete)</MudText>
+                        }
+                    </MudRadio>
+                    <MudRadio T="PropertyManagerModeEnum" Value="PropertyManagerModeEnum.SelectExisting" Color="Color.Primary">Select Existing Property Manager</MudRadio>
+                    <MudRadio T="PropertyManagerModeEnum" Value="PropertyManagerModeEnum.EnterNew" Color="Color.Primary">Enter New Property Manager</MudRadio>
                 </MudRadioGroup>
             </MudItem>
 
-            @if (useExistingPropertyManager) {
+            @if (propertyManagerMode == PropertyManagerModeEnum.UseMyAccount && CanUseMyAccount)
+            {
+                <!-- Show current user's info with editable fields for missing data -->
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                        Using your account information as the Property Manager contact.
+                        @if (string.IsNullOrWhiteSpace(CurrentUserCompanyName) || string.IsNullOrWhiteSpace(CurrentUserPhone))
+                        {
+                            <MudText Typo="Typo.caption"> Please fill in any missing fields below.</MudText>
+                        }
+                    </MudAlert>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudTextField Value="@UserState.CurrentUser?.FullName" 
+                                          Label="Name" 
+                                          ReadOnly="true" 
+                                          Variant="Variant.Filled" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            @if (string.IsNullOrWhiteSpace(CurrentUserCompanyName))
+                            {
+                                <MudTextField @bind-Value="Model.PropertyManager.CompanyName" 
+                                              Label="Company Name" 
+                                              Required="true"
+                                              Immediate="true"
+                                              Placeholder="Enter your company name" />
+                            }
+                            else
+                            {
+                                <MudTextField Value="@CurrentUserCompanyName" 
+                                              Label="Company" 
+                                              ReadOnly="true" 
+                                              Variant="Variant.Filled" />
+                            }
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudTextField Value="@UserState.CurrentUser?.Email" 
+                                          Label="Email" 
+                                          ReadOnly="true" 
+                                          Variant="Variant.Filled" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            @if (string.IsNullOrWhiteSpace(CurrentUserPhone))
+                            {
+                                <MudTextField @bind-Value="Model.PropertyManager.Phone" 
+                                              Label="Phone" 
+                                              Required="true"
+                                              Immediate="true"
+                                              Placeholder="Enter your phone number" />
+                            }
+                            else
+                            {
+                                <MudTextField Value="@CurrentUserPhone" 
+                                              Label="Phone" 
+                                              ReadOnly="true" 
+                                              Variant="Variant.Filled" />
+                            }
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+            }
+            else if (propertyManagerMode == PropertyManagerModeEnum.SelectExisting) {
                 <!-- Existing Property Manager Selector -->
                 <MudItem xs="12">
                     <MudSelect T="PropertyManager" Label="Select Property Manager" @bind-Value="selectedPropertyManager" Required="true" AdornmentIcon="@Icons.Material.TwoTone.Business"
@@ -105,7 +173,7 @@
                     </MudSelect>
                 </MudItem>
             }
-            else {
+            else if (propertyManagerMode == PropertyManagerModeEnum.EnterNew) {
                 <!-- First Name and Last Name -->
                 <MudItem xs="12">
                     <MudGrid>
@@ -167,12 +235,81 @@
 
     private MudForm form;
     private bool useExistingContact;
-    private bool useExistingPropertyManager;
+    private PropertyManagerModeEnum _propertyManagerMode = PropertyManagerModeEnum.EnterNew;
     private bool _includePropertyManager = false;
     private Contact selectedContact;
     private PropertyManager selectedPropertyManager;
     private List<Contact> existingContacts = new();
     private List<PropertyManager> existingPropertyManagers = new();
+    private CustomerAccount? _customerAccount; // Customer account for company info
+
+    // Enum for Property Manager selection mode
+    private enum PropertyManagerModeEnum
+    {
+        UseMyAccount,
+        SelectExisting,
+        EnterNew
+    }
+
+    // Property to track mode and auto-populate when "Use My Account" is selected
+    private PropertyManagerModeEnum propertyManagerMode
+    {
+        get => _propertyManagerMode;
+        set
+        {
+            if (_propertyManagerMode == value) return;
+            _propertyManagerMode = value;
+
+            if (value == PropertyManagerModeEnum.UseMyAccount && CanUseMyAccount)
+            {
+                PopulatePropertyManagerFromCurrentUser();
+            }
+            else if (value == PropertyManagerModeEnum.EnterNew)
+            {
+                // Clear and start fresh for manual entry
+                selectedPropertyManager = null;
+                if (Model != null)
+                {
+                    Model.PropertyManager = new PropertyManager();
+                    Model.PropertyManagerId = null;
+                }
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    // Check if current user has enough info to use as Property Manager
+    private bool CanUseMyAccount => 
+        UserState.CurrentUser != null &&
+        !string.IsNullOrWhiteSpace(UserState.CurrentUser.FirstName) &&
+        !string.IsNullOrWhiteSpace(UserState.CurrentUser.LastName) &&
+        !string.IsNullOrWhiteSpace(UserState.CurrentUser.Email);
+
+    // Get company name from CustomerAccount or ApplicationUser
+    private string? CurrentUserCompanyName => 
+        _customerAccount?.Name ?? UserState.CurrentUser?.CompanyName;
+
+    // Get phone from CustomerAccount or ApplicationUser
+    private string? CurrentUserPhone => 
+        _customerAccount?.Phone ?? UserState.CurrentUser?.PhoneNumber;
+
+    // Populate Property Manager fields from current user's account
+    private void PopulatePropertyManagerFromCurrentUser()
+    {
+        if (UserState.CurrentUser == null || Model == null) return;
+
+        Model.PropertyManager = new PropertyManager
+        {
+            FirstName = UserState.CurrentUser.FirstName,
+            LastName = UserState.CurrentUser.LastName,
+            CompanyName = CurrentUserCompanyName, // Use CustomerAccount name first
+            Email = UserState.CurrentUser.Email,
+            Phone = CurrentUserPhone // Use CustomerAccount phone first
+        };
+        Model.PropertyManagerId = null; // New PM, not linked to existing
+        selectedPropertyManager = null;
+    }
 
     // Simplified property - just manages checkbox state
     private bool includePropertyManager
@@ -181,14 +318,19 @@
         set
         {
             if (_includePropertyManager == value) return;
-            
+
             _includePropertyManager = value;
-            
+
             if (value)
             {
-                // Initialize PropertyManager when checking the box
-                useExistingPropertyManager = false;
-                if (Model != null && Model.PropertyManager == null)
+                // Default to "Use My Account" if available, otherwise "Enter New"
+                _propertyManagerMode = CanUseMyAccount ? PropertyManagerModeEnum.UseMyAccount : PropertyManagerModeEnum.EnterNew;
+
+                if (_propertyManagerMode == PropertyManagerModeEnum.UseMyAccount)
+                {
+                    PopulatePropertyManagerFromCurrentUser();
+                }
+                else if (Model != null && Model.PropertyManager == null)
                 {
                     Model.PropertyManager = new PropertyManager();
                 }
@@ -201,7 +343,8 @@
     protected override async Task OnInitializedAsync() {
         await LoadUserContacts();
         await LoadUserPropertyManagers();
-        
+        await LoadCustomerAccountAsync();
+
         // For CREATE mode: Check if PropertyManager has any meaningful data
         // This handles navigation back to this step after filling in data
         if (Model?.PropertyManager != null) {
@@ -210,15 +353,31 @@
                          !string.IsNullOrWhiteSpace(Model.PropertyManager.CompanyName) ||
                          !string.IsNullOrWhiteSpace(Model.PropertyManager.Email) ||
                          !string.IsNullOrWhiteSpace(Model.PropertyManager.Phone);
-            
+
             if (hasData) {
                 _includePropertyManager = true;
             }
         }
-        
+
         // Ensure PropertyManager is initialized if checkbox is checked
         if (_includePropertyManager && Model?.PropertyManager == null) {
             Model.PropertyManager = new PropertyManager();
+        }
+    }
+
+    private async Task LoadCustomerAccountAsync() {
+        try {
+            if (UserState.CurrentUser == null) return;
+
+            await using var context = await DbFactory.CreateDbContextAsync();
+            _customerAccount = await context.CustomerAccountUsers
+                .AsNoTracking()
+                .Where(cau => cau.UserId == UserState.CurrentUser.Id && cau.IsActive)
+                .Select(cau => cau.CustomerAccount)
+                .FirstOrDefaultAsync();
+        }
+        catch (Exception) {
+            _customerAccount = null;
         }
     }
 
@@ -239,10 +398,28 @@
     private async Task LoadUserPropertyManagers() {
         try {
             using var context = await DbFactory.CreateDbContextAsync();
-            existingPropertyManagers = await context.PropertyManagers
+            var allPropertyManagers = await context.PropertyManagers
                 .AsNoTracking()
                 .Where(pm => !pm.DateDeleted.HasValue)
+                // Filter out empty property managers
+                .Where(pm => !string.IsNullOrWhiteSpace(pm.FirstName) || 
+                            !string.IsNullOrWhiteSpace(pm.LastName) || 
+                            !string.IsNullOrWhiteSpace(pm.CompanyName) ||
+                            !string.IsNullOrWhiteSpace(pm.Email))
                 .ToListAsync();
+
+            // Deduplicate by name/company/email
+            existingPropertyManagers = allPropertyManagers
+                .GroupBy(pm => new { 
+                    FirstName = pm.FirstName?.ToLowerInvariant()?.Trim(),
+                    LastName = pm.LastName?.ToLowerInvariant()?.Trim(),
+                    CompanyName = pm.CompanyName?.ToLowerInvariant()?.Trim(),
+                    Email = pm.Email?.ToLowerInvariant()?.Trim()
+                })
+                .Select(g => g.First())
+                .OrderBy(pm => pm.CompanyName)
+                .ThenBy(pm => pm.LastName)
+                .ToList();
         }
         catch (Exception) {
             existingPropertyManagers = new List<PropertyManager>();

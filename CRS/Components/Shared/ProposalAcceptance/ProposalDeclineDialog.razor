@@ -1,0 +1,226 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject IReserveStudyWorkflowService WorkflowService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <!-- Header with warning -->
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="false">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold">
+                    Are you sure you want to decline this proposal?
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    This will notify the specialist who may reach out to discuss your concerns.
+                </MudText>
+            </MudAlert>
+
+            <!-- Proposal Summary -->
+            @if (ReserveStudy?.CurrentProposal != null)
+            {
+                <MudPaper Elevation="0" Class="pa-4" Style="background: #FEF3C7; border-radius: 8px;">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.subtitle2" Class="fw-bold">
+                            <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Small" Class="mr-1" />
+                            Proposal Summary
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            <strong>Community:</strong> @ReserveStudy.Community?.Name
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            <strong>Estimated Cost:</strong> @ReserveStudy.CurrentProposal.EstimatedCost.ToString("C")
+                        </MudText>
+                        @if (!string.IsNullOrWhiteSpace(ReserveStudy.CurrentProposal.ServiceLevel))
+                        {
+                            <MudText Typo="Typo.body2">
+                                <strong>Service Level:</strong> @ReserveStudy.CurrentProposal.ServiceLevel
+                            </MudText>
+                        }
+                    </MudStack>
+                </MudPaper>
+            }
+
+            <!-- Decline Reason Selection -->
+            <MudSelect T="ProposalDeclineReason?"
+                       @bind-Value="selectedReason"
+                       Label="Reason for Declining"
+                       Required="true"
+                       Variant="Variant.Outlined"
+                       AdornmentIcon="@Icons.Material.Filled.Help"
+                       HelperText="Help us understand why this proposal doesn't meet your needs">
+                <MudSelectItem Value="@((ProposalDeclineReason?)ProposalDeclineReason.PriceTooHigh)">
+                    Price is above our budget
+                </MudSelectItem>
+                <MudSelectItem Value="@((ProposalDeclineReason?)ProposalDeclineReason.ScopeInadequate)">
+                    Scope doesn't meet our requirements
+                </MudSelectItem>
+                <MudSelectItem Value="@((ProposalDeclineReason?)ProposalDeclineReason.TimelineUnacceptable)">
+                    Timeline doesn't work for us
+                </MudSelectItem>
+                <MudSelectItem Value="@((ProposalDeclineReason?)ProposalDeclineReason.PaymentTermsUnacceptable)">
+                    Payment terms are not acceptable
+                </MudSelectItem>
+                <MudSelectItem Value="@((ProposalDeclineReason?)ProposalDeclineReason.BudgetConstraints)">
+                    Budget constraints / funding issues
+                </MudSelectItem>
+                <MudSelectItem Value="@((ProposalDeclineReason?)ProposalDeclineReason.ChoseCompetitor)">
+                    We chose a different company
+                </MudSelectItem>
+                <MudSelectItem Value="@((ProposalDeclineReason?)ProposalDeclineReason.ProjectCancelled)">
+                    Project cancelled or no longer needed
+                </MudSelectItem>
+                <MudSelectItem Value="@((ProposalDeclineReason?)ProposalDeclineReason.Other)">
+                    Other reason
+                </MudSelectItem>
+            </MudSelect>
+
+            <!-- Additional Comments -->
+            <MudTextField @bind-Value="comments"
+                          Label="Additional Comments (Optional)"
+                          Variant="Variant.Outlined"
+                          Lines="3"
+                          Placeholder="Please share any additional feedback or concerns..."
+                          HelperText="Your feedback helps us improve our proposals" />
+
+            <!-- Request Revision Option -->
+            @if (selectedReason != ProposalDeclineReason.ChoseCompetitor && 
+                 selectedReason != ProposalDeclineReason.ProjectCancelled)
+            {
+                <MudCheckBox T="bool"
+                             @bind-Value="requestRevision"
+                             Color="Color.Primary"
+                             Dense="true">
+                    <MudText Typo="Typo.body2">
+                        <strong>Request a revised proposal</strong> - The specialist will contact you to discuss changes
+                    </MudText>
+                </MudCheckBox>
+            }
+
+            <!-- Validation Errors -->
+            @if (validationErrors.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">
+                    <ul class="mb-0 pl-3">
+                        @foreach (var error in validationErrors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">
+            Go Back
+        </MudButton>
+        <MudButton OnClick="DeclineProposal"
+                   Variant="Variant.Filled"
+                   Color="Color.Error"
+                   Disabled="@(!CanDecline || isSubmitting)"
+                   StartIcon="@(isSubmitting ? null : Icons.Material.Filled.Cancel)">
+            @if (isSubmitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Processing...</span>
+            }
+            else
+            {
+                <span>@(requestRevision ? "Decline & Request Revision" : "Decline Proposal")</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public ReserveStudy? ReserveStudy { get; set; }
+
+    [Parameter]
+    public Guid? ProposalId { get; set; }
+
+    private ProposalDeclineReason? selectedReason;
+    private string comments = "";
+    private bool requestRevision = false;
+    private bool isSubmitting = false;
+    private List<string> validationErrors = new();
+
+    private bool CanDecline => selectedReason.HasValue && !isSubmitting;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task DeclineProposal()
+    {
+        validationErrors.Clear();
+
+        if (!selectedReason.HasValue)
+        {
+            validationErrors.Add("Please select a reason for declining.");
+            return;
+        }
+
+        if (selectedReason == ProposalDeclineReason.Other && string.IsNullOrWhiteSpace(comments))
+        {
+            validationErrors.Add("Please provide additional details when selecting 'Other' as the reason.");
+            return;
+        }
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            // Get current user
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var declinedBy = user.Identity?.Name ?? "Customer";
+
+            // Call workflow service to decline proposal
+            var proposalIdToUse = ProposalId ?? ReserveStudy?.CurrentProposalId;
+            if (proposalIdToUse == null)
+            {
+                validationErrors.Add("Unable to identify the proposal. Please try again.");
+                return;
+            }
+
+            var success = await WorkflowService.DeclineProposalAsync(
+                proposalIdToUse.Value,
+                declinedBy,
+                selectedReason.Value,
+                comments,
+                requestRevision
+            );
+
+            if (success)
+            {
+                Snackbar.Add(
+                    requestRevision 
+                        ? "Proposal declined. The specialist will contact you about a revised proposal." 
+                        : "Proposal declined. Thank you for your feedback.",
+                    Severity.Info
+                );
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                validationErrors.Add("Failed to decline the proposal. Please try again or contact support.");
+            }
+        }
+        catch (Exception ex)
+        {
+            validationErrors.Add($"An error occurred: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+}

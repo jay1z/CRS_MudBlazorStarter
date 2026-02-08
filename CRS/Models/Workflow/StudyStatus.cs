@@ -52,7 +52,7 @@ namespace CRS.Models.Workflow {
 
         /// <summary>
         /// Proposal sent to client.
-        /// Transitions: → ProposalAccepted | RequestCancelled
+        /// Transitions: → ProposalAccepted | ProposalDeclined | RequestCancelled
         /// </summary>
         ProposalSent = 6,
 
@@ -61,6 +61,12 @@ namespace CRS.Models.Workflow {
         /// Transitions: → ServiceContactsRequested | FinancialInfoRequested
         /// </summary>
         ProposalAccepted = 7,
+
+        /// <summary>
+        /// Client declines the proposal.
+        /// Transitions: → ProposalCreated (revision) | RequestCancelled
+        /// </summary>
+        ProposalDeclined = 52,
 
         // ═══════════════════════════════════════════════════════════════
         // DATA COLLECTION PHASE

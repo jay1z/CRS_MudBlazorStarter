@@ -5,7 +5,8 @@
     var baseUrl = string.IsNullOrEmpty(Model.BaseUrl) ? "" : Model.BaseUrl;
     var detailsUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/Details";
     var communityName = Model.ReserveStudy?.Community?.Name ?? "Your Community";
-    var proposalCost = Model.ReserveStudy?.CurrentProposal?.EstimatedCost.ToString("C") ?? "TBD";
+    var estimatedCost = Model.ReserveStudy?.CurrentProposal?.EstimatedCost ?? 0;
+    var proposalCost = estimatedCost > 0 ? estimatedCost.ToString("C") : "See Proposal Details";
     var proposalScope = Model.ReserveStudy?.CurrentProposal?.ProposalScope ?? "Reserve Study";
     
     // Tenant branding
@@ -56,18 +57,15 @@
                             </td>
                         </tr>
                     }
-                    
-                    <!-- Header with Gradient -->
+
+                    <!-- Community Name and Action Button -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, @primaryColor 0%, @secondaryColor 100%); @(string.IsNullOrEmpty(logoUrl) && string.IsNullOrEmpty(companyName) ? "border-radius: 16px 16px 0 0;" : "") padding: 40px; text-align: center;">
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                        <td style="background-color: #ffffff; padding: 32px 40px 24px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; @(string.IsNullOrEmpty(logoUrl) && string.IsNullOrEmpty(companyName) ? "border-radius: 16px 16px 0 0; border-top: 1px solid #e5e7eb;" : "")">
+                            <h2 style="margin: 0 0 16px 0; color: @primaryColor; font-size: 22px; font-weight: 700; text-align: center;">@communityName</h2>
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
                                 <tr>
-                                    <td align="center">
-                                        <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; line-height: 64px;">
-                                            <span style="font-size: 32px;">📋</span>
-                                        </div>
-                                        <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Proposal Ready for Review</h1>
-                                        <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 16px;">@communityName</p>
+                                    <td style="border-radius: 8px; background: linear-gradient(135deg, @primaryColor 0%, @secondaryColor 100%);">
+                                        <a href="@detailsUrl" target="_blank" style="display: inline-block; padding: 16px 32px; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">View Proposal Online →</a>
                                     </td>
                                 </tr>
                             </table>

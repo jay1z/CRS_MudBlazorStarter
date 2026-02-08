@@ -1,0 +1,94 @@
+﻿@namespace CRS.Components.Pages.ReserveStudy.Dialogs
+@using CRS.Models
+
+<MudDialog Style="max-width: 480px;">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Error" />
+            <MudText Typo="Typo.h6">Permanently Delete Study</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <!-- Icon and main message -->
+            <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="pt-2">
+                <MudAvatar Size="Size.Large" Style="background: #FFEBEE; width: 64px; height: 64px;">
+                    <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Style="color: #DC3545; font-size: 32px;" />
+                </MudAvatar>
+                <MudText Typo="Typo.body1" Align="Align.Center">
+                    You are about to <strong>permanently delete</strong>
+                </MudText>
+                <MudText Typo="Typo.h6" Align="Align.Center" Style="color: #DC3545;">
+                    @Study?.Community?.Name
+                </MudText>
+            </MudStack>
+
+            <!-- Warning alert -->
+            <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Dense="true" Icon="@Icons.Material.Filled.Warning" Class="mt-2">
+                <strong>This action cannot be undone!</strong> All data will be permanently removed.
+            </MudAlert>
+
+            <!-- Study details card -->
+            <MudPaper Elevation="0" Class="pa-3" Style="background: linear-gradient(135deg, #fff5f5 0%, #ffebee 100%); border-radius: 8px; border: 1px solid #ffcdd2;">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" Style="color: #666;" />
+                        <MudText Typo="Typo.body2" Style="color: #666;">Community:</MudText>
+                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@Study?.Community?.Name</MudText>
+                    </MudStack>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Style="color: #666;" />
+                        <MudText Typo="Typo.body2" Style="color: #666;">Contact:</MudText>
+                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@(Study?.PointOfContact?.FullName ?? "Not assigned")</MudText>
+                    </MudStack>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Small" Style="color: #666;" />
+                        <MudText Typo="Typo.body2" Style="color: #666;">Deleted on:</MudText>
+                        <MudText Typo="Typo.body2" Style="font-weight: 500;">@Study?.DateDeleted?.ToString("MMMM d, yyyy")</MudText>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Confirmation checkbox -->
+            <MudPaper Elevation="0" Class="pa-3" Style="background: #fff; border: 2px solid #ffcdd2; border-radius: 8px;">
+                <MudCheckBox T="bool" 
+                             @bind-Value="confirmed" 
+                             Color="Color.Error"
+                             Dense="true">
+                    <MudText Typo="Typo.body2">
+                        I understand this action is <strong>permanent</strong> and cannot be undone
+                    </MudText>
+                </MudCheckBox>
+            </MudPaper>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudStack Row="true" Spacing="2" Class="pa-2" Style="width: 100%;" Justify="Justify.FlexEnd">
+            <MudButton OnClick="Cancel" 
+                       Variant="Variant.Text" 
+                       Color="Color.Default"
+                       Size="Size.Medium">
+                Cancel
+            </MudButton>
+            <MudButton OnClick="Submit" 
+                       Variant="Variant.Filled" 
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.DeleteForever"
+                       Size="Size.Medium"
+                       Disabled="!confirmed">
+                Permanently Delete
+            </MudButton>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public ReserveStudy Study { get; set; } = null!;
+
+    private bool confirmed = false;
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,4 +1,4 @@
-﻿@page "/ReserveStudies/{studyId:guid}/FinancialInfo"
+﻿@page "/ReserveStudies/FinancialInfo/{studyId:guid}"
 @attribute [Authorize]
 @using CRS.Models
 @using CRS.Models.Workflow
@@ -38,7 +38,7 @@
                 </CardHeaderContent>
                 <CardHeaderActions>
                     <MudTooltip Text="Return to Study Details">
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudies/{studyId}/Details")" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="@($"/ReserveStudies/Details/{studyId}")" />
                     </MudTooltip>
                 </CardHeaderActions>
             </MudCardHeader>
@@ -461,7 +461,7 @@
                     <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-6">
                         <MudButton Variant="Variant.Outlined"
                                    Color="Color.Default"
-                                   Href="@($"/ReserveStudies/{studyId}/Details")"
+                                   Href="@($"/ReserveStudies/Details/{studyId}")"
                                    StartIcon="@Icons.Material.Filled.ArrowBack">
                             Back to Details
                         </MudButton>
@@ -576,7 +576,7 @@
             var result = await WorkflowService.SubmitFinancialInfoAsync(studyId, financialInfo);
             if (result) {
                 Snackbar.Add("Financial information submitted successfully!", Severity.Success);
-                Navigation.NavigateTo($"/ReserveStudies/{studyId}/Details");
+                Navigation.NavigateTo($"/ReserveStudies/Details/{studyId}");
             } else {
                 Snackbar.Add("Failed to submit financial information. Please try again.", Severity.Error);
             }

@@ -135,6 +135,12 @@
     private string? FixedTenantSlug => TenantContext.Subdomain;
 
     protected override async Task OnInitializedAsync() {
+        // If user is already authenticated, redirect to dashboard
+        if (HttpContext.User?.Identity?.IsAuthenticated == true) {
+            RedirectManager.RedirectTo("/Dashboard");
+            return;
+        }
+
         // Hide app bar if on subdomain (tenant-specific login)
         if (!string.IsNullOrWhiteSpace(TenantContext.Subdomain)) {
             LayoutService.SetHideNav(true);

@@ -4,6 +4,7 @@ using CRS.Models;
 using CRS.Models.Email;
 using CRS.Models.Emails;
 using CRS.Services.Billing;
+using CRS.Services.Email;
 using CRS.Services.Interfaces;
 using CRS.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
@@ -116,6 +117,26 @@ public class InvoicePaymentService : IInvoicePaymentService
         var client = _stripeClientFactory.CreateClient();
         var sessionService = new SessionService(client);
 
+        // Get tenant for Stripe Connect account and platform fee calculation
+        var tenant = await context.Tenants.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == invoice.TenantId, ct);
+
+        var hasConnectAccount = !string.IsNullOrEmpty(tenant?.StripeConnectAccountId) 
+            && tenant.StripeConnectOnboardingComplete 
+            && tenant.StripeConnectCardPaymentsEnabled;
+
+        // Calculate platform fee (application_fee) based on tenant's subscription tier
+        long? applicationFeeAmount = null;
+        if (hasConnectAccount && tenant != null)
+        {
+            var feeRate = SubscriptionTierDefaults.GetPlatformFeeRate(tenant);
+            applicationFeeAmount = (long)Math.Ceiling(balanceDue * feeRate * 100); // Convert to cents
+
+            _logger.LogInformation(
+                "Calculated application fee for invoice {InvoiceNumber}: {Amount:C} × {Rate:P2} = {Fee} cents",
+                invoice.InvoiceNumber, balanceDue, feeRate, applicationFeeAmount);
+        }
+
         var sessionOptions = new SessionCreateOptions
         {
             Mode = "payment",
@@ -132,16 +153,46 @@ public class InvoicePaymentService : IInvoicePaymentService
             },
             PaymentIntentData = new SessionPaymentIntentDataOptions
             {
+                // Save payment method for future invoice payments
+                SetupFutureUsage = "off_session",
                 Metadata = new Dictionary<string, string>
                 {
                     ["invoice_id"] = invoice.Id.ToString(),
                     ["invoice_number"] = invoice.InvoiceNumber
-                }
+                },
+                // Application fee goes to the platform (ALX Reserve Cloud)
+                ApplicationFeeAmount = applicationFeeAmount
             },
+            // Enable multiple payment methods including ACH
+            PaymentMethodTypes = ["card", "us_bank_account"],
             ExpiresAt = DateTime.UtcNow.AddHours(24) // Session expires in 24 hours
         };
 
-        var session = await sessionService.CreateAsync(sessionOptions, cancellationToken: ct);
+        // Configure for Direct Charges to Connected Account if Stripe Connect is set up
+        Stripe.RequestOptions? requestOptions = null;
+        if (hasConnectAccount && tenant != null)
+        {
+            // Direct Charge: Create the checkout session on the connected account
+            requestOptions = new Stripe.RequestOptions
+            {
+                StripeAccount = tenant.StripeConnectAccountId
+            };
+
+            _logger.LogInformation(
+                "Using Direct Charge to connected account {AccountId} for invoice {InvoiceNumber}",
+                tenant.StripeConnectAccountId, invoice.InvoiceNumber);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "No Stripe Connect account for tenant {TenantId}, creating standard checkout for invoice {InvoiceNumber}",
+                invoice.TenantId, invoice.InvoiceNumber);
+
+            // Remove application fee if no connected account (fee only applies to Connect)
+            sessionOptions.PaymentIntentData.ApplicationFeeAmount = null;
+        }
+
+        var session = await sessionService.CreateAsync(sessionOptions, requestOptions, ct);
 
         // Update invoice with payment URL
         invoice.StripeCheckoutSessionId = session.Id;
@@ -216,10 +267,74 @@ public class InvoicePaymentService : IInvoicePaymentService
                 "Recorded Stripe payment for invoice {InvoiceNumber}: {Amount:C} via {PaymentIntent}",
                 invoice.InvoiceNumber, amountPaid, paymentIntentId);
 
+            // Send payment receipt email
+            await SendPaymentReceiptAsync(invoice, amountPaid, paymentIntentId, context, ct);
+
             // Auto-generate next milestone if enabled
             if (wasPaidInFull && invoice.MilestoneType.HasValue)
             {
                 await TryGenerateNextMilestoneAsync(invoice, context, ct);
+            }
+        }
+
+        /// <summary>
+        /// Sends a payment receipt email to the invoice recipient.
+        /// </summary>
+        private async Task SendPaymentReceiptAsync(
+            Invoice invoice, 
+            decimal amountPaid, 
+            string? paymentIntentId, 
+            ApplicationDbContext context, 
+            CancellationToken ct)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(invoice.BillToEmail))
+                {
+                    _logger.LogWarning("Cannot send payment receipt for invoice {InvoiceNumber}: no BillToEmail", invoice.InvoiceNumber);
+                    return;
+                }
+
+                // Get tenant info for the email
+                var tenant = await context.Tenants.AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.Id == invoice.TenantId, ct);
+
+                var baseUrl = _configuration["App:RootDomain"] ?? "reservecloud.com";
+                var subdomain = tenant?.Subdomain ?? "app";
+                var invoiceUrl = $"https://{subdomain}.{baseUrl}/Invoices/Details/{invoice.Id}";
+
+                var receiptEmail = new PaymentReceiptEmail
+                {
+                    RecipientEmail = invoice.BillToEmail,
+                    RecipientName = invoice.BillToName,
+                    TenantName = tenant?.Name ?? "ALX Reserve Cloud",
+                    InvoiceNumber = invoice.InvoiceNumber,
+                    InvoiceId = invoice.Id,
+                    ClientName = invoice.BillToName,
+                    TotalAmount = invoice.TotalAmount,
+                    AmountPaid = amountPaid,
+                    BalanceRemaining = invoice.TotalAmount - invoice.AmountPaid,
+                    PaymentMethod = "Credit Card", // Could be enhanced to detect ACH
+                    PaymentReference = paymentIntentId,
+                    PaymentDate = DateTime.UtcNow,
+                    Description = $"Reserve Study Services",
+                    InvoiceUrl = invoiceUrl,
+                    SupportEmail = tenant?.DefaultNotificationEmail
+                };
+
+                var mailable = new PaymentReceiptMailable(receiptEmail);
+                await _mailer.SendAsync(mailable);
+
+                _logger.LogInformation(
+                    "Sent payment receipt email to {Email} for invoice {InvoiceNumber}",
+                    invoice.BillToEmail, invoice.InvoiceNumber);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, 
+                    "Failed to send payment receipt email for invoice {InvoiceNumber}", 
+                    invoice.InvoiceNumber);
+                // Don't rethrow - receipt email failure shouldn't break payment processing
             }
         }
 
@@ -368,7 +483,7 @@ public class InvoicePaymentService : IInvoicePaymentService
 
         // Create new checkout session
         var successUrl = $"{baseUrl}/Invoices/PaymentSuccess";
-        var cancelUrl = $"{baseUrl}/Invoices/{invoiceId}";
+        var cancelUrl = $"{baseUrl}/Invoices/Details/{invoiceId}";
 
         return await CreateCheckoutSessionAsync(invoiceId, successUrl, cancelUrl, ct);
     }

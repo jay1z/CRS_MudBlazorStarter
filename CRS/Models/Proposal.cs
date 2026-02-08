@@ -152,38 +152,102 @@ namespace CRS.Models {
         public bool IncludePrepaymentDiscount { get; set; }
         
         public bool IncludeDigitalDelivery { get; set; }
-        
+
         public bool IncludeComponentInventory { get; set; }
-        
+
         public bool IncludeFundingPlans { get; set; }
-        
+
+        // ============================================
+        // DECLINE TRACKING
+        // ============================================
+
+        /// <summary>
+        /// Indicates if the proposal has been declined by the client
+        /// </summary>
+        public bool IsDeclined { get; set; }
+
+        /// <summary>
+        /// Date when the proposal was declined
+        /// </summary>
+        public DateTime? DateDeclined { get; set; }
+
+        /// <summary>
+        /// Name/identifier of who declined the proposal
+        /// </summary>
+        public string? DeclinedBy { get; set; }
+
+        /// <summary>
+        /// Category of decline reason for analytics
+        /// </summary>
+        public ProposalDeclineReason? DeclineReasonCategory { get; set; }
+
+        /// <summary>
+        /// Additional comments/details about the decline
+        /// </summary>
+        public string? DeclineComments { get; set; }
+
+        /// <summary>
+        /// Indicates if the client requested a revision after declining
+        /// </summary>
+        public bool RevisionRequested { get; set; }
+
         // Amendment tracking
         /// <summary>
         /// Indicates if this proposal is an amendment to a previous proposal
         /// </summary>
         public bool IsAmendment { get; set; }
-        
+
         /// <summary>
         /// Reference to the original proposal this amendment is based on
         /// </summary>
         public Guid? OriginalProposalId { get; set; }
-        
+
         [ForeignKey("OriginalProposalId")]
         public Proposal? OriginalProposal { get; set; }
-        
+
         /// <summary>
         /// The amendment version number (1 = first amendment, 2 = second amendment, etc.)
         /// </summary>
         public int AmendmentNumber { get; set; }
-        
+
         /// <summary>
         /// Reason for the amendment (e.g., scope change after site visit)
         /// </summary>
         public string? AmendmentReason { get; set; }
-        
+
         /// <summary>
         /// Collection of amendments based on this proposal
         /// </summary>
         public virtual ICollection<Proposal>? Amendments { get; set; }
+    }
+
+    /// <summary>
+    /// Categories for why a proposal was declined
+    /// </summary>
+    public enum ProposalDeclineReason
+    {
+        /// <summary>Price is above budget</summary>
+        PriceTooHigh = 0,
+
+        /// <summary>Scope doesn't meet requirements</summary>
+        ScopeInadequate = 1,
+
+        /// <summary>Timeline doesn't work</summary>
+        TimelineUnacceptable = 2,
+
+        /// <summary>Payment terms not acceptable</summary>
+        PaymentTermsUnacceptable = 3,
+
+        /// <summary>Chose a different company</summary>
+        ChoseCompetitor = 4,
+
+        /// <summary>Project cancelled or no longer needed</summary>
+        ProjectCancelled = 5,
+
+        /// <summary>Budget constraints / funding issues</summary>
+        BudgetConstraints = 6,
+
+        /// <summary>Other reason (see comments)</summary>
+        Other = 99
     }
 }

@@ -83,7 +83,7 @@
                             </MudText>
                         }
                     </div>
-                    
+
                     <MudList T="string" Dense="false" Class="mb-6">
                         <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
                             <MudText Typo="Typo.body2"><strong>Up to 10</strong> properties</MudText>
@@ -100,8 +100,11 @@
                         <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
                             <MudText Typo="Typo.body2">Email support</MudText>
                         </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Payments" IconColor="Color.Warning">
+                            <MudText Typo="Typo.body2">Payment processing: <strong>2.0%</strong> platform fee</MudText>
+                        </MudListItem>
                     </MudList>
-                    
+
                     <MudButton Variant="Variant.Outlined" 
                                Color="Color.Primary" 
                                FullWidth="true" 
@@ -113,11 +116,11 @@
                 </div>
             </MudPaper>
         </MudItem>
-        
+
         <!-- Professional Plan (Popular) -->
         <MudItem xs="12" sm="6" lg="4">
             <MudPaper Elevation="12" Class="pricing-card pricing-card-popular" Style="@GetCardStyle(true)">
-                <MudChip T="string" Size="Size.Small" 
+                <MudChip T="string" Size="Size.Small"
                          Style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #FF8C00; color: white; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
                     <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
                     MOST POPULAR
@@ -171,6 +174,9 @@
                         <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
                             <MudText Typo="Typo.body2"><strong>24/7 priority support</strong></MudText>
                         </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Star" IconColor="Color.Warning">
+                            <MudText Typo="Typo.body2">Payment processing: <strong>1.5%</strong> platform fee</MudText>
+                        </MudListItem>
                     </MudList>
                     
                     <MudButton Variant="Variant.Filled" 
@@ -223,6 +229,9 @@
                         </MudListItem>
                         <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
                             <MudText Typo="Typo.body2"><strong>Dedicated account manager</strong></MudText>
+                        </MudListItem>
+                        <MudListItem T="string" Icon="@Icons.Material.Filled.Diamond" IconColor="Color.Primary">
+                            <MudText Typo="Typo.body2">Payment processing: <strong>1.0%</strong> platform fee</MudText>
                         </MudListItem>
                     </MudList>
                     
