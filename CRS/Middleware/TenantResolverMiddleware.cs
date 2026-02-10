@@ -31,6 +31,20 @@ namespace CRS.Middleware {
                 }
 
                 if (tenantFromHost == null && ShouldAllowRedirect(path)) {
+                    // Check if this is a deferred checkout that's still being processed
+                    var queryString = context.Request.QueryString.Value;
+                    if (queryString != null && queryString.Contains("deferred=1")) {
+                        // Tenant doesn't exist yet - webhook may still be processing
+                        // Redirect to platform billing success page to poll for completion
+                        var sessionId = context.Request.Query["session_id"].FirstOrDefault();
+                        var platformHost = rootDomain ?? "alxreservecloud.com";
+                        var scheme = context.Request.Scheme;
+                        var redirectUrl = $"{scheme}://www.{platformHost}/billing/success?RequestContainsDeferred=true&session_id={sessionId}";
+                        _logger.LogInformation("TenantResolver: Tenant not found for subdomain {Subdomain}, but deferred checkout detected. Redirecting to {Url}", subdomain, redirectUrl);
+                        context.Response.Redirect(redirectUrl);
+                        return;
+                    }
+
                     _logger.LogWarning("TenantResolver: Unknown subdomain {Subdomain} host={Host} path={Path}; redirecting not-found", subdomain, host, path);
                     var q = Uri.EscapeDataString(host);
                     context.Response.Redirect($"/tenant/not-found?host={q}");
@@ -124,7 +138,19 @@ namespace CRS.Middleware {
             }
 
             // Redirect tenant subdomain root to app to avoid flicker on '/' landing
+            // BUT: preserve deferred checkout flow by checking for deferred param
             if (!tenantContext.IsPlatformHost && tenantContext.TenantId != null && path == "/") {
+                var queryString = context.Request.QueryString.Value;
+
+                // If this is a deferred checkout completion, redirect to billing success page with params
+                if (queryString != null && queryString.Contains("deferred=1")) {
+                    var sessionId = context.Request.Query["session_id"].FirstOrDefault();
+                    var redirectUrl = $"/billing/success?RequestContainsDeferred=true&session_id={sessionId}";
+                    _logger.LogInformation("TenantResolver: Deferred checkout detected, redirecting to {Url}", redirectUrl);
+                    context.Response.Redirect(redirectUrl);
+                    return;
+                }
+
                 context.Response.Redirect("/dashboard");
                 return;
             }

@@ -4678,7 +4678,8 @@ namespace CRS.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("PlatformFeeRateOverride")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
 
                     b.Property<DateTime?>("ProvisionedAt")
                         .HasColumnType("datetime2");

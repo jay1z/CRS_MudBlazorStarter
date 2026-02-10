@@ -31,6 +31,10 @@
         <MudPaper Class="pa-8" Elevation="2" Style="border-radius: 12px;">
             <MudAlert Severity="Severity.Error">
                 <MudText Typo="Typo.body1">Unable to load billing information. Please contact support.</MudText>
+                @if (_debugInfo != null)
+                {
+                    <MudText Typo="Typo.caption" Class="mt-2" Style="color: #888;">Debug: @_debugInfo</MudText>
+                }
             </MudAlert>
         </MudPaper>
     }
@@ -553,6 +557,9 @@
     private bool _loadingInvoices = false;
     private bool _processing = false;
     private int activeTab = 0;
+    private string? _debugInfo;
+    private decimal? _actualPriceAmount; // Price from Stripe in dollars
+    private string? _actualPriceCurrency; // Currency from Stripe
 
     protected override async Task OnInitializedAsync()
     {
@@ -565,12 +572,20 @@
         {
             if (!TenantContext.TenantId.HasValue)
             {
-                Nav.NavigateTo("/");
+                _debugInfo = "TenantContext.TenantId is null";
+                Snackbar.Add("No tenant context available. Please log in again.", Severity.Warning);
+                Nav.NavigateTo("/Account/Login");
                 return;
             }
 
             await using var db = await DbFactory.CreateDbContextAsync();
-            _tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
+            // Use IgnoreQueryFilters to ensure we can load the tenant regardless of any tenant scoping
+            _tenant = await db.Tenants.IgnoreQueryFilters().AsNoTracking().FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
+
+            if (_tenant == null)
+            {
+                _debugInfo = $"TenantContext.TenantId={TenantContext.TenantId.Value}, but no tenant found in database with that ID";
+            }
 
             if (_tenant != null)
             {
@@ -640,8 +655,22 @@
                             var client = StripeClientFactory.CreateClient();
                             var svc = new SubscriptionService(client);
                             var sub = await svc.GetAsync(_tenant.StripeSubscriptionId);
-                            var firstPrice = sub.Items.Data.FirstOrDefault()?.Price;
+                            var firstItem = sub.Items.Data.FirstOrDefault();
+                            var firstPrice = firstItem?.Price;
                             interval = firstPrice?.Recurring?.Interval;
+
+                            // Get actual price from Stripe (amount is in cents)
+                            if (firstPrice?.UnitAmount != null)
+                            {
+                                _actualPriceAmount = firstPrice.UnitAmount.Value / 100m;
+                                _actualPriceCurrency = firstPrice.Currency?.ToUpperInvariant() ?? "USD";
+
+                                // For yearly subscriptions, calculate monthly equivalent
+                                if (interval == "year" && _actualPriceAmount.HasValue)
+                                {
+                                    _actualPriceAmount = _actualPriceAmount.Value / 12m;
+                                }
+                            }
                         }
                         catch { }
                     }
@@ -722,13 +751,23 @@
     // Helper Methods
     private string GetPlanName(SubscriptionTier? tier) => tier?.ToString() ?? "None";
 
-    private string GetPlanPrice(SubscriptionTier? tier, string? interval) => tier switch
+    private string GetPlanPrice(SubscriptionTier? tier, string? interval)
     {
-        SubscriptionTier.Startup => interval == "year" ? "$159" : "$199",
-        SubscriptionTier.Pro => interval == "year" ? "$399" : "$499",
-        SubscriptionTier.Enterprise => "Custom",
-        _ => "N/A"
-    };
+        // Use actual price from Stripe if available
+        if (_actualPriceAmount.HasValue)
+        {
+            return $"${_actualPriceAmount.Value:N0}";
+        }
+
+        // Fallback to hardcoded prices (should rarely be used)
+        return tier switch
+        {
+            SubscriptionTier.Startup => interval == "year" ? "$159" : "$199",
+            SubscriptionTier.Pro => interval == "year" ? "$399" : "$499",
+            SubscriptionTier.Enterprise => "Custom",
+            _ => "N/A"
+        };
+    }
 
     private string GetBillingCycle(string? interval) => interval switch
     {

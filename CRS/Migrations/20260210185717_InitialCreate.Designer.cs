@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260208174835_InitialCreate")]
+    [Migration("20260210185717_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -4681,7 +4681,8 @@ namespace CRS.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("PlatformFeeRateOverride")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
 
                     b.Property<DateTime?>("ProvisionedAt")
                         .HasColumnType("datetime2");

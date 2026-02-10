@@ -360,6 +360,9 @@ namespace CRS.Data {
                 entity.Property(t => t.RequireFinalReview).HasDefaultValue(false);
                 entity.Property(t => t.AutoArchiveAfterDays).HasDefaultValue(0);
                 entity.Property(t => t.AllowAmendmentsAfterCompletion).HasDefaultValue(true);
+
+                // Configure decimal precision for billing fields
+                entity.Property(t => t.PlatformFeeRateOverride).HasPrecision(5, 4); // e.g., 0.0250 for 2.5%
             });
 
             builder.Entity<ReserveStudyBuildingElement>()

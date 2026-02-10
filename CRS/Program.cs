@@ -417,7 +417,7 @@ void ConfigureIdentity(WebApplicationBuilder builder) {
         options.Cookie.Name = ".CRS.Auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.Cookie.SameSite = SameSiteMode.Lax; // Changed from Strict to Lax for redirect flows
         options.SlidingExpiration = true;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.LoginPath = "/Account/Login";
@@ -473,6 +473,20 @@ async Task ConfigurePipeline(WebApplication app) {
             var claims = user?.Claims.Select(c => new { c.Type, c.Value }) ?? Enumerable.Empty<object>();
             return Results.Json(claims);
         }).WithDisplayName("Dev: WhoAmI (claims)").RequireAuthorization();
+
+        // Dev helper: dump tenant context for troubleshooting
+        app.MapGet("/dev/tenant", (ITenantContext tenantContext, System.Security.Claims.ClaimsPrincipal user) => {
+            var tenantClaim = user?.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
+            return Results.Json(new {
+                TenantContextId = tenantContext.TenantId,
+                TenantContextName = tenantContext.TenantName,
+                TenantContextSubdomain = tenantContext.Subdomain,
+                TenantContextIsActive = tenantContext.IsActive,
+                TenantContextIsPlatformHost = tenantContext.IsPlatformHost,
+                TenantContextIsResolvedByLogin = tenantContext.IsResolvedByLogin,
+                ClaimTenantId = tenantClaim
+            });
+        }).WithDisplayName("Dev: Tenant context").RequireAuthorization();
 
         app.UseDeveloperExceptionPage();
     } else {
@@ -590,22 +604,49 @@ async Task ConfigurePipeline(WebApplication app) {
             if (hasPassword) {
                 return Results.Ok(new { message = $"User '{email}' already has a password. No action needed." });
             }
-            
+
             // Use fixed password for testing in Development
             var tempPassword = "Letmeinnow1_";
-            
+
             // Add password to user
             var result = await userManager.AddPasswordAsync(user, tempPassword);
             if (!result.Succeeded) {
                 return Results.BadRequest(new { error = "Failed to add password", errors = result.Errors.Select(e => e.Description) });
             }
-            
+
             return Results.Ok(new { 
                 message = $"Password added for user '{email}'",
                 temporaryPassword = tempPassword,
                 warning = "Please share this password securely with the user and ask them to change it immediately."
             });
         }).WithDisplayName("Dev: Fix user with null password");
+
+        // Dev helper: fix user TenantId mismatch
+        app.MapGet("/dev/fix-tenant", async (string email, int tenantId, UserManager<ApplicationUser> userManager, IDbContextFactory<ApplicationDbContext> dbFactory) => {
+            if (string.IsNullOrWhiteSpace(email)) return Results.BadRequest("email is required");
+            if (tenantId <= 0) return Results.BadRequest("tenantId must be a positive integer");
+
+            var user = await userManager.FindByEmailAsync(email);
+            if (user == null) return Results.NotFound($"User '{email}' not found.");
+
+            await using var db = await dbFactory.CreateDbContextAsync();
+            var tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId);
+            if (tenant == null) return Results.NotFound($"Tenant with ID {tenantId} not found.");
+
+            var oldTenantId = user.TenantId;
+            user.TenantId = tenantId;
+            var result = await userManager.UpdateAsync(user);
+
+            if (!result.Succeeded) {
+                return Results.BadRequest(new { error = "Failed to update user", errors = result.Errors.Select(e => e.Description) });
+            }
+
+            return Results.Ok(new { 
+                message = $"Updated user '{email}' TenantId from {oldTenantId} to {tenantId}",
+                tenantName = tenant.Name,
+                note = "User must log out and log back in for changes to take effect in claims."
+            });
+        }).WithDisplayName("Dev: Fix user TenantId");
 
         // Example workflow transition + notification trigger
         app.MapGet("/dev/workflow/example", async (IStudyWorkflowService engine) => {

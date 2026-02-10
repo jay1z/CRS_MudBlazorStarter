@@ -2,6 +2,8 @@
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @using CRS.Data
+@using CRS.Models
+@using CRS.Services.Customers
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject UserManager<ApplicationUser> UserManager
@@ -10,6 +12,7 @@
 @inject ISnackbar Snackbar
 @inject CRS.Services.Tenant.ITenantUserService TenantUserService
 @inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject ICustomerService CustomerService
 
 <PageTitle>HOA User Management</PageTitle>
 
@@ -62,7 +65,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #28a745; font-size: 28px;" />
                         </div>
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@hoaUsers.Count(u => u.Status == StatusEnum.Active)</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@hoaUsers.Count(u => u.IsActive)</MudText>
                             <MudText Typo="Typo.body2" Style="color: #666;">Active</MudText>
                         </MudStack>
                     </MudStack>
@@ -77,7 +80,7 @@
                             <MudIcon Icon="@Icons.Material.Filled.Home" Style="color: #6A3D9A; font-size: 28px;" />
                         </div>
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetRoleCount("HOAUser")</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@hoaUsers.Count(u => u.Role <= CustomerAccountRole.Member)</MudText>
                             <MudText Typo="Typo.body2" Style="color: #666;">Board Members</MudText>
                         </MudStack>
                     </MudStack>
@@ -89,10 +92,10 @@
                 <MudCardContent>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                         <div style="width: 48px; height: 48px; background: #FFF5E6; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                            <MudIcon Icon="@Icons.Material.Filled.Gavel" Style="color: #FF8C00; font-size: 28px;" />
+                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="color: #FF8C00; font-size: 28px;" />
                         </div>
                         <MudStack Spacing="0">
-                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@GetRoleCount("HOAAuditor")</MudText>
+                            <MudText Typo="Typo.h4" Style="font-weight: 600;">@hoaUsers.Count(u => u.Role == CustomerAccountRole.Viewer)</MudText>
                             <MudText Typo="Typo.body2" Style="color: #666;">Auditors</MudText>
                         </MudStack>
                     </MudStack>
@@ -147,7 +150,7 @@
         }
         else
         {
-            <MudTable T="ApplicationUser" 
+            <MudTable T="CustomerAccountUser" 
                       Items="filteredUsers" 
                       Hover="true" 
                       Breakpoint="Breakpoint.Sm"
@@ -163,39 +166,37 @@
                 <RowTemplate>
                     <MudTd DataLabel="User">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudAvatar Color="Color.Primary" Size="Size.Small">
-                                @context.Initials
+                            <MudAvatar Color="@GetRoleColor(context.Role)" Size="Size.Small">
+                                @(context.User?.FirstName?.Substring(0, 1).ToUpper() ?? "?")
                             </MudAvatar>
                             <MudStack Spacing="0">
-                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.FullName</MudText>
-                                <MudText Typo="Typo.caption" Style="color: #999;">@context.Title</MudText>
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.User?.FullName</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #999;">@context.User?.Title</MudText>
                             </MudStack>
                         </MudStack>
                     </MudTd>
                     <MudTd DataLabel="Email">
-                        <MudText Typo="Typo.body2">@context.Email</MudText>
+                        <MudText Typo="Typo.body2">@context.User?.Email</MudText>
                     </MudTd>
                     <MudTd DataLabel="Organization">
-                        <MudText Typo="Typo.body2">@(context.CompanyName ?? "N/A")</MudText>
+                        <MudLink Href="@($"/Customers/Details/{context.CustomerAccountId}")" Typo="Typo.body2">
+                            @(context.CustomerAccount?.Name ?? "N/A")
+                        </MudLink>
                     </MudTd>
                     <MudTd DataLabel="Role">
-                        @foreach (var role in (context.Roles ?? Array.Empty<string>()))
-                        {
-                            <MudChip T="string" 
-                                     Size="Size.Small" 
-                                     Color="@GetRoleColor(role)"
-                                     Variant="Variant.Filled"
-                                     Class="mr-1">
-                                @GetRoleDisplayName(role)
-                            </MudChip>
-                        }
+                        <MudChip T="string" 
+                                 Size="Size.Small" 
+                                 Color="@GetRoleColor(context.Role)"
+                                 Variant="Variant.Filled">
+                            @GetRoleDisplayName(context.Role)
+                        </MudChip>
                     </MudTd>
                     <MudTd DataLabel="Status">
                         <MudChip T="string" 
                                  Size="Size.Small" 
-                                 Color="@GetStatusColor(context.Status)"
+                                 Color="@(context.IsActive ? Color.Success : Color.Warning)"
                                  Variant="Variant.Filled">
-                            @context.Status
+                            @(context.IsActive ? "Active" : "Inactive")
                         </MudChip>
                     </MudTd>
                     <MudTd DataLabel="Actions" Style="text-align: right;">
@@ -204,10 +205,6 @@
                                  Dense="true"
                                  AnchorOrigin="Origin.BottomRight"
                                  TransformOrigin="Origin.TopRight">
-                            <MudMenuItem Icon="@Icons.Material.Filled.Email" 
-                                         OnClick="@(() => ResendInviteAsync(context))">
-                                Resend Invitation
-                            </MudMenuItem>
                             <MudMenuItem Icon="@Icons.Material.Filled.VpnKey" 
                                          OnClick="@(() => SendPasswordResetAsync(context))">
                                 Send Password Reset
@@ -219,10 +216,10 @@
                                 Change Role
                             </MudMenuItem>
                             <MudDivider />
-                            <MudMenuItem Icon="@Icons.Material.Filled.Block" 
+                            <MudMenuItem Icon="@Icons.Material.Filled.PersonRemove" 
                                          OnClick="@(() => DeactivateUserAsync(context))"
                                          IconColor="Color.Error">
-                                Deactivate User
+                                Remove from Organization
                             </MudMenuItem>
                         </MudMenu>
                     </MudTd>
@@ -233,11 +230,11 @@
 </MudContainer>
 
 @code {
-    private List<ApplicationUser> hoaUsers = new();
+    private List<CustomerAccountUser> hoaUsers = new();
     private string? searchValue;
     private bool isLoading = true;
 
-    private IEnumerable<ApplicationUser> filteredUsers
+    private IEnumerable<CustomerAccountUser> filteredUsers
     {
         get
         {
@@ -245,11 +242,11 @@
                 return hoaUsers;
 
             return hoaUsers.Where(u =>
-                (u.UserName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (u.Email?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (u.FirstName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (u.LastName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (u.CompanyName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false));
+                (u.User?.UserName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.User?.Email?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.User?.FirstName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.User?.LastName?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.CustomerAccount?.Name?.Contains(searchValue, StringComparison.OrdinalIgnoreCase) ?? false));
         }
     }
 
@@ -271,25 +268,18 @@
             }
 
             await using var db = await DbFactory.CreateDbContextAsync();
-            
-            // Get all users with HOA roles in this tenant
-            var usersInRoles = await UserManager.GetUsersInRoleAsync("HOAUser");
-            var auditorsInRoles = await UserManager.GetUsersInRoleAsync("HOAAuditor");
-            
-            var allHOAUsers = usersInRoles.Concat(auditorsInRoles)
-                .Where(u => u.TenantId == tenantId.Value)
-                .DistinctBy(u => u.Id)
-                .OrderBy(u => u.LastName)
-                .ThenBy(u => u.FirstName)
-                .ToList();
 
-            hoaUsers = allHOAUsers;
-
-            // Load roles for each user
-            foreach (var user in hoaUsers)
-            {
-                user.Roles = await UserManager.GetRolesAsync(user);
-            }
+            // Get all CustomerAccountUsers for this tenant
+            hoaUsers = await db.CustomerAccountUsers
+                .Include(cau => cau.User)
+                .Include(cau => cau.CustomerAccount)
+                .Where(cau => cau.IsActive && 
+                             cau.CustomerAccount.TenantId == tenantId.Value &&
+                             cau.CustomerAccount.IsActive)
+                .OrderBy(cau => cau.CustomerAccount.Name)
+                .ThenBy(cau => cau.User.LastName)
+                .ThenBy(cau => cau.User.FirstName)
+                .ToListAsync();
         }
         catch (Exception ex)
         {
@@ -303,30 +293,40 @@
 
     private int GetRoleCount(string roleName)
     {
-        return hoaUsers.Count(u => u.Roles?.Contains(roleName) ?? false);
+        var role = roleName switch
+        {
+            "HOAUser" => CustomerAccountRole.Member,
+            "HOAAuditor" => CustomerAccountRole.Viewer,
+            _ => CustomerAccountRole.Member
+        };
+        return hoaUsers.Count(u => u.Role == role || (roleName == "HOAUser" && u.Role <= CustomerAccountRole.Member));
     }
 
-    private Color GetRoleColor(string role)
+    private Color GetRoleColor(CustomerAccountRole role)
     {
         return role switch
         {
-            "HOAUser" => Color.Primary,
-            "HOAAuditor" => Color.Secondary,
+            CustomerAccountRole.Owner => Color.Error,
+            CustomerAccountRole.Admin => Color.Warning,
+            CustomerAccountRole.Member => Color.Primary,
+            CustomerAccountRole.Viewer => Color.Secondary,
             _ => Color.Default
         };
     }
 
-    private string GetRoleDisplayName(string role)
+    private static string GetRoleDisplayName(CustomerAccountRole role)
     {
         return role switch
         {
-            "HOAUser" => "Board Member",
-            "HOAAuditor" => "Auditor",
-            _ => role
+            CustomerAccountRole.Owner => "Owner",
+            CustomerAccountRole.Admin => "Admin",
+            CustomerAccountRole.Member => "Member",
+            CustomerAccountRole.Viewer => "Viewer",
+            _ => role.ToString()
         };
     }
 
-    private Color GetStatusColor(StatusEnum status)
+    private static Color GetStatusColor(StatusEnum status)
     {
         return status switch
         {
@@ -342,40 +342,42 @@
         var options = new DialogOptions 
         { 
             CloseOnEscapeKey = true, 
-            MaxWidth = MaxWidth.Medium,
+            MaxWidth = MaxWidth.Small,
             FullWidth = true
         };
-        
+
         var dialog = await DialogService.ShowAsync<InviteHOAUserDialog>("Invite HOA User", options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is { Canceled: false })
         {
             await LoadHOAUsers();
         }
     }
 
-    private async Task ResendInviteAsync(ApplicationUser user)
+    private async Task ResendInviteAsync(CustomerAccountUser cau)
     {
+        if (cau.User == null) return;
+
         try
         {
-            var confirmationToken = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-            var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
-            
-            Snackbar.Add($"Invitation emails sent to {user.Email}", Severity.Success);
+            var resetToken = await UserManager.GeneratePasswordResetTokenAsync(cau.User);
+            Snackbar.Add($"Password reset email sent to {cau.User.Email}", Severity.Success);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error sending invitation: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error sending email: {ex.Message}", Severity.Error);
         }
     }
 
-    private async Task SendPasswordResetAsync(ApplicationUser user)
+    private async Task SendPasswordResetAsync(CustomerAccountUser cau)
     {
+        if (cau.User == null) return;
+
         try
         {
-            var resetToken = await UserManager.GeneratePasswordResetTokenAsync(user);
-            Snackbar.Add($"Password reset email sent to {user.Email}", Severity.Success);
+            var resetToken = await UserManager.GeneratePasswordResetTokenAsync(cau.User);
+            Snackbar.Add($"Password reset email sent to {cau.User.Email}", Severity.Success);
         }
         catch (Exception ex)
         {
@@ -383,28 +385,39 @@
         }
     }
 
-    private async Task ChangeRoleAsync(ApplicationUser user)
+    private async Task ChangeRoleAsync(CustomerAccountUser cau)
     {
-        var currentRole = user.Roles?.FirstOrDefault();
-        var newRole = currentRole == "HOAUser" ? "HOAAuditor" : "HOAUser";
+        if (cau.CustomerAccount == null) return;
+
+        var currentRole = cau.Role;
+        var nextRole = currentRole switch
+        {
+            CustomerAccountRole.Owner => CustomerAccountRole.Admin,
+            CustomerAccountRole.Admin => CustomerAccountRole.Member,
+            CustomerAccountRole.Member => CustomerAccountRole.Viewer,
+            CustomerAccountRole.Viewer => CustomerAccountRole.Owner,
+            _ => CustomerAccountRole.Member
+        };
 
         bool? confirm = await DialogService.ShowMessageBox(
             "Confirm Role Change",
-            $"Change {user.FullName}'s role from {GetRoleDisplayName(currentRole ?? "")} to {GetRoleDisplayName(newRole)}?",
+            $"Change {cau.User?.FullName}'s role from {GetRoleDisplayName(currentRole)} to {GetRoleDisplayName(nextRole)}?",
             yesText: "Change", cancelText: "Cancel");
 
         if (confirm == true)
         {
             try
             {
-                if (!string.IsNullOrEmpty(currentRole))
+                var success = await CustomerService.UpdateTeamMemberRoleAsync(cau.CustomerAccountId, cau.UserId, nextRole);
+                if (success)
                 {
-                    await UserManager.RemoveFromRoleAsync(user, currentRole);
+                    Snackbar.Add($"Role changed to {GetRoleDisplayName(nextRole)}", Severity.Success);
+                    await LoadHOAUsers();
                 }
-                await UserManager.AddToRoleAsync(user, newRole);
-                
-                Snackbar.Add($"Role changed to {GetRoleDisplayName(newRole)}", Severity.Success);
-                await LoadHOAUsers();
+                else
+                {
+                    Snackbar.Add("Failed to change role", Severity.Error);
+                }
             }
             catch (Exception ex)
             {
@@ -413,29 +426,29 @@
         }
     }
 
-    private async Task DeactivateUserAsync(ApplicationUser user)
+    private async Task DeactivateUserAsync(CustomerAccountUser cau)
     {
+        if (cau.CustomerAccount == null) return;
+
         bool? confirm = await DialogService.ShowMessageBox(
-            "Confirm Deactivation",
-            $"Deactivate {user.FullName}? They will no longer be able to access reserve studies and reports.",
-            yesText: "Deactivate", cancelText: "Cancel",
+            "Remove from Organization",
+            $"Remove {cau.User?.FullName} from {cau.CustomerAccount.Name}? They will no longer have access to this organization's reserve studies.",
+            yesText: "Remove", cancelText: "Cancel",
             options: new DialogOptions { MaxWidth = MaxWidth.Small });
 
         if (confirm == true)
         {
             try
             {
-                user.Status = StatusEnum.Inactive;
-                var result = await UserManager.UpdateAsync(user);
-                
-                if (result.Succeeded)
+                var success = await CustomerService.RemoveTeamMemberAsync(cau.CustomerAccountId, cau.UserId);
+                if (success)
                 {
-                    Snackbar.Add($"User {user.Email} has been deactivated", Severity.Success);
+                    Snackbar.Add($"User removed from {cau.CustomerAccount.Name}", Severity.Success);
                     await LoadHOAUsers();
                 }
                 else
                 {
-                    Snackbar.Add($"Failed: {string.Join(',', result.Errors.Select(e => e.Description))}", Severity.Error);
+                    Snackbar.Add("Failed to remove user", Severity.Error);
                 }
             }
             catch (Exception ex)

@@ -1,36 +1,103 @@
-﻿@page "/Account/RegisterConfirmation"
+﻿@attribute [AllowAnonymous]
+@layout EmptyLayout
+@page "/Account/RegisterConfirmation"
 
 @using System.Text
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using CRS.Data
+@using CRS.Services.Tenant
+@using CRS.Services.Storage
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IEmailSender<ApplicationUser> EmailSender
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject ITenantContext TenantContext
+@inject ILogoStorageService LogoStorage
+@inject ILogger<RegisterConfirmation> Logger
 
-<PageTitle>Register confirmation</PageTitle>
+<PageTitle>Check Your Email</PageTitle>
 
-<h1>Register confirmation</h1>
+<div class="d-flex flex-column justify-center align-center pa-6" style="min-height: 100vh; width: 100vw;">
+    <MudPaper Class="pa-8" Elevation="4" Style="max-width: 500px; text-align: center;">
+        <!-- Logo -->
+        @if (!string.IsNullOrWhiteSpace(_tenantLogoUrl))
+        {
+            <MudImage Src="@_tenantLogoUrl" Alt="@_logoAltText" Class="mb-4" Style="max-height: 80px; object-fit: contain;" />
+        }
+        else
+        {
+            <MudImage Src="images/logo.png" Alt="Logo" Width="100" Height="100" Class="mb-4" />
+        }
 
-<StatusMessage Message="@statusMessage" />
+        @if (_statusMessage != null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_statusMessage</MudAlert>
+        }
+        else
+        {
+            <MudIcon Icon="@Icons.Material.Filled.MarkEmailUnread" Color="Color.Primary" Style="font-size: 80px;" Class="mb-4" />
 
-@if (emailConfirmationLink is not null)
-{
-    <p>
-        This app does not currently have a real email sender registered, see <a class="mud-link mud-primary-text mud-link-underline-hover" href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
-        Normally this would be emailed: <a class="mud-link mud-primary-text mud-link-underline-hover" href="@emailConfirmationLink">Click here to confirm your account</a>
-    </p>
-}
-else
-{
-    <p role="alert">Please check your email to confirm your account.</p>
-}
+            <MudText Typo="Typo.h4" Class="fw-bold mb-2">Check Your Email</MudText>
+
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                We've sent a confirmation link to:
+            </MudText>
+
+            <MudPaper Class="pa-3 mb-4" Elevation="0" Style="background: #f5f5f5; border-radius: 8px;">
+                <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                    @Email
+                </MudText>
+            </MudPaper>
+
+            <MudText Typo="Typo.body2" Class="mb-4" Style="color: #666;">
+                Click the link in the email to verify your account and complete registration.
+            </MudText>
+
+            @if (_emailConfirmationLink is not null)
+            {
+                <!-- Development mode: show direct confirmation link -->
+                <MudAlert Severity="Severity.Warning" Class="mb-4" Variant="Variant.Outlined">
+                    <MudText Typo="Typo.caption" Class="mb-2">
+                        <strong>Development Mode:</strong> Email sending is not configured.
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Small" 
+                               Href="@_emailConfirmationLink">
+                        Confirm Email Directly
+                    </MudButton>
+                </MudAlert>
+            }
+
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.body2" Style="color: #999;" Class="mb-2">
+                Didn't receive the email?
+            </MudText>
+
+            <MudText Typo="Typo.caption" Style="color: #999;" Class="mb-3">
+                Check your spam folder or request a new confirmation email.
+            </MudText>
+
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       Href="Account/ResendEmailConfirmation" Class="mb-2">
+                Resend Confirmation Email
+            </MudButton>
+        }
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.caption" Style="color: #999;">
+            <MudLink Href="Account/Login" Style="color: #666;">← Back to Login</MudLink>
+        </MudText>
+    </MudPaper>
+</div>
 
 @code {
-    private string? emailConfirmationLink;
-    private string? statusMessage;
+    private string? _emailConfirmationLink;
+    private string? _statusMessage;
+    private string? _tenantLogoUrl;
+    private string _logoAltText = "Logo";
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -43,26 +110,45 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadTenantLogoAsync();
+
         if (Email is null)
         {
             RedirectManager.RedirectTo("");
+            return;
         }
 
         var user = await UserManager.FindByEmailAsync(Email);
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = "Error finding user for unspecified email";
+            _statusMessage = "We couldn't find an account with that email address.";
         }
         else if (EmailSender is IdentityNoOpEmailSender)
         {
-            // Once you add a real email sender, you should remove this code that lets you confirm the account
+            // Development mode: show direct confirmation link
             var userId = await UserManager.GetUserIdAsync(user);
             var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-            emailConfirmationLink = NavigationManager.GetUriWithQueryParameters(
+            _emailConfirmationLink = NavigationManager.GetUriWithQueryParameters(
                 NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
                 new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+        }
+    }
+
+    private async Task LoadTenantLogoAsync()
+    {
+        if (TenantContext.TenantId.HasValue)
+        {
+            try
+            {
+                _tenantLogoUrl = await LogoStorage.GetLogoUrlAsync(TenantContext.TenantId.Value);
+                _logoAltText = $"{TenantContext.TenantName ?? "Company"} Logo";
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Error loading tenant logo");
+            }
         }
     }
 }

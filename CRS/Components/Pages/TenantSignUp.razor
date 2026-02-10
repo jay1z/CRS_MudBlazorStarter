@@ -666,9 +666,9 @@ protected override void OnParametersSet()
         var isYearly = model.Interval == "Yearly";
         return planValue switch
         {
-            "Startup" => isYearly ? "$159/mo" : "$199/mo",
-            "Pro" => isYearly ? "$399/mo" : "$499/mo",
-            "Enterprise" => "Custom",
+            "Startup" => isYearly ? "$39/mo" : "$49/mo",
+            "Pro" => isYearly ? "$119/mo" : "$149/mo",
+            "Enterprise" => isYearly ? "$279/mo" : "$349/mo",
             _ => ""
         };
     }

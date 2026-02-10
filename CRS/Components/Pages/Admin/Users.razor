@@ -296,15 +296,16 @@
                 query = query.Where(u => u.TenantId == tenantId.Value);
             }
             var allUsers = await query.OrderBy(u => u.LastName).ThenBy(u => u.FirstName).ToListAsync();
-            
-            // Load roles and filter out HOA users (they are managed on the HOAUsers page)
-            var hoaRoles = new[] { "HOAUser", "HOAAuditor" };
+
+            // Only include staff users (those with TenantOwner, TenantSpecialist, or TenantViewer roles)
+            // HOA customers are managed on the HOAUsers page
+            var staffRoles = new[] { "TenantOwner", "TenantSpecialist", "TenantViewer" };
             users = new List<ApplicationUser>();
             foreach (var user in allUsers)
             {
                 user.Roles = await UserManager.GetRolesAsync(user);
-                // Only include users that don't have HOA roles
-                if (!user.Roles.Any(r => hoaRoles.Contains(r)))
+                // Only include users that have at least one staff role
+                if (user.Roles.Any(r => staffRoles.Contains(r)))
                 {
                     users.Add(user);
                 }

@@ -696,7 +696,7 @@ namespace CRS.Services.Customers {
                 var baseUrl = !string.IsNullOrEmpty(subdomain)
                     ? $"https://{subdomain}.reservecloud.com"
                     : "https://reservecloud.com";
-                var acceptUrl = $"{baseUrl}/Customer/AcceptInvite?token={Uri.EscapeDataString(invitation.Token)}";
+                var acceptUrl = $"{baseUrl}/Account/AcceptInvitation?token={Uri.EscapeDataString(invitation.Token)}";
 
                 var emailModel = new TeamInvitationEmail
                 {

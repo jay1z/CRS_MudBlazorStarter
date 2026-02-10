@@ -23,7 +23,7 @@
         if (RequestContainsDeferred && SessionId != null) {
             // Poll resolve endpoint for up to 10 seconds
             for (int i = 0; i < 10; i++) {
-                var client = ClientFactory.CreateClient();
+                var client = CreateClientWithBaseAddress();
                 var resolveResp = await client.GetAsync($"api/signup/resolve?sessionId={SessionId}");
                 if (resolveResp.IsSuccessStatusCode) {
                     var json = await resolveResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
@@ -43,7 +43,7 @@
             return;
         }
         if (tenantId is not int id) { _checking = false; return; }
-        var client2 = ClientFactory.CreateClient();
+        var client2 = CreateClientWithBaseAddress();
         var resp = await client2.GetAsync($"api/billing/status/{id}");
         if (resp.IsSuccessStatusCode) {
             var json = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
@@ -55,6 +55,12 @@
             if (_active) NavigateToSubdomain(_resolvedSubdomain, tenantId);
         }
         _checking = false;
+    }
+
+    private HttpClient CreateClientWithBaseAddress() {
+        var client = ClientFactory.CreateClient();
+        client.BaseAddress = new Uri(Nav.BaseUri);
+        return client;
     }
 
     private void NavigateToSubdomain(string? subdomain, int? tenantIdParam)

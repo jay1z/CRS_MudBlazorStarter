@@ -199,35 +199,92 @@ namespace CRS.Controllers {
                         } else {
                             _logger.LogWarning("Could not parse tier '{Tier}', defaulting to null", tierStr);
                         }
-                        
+
+                        // Determine initial subscription status - check if subscription is in trial
+                        var initialStatus = CRS.Models.SubscriptionStatus.Incomplete;
+                        if (sub != null && sub.Status == "trialing") {
+                            initialStatus = CRS.Models.SubscriptionStatus.Trialing;
+                        } else if (sub != null && sub.Status == "active") {
+                            initialStatus = CRS.Models.SubscriptionStatus.Active;
+                        }
+
                         var tenant = new CRS.Models.Tenant {
                             Name = companyName,
                             Subdomain = subdomain,
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active,
-                            SubscriptionStatus = CRS.Models.SubscriptionStatus.Incomplete,
+                            SubscriptionStatus = initialStatus,
                             PendingOwnerEmail = adminEmail,
                             StripeCustomerId = session.CustomerId,
+                            StripeSubscriptionId = session.SubscriptionId, // Save the subscription ID
                             LastStripeCheckoutSessionId = session.Id,
                             Tier = tier
                         };
-                        _db.Tenants.Add(tenant);
-                        await _db.SaveChangesAsync(ct);
-                        _logger.LogInformation("Successfully created tenant {TenantId} for subdomain {Subdomain}", tenant.Id, subdomain);
-                        
-                        // Provision owner account
-                        _logger.LogInformation("Provisioning owner account for {Email}", adminEmail);
-                        var provisionResult = await _ownerProvisioning.ProvisionAsync(tenant, adminEmail, ct);
-                        _logger.LogInformation("Owner provisioning result: {Result}", provisionResult);
+
+                        // Set tier limits based on subscription tier
+                        if (tier.HasValue) {
+                            var limits = CRS.Models.SubscriptionTierDefaults.GetLimits(tier.Value);
+                            tenant.MaxCommunities = limits.communities;
+                            tenant.MaxSpecialistUsers = limits.specialists;
+                        }
+
+                        try {
+                            _db.Tenants.Add(tenant);
+                            await _db.SaveChangesAsync(ct);
+                            _logger.LogInformation("Successfully created tenant {TenantId} for subdomain {Subdomain} with status {Status}", 
+                                tenant.Id, subdomain, initialStatus);
+
+                            // Provision owner account
+                            _logger.LogInformation("Provisioning owner account for {Email}", adminEmail);
+                            var provisionResult = await _ownerProvisioning.ProvisionAsync(tenant, adminEmail, ct);
+                            _logger.LogInformation("Owner provisioning result: {Result}", provisionResult);
+                        } catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx) when (dbEx.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx && sqlEx.Number == 2601) {
+                            // Duplicate key - race condition with another webhook event
+                            // Remove the failed entity from tracking and fetch the existing one
+                            _logger.LogWarning("Race condition detected: tenant for subdomain {Subdomain} was created by another event. Fetching existing.", subdomain);
+                            _db.Entry(tenant).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+
+                            var raceTenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Subdomain == subdomain, ct);
+                            if (raceTenant != null) {
+                                // Update the existing tenant with any missing info
+                                if (string.IsNullOrWhiteSpace(raceTenant.StripeCustomerId)) raceTenant.StripeCustomerId = session.CustomerId;
+                                if (string.IsNullOrWhiteSpace(raceTenant.StripeSubscriptionId)) raceTenant.StripeSubscriptionId = session.SubscriptionId;
+                                raceTenant.LastStripeCheckoutSessionId = session.Id;
+                                raceTenant.UpdatedAt = DateTime.UtcNow;
+                                await _db.SaveChangesAsync(ct);
+                                _logger.LogInformation("Updated existing tenant {TenantId} after race condition", raceTenant.Id);
+
+                                var provisionResult = await _ownerProvisioning.ProvisionAsync(raceTenant, adminEmail, ct);
+                                _logger.LogInformation("Owner provisioning result after race: {Result}", provisionResult);
+                            }
+                        }
                     } else {
-                        _logger.LogInformation("Tenant {TenantId} already exists for subdomain {Subdomain}, updating Stripe customer ID", existing.Id, subdomain);
+                        _logger.LogInformation("Tenant {TenantId} already exists for subdomain {Subdomain}, updating Stripe info", existing.Id, subdomain);
+
+                        // Update Stripe IDs if not already set
                         if (string.IsNullOrWhiteSpace(existing.StripeCustomerId) && !string.IsNullOrWhiteSpace(session.CustomerId)) {
                             existing.StripeCustomerId = session.CustomerId;
-                            existing.LastStripeCheckoutSessionId = session.Id;
-                            await _db.SaveChangesAsync(ct);
-                            _logger.LogInformation("Updated existing tenant {TenantId} with Stripe customer {CustomerId}", existing.Id, session.CustomerId);
                         }
+                        if (string.IsNullOrWhiteSpace(existing.StripeSubscriptionId) && !string.IsNullOrWhiteSpace(session.SubscriptionId)) {
+                            existing.StripeSubscriptionId = session.SubscriptionId;
+                        }
+                        existing.LastStripeCheckoutSessionId = session.Id;
+
+                        // Update subscription status based on actual Stripe status
+                        if (sub != null) {
+                            if (sub.Status == "trialing") {
+                                existing.SubscriptionStatus = CRS.Models.SubscriptionStatus.Trialing;
+                            } else if (sub.Status == "active") {
+                                existing.SubscriptionStatus = CRS.Models.SubscriptionStatus.Active;
+                            }
+                        }
+
+                        existing.UpdatedAt = DateTime.UtcNow;
+                        await _db.SaveChangesAsync(ct);
+                        _logger.LogInformation("Updated existing tenant {TenantId} with Stripe customer {CustomerId}, subscription {SubscriptionId}", 
+                            existing.Id, session.CustomerId, session.SubscriptionId);
+
                         var provisionResult = await _ownerProvisioning.ProvisionAsync(existing, adminEmail, ct);
                         _logger.LogInformation("Owner provisioning result for existing tenant: {Result}", provisionResult);
                     }
@@ -320,10 +377,10 @@ namespace CRS.Controllers {
                     subscription.Metadata.TryGetValue("company_name", out var companyName);
                     subscription.Metadata.TryGetValue("subdomain", out var subdomain);
                     subscription.Metadata.TryGetValue("admin_email", out var adminEmail);
-                    
+
                     _logger.LogInformation("Subscription deferred metadata: company={Company} subdomain={Subdomain} admin={Admin}", 
                         companyName, subdomain, adminEmail);
-                    
+
                     if (!string.IsNullOrWhiteSpace(companyName) && !string.IsNullOrWhiteSpace(subdomain)) {
                         var existing = await _db.Tenants.FirstOrDefaultAsync(t => t.Subdomain == subdomain, ct);
                         if (existing == null) {
@@ -334,18 +391,42 @@ namespace CRS.Controllers {
                                 IsActive = true,
                                 CreatedAt = DateTime.UtcNow,
                                 ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active,
-                                SubscriptionStatus = CRS.Models.SubscriptionStatus.Incomplete,
+                                SubscriptionStatus = status,
                                 PendingOwnerEmail = adminEmail,
                                 StripeCustomerId = subscription.CustomerId,
                                 StripeSubscriptionId = subscription.Id,
                                 Tier = tier
                             };
-                            _db.Tenants.Add(newTenant);
-                            await _db.SaveChangesAsync(ct);
-                            _logger.LogInformation("Successfully created tenant {TenantId} from subscription for subdomain {Subdomain}", newTenant.Id, subdomain);
-                            var provisionResult = await _ownerProvisioning.ProvisionAsync(newTenant, adminEmail, ct);
-                            _logger.LogInformation("Owner provisioning result from subscription: {Result}", provisionResult);
-                            tenant = newTenant; // continue applying update below
+
+                            // Set tier limits
+                            if (tier.HasValue) {
+                                var limits = CRS.Models.SubscriptionTierDefaults.GetLimits(tier.Value);
+                                newTenant.MaxCommunities = limits.communities;
+                                newTenant.MaxSpecialistUsers = limits.specialists;
+                            }
+
+                            try {
+                                _db.Tenants.Add(newTenant);
+                                await _db.SaveChangesAsync(ct);
+                                _logger.LogInformation("Successfully created tenant {TenantId} from subscription for subdomain {Subdomain}", newTenant.Id, subdomain);
+                                var provisionResult = await _ownerProvisioning.ProvisionAsync(newTenant, adminEmail, ct);
+                                _logger.LogInformation("Owner provisioning result from subscription: {Result}", provisionResult);
+                                tenant = newTenant; // continue applying update below
+                            } catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx) when (dbEx.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx && sqlEx.Number == 2601) {
+                                // Duplicate key - race condition with checkout.session.completed
+                                _logger.LogWarning("Race condition in subscription handler: tenant for subdomain {Subdomain} was created by another event", subdomain);
+                                _db.Entry(newTenant).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+
+                                tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Subdomain == subdomain, ct);
+                                if (tenant != null) {
+                                    // Update with subscription info if missing
+                                    if (string.IsNullOrWhiteSpace(tenant.StripeSubscriptionId)) {
+                                        tenant.StripeSubscriptionId = subscription.Id;
+                                        tenant.UpdatedAt = DateTime.UtcNow;
+                                        await _db.SaveChangesAsync(ct);
+                                    }
+                                }
+                            }
                         } else {
                             _logger.LogInformation("Tenant {TenantId} already exists for subdomain {Subdomain}", existing.Id, subdomain);
                             tenant = existing;

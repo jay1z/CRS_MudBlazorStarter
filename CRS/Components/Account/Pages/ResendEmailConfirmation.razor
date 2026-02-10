@@ -1,4 +1,5 @@
 ﻿@attribute [AllowAnonymous]
+@layout EmptyLayout
 @page "/Account/ResendEmailConfirmation"
 
 @using System.ComponentModel.DataAnnotations
@@ -7,65 +8,173 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using CRS.Data
+@using CRS.Services.Tenant
+@using CRS.Services.Storage
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IEmailSender<ApplicationUser> EmailSender
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject ITenantContext TenantContext
+@inject ILogoStorageService LogoStorage
+@inject ILogger<ResendEmailConfirmation> Logger
 
-<PageTitle>Resend email confirmation</PageTitle>
+<PageTitle>Resend Email Confirmation</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Resend email confirmation</MudText>
+<div class="d-flex flex-column flex-md-row" style="min-height: 100vh; width: 100vw;">
+    <!-- Left: Form -->
+    <div class="d-flex flex-column justify-center align-center pa-6" style="width: 100%; max-width: 500px;">
+        <MudPaper Class="pa-6" Elevation="0" Style="width: 100%; max-width: 400px;">
+            <!-- Logo -->
+            @if (!string.IsNullOrWhiteSpace(_tenantLogoUrl))
+            {
+                <div class="text-center mb-6">
+                    <MudImage Src="@_tenantLogoUrl" Alt="@_logoAltText" Style="max-height: 100px; object-fit: contain;" />
+                </div>
+            }
+            else
+            {
+                <div class="text-center mb-6">
+                    <MudImage Src="images/logo.png" Alt="Logo" Width="120" Height="120" />
+                </div>
+            }
 
-<MudText Typo="Typo.body1" GutterBottom="true">Enter your email.</MudText>
+            <!-- Header -->
+            <MudText Typo="Typo.h5" Class="mb-2 text-center">Resend Confirmation Email</MudText>
+            <MudText Typo="Typo.body2" Class="mb-6 text-center" Style="color: #666;">
+                Enter your email address and we'll send you a new confirmation link.
+            </MudText>
 
-<StatusMessage Message="@message" />
+            @if (_emailSent)
+            {
+                <!-- Success State -->
+                <MudAlert Severity="Severity.Success" Class="mb-4" Variant="Variant.Filled">
+                    <MudText Typo="Typo.body1" Class="fw-bold">Email Sent!</MudText>
+                    <MudText Typo="Typo.body2">
+                        If an account exists for <strong>@Input.Email</strong>, you will receive a confirmation email shortly.
+                    </MudText>
+                </MudAlert>
 
-<EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
-    <DataAnnotationsValidator />
+                <MudText Typo="Typo.body2" Class="mb-4" Style="color: #666;">
+                    Didn't receive the email? Check your spam folder or try again.
+                </MudText>
 
-    <MudGrid>
-        <MudItem md="12">
-            <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email"
-                                Label="Email" Placeholder="name@example.com"
-                                UserAttributes="@(new() { { "autocomplete", "username" }, { "aria-required", "true" } } )" />
-        </MudItem>
-        <MudItem md="12">
-            <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Resend</MudStaticButton>
-        </MudItem>
-    </MudGrid>
-</EditForm>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="mb-3"
+                           OnClick="@(() => _emailSent = false)">
+                    Try Another Email
+                </MudButton>
+
+                <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" Href="Account/Login">
+                    Back to Login
+                </MudButton>
+            }
+            else
+            {
+                <!-- Form State -->
+                <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
+                    <DataAnnotationsValidator />
+
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12">
+                            <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email"
+                                                Label="Email Address" Placeholder="name@example.com"
+                                                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
+                                                Variant="Variant.Outlined"
+                                                UserAttributes="@(new() { { "autocomplete", "email" }, { "aria-required", "true" } })" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" 
+                                             FormAction="FormAction.Submit" StartIcon="@Icons.Material.Filled.Send">
+                                Send Confirmation Email
+                            </MudStaticButton>
+                        </MudItem>
+                    </MudGrid>
+                </EditForm>
+
+                <MudDivider Class="my-4" />
+
+                <MudText Typo="Typo.body2" Class="text-center" Style="color: #666;">
+                    Remember your password? <MudLink Href="Account/Login">Sign in</MudLink>
+                </MudText>
+                <MudText Typo="Typo.body2" Class="text-center mt-2" Style="color: #666;">
+                    Need to reset your password? <MudLink Href="Account/ForgotPassword">Reset it here</MudLink>
+                </MudText>
+            }
+        </MudPaper>
+    </div>
+
+    <!-- Right: Image -->
+    <div class="d-none d-md-flex flex-grow-1" style="overflow: hidden; padding: 0; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="d-flex flex-column justify-center align-center pa-8" style="width: 100%;">
+            <MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" Style="font-size: 120px; color: rgba(255,255,255,0.9);" />
+            <MudText Typo="Typo.h4" Class="mt-4" Style="color: white; text-align: center;">
+                Confirm Your Email
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mt-2" Style="color: rgba(255,255,255,0.8); text-align: center; max-width: 400px;">
+                Email confirmation helps secure your account and ensures you receive important notifications.
+            </MudText>
+        </div>
+    </div>
+</div>
 
 @code {
-    private string? message;
+    private string? _tenantLogoUrl;
+    private string _logoAltText = "Logo";
+    private bool _emailSent = false;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTenantLogoAsync();
+    }
+
+    private async Task LoadTenantLogoAsync()
+    {
+        if (TenantContext.TenantId.HasValue)
+        {
+            try
+            {
+                _tenantLogoUrl = await LogoStorage.GetLogoUrlAsync(TenantContext.TenantId.Value);
+                _logoAltText = $"{TenantContext.TenantName ?? "Company"} Logo";
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Error loading tenant logo for tenant {TenantId}", TenantContext.TenantId);
+            }
+        }
+    }
+
     private async Task OnValidSubmitAsync()
     {
         var user = await UserManager.FindByEmailAsync(Input.Email!);
-        if (user is null)
+        if (user is not null)
         {
-            message = "Verification email sent. Please check your email.";
-            return;
+            var userId = await UserManager.GetUserIdAsync(user);
+            var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+                NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+                new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+            await EmailSender.SendConfirmationLinkAsync(user, Input.Email!, HtmlEncoder.Default.Encode(callbackUrl));
+
+            Logger.LogInformation("Confirmation email resent to {Email}", Input.Email);
+        }
+        else
+        {
+            // Don't reveal that the user doesn't exist - still show success for security
+            Logger.LogWarning("Resend confirmation requested for non-existent email: {Email}", Input.Email);
         }
 
-        var userId = await UserManager.GetUserIdAsync(user);
-        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
-        message = "Verification email sent. Please check your email.";
+        // Always show success to prevent email enumeration
+        _emailSent = true;
     }
 
     private sealed class InputModel
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Please enter a valid email address")]
         public string Email { get; set; } = "";
     }
 }

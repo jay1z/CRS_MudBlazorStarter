@@ -1,0 +1,490 @@
+﻿@attribute [AllowAnonymous]
+@layout EmptyLayout
+@page "/Account/Register"
+@page "/register"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.EntityFrameworkCore
+@using CRS.Data
+@using CRS.Models
+@using CRS.Models.Security
+@using CRS.Services.Tenant
+@using CRS.Services.Storage
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject ILogger<Register> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+@inject ITenantContext TenantContext
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ILogoStorageService LogoStorage
+@inject IConfiguration Config
+
+<PageTitle>Register</PageTitle>
+
+@if (_invitationError != null)
+{
+    <!-- Invalid or expired invitation -->
+    <div class="d-flex flex-column justify-center align-center pa-6" style="height: 100vh; width: 100vw;">
+        <MudPaper Class="pa-8" Elevation="4" Style="max-width: 600px; text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Style="font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h4" Class="fw-bold mb-4">Invalid Invitation</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                @_invitationError
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="Account/Login">
+                Go to Login
+            </MudButton>
+        </MudPaper>
+    </div>
+}
+else if (_requiresInvitation)
+{
+    <!-- No invitation token - registration requires invitation -->
+    <div class="d-flex flex-column justify-center align-center pa-6" style="height: 100vh; width: 100vw;">
+        <MudPaper Class="pa-8" Elevation="4" Style="max-width: 600px; text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.MailLock" Color="Color.Primary" Style="font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h4" Class="fw-bold mb-4">Invitation Required</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                Registration requires an invitation from the organization.
+            </MudText>
+            <MudText Typo="Typo.body2" Class="mb-4" Style="color: #888;">
+                If you've received an invitation email, please click the link in that email to register.
+            </MudText>
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.body2" Style="color: #666;">
+                Already have an account? <MudLink Href="Account/Login">Sign in</MudLink>
+            </MudText>
+            @if (TenantContext.IsPlatformHost || !TenantContext.TenantId.HasValue)
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.body2" Style="color: #666;">
+                    Want to start your own reserve study business?
+                </MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Warning" Class="mt-2" Href="/tenant/signup" StartIcon="@Icons.Material.Filled.RocketLaunch">
+                    Start Free Trial
+                </MudButton>
+            }
+        </MudPaper>
+    </div>
+}
+else if (!TenantContext.TenantId.HasValue || TenantContext.IsPlatformHost)
+{
+    <!-- Platform host - redirect to tenant signup -->
+    <div class="d-flex flex-column justify-center align-center pa-6" style="height: 100vh; width: 100vw;">
+        <MudPaper Class="pa-8" Elevation="4" Style="max-width: 600px; text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Primary" Style="font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h4" Class="fw-bold mb-4">Create an Account</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                To register as a customer, please visit your organization's dedicated portal.
+            </MudText>
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.body2" Class="mb-4" Style="color: #666;">
+                Want to start your own reserve study business?
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Warning" Size="Size.Large" Href="/tenant/signup" StartIcon="@Icons.Material.Filled.RocketLaunch">
+                Start Free Trial
+            </MudButton>
+        </MudPaper>
+    </div>
+}
+else
+{
+    <!-- Tenant-specific registration form -->
+    <div class="d-flex flex-column flex-md-row" style="min-height: 100vh; width: 100vw;">
+        <div class="d-flex flex-column justify-center align-center pa-6" style="width: 100%; max-width: 600px;">
+            <MudGrid>
+                <MudItem xs="12">
+                    @if (!string.IsNullOrWhiteSpace(_tenantLogoUrl))
+                    {
+                        <MudImage Src="@_tenantLogoUrl" Alt="@_logoAltText" Class="mx-auto mb-4" Style="max-height: 120px; object-fit: contain;" />
+                    }
+                    else
+                    {
+                        <MudImage Src="images/logo.png" Alt="Logo" Width="180" Height="180" Class="mx-auto mb-4" />
+                    }
+                </MudItem>
+                <MudItem xs="12">
+                    @if (_invitation != null)
+                    {
+                        <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Outlined">
+                            <MudText Typo="Typo.body2">
+                                You've been invited to join <strong>@_customerAccountName</strong>
+                            </MudText>
+                        </MudAlert>
+                        <MudText Typo="Typo.h5" Class="mb-2">Complete Your Registration</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-4" Style="color: #666;">
+                            Create your account to accept the invitation and access your community's reserve study information.
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.h5" Class="mb-2">Create Your Account</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-4" Style="color: #666;">
+                            Register to access your reserve study documents and community information.
+                        </MudText>
+                    }
+                </MudItem>
+                <MudItem xs="12">
+                    <StatusMessage Message="@_message" />
+                    <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+                        <DataAnnotationsValidator />
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudStaticTextField For="@(() => Input.FirstName)" @bind-Value="Input.FirstName" 
+                                    Label="First Name" Placeholder="John" 
+                                    UserAttributes="@(new() { { "autocomplete", "given-name" }, { "aria-required", "true" } })" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudStaticTextField For="@(() => Input.LastName)" @bind-Value="Input.LastName" 
+                                    Label="Last Name" Placeholder="Doe" 
+                                    UserAttributes="@(new() { { "autocomplete", "family-name" }, { "aria-required", "true" } })" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email" 
+                                    Label="Email" Placeholder="name@example.com" 
+                                    UserAttributes="@(new() { { "autocomplete", "email" }, { "aria-required", "true" } })" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" 
+                                    Label="Password" InputType="InputType.Password" Placeholder="********" 
+                                    UserAttributes="@(new() { { "autocomplete", "new-password" }, { "aria-required", "true" } })" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudStaticTextField For="@(() => Input.ConfirmPassword)" @bind-Value="Input.ConfirmPassword" 
+                                    Label="Confirm Password" InputType="InputType.Password" Placeholder="********" 
+                                    UserAttributes="@(new() { { "autocomplete", "new-password" }, { "aria-required", "true" } })" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">
+                                    Create Account
+                                </MudStaticButton>
+                            </MudItem>
+                        </MudGrid>
+                    </EditForm>
+                </MudItem>
+                <MudItem xs="12" Class="mt-4">
+                    <MudText Typo="Typo.body2" Style="color: #666;">
+                        Already have an account? <MudLink Href="Account/Login">Sign in</MudLink>
+                    </MudText>
+                </MudItem>
+            </MudGrid>
+        </div>
+
+        <!-- Right: Image -->
+        <div class="d-none d-md-flex flex-grow-1" style="overflow: hidden; padding: 0; margin: 0;">
+            <MudImage Src="images/login_2.png" ObjectFit="ObjectFit.Cover" Alt="Register" Style="width: 100%; height: 100%; display: block;" />
+        </div>
+    </div>
+}
+
+@code {
+    private IEnumerable<IdentityError>? _identityErrors;
+    private string? _message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
+    private string? _tenantLogoUrl;
+    private string _logoAltText = "Logo";
+    private CustomerAccountInvitation? _invitation;
+    private string? _customerAccountName;
+    private string? _invitationError;
+    private bool _requiresInvitation = false;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery(Name = "invite")]
+    private string? InvitationToken { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Registration requires an invitation token
+        if (string.IsNullOrWhiteSpace(InvitationToken))
+        {
+            _requiresInvitation = true;
+            return;
+        }
+
+        // Validate the invitation token
+        await ValidateInvitationAsync();
+
+        if (TenantContext.TenantId.HasValue && !TenantContext.IsPlatformHost && _invitation != null)
+        {
+            await LoadTenantLogoAsync();
+        }
+    }
+
+    private async Task ValidateInvitationAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            // Find invitation by token (bypasses tenant filter)
+            _invitation = await db.Set<CustomerAccountInvitation>()
+                .FirstOrDefaultAsync(i => i.Token == InvitationToken);
+
+            if (_invitation == null)
+            {
+                _invitationError = "This invitation link is invalid or has already been used.";
+                return;
+            }
+
+            if (_invitation.Status != InvitationStatus.Pending)
+            {
+                _invitationError = _invitation.Status switch
+                {
+                    InvitationStatus.Accepted => "This invitation has already been accepted.",
+                    InvitationStatus.Expired => "This invitation has expired.",
+                    InvitationStatus.Revoked => "This invitation has been revoked.",
+                    _ => "This invitation is no longer valid."
+                };
+                return;
+            }
+
+            if (_invitation.ExpiresAt < DateTime.UtcNow)
+            {
+                _invitationError = "This invitation has expired. Please request a new invitation.";
+                // Update status
+                _invitation.Status = InvitationStatus.Expired;
+                await db.SaveChangesAsync();
+                return;
+            }
+
+            // Get customer account name (bypass tenant filter)
+            var customerAccount = await db.Set<CustomerAccount>()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == _invitation.CustomerAccountId);
+
+            _customerAccountName = customerAccount?.Name ?? "the organization";
+
+            // Pre-fill email from invitation
+            Input.Email = _invitation.Email;
+
+            Logger.LogInformation("Valid invitation found for email {Email} to customer account {AccountId}", 
+                _invitation.Email, _invitation.CustomerAccountId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error validating invitation token");
+            _invitationError = "An error occurred while validating your invitation. Please try again.";
+        }
+    }
+
+    private async Task LoadTenantLogoAsync()
+    {
+        if (TenantContext.TenantId.HasValue)
+        {
+            try
+            {
+                _tenantLogoUrl = await LogoStorage.GetLogoUrlAsync(TenantContext.TenantId.Value);
+                _logoAltText = $"{TenantContext.TenantName ?? "Company"} Logo";
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Error loading tenant logo for tenant {TenantId}", TenantContext.TenantId);
+            }
+        }
+    }
+
+    public async Task RegisterUser(EditContext editContext)
+    {
+        if (!TenantContext.TenantId.HasValue)
+        {
+            _identityErrors = [new IdentityError { Description = "Unable to determine tenant. Please try again." }];
+            return;
+        }
+
+        var user = CreateUser();
+        user.FirstName = Input.FirstName;
+        user.LastName = Input.LastName;
+        user.TenantId = TenantContext.TenantId.Value;
+
+        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        var emailStore = GetEmailStore();
+        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (!result.Succeeded)
+        {
+            _identityErrors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User {Email} created a new account for tenant {TenantId}.", Input.Email, TenantContext.TenantId);
+
+        // Assign HOA Customer role
+        await AssignCustomerRoleAsync(user);
+
+        // If this is an invitation registration, link to CustomerAccount
+        if (_invitation != null)
+        {
+            await AcceptInvitationAsync(user);
+        }
+
+        // Send confirmation email
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        if (UserManager.Options.SignIn.RequireConfirmedAccount)
+        {
+            RedirectManager.RedirectTo(
+                "Account/RegisterConfirmation",
+                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+        }
+
+        await SignInManager.SignInAsync(user, isPersistent: false);
+        RedirectManager.RedirectTo(ReturnUrl);
+    }
+
+    private async Task AcceptInvitationAsync(ApplicationUser user)
+    {
+        if (_invitation == null) return;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            // Create CustomerAccountUser link
+            var customerAccountUser = new CustomerAccountUser
+            {
+                CustomerAccountId = _invitation.CustomerAccountId,
+                UserId = user.Id,
+                Role = _invitation.Role,
+                JoinedAt = DateTime.UtcNow,
+                InvitedByUserId = _invitation.InvitedByUserId,
+                IsActive = true
+            };
+            db.Set<CustomerAccountUser>().Add(customerAccountUser);
+
+            // Update invitation status
+            var invitation = await db.Set<CustomerAccountInvitation>()
+                .FirstOrDefaultAsync(i => i.Id == _invitation.Id);
+
+            if (invitation != null)
+            {
+                invitation.Status = InvitationStatus.Accepted;
+                invitation.AcceptedAt = DateTime.UtcNow;
+                invitation.AcceptedByUserId = user.Id;
+            }
+
+            await db.SaveChangesAsync();
+
+            Logger.LogInformation("User {Email} accepted invitation and joined CustomerAccount {AccountId} with role {Role}",
+                user.Email, _invitation.CustomerAccountId, _invitation.Role);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error accepting invitation for user {Email}", user.Email);
+            // Don't fail registration if invitation linking fails - user can be added manually
+        }
+    }
+
+    private async Task AssignCustomerRoleAsync(ApplicationUser user)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            
+            // Find or create the HOA Customer role
+            var customerRole = await db.Roles2.FirstOrDefaultAsync(r => r.Name == "HoaCustomer");
+            if (customerRole == null)
+            {
+                customerRole = new Role
+                {
+                    Name = "HoaCustomer",
+                    Scope = RoleScope.Tenant
+                };
+                db.Roles2.Add(customerRole);
+                await db.SaveChangesAsync();
+            }
+
+            // Check if assignment already exists
+            var exists = await db.UserRoleAssignments.AnyAsync(a =>
+                a.UserId == user.Id &&
+                a.RoleId == customerRole.Id &&
+                a.TenantId == TenantContext.TenantId);
+
+            if (!exists)
+            {
+                db.UserRoleAssignments.Add(new UserRoleAssignment
+                {
+                    UserId = user.Id,
+                    RoleId = customerRole.Id,
+                    TenantId = TenantContext.TenantId
+                });
+                await db.SaveChangesAsync();
+            }
+
+            Logger.LogInformation("Assigned HoaCustomer role to user {Email} for tenant {TenantId}", user.Email, TenantContext.TenantId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error assigning customer role to user {Email}", user.Email);
+        }
+    }
+
+    private ApplicationUser CreateUser()
+    {
+        try
+        {
+            return Activator.CreateInstance<ApplicationUser>();
+        }
+        catch
+        {
+            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
+                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+        }
+    }
+
+    private IUserEmailStore<ApplicationUser> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+        return (IUserEmailStore<ApplicationUser>)UserStore;
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [Display(Name = "First Name")]
+        public string FirstName { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Last Name")]
+        public string LastName { get; set; } = "";
+
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 12)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}

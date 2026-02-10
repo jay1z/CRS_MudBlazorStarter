@@ -1,5 +1,6 @@
 ﻿using CRS.Data;
 using CRS.Models.Security;
+using CRS.Services.Billing;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -13,6 +14,7 @@ namespace CRS.Services.Tenant {
         private readonly ILogger<TenantUserService> _logger;
         private readonly IEmailSender<ApplicationUser> _emailSender;
         private readonly IConfiguration _config;
+        private readonly IFeatureGuardService _featureGuard;
         private const string DefaultTempPassword = "Letmeinnow1_";
 
         public TenantUserService(UserManager<ApplicationUser> userManager,
@@ -20,19 +22,28 @@ namespace CRS.Services.Tenant {
                                  IDbContextFactory<ApplicationDbContext> dbFactory,
                                  ILogger<TenantUserService> logger,
                                  IEmailSender<ApplicationUser> emailSender,
-                                 IConfiguration config) {
+                                 IConfiguration config,
+                                 IFeatureGuardService featureGuard) {
             _userManager = userManager;
             _roleManager = roleManager;
             _dbFactory = dbFactory;
             _logger = logger;
             _emailSender = emailSender;
             _config = config;
+            _featureGuard = featureGuard;
         }
 
         public async Task<ApplicationUser?> CreateTenantUserAsync(string email, string password, string firstName, string lastName, int tenantId, string roleName) {
             if (string.IsNullOrWhiteSpace(email)) throw new ArgumentException("email required", nameof(email));
             if (string.IsNullOrWhiteSpace(password)) throw new ArgumentException("password required", nameof(password));
             if (tenantId <= 0) throw new ArgumentException("tenantId required", nameof(tenantId));
+
+            // Check usage limits before creating user
+            var usage = await _featureGuard.GetSpecialistUserUsageAsync(tenantId);
+            if (!usage.CanAdd) {
+                _logger.LogWarning("CreateTenantUserAsync: Cannot add user {Email} - {Message}", email, usage.LimitReachedMessage);
+                throw new InvalidOperationException(usage.LimitReachedMessage ?? "Team member limit reached. Please upgrade your plan.");
+            }
 
             var existing = await _userManager.FindByEmailAsync(email);
             if (existing != null) {

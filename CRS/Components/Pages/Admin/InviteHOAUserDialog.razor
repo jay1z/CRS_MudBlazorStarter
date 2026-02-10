@@ -1,69 +1,96 @@
 ﻿@using CRS.Data
+@using CRS.Models
 @using CRS.Services.Tenant
+@using CRS.Services.Customers
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using MudBlazor
-@inject ITenantUserService TenantUserService
+@using System.Security.Claims
+
+@inject ICustomerService CustomerService
 @inject ITenantContext TenantContext
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
 
 <MudDialog>
     <DialogContent>
         <MudForm @ref="form" Model="model">
             <MudStack Spacing="3">
                 <MudText Typo="Typo.body1" Style="color: #666;">
-                    Invite an HOA board member or auditor to access reserve studies and reports.
+                    Invite a user to access reserve studies and reports for a customer organization.
                 </MudText>
 
+                <!-- Customer Account Selection -->
+                <MudAutocomplete T="CustomerAccount"
+                                 @bind-Value="selectedCustomer"
+                                 Label="Customer Account *"
+                                 Placeholder="Search for a customer..."
+                                 SearchFunc="SearchCustomersAsync"
+                                 ToStringFunc="@(c => c?.Name ?? "")"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.Business"
+                                 ShowProgressIndicator="true"
+                                 Required="true"
+                                 Disabled="@(PreselectedCustomerId.HasValue)">
+                    <ItemTemplate Context="customer">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@customer.Name</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">@GetCustomerTypeName(customer.Type)</MudText>
+                        </MudStack>
+                    </ItemTemplate>
+                </MudAutocomplete>
+
+                @if (selectedCustomer == null && !PreselectedCustomerId.HasValue)
+                {
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="NavigateToCreateCustomer">
+                        Create New Customer
+                    </MudButton>
+                }
+
+                <MudDivider Class="my-2" />
+
                 <MudTextField @bind-Value="model.Email"
-                              Label="Email Address"
+                              Label="Email Address *"
                               Required="true"
                               Variant="Variant.Outlined"
                               Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Email" />
-
-                <MudGrid>
-                    <MudItem xs="6">
-                        <MudTextField @bind-Value="model.FirstName"
-                                      Label="First Name"
-                                      Required="true"
-                                      Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="6">
-                        <MudTextField @bind-Value="model.LastName"
-                                      Label="Last Name"
-                                      Required="true"
-                                      Variant="Variant.Outlined" />
-                    </MudItem>
-                </MudGrid>
-
-                <MudTextField @bind-Value="model.CompanyName"
-                              Label="HOA / Organization Name"
-                              Variant="Variant.Outlined"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Business" />
-
-                <MudTextField @bind-Value="model.Title"
-                              Label="Title / Position"
-                              Placeholder="e.g., Board President, Treasurer, etc."
-                              Variant="Variant.Outlined"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Badge" />
+                              AdornmentIcon="@Icons.Material.Filled.Email"
+                              InputType="InputType.Email" />
 
                 <MudSelect @bind-Value="model.Role"
-                           Label="Role"
+                           Label="Role *"
                            Variant="Variant.Outlined"
                            Required="true"
                            Adornment="Adornment.Start"
                            AdornmentIcon="@Icons.Material.Filled.AccountCircle">
-                    <MudSelectItem Value="@("HOAUser")">
+                    <MudSelectItem Value="CustomerAccountRole.Owner">
                         <div>
-                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Board Member</MudText>
-                            <MudText Typo="Typo.caption" Style="color: #999;">Can view studies and reports, submit requests</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Owner</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">Full access, can manage team members</MudText>
                         </div>
                     </MudSelectItem>
-                    <MudSelectItem Value="@("HOAAuditor")">
+                    <MudSelectItem Value="CustomerAccountRole.Admin">
                         <div>
-                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Auditor</MudText>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Admin</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">Can manage settings and team members</MudText>
+                        </div>
+                    </MudSelectItem>
+                    <MudSelectItem Value="CustomerAccountRole.Member">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Member</MudText>
+                            <MudText Typo="Typo.caption" Style="color: #999;">Can view studies and reports</MudText>
+                        </div>
+                    </MudSelectItem>
+                    <MudSelectItem Value="CustomerAccountRole.Viewer">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">Viewer</MudText>
                             <MudText Typo="Typo.caption" Style="color: #999;">Read-only access for compliance review</MudText>
                         </div>
                     </MudSelectItem>
@@ -71,7 +98,8 @@
 
                 <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
                     <MudText Typo="Typo.body2">
-                        The user will receive an email with instructions to set their password and access the platform.
+                        The user will receive an email invitation to create their account and join the organization.
+                        The invitation expires in 7 days.
                     </MudText>
                 </MudAlert>
             </MudStack>
@@ -82,7 +110,7 @@
         <MudButton OnClick="Submit" 
                    Color="Color.Primary" 
                    Variant="Variant.Filled"
-                   Disabled="isSubmitting"
+                   Disabled="@(isSubmitting || selectedCustomer == null)"
                    StartIcon="@Icons.Material.Filled.Send">
             @(isSubmitting ? "Sending Invitation..." : "Send Invitation")
         </MudButton>
@@ -90,27 +118,69 @@
 </MudDialog>
 
 @code {
-[CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-    
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>
+    /// Optional: Pre-select a customer (when inviting from Customer Details page)
+    /// </summary>
+    [Parameter] public Guid? PreselectedCustomerId { get; set; }
+
     private MudForm? form;
     private InviteModel model = new();
     private bool isSubmitting;
+    private CustomerAccount? selectedCustomer;
+    private List<CustomerAccount> customers = [];
 
     private class InviteModel
     {
         public string Email { get; set; } = string.Empty;
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string? CompanyName { get; set; }
-        public string? Title { get; set; }
-        public string Role { get; set; } = "HOAUser";
+        public CustomerAccountRole Role { get; set; } = CustomerAccountRole.Member;
     }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load all customers for autocomplete
+        customers = await CustomerService.GetAllAsync();
+
+        // If pre-selected, load that customer
+        if (PreselectedCustomerId.HasValue)
+        {
+            selectedCustomer = customers.FirstOrDefault(c => c.Id == PreselectedCustomerId.Value)
+                              ?? await CustomerService.GetByIdAsync(PreselectedCustomerId.Value);
+        }
+    }
+
+    private async Task<IEnumerable<CustomerAccount>> SearchCustomersAsync(string value, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return customers.Take(10);
+
+        return customers
+            .Where(c => c.Name.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+                       (c.ContactName?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false))
+            .Take(10);
+    }
+
+    private static string GetCustomerTypeName(CustomerType type) => type switch
+    {
+        CustomerType.HOABoard => "HOA Board",
+        CustomerType.ManagementCompany => "Management Company",
+        CustomerType.PropertyOwner => "Property Owner",
+        CustomerType.Developer => "Developer",
+        _ => "Other"
+    };
 
     private void Cancel() => MudDialog.Cancel();
 
+    private void NavigateToCreateCustomer()
+    {
+        MudDialog.Cancel();
+        NavigationManager.NavigateTo("/Customers?create=true");
+    }
+
     private async Task Submit()
     {
-        if (form == null || !TenantContext.TenantId.HasValue)
+        if (form == null || selectedCustomer == null)
             return;
 
         await form.Validate();
@@ -120,28 +190,35 @@
         isSubmitting = true;
         try
         {
-            var user = await TenantUserService.CreateTenantUserAsync(
+            // Get current user ID
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
+            {
+                Snackbar.Add("Unable to determine current user", Severity.Error);
+                return;
+            }
+
+            // Check if user already exists in this CustomerAccount
+            var existingMembers = await CustomerService.GetTeamMembersAsync(selectedCustomer.Id);
+            if (existingMembers.Any(m => m.User?.Email?.Equals(model.Email, StringComparison.OrdinalIgnoreCase) ?? false))
+            {
+                Snackbar.Add("This user is already a member of this organization", Severity.Warning);
+                return;
+            }
+
+            // Create the invitation
+            var invitation = await CustomerService.CreateInvitationAsync(
+                selectedCustomer.Id,
                 model.Email.Trim(),
-                "Letmeinnow1_", // Temporary password (user will reset)
-                model.FirstName.Trim(),
-                model.LastName.Trim(),
-                TenantContext.TenantId.Value,
-                model.Role);
+                model.Role,
+                currentUserId);
 
-            if (user != null)
-            {
-                // Update additional fields
-                user.CompanyName = model.CompanyName?.Trim();
-                user.Title = model.Title?.Trim();
-                await TenantUserService.UpdateUserAsync(user);
+            // Send the invitation email
+            await CustomerService.SendInvitationEmailAsync(invitation);
 
-                Snackbar.Add($"Invitation sent to {model.Email}", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(true));
-            }
-            else
-            {
-                Snackbar.Add("Failed to create user. Email may already be registered.", Severity.Error);
-            }
+            Snackbar.Add($"Invitation sent to {model.Email}", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {

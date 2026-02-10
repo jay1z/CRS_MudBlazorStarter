@@ -104,6 +104,18 @@
                             <MudLink Href="Account/ResendEmailConfirmation">Resend email confirmation</MudLink>
                         </MudItem>
                     </MudGrid>
+
+                    <!-- Link to platform signup for wrong tenant -->
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.body2" Class="text-center" Style="color: #666;">
+                        Looking to start your own account?
+                    </MudText>
+                    <MudText Typo="Typo.body2" Class="text-center mt-2">
+                        <MudLink Href="@GetPlatformSignupUrl()" Style="color: #FF8C00;">
+                            <MudIcon Icon="@Icons.Material.Filled.RocketLaunch" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                            Start a Free Trial
+                        </MudLink>
+                    </MudText>
                 </MudItem>
                 @* <MudItem md="6">
                         <MudText GutterBottom="true" Typo="Typo.body1">Use another service to log in.</MudText>
@@ -269,6 +281,27 @@
             // take last two labels
             return string.Join('.', parts.Skip(parts.Length - 2));
         } catch { return "localhost"; }
+    }
+
+    private string GetPlatformSignupUrl() {
+        try {
+            var rootDomain = Config["App:RootDomain"];
+            if (string.IsNullOrWhiteSpace(rootDomain)) {
+                // Derive from current URL
+                rootDomain = DeriveRootDomain();
+            }
+
+            var baseUri = new Uri(NavigationManager.BaseUri);
+            var scheme = baseUri.Scheme;
+
+            // Build platform URL (www.domain.com or just domain.com for localhost)
+            if (rootDomain.Contains("localhost", StringComparison.OrdinalIgnoreCase)) {
+                return $"{scheme}://{rootDomain}/tenant/signup";
+            }
+            return $"{scheme}://www.{rootDomain.TrimStart('.')}/tenant/signup";
+        } catch {
+            return "/tenant/signup";
+        }
     }
 
     private sealed class InputModel {

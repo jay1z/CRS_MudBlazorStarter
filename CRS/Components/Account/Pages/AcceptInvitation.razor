@@ -1,0 +1,282 @@
+﻿@attribute [AllowAnonymous]
+@layout EmptyLayout
+@page "/Account/AcceptInvitation"
+@page "/invite/accept"
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Tenant
+@using CRS.Services.Storage
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILogger<AcceptInvitation> Logger
+@inject NavigationManager NavigationManager
+@inject ITenantContext TenantContext
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ILogoStorageService LogoStorage
+@inject IConfiguration Config
+
+<PageTitle>Accept Invitation</PageTitle>
+
+<div class="d-flex flex-column justify-center align-center pa-6" style="min-height: 100vh; width: 100vw;">
+    <MudPaper Class="pa-8" Elevation="4" Style="max-width: 500px; text-align: center;">
+        @if (_loading)
+        {
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+            <MudText Typo="Typo.body1" Class="mt-4">Validating invitation...</MudText>
+        }
+        else if (_error != null)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Style="font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h5" Class="fw-bold mb-4">Unable to Accept Invitation</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                @_error
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="Account/Login">
+                Go to Login
+            </MudButton>
+        }
+        else if (_success)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Style="font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h5" Class="fw-bold mb-4">Invitation Accepted!</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                You have successfully joined <strong>@_customerAccountName</strong>.
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/Dashboard">
+                Go to Dashboard
+            </MudButton>
+        }
+        else if (_requiresLogin)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Login" Color="Color.Primary" Style="font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h5" Class="fw-bold mb-4">Sign In Required</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                Please sign in to accept the invitation to join <strong>@_customerAccountName</strong>.
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mb-3"
+                       Href="@($"Account/Login?returnUrl={Uri.EscapeDataString($"/Account/AcceptInvitation?token={Token}")}")">
+                Sign In
+            </MudButton>
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.body2" Style="color: #666;">
+                Don't have an account yet?
+            </MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="mt-2"
+                       Href="@($"Account/Register?invite={Token}")">
+                Create Account
+            </MudButton>
+        }
+        else if (_invitation != null && _currentUser != null)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Mail" Color="Color.Primary" Style="font-size: 64px;" Class="mb-4" />
+            <MudText Typo="Typo.h5" Class="fw-bold mb-4">Join @_customerAccountName</MudText>
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                You've been invited to join this organization as a <strong>@_invitation.Role</strong>.
+            </MudText>
+            <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Outlined">
+                <MudText Typo="Typo.body2">
+                    Signed in as <strong>@_currentUser.Email</strong>
+                </MudText>
+            </MudAlert>
+            <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true" Class="mb-2"
+                       OnClick="AcceptInvitationAsync" Disabled="_processing">
+                @if (_processing)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Accept Invitation
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" FullWidth="true" Href="/">
+                Decline
+            </MudButton>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    private bool _loading = true;
+    private bool _processing = false;
+    private bool _success = false;
+    private bool _requiresLogin = false;
+    private string? _error;
+    private CustomerAccountInvitation? _invitation;
+    private string? _customerAccountName;
+    private ApplicationUser? _currentUser;
+
+    [SupplyParameterFromQuery(Name = "token")]
+    private string? Token { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Token))
+        {
+            _error = "No invitation token provided.";
+            _loading = false;
+            return;
+        }
+
+        await ValidateAndProcessInvitationAsync();
+    }
+
+    private async Task ValidateAndProcessInvitationAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            // Find invitation by token
+            _invitation = await db.Set<CustomerAccountInvitation>()
+                .FirstOrDefaultAsync(i => i.Token == Token);
+
+            if (_invitation == null)
+            {
+                _error = "This invitation link is invalid or has already been used.";
+                _loading = false;
+                return;
+            }
+
+            if (_invitation.Status != InvitationStatus.Pending)
+            {
+                _error = _invitation.Status switch
+                {
+                    InvitationStatus.Accepted => "This invitation has already been accepted.",
+                    InvitationStatus.Expired => "This invitation has expired.",
+                    InvitationStatus.Revoked => "This invitation has been revoked.",
+                    _ => "This invitation is no longer valid."
+                };
+                _loading = false;
+                return;
+            }
+
+            if (_invitation.ExpiresAt < DateTime.UtcNow)
+            {
+                _error = "This invitation has expired. Please request a new invitation.";
+                _invitation.Status = InvitationStatus.Expired;
+                await db.SaveChangesAsync();
+                _loading = false;
+                return;
+            }
+
+            // Get customer account name
+            var customerAccount = await db.Set<CustomerAccount>()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == _invitation.CustomerAccountId);
+
+            _customerAccountName = customerAccount?.Name ?? "the organization";
+
+            // Check if user is logged in
+            if (AuthState != null)
+            {
+                var authState = await AuthState;
+                if (authState.User?.Identity?.IsAuthenticated == true)
+                {
+                    var userIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                    if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+                    {
+                        _currentUser = await UserManager.FindByIdAsync(userId.ToString());
+                    }
+                }
+            }
+
+            if (_currentUser == null)
+            {
+                // Check if user with this email already exists
+                var existingUser = await UserManager.FindByEmailAsync(_invitation.Email);
+                if (existingUser != null)
+                {
+                    _requiresLogin = true;
+                }
+                else
+                {
+                    // Redirect to register with invitation token
+                    NavigationManager.NavigateTo($"Account/Register?invite={Token}");
+                    return;
+                }
+            }
+            else
+            {
+                // Check if user is already a member
+                var alreadyMember = await db.Set<CustomerAccountUser>()
+                    .AnyAsync(cau => cau.CustomerAccountId == _invitation.CustomerAccountId && cau.UserId == _currentUser.Id);
+
+                if (alreadyMember)
+                {
+                    _error = "You are already a member of this organization.";
+                    _loading = false;
+                    return;
+                }
+            }
+
+            _loading = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error validating invitation token");
+            _error = "An error occurred while validating your invitation. Please try again.";
+            _loading = false;
+        }
+    }
+
+    private async Task AcceptInvitationAsync()
+    {
+        if (_invitation == null || _currentUser == null)
+        {
+            _error = "Unable to process invitation. Please try again.";
+            return;
+        }
+
+        _processing = true;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            // Create CustomerAccountUser link
+            var customerAccountUser = new CustomerAccountUser
+            {
+                CustomerAccountId = _invitation.CustomerAccountId,
+                UserId = _currentUser.Id,
+                Role = _invitation.Role,
+                JoinedAt = DateTime.UtcNow,
+                InvitedByUserId = _invitation.InvitedByUserId,
+                IsActive = true
+            };
+            db.Set<CustomerAccountUser>().Add(customerAccountUser);
+
+            // Update invitation status
+            var invitation = await db.Set<CustomerAccountInvitation>()
+                .FirstOrDefaultAsync(i => i.Id == _invitation.Id);
+
+            if (invitation != null)
+            {
+                invitation.Status = InvitationStatus.Accepted;
+                invitation.AcceptedAt = DateTime.UtcNow;
+                invitation.AcceptedByUserId = _currentUser.Id;
+            }
+
+            await db.SaveChangesAsync();
+
+            Logger.LogInformation("User {Email} accepted invitation and joined CustomerAccount {AccountId} with role {Role}",
+                _currentUser.Email, _invitation.CustomerAccountId, _invitation.Role);
+
+            _success = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error accepting invitation for user {Email}", _currentUser.Email);
+            _error = "An error occurred while accepting the invitation. Please try again.";
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+}

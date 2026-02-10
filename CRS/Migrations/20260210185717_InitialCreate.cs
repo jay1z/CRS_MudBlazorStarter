@@ -581,7 +581,7 @@ namespace CRS.Migrations
                     ReactivationCount = table.Column<int>(type: "int", nullable: false),
                     LastReactivatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     LastPaymentFailureAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    PlatformFeeRateOverride = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    PlatformFeeRateOverride = table.Column<decimal>(type: "decimal(5,4)", precision: 5, scale: 4, nullable: true),
                     StripeConnectAccountId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StripeConnectOnboardingComplete = table.Column<bool>(type: "bit", nullable: false),
                     StripeConnectPayoutsEnabled = table.Column<bool>(type: "bit", nullable: false),

@@ -200,6 +200,9 @@ namespace CRS.Services.Billing {
                 CustomerEmail = adminEmail,
                 // Enable promo/coupon codes at checkout
                 AllowPromotionCodes = _stripeOptions.AllowPromotionCodes,
+                // For trials: "if_required" allows checkout without payment method during trial
+                // "always" (default) requires payment method upfront
+                PaymentMethodCollection = _stripeOptions.TrialPeriodDays > 0 ? "if_required" : "always",
                 Metadata = new Dictionary<string, string> {
                     ["company_name"] = companyName,
                     ["subdomain"] = subdomain,

@@ -85,7 +85,8 @@ namespace CRS.Controllers {
                 stripeSubscriptionId = tenant.StripeSubscriptionId,
                 active = tenant.IsActive,
                 pendingOwnerEmail,
-                ownerExists
+                ownerExists,
+                subdomain = tenant.Subdomain
             });
         }
 

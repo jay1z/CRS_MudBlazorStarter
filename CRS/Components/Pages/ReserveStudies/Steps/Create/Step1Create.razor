@@ -6,6 +6,7 @@
 @using CRS.Services
 @using CRS.Services.Tenant
 @using CRS.Services.Customers
+@using CRS.Services.Billing
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
@@ -15,6 +16,7 @@
 @inject ITenantContext TenantContext
 @inject ITenantUserRoleService RoleService
 @inject ICustomerService CustomerService
+@inject IFeatureGuardService FeatureGuard
 @inject UserManager<ApplicationUser> UserManager
 @inject ISnackbar Snackbar
 @inject ILogger<Step1Create> Logger
@@ -673,27 +675,37 @@
         Logger.LogInformation("SaveNewCommunityIfNeededAsync: Starting. Model.Community is {State}, Model.CommunityId={CommunityId}", 
             Model?.Community == null ? "null" : "not null", 
             Model?.CommunityId);
-        
+
         // If community is already null (already processed) or CommunityId is already set, consider it saved
         if (Model?.Community == null) {
             Logger.LogInformation("SaveNewCommunityIfNeededAsync: Community is null, returning true");
             return true;
         }
-        
+
         // If CommunityId is already set and valid, the community was already saved
         if (Model.CommunityId != Guid.Empty) {
             Logger.LogInformation("SaveNewCommunityIfNeededAsync: CommunityId already set to {CommunityId}, returning true", Model.CommunityId);
             return true;
         }
-        
+
         if (!IsNewCommunity()) {
             Logger.LogInformation("SaveNewCommunityIfNeededAsync: Not a new community, returning true");
             return true;
         }
 
         try {
+            // Check community limit before creating
+            if (TenantContext.TenantId.HasValue) {
+                var usage = await FeatureGuard.GetCommunityUsageAsync(TenantContext.TenantId.Value);
+                if (!usage.CanAdd) {
+                    Logger.LogWarning("SaveNewCommunityIfNeededAsync: Community limit reached - {Message}", usage.LimitReachedMessage);
+                    Snackbar.Add(usage.LimitReachedMessage ?? "Community limit reached. Please upgrade your plan.", Severity.Error);
+                    return false;
+                }
+            }
+
             await using var context = await DbFactory.CreateDbContextAsync();
-            
+
             if (TenantContext.TenantId.HasValue) {
                 Model.Community.TenantId = TenantContext.TenantId.Value;
             }

@@ -1,20 +1,95 @@
-﻿@page "/Account/ConfirmEmail"
+﻿@attribute [AllowAnonymous]
+@layout EmptyLayout
+@page "/Account/ConfirmEmail"
 
 @using System.Text
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using CRS.Data
+@using CRS.Services.Tenant
+@using CRS.Services.Storage
 
 @inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
+@inject ITenantContext TenantContext
+@inject ILogoStorageService LogoStorage
+@inject ILogger<ConfirmEmail> Logger
 
-<PageTitle>Confirm email</PageTitle>
+<PageTitle>Email Confirmed</PageTitle>
 
-<h1>Confirm email</h1>
-<StatusMessage Message="@statusMessage" />
+<div class="d-flex flex-column justify-center align-center pa-6" style="min-height: 100vh; width: 100vw;">
+    <MudPaper Class="pa-8" Elevation="4" Style="max-width: 500px; text-align: center;">
+        <!-- Logo -->
+        @if (!string.IsNullOrWhiteSpace(_tenantLogoUrl))
+        {
+            <MudImage Src="@_tenantLogoUrl" Alt="@_logoAltText" Class="mb-4" Style="max-height: 80px; object-fit: contain;" />
+        }
+        else
+        {
+            <MudImage Src="images/logo.png" Alt="Logo" Width="100" Height="100" Class="mb-4" />
+        }
+
+        @if (_success)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Style="font-size: 80px;" Class="mb-4" />
+
+            <MudText Typo="Typo.h4" Class="fw-bold mb-2">Email Confirmed!</MudText>
+
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                Thank you for verifying your email address. Your account is now fully activated.
+            </MudText>
+
+            <MudAlert Severity="Severity.Success" Class="mb-4" Variant="Variant.Outlined">
+                <MudText Typo="Typo.body2">
+                    You can now access all features of your account.
+                </MudText>
+            </MudAlert>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true"
+                       Href="Account/Login" Class="mb-2">
+                Sign In to Your Account
+            </MudButton>
+
+            <MudText Typo="Typo.caption" Style="color: #999;" Class="mt-3">
+                You will be redirected to the login page.
+            </MudText>
+        }
+        else
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Style="font-size: 80px;" Class="mb-4" />
+
+            <MudText Typo="Typo.h4" Class="fw-bold mb-2">Confirmation Failed</MudText>
+
+            <MudText Typo="Typo.body1" Class="mb-4" Style="color: #666;">
+                @_statusMessage
+            </MudText>
+
+            <MudAlert Severity="Severity.Warning" Class="mb-4" Variant="Variant.Outlined">
+                <MudText Typo="Typo.body2">
+                    The confirmation link may have expired or already been used. Please request a new confirmation email.
+                </MudText>
+            </MudAlert>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true"
+                       Href="Account/ResendEmailConfirmation" Class="mb-2">
+                Request New Confirmation Email
+            </MudButton>
+
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.caption" Style="color: #999;">
+                <MudLink Href="Account/Login" Style="color: #666;">← Back to Login</MudLink>
+            </MudText>
+        }
+    </MudPaper>
+</div>
 
 @code {
-    private string? statusMessage;
+    private bool _success = false;
+    private string? _statusMessage;
+    private string? _tenantLogoUrl;
+    private string _logoAltText = "Logo";
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -25,24 +100,64 @@
     [SupplyParameterFromQuery]
     private string? Code { get; set; }
 
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadTenantLogoAsync();
+
         if (UserId is null || Code is null)
         {
-            RedirectManager.RedirectTo("");
+            _statusMessage = "Invalid confirmation link. Please check your email for the correct link.";
+            return;
         }
 
         var user = await UserManager.FindByIdAsync(UserId);
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = $"Error loading user with ID {UserId}";
+            _statusMessage = "We couldn't find an account associated with this confirmation link.";
+            return;
         }
-        else
+
+        try
         {
             var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
             var result = await UserManager.ConfirmEmailAsync(user, code);
-            statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
+
+            if (result.Succeeded)
+            {
+                _success = true;
+                Logger.LogInformation("User {Email} confirmed their email address", user.Email);
+            }
+            else
+            {
+                _statusMessage = "Unable to confirm your email address. The link may have expired or already been used.";
+                Logger.LogWarning("Email confirmation failed for user {Email}: {Errors}", 
+                    user.Email, string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error confirming email for user {UserId}", UserId);
+            _statusMessage = "An error occurred while confirming your email. Please try again.";
+        }
+    }
+
+    private async Task LoadTenantLogoAsync()
+    {
+        if (TenantContext.TenantId.HasValue)
+        {
+            try
+            {
+                _tenantLogoUrl = await LogoStorage.GetLogoUrlAsync(TenantContext.TenantId.Value);
+                _logoAltText = $"{TenantContext.TenantName ?? "Company"} Logo";
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Error loading tenant logo");
+            }
         }
     }
 }
