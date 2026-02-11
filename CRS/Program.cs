@@ -254,8 +254,8 @@ void ConfigureServices(WebApplicationBuilder builder) {
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     });
 
-    // Register Coravel
-    builder.Services.AddMailer(builder.Configuration);
+    // Register Coravel - Use Azure Communication Services for email
+    builder.Services.AddEmailServices(builder.Configuration); // Uses ACS if enabled, otherwise Coravel SMTP
     builder.Services.AddEmailLogging(); // Wrap IMailer with logging
     builder.Services.AddScheduler(); // Add Coravel scheduler for background jobs
     builder.Services.AddScoped<ReserveStudyCreatedListener>();

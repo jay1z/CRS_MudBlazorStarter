@@ -24,8 +24,44 @@
 
 <PageTitle>Dashboard - @TenantName</PageTitle>
 
+@if (!_isInitialized)
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 mb-8">
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" Class="mb-6" Style="border-radius: 16px;" />
+        <MudGrid Spacing="3" Class="mb-6">
+            <MudItem xs="6" sm="4" md="2">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" Style="border-radius: 12px;" />
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" Style="border-radius: 12px;" />
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" Style="border-radius: 12px;" />
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" Style="border-radius: 12px;" />
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" Style="border-radius: 12px;" />
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" Style="border-radius: 12px;" />
+            </MudItem>
+        </MudGrid>
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="7">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="400px" Style="border-radius: 16px;" />
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="400px" Style="border-radius: 16px;" />
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
+else
+{
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 mb-8">
-    
+
     @* Role-based welcome banner *@
     @if (RoleService.IsHOAUser || RoleService.IsHOAAuditor)
     {
@@ -870,6 +906,7 @@
     </MudGrid>
     }
 </MudContainer>
+}
 
 <style>
     /* Clickable KPI cards get hover effects */
@@ -900,7 +937,8 @@
 private string TenantName => TenantContext.TenantName ?? "ALX Reserve Cloud";
 private GlobalBannerInfo? globalBanner;
 private bool bannerDismissed = false;
-    
+private bool _isInitialized = false;
+
 // Brand colors from tenant settings
 private string primaryColor = "#667eea";
 private string secondaryColor = "#764ba2";
@@ -954,10 +992,10 @@ protected override async Task OnInitializedAsync()
 {
     // Initialize role service
     await RoleService.InitializeAsync();
-        
+
     // Load global banner from system settings
     globalBanner = await SystemSettingsService.GetGlobalBannerInfoAsync();
-    
+
     // Load tenant brand colors from Branding & Theme settings
     try
     {
@@ -975,36 +1013,42 @@ protected override async Task OnInitializedAsync()
         // Use default colors if branding can't be loaded
     }
 
-        // Get current user ID and name for personalization
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
-        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
-        {
-            currentUserId = userId;
-            
-            // Get user's first name from the database profile
-            var user = await UserManager.FindByIdAsync(userId.ToString());
-            if (user != null && !string.IsNullOrWhiteSpace(user.FirstName))
-            {
-                currentUserName = user.FirstName;
-            }
-        }
+    // Get current user ID and name for personalization
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var userIdClaim = authState.User.FindFirst(ClaimTypes.NameIdentifier);
+    if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+    {
+        currentUserId = userId;
 
-        // Load real code from services based on role and tenant context
-        await LoadDashboardDataAsync();
-
-        // Load HOA user studies and invoices if applicable
-        if ((RoleService.IsHOAUser || RoleService.IsHOAAuditor) && currentUserId.HasValue)
+        // Get user's first name using factory to avoid DbContext concurrency issues
+        await using var userContext = await DbFactory.CreateDbContextAsync();
+        var user = await userContext.Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.FirstName })
+            .FirstOrDefaultAsync();
+        if (user != null && !string.IsNullOrWhiteSpace(user.FirstName))
         {
-            await LoadHOAUserStudiesAsync();
-            await LoadHOAUserInvoicesAsync();
-        }
-        else if (RoleService.IsTenantOwner || RoleService.IsTenantSpecialist || RoleService.IsPlatformAdmin)
-        {
-            // Load invoice data for staff/admin
-            await LoadInvoiceDataAsync();
+            currentUserName = user.FirstName;
         }
     }
+
+    // Load real code from services based on role and tenant context
+    await LoadDashboardDataAsync();
+
+    // Load HOA user studies and invoices if applicable
+    if ((RoleService.IsHOAUser || RoleService.IsHOAAuditor) && currentUserId.HasValue)
+    {
+        await LoadHOAUserStudiesAsync();
+        await LoadHOAUserInvoicesAsync();
+    }
+    else if (RoleService.IsTenantOwner || RoleService.IsTenantSpecialist || RoleService.IsPlatformAdmin)
+    {
+        // Load invoice data for staff/admin
+        await LoadInvoiceDataAsync();
+    }
+
+    _isInitialized = true;
+}
 
 private async Task LoadDashboardDataAsync()
 {

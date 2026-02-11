@@ -21,7 +21,8 @@ public class TeamInvitationMailable : Mailable<TeamInvitationEmail>
 
     public override void Build()
     {
-        var from = _fromEmail ?? "no-reply@reservecloud.com";
+        // Use Azure Communication Services default domain if no custom sender provided
+        var from = _fromEmail ?? "DoNotReply@4b9bbf9f-0f50-4984-9cf1-a70b8e8b1f32.azurecomm.net";
         var subject = $"You're invited to join {_model.CustomerName} on {_model.TenantName}";
 
         this.To(_recipientEmail)

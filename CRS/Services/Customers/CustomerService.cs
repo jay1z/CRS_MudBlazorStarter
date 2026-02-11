@@ -712,7 +712,7 @@ namespace CRS.Services.Customers {
                     ExpiresAt = invitation.ExpiresAt
                 };
 
-                var fromEmail = tenant?.DefaultNotificationEmail ?? "no-reply@alxreservecloud.com";
+                var fromEmail = tenant?.DefaultNotificationEmail ?? "DoNotReply@4b9bbf9f-0f50-4984-9cf1-a70b8e8b1f32.azurecomm.net";
                 var mailable = new TeamInvitationMailable(emailModel, invitation.Email, fromEmail);
 
                 await _mailer.SendAsync(mailable);
