@@ -364,3 +364,5 @@ FodyWeavers.xsd
 /CRS/appsettings.Development.json
 /CRS/appsettings.json
 /CRS/appsettings.Development.json
+/CRS/appsettings.json
+/CRS/appsettings.Production.json
