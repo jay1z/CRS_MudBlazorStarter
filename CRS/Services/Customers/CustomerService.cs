@@ -292,8 +292,8 @@ namespace CRS.Services.Customers {
 
                 // Build URLs
                 var baseUrl = !string.IsNullOrEmpty(subdomain) 
-                    ? $"https://{subdomain}.reservecloud.com" 
-                    : "https://reservecloud.com";
+                    ? $"https://{subdomain}.alxreservecloud.com" 
+                    : "https://alxreservecloud.com";
 
                 var emailModel = new CustomerWelcomeEmail
                 {
@@ -307,7 +307,7 @@ namespace CRS.Services.Customers {
                     SupportPhone = null // Tenant doesn't have a phone field
                 };
 
-                var fromEmail = tenant?.DefaultNotificationEmail ?? "no-reply@reservecloud.com";
+                var fromEmail = tenant?.DefaultNotificationEmail ?? "no-reply@alxreservecloud.com";
                 var mailable = new CustomerWelcomeMailable(emailModel, customer.Email, fromEmail);
 
                 await _mailer.SendAsync(mailable);
@@ -678,8 +678,11 @@ namespace CRS.Services.Customers {
             {
                 await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
-                // Get customer and tenant info
+                // Get customer and tenant info - use IgnoreQueryFilters to ensure we can
+                // find the customer regardless of the current tenant context, since invitations
+                // may be sent/resent in various contexts
                 var customer = await db.CustomerAccounts
+                    .IgnoreQueryFilters()
                     .FirstOrDefaultAsync(c => c.Id == invitation.CustomerAccountId, ct);
 
                 if (customer == null) return;
@@ -694,8 +697,8 @@ namespace CRS.Services.Customers {
 
                 // Build accept URL
                 var baseUrl = !string.IsNullOrEmpty(subdomain)
-                    ? $"https://{subdomain}.reservecloud.com"
-                    : "https://reservecloud.com";
+                    ? $"https://{subdomain}.alxreservecloud.com"
+                    : "https://alxreservecloud.com";
                 var acceptUrl = $"{baseUrl}/Account/AcceptInvitation?token={Uri.EscapeDataString(invitation.Token)}";
 
                 var emailModel = new TeamInvitationEmail
@@ -709,7 +712,7 @@ namespace CRS.Services.Customers {
                     ExpiresAt = invitation.ExpiresAt
                 };
 
-                var fromEmail = tenant?.DefaultNotificationEmail ?? "no-reply@reservecloud.com";
+                var fromEmail = tenant?.DefaultNotificationEmail ?? "no-reply@alxreservecloud.com";
                 var mailable = new TeamInvitationMailable(emailModel, invitation.Email, fromEmail);
 
                 await _mailer.SendAsync(mailable);

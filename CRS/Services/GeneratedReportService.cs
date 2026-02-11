@@ -787,7 +787,7 @@ public class GeneratedReportService : IGeneratedReportService
                 var tenantInfo = new TenantEmailInfo
                 {
                     CompanyName = tenant?.Name ?? "Reserve Study Services",
-                    FromEmail = branding?.Email ?? "no-reply@reservecloud.com",
+                    FromEmail = branding?.Email ?? "no-reply@alxreservecloud.com",
                     Phone = branding?.Phone,
                     Website = branding?.Website,
                     Address = branding?.Address,

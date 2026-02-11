@@ -299,7 +299,7 @@ public class InvoicePaymentService : IInvoicePaymentService
                 var tenant = await context.Tenants.AsNoTracking()
                     .FirstOrDefaultAsync(t => t.Id == invoice.TenantId, ct);
 
-                var baseUrl = _configuration["App:RootDomain"] ?? "reservecloud.com";
+                var baseUrl = _configuration["App:RootDomain"] ?? "alxreservecloud.com";
                 var subdomain = tenant?.Subdomain ?? "app";
                 var invoiceUrl = $"https://{subdomain}.{baseUrl}/Invoices/Details/{invoice.Id}";
 
@@ -427,7 +427,7 @@ public class InvoicePaymentService : IInvoicePaymentService
                             .Include(rs => rs.Community)
                             .FirstOrDefaultAsync(rs => rs.Id == newInvoice.ReserveStudyId, ct);
 
-                        var baseUrl = _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://app.reservecloud.com";
+                        var baseUrl = _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://app.alxreservecloud.com";
 
                         var notification = new InvoiceStaffNotificationEmail
                         {

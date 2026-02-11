@@ -231,7 +231,11 @@ namespace CRS.Services.Billing {
             }
 
             var session = await sessionService.CreateAsync(sessionOptions, null, ct);
-            _logger.LogInformation("Created deferred checkout session {SessionId} for subdomain {Subdomain}", session.Id, subdomain);
+            _logger.LogInformation(
+                "Created deferred checkout session {SessionId} for subdomain {Subdomain}. " +
+                "TrialDays={TrialDays}, PaymentMethodCollection={PaymentMethodCollection}, Mode={Mode}, PriceId={PriceId}",
+                session.Id, subdomain, _stripeOptions.TrialPeriodDays, 
+                sessionOptions.PaymentMethodCollection, sessionOptions.Mode, priceId);
             return session.Url;
         }
 

@@ -21,7 +21,7 @@ public class BillingNotificationMailable : Mailable<BillingNotificationEmail>
         var template = GetTemplate();
 
         To(_email.OwnerEmail)
-            .From("billing@reservecloud.com")
+            .From("no-reply@alxreservecloud.com")
             .Subject(subject)
             .View(template, _email);
     }

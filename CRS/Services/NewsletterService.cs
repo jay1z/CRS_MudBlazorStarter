@@ -295,7 +295,7 @@ public class NewsletterService : INewsletterService
     {
         try
         {
-            var baseUrl = _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://reservecloud.com";
+            var baseUrl = _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://alxreservecloud.com";
             var confirmUrl = $"{baseUrl}/newsletter/confirm?token={subscriber.ConfirmationToken}";
             var unsubscribeUrl = $"{baseUrl}/newsletter/unsubscribe?id={subscriber.Id}";
 
@@ -434,7 +434,7 @@ public class NewsletterService : INewsletterService
         campaign.TargetCount = subscribers.Count;
         await context.SaveChangesAsync(ct);
 
-        var baseUrl = _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://reservecloud.com";
+        var baseUrl = _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://alxreservecloud.com";
         int sentCount = 0;
         int failedCount = 0;
 
@@ -564,7 +564,7 @@ public class NewsletterService : INewsletterService
             return "<p>Campaign not found</p>";
         }
 
-        var baseUrl = _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://reservecloud.com";
+        var baseUrl = _configuration["Application:BaseUrl"]?.TrimEnd('/') ?? "https://alxreservecloud.com";
 
         // Return the HTML content with placeholder values
         return campaign.HtmlContent

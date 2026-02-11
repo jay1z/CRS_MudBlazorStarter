@@ -75,9 +75,9 @@ else if (_requiresInvitation)
         </MudPaper>
     </div>
 }
-else if (!TenantContext.TenantId.HasValue || TenantContext.IsPlatformHost)
+else if ((!TenantContext.TenantId.HasValue || TenantContext.IsPlatformHost) && _invitation == null)
 {
-    <!-- Platform host - redirect to tenant signup -->
+    <!-- Platform host - redirect to tenant signup (only if no valid invitation) -->
     <div class="d-flex flex-column justify-center align-center pa-6" style="height: 100vh; width: 100vw;">
         <MudPaper Class="pa-8" Elevation="4" Style="max-width: 600px; text-align: center;">
             <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Primary" Style="font-size: 64px;" Class="mb-4" />
@@ -400,15 +400,15 @@ else
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
-            
-            // Find or create the HOA Customer role
-            var customerRole = await db.Roles2.FirstOrDefaultAsync(r => r.Name == "HoaCustomer");
+
+            // Find or create the HOA User role (must match TenantUserRoleService.IsHOAUser check)
+            var customerRole = await db.Roles2.FirstOrDefaultAsync(r => r.Name == "HOAUser");
             if (customerRole == null)
             {
                 customerRole = new Role
                 {
-                    Name = "HoaCustomer",
-                    Scope = RoleScope.Tenant
+                    Name = "HOAUser",
+                    Scope = RoleScope.External
                 };
                 db.Roles2.Add(customerRole);
                 await db.SaveChangesAsync();
@@ -431,7 +431,7 @@ else
                 await db.SaveChangesAsync();
             }
 
-            Logger.LogInformation("Assigned HoaCustomer role to user {Email} for tenant {TenantId}", user.Email, TenantContext.TenantId);
+            Logger.LogInformation("Assigned HOAUser role to user {Email} for tenant {TenantId}", user.Email, TenantContext.TenantId);
         }
         catch (Exception ex)
         {
