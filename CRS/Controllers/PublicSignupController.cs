@@ -36,13 +36,13 @@ namespace CRS.Controllers {
                 _logger.LogWarning("Signup attempt with missing required fields");
                 return BadRequest("Missing required fields");
             }
-            
+
             // Validate tier
             if (!Enum.TryParse<SubscriptionTier>(request.Tier, true, out var tier)) {
                 _logger.LogWarning("Signup attempt with invalid tier: {Tier}", request.Tier);
                 return BadRequest("Invalid tier");
             }
-            
+
             // Validate interval
             if (!Enum.TryParse<Services.Billing.BillingInterval>(request.Interval, true, out var interval)) {
                 interval = Services.Billing.BillingInterval.Monthly;
@@ -87,7 +87,7 @@ namespace CRS.Controllers {
                 return Conflict("This email has a pending registration. Please check your email or contact support.");
             }
 
-            // All validations passed - create checkout session
+            // All validations passed - create Stripe checkout session (includes trial if configured)
             try {
                 _logger.LogInformation("Creating Stripe checkout session for subdomain {Subdomain}, email {Email}, tier {Tier}", 
                     sub, normalizedEmail, tier);
@@ -98,7 +98,7 @@ namespace CRS.Controllers {
                     tier, 
                     interval, 
                     ct);
-                
+
                 _logger.LogInformation("Stripe checkout session created successfully for {Subdomain}", sub);
                 return Ok(new StartSignupResponse(checkoutUrl, 0, Guid.Empty));
             } catch (Exception ex) {

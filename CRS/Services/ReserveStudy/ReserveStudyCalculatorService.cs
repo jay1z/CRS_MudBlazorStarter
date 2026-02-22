@@ -28,6 +28,15 @@ public interface IReserveStudyCalculatorService
     Task<ReserveStudyResult> CalculateFromStudyAsync(Guid studyId);
 
     /// <summary>
+    /// Calculates results from a ReserveStudy and persists key metrics to the study record.
+    /// This includes PercentFunded, FullyFundedBalance, RecommendedContribution, and FundingStatus.
+    /// </summary>
+    /// <param name="studyId">The ReserveStudy ID.</param>
+    /// <param name="scenarioId">Optional scenario ID that was used for this calculation.</param>
+    /// <returns>Calculation result from study data.</returns>
+    Task<ReserveStudyResult> CalculateAndPersistAsync(Guid studyId, int? scenarioId = null);
+
+    /// <summary>
     /// Gets or creates a scenario from a ReserveStudy.
     /// If no scenario exists for the study, creates one from study elements.
     /// </summary>
@@ -182,6 +191,73 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
         var result = _calculator.Calculate(input);
 
         return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<ReserveStudyResult> CalculateAndPersistAsync(Guid studyId, int? scenarioId = null)
+    {
+        // First, perform the calculation
+        var result = await CalculateFromStudyAsync(studyId);
+
+        if (!result.IsSuccess)
+        {
+            _logger?.LogWarning("CalculateAndPersistAsync: Calculation failed for study {StudyId}: {Error}", 
+                studyId, result.ErrorMessage);
+            return result;
+        }
+
+        // Now persist the key metrics to the ReserveStudy record
+        await using var context = await _dbFactory.CreateDbContextAsync();
+
+        var study = await context.ReserveStudies
+            .FirstOrDefaultAsync(s => s.Id == studyId);
+
+        if (study == null)
+        {
+            _logger?.LogError("CalculateAndPersistAsync: Study {StudyId} not found when persisting results", studyId);
+            return result;
+        }
+
+        // Map calculator results to study fields
+        study.PercentFunded = result.PercentFunded;
+        study.FundingStatus = MapFundingStatus(result.FundingStatus);
+        study.FullyFundedBalance = result.FullyFundedBalance;
+        study.RecommendedMonthlyContribution = result.MonthlyContributionYear1;
+        study.RecommendedAnnualContribution = result.AnnualContributionYear1;
+        study.SpecialAssessmentRisk = result.SpecialAssessmentWarning;
+        study.EstimatedSpecialAssessment = result.SpecialAssessmentRequired > 0 ? result.SpecialAssessmentRequired : null;
+        study.ProjectionYears = result.ProjectionYears;
+        study.CalculationLastUpdated = DateTime.UtcNow;
+        study.LastCalculatedScenarioId = scenarioId;
+
+        // Set next scheduled update (typically 3 years for full study, 1 year for update)
+        var yearsUntilUpdate = study.StudyType?.Contains("Update", StringComparison.OrdinalIgnoreCase) == true ? 1 : 3;
+        study.NextScheduledUpdate = DateTime.UtcNow.AddYears(yearsUntilUpdate);
+
+        await context.SaveChangesAsync();
+
+        _logger?.LogInformation(
+            "CalculateAndPersistAsync: Persisted results for study {StudyId}. " +
+            "PercentFunded={PercentFunded:F1}%, FundingStatus={FundingStatus}, " +
+            "FullyFundedBalance={FullyFundedBalance:C0}, MonthlyContribution={MonthlyContribution:C0}",
+            studyId, study.PercentFunded, study.FundingStatus, 
+            study.FullyFundedBalance, study.RecommendedMonthlyContribution);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Maps the core calculator FundingStatus enum to the model FundingStatusLevel enum.
+    /// </summary>
+    private static FundingStatusLevel MapFundingStatus(CRS.Core.ReserveCalculator.Enums.FundingStatus coreStatus)
+    {
+        return coreStatus switch
+        {
+            CRS.Core.ReserveCalculator.Enums.FundingStatus.Strong => FundingStatusLevel.Strong,
+            CRS.Core.ReserveCalculator.Enums.FundingStatus.Fair => FundingStatusLevel.Fair,
+            CRS.Core.ReserveCalculator.Enums.FundingStatus.Weak => FundingStatusLevel.Weak,
+            _ => FundingStatusLevel.Critical
+        };
     }
 
     /// <inheritdoc />

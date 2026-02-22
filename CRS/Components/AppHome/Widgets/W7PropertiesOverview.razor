@@ -2,6 +2,7 @@
 @inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
 @inject CRS.Services.Tenant.ITenantContext TenantContext
 @inject ILogger<W7PropertiesOverview> Logger
+@inject NavigationManager NavigationManager
 
 <MudPaper Class="pa-4 mb-4" Elevation="1">
     <MudText Typo="Typo.h6">Properties Overview</MudText>
@@ -76,8 +77,8 @@
     }
 
     private void CreateProperty() {
-        // TODO: Navigate to property create flow or open dialog in future
         Logger.LogInformation("CTA: Create first property clicked for tenant {TenantId}", TenantContext.TenantId);
+        NavigationManager.NavigateTo("/Communities/Create");
     }
 
     private sealed class RowVm

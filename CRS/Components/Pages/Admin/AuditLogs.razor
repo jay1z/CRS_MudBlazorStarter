@@ -1,0 +1,482 @@
+﻿@page "/admin/auditlogs"
+@using CRS.Services.Interfaces
+@using CRS.Models
+@using Microsoft.JSInterop
+@attribute [Authorize(Roles = "Admin,TenantOwner")]
+@inject IAuditLogService AuditLogService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>Audit Logs - ALX Reserve Cloud</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h4" Style="font-weight: 700;">Audit Logs</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Track all changes and activity in your account
+                </MudText>
+            </MudStack>
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Download"
+                       OnClick="ExportToCsv"
+                       Disabled="_exporting">
+                @if (_exporting)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Exporting...</span>
+                }
+                else
+                {
+                    <span>Export CSV</span>
+                }
+            </MudButton>
+        </MudStack>
+
+        <!-- Filters -->
+        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6" md="3">
+                    <MudTextField @bind-Value="_filter.SearchText"
+                                  Label="Search"
+                                  Placeholder="Search logs..."
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  Immediate="true"
+                                  DebounceInterval="500"
+                                  OnDebounceIntervalElapsed="SearchChanged" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="2">
+                    <MudSelect @bind-Value="_filter.Action"
+                               Label="Action"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var action in _distinctActions)
+                        {
+                            <MudSelectItem Value="@action">@action</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="2">
+                    <MudSelect @bind-Value="_filter.TableName"
+                               Label="Entity Type"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var table in _distinctTables)
+                        {
+                            <MudSelectItem Value="@table">@table</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="2">
+                    <MudDatePicker @bind-Date="_fromDate"
+                                   Label="From Date"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   MaxDate="DateTime.Today" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="2">
+                    <MudDatePicker @bind-Date="_toDate"
+                                   Label="To Date"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   MaxDate="DateTime.Today" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="1" Class="d-flex align-end">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               OnClick="ApplyFilters"
+                               FullWidth="true">
+                        Filter
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Results -->
+        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+            @if (_loading)
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Loading audit logs...</MudText>
+                </MudStack>
+            }
+            else if (_result.Items.Count == 0)
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Color="Color.Secondary" />
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">No audit logs found</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Try adjusting your filters or check back later
+                    </MudText>
+                </MudStack>
+            }
+            else
+            {
+                <MudTable Items="@_result.Items" 
+                          Dense="true" 
+                          Hover="true" 
+                          Striped="true"
+                          FixedHeader="true"
+                          Height="calc(100vh - 400px)">
+                    <HeaderContent>
+                        <MudTh Style="width: 160px;">Timestamp</MudTh>
+                        <MudTh Style="width: 160px;">User</MudTh>
+                        <MudTh Style="width: 100px;">Action</MudTh>
+                        <MudTh Style="width: 140px;">Entity</MudTh>
+                        <MudTh>Changes</MudTh>
+                        <MudTh Style="width: 80px;">Details</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Timestamp">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                                    @context.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy")
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="color: #888;">
+                                    @context.CreatedAt.ToLocalTime().ToString("HH:mm:ss")
+                                </MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="User">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2">
+                                    @(context.ActorName ?? context.User?.Email ?? "System")
+                                </MudText>
+                                @if (!string.IsNullOrEmpty(context.RemoteIp))
+                                {
+                                    <MudText Typo="Typo.caption" Style="color: #888;">
+                                        @context.RemoteIp
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Action">
+                            <MudChip T="string" 
+                                     Size="Size.Small" 
+                                     Color="@GetActionColor(context.Action)"
+                                     Variant="Variant.Filled">
+                                @context.Action
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Entity">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">
+                                    @context.TableName
+                                </MudText>
+                                @if (!string.IsNullOrEmpty(context.RecordId))
+                                {
+                                    <MudText Typo="Typo.caption" Style="color: #888; font-family: monospace;">
+                                        @TruncateId(context.RecordId)
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Changes">
+                            @if (!string.IsNullOrEmpty(context.ColumnName))
+                            {
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.caption" Style="font-weight: 600;">
+                                        @context.ColumnName
+                                    </MudText>
+                                    @if (context.Action == "Modified" || context.Action == "Deleted")
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: #ef4444;">
+                                            - @TruncateValue(context.OldValue)
+                                        </MudText>
+                                    }
+                                    @if (context.Action == "Modified" || context.Action == "Created")
+                                    {
+                                        <MudText Typo="Typo.caption" Style="color: #10b981;">
+                                            + @TruncateValue(context.NewValue)
+                                        </MudText>
+                                    }
+                                </MudStack>
+                            }
+                            else if (!string.IsNullOrEmpty(context.Path))
+                            {
+                                <MudText Typo="Typo.caption" Style="font-family: monospace; color: #888;">
+                                    @context.Method @TruncateValue(context.Path, 50)
+                                </MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Details">
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                           Size="Size.Small"
+                                           Color="Color.Primary"
+                                           OnClick="@(() => ShowDetails(context))"
+                                           Title="View Details" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+
+                <!-- Pagination -->
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-4">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Showing @((_result.Page - 1) * _result.PageSize + 1) - @(Math.Min(_result.Page * _result.PageSize, _result.TotalCount)) of @_result.TotalCount entries
+                    </MudText>
+                    <MudPagination Count="@_result.TotalPages"
+                                   Selected="@_result.Page"
+                                   SelectedChanged="PageChanged"
+                                   Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   ShowFirstButton="true"
+                                   ShowLastButton="true" />
+                </MudStack>
+            }
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+<!-- Details Dialog -->
+<MudDialog @bind-Visible="_showDetailsDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+            Audit Log Details
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedLog != null)
+        {
+            <MudStack Spacing="3">
+                <MudGrid>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Timestamp</MudText>
+                        <MudText Typo="Typo.body1">@_selectedLog.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">User</MudText>
+                        <MudText Typo="Typo.body1">@(_selectedLog.ActorName ?? _selectedLog.User?.Email ?? "System")</MudText>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Action</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="@GetActionColor(_selectedLog.Action)">@_selectedLog.Action</MudChip>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Entity Type</MudText>
+                        <MudText Typo="Typo.body1">@_selectedLog.TableName</MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Record ID</MudText>
+                        <MudText Typo="Typo.body1" Style="font-family: monospace;">@_selectedLog.RecordId</MudText>
+                    </MudItem>
+                    @if (!string.IsNullOrEmpty(_selectedLog.ColumnName))
+                    {
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Column Changed</MudText>
+                            <MudText Typo="Typo.body1">@_selectedLog.ColumnName</MudText>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedLog.OldValue))
+                    {
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Old Value</MudText>
+                            <MudPaper Elevation="0" Class="pa-2" Style="background: #fef2f2; border-radius: 8px; max-height: 150px; overflow: auto;">
+                                <MudText Typo="Typo.body2" Style="font-family: monospace; white-space: pre-wrap; word-break: break-all;">@_selectedLog.OldValue</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedLog.NewValue))
+                    {
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">New Value</MudText>
+                            <MudPaper Elevation="0" Class="pa-2" Style="background: #f0fdf4; border-radius: 8px; max-height: 150px; overflow: auto;">
+                                <MudText Typo="Typo.body2" Style="font-family: monospace; white-space: pre-wrap; word-break: break-all;">@_selectedLog.NewValue</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedLog.RemoteIp))
+                    {
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">IP Address</MudText>
+                            <MudText Typo="Typo.body1" Style="font-family: monospace;">@_selectedLog.RemoteIp</MudText>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedLog.Method))
+                    {
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">HTTP Method</MudText>
+                            <MudText Typo="Typo.body1">@_selectedLog.Method</MudText>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedLog.Path))
+                    {
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Request Path</MudText>
+                            <MudText Typo="Typo.body1" Style="font-family: monospace;">@_selectedLog.Path</MudText>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedLog.CorrelationId))
+                    {
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Correlation ID</MudText>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.body1" Style="font-family: monospace;">@_selectedLog.CorrelationId</MudText>
+                                <MudIconButton Icon="@Icons.Material.Filled.FilterAlt" 
+                                               Size="Size.Small" 
+                                               Title="Filter by this correlation ID"
+                                               OnClick="@(() => FilterByCorrelation(_selectedLog.CorrelationId!))" />
+                            </MudStack>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDetailsDialog = false)">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private AuditLogFilter _filter = new();
+    private AuditLogPagedResult _result = new();
+    private List<string> _distinctTables = [];
+    private List<string> _distinctActions = [];
+    private bool _loading = true;
+    private bool _exporting = false;
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+    private bool _showDetailsDialog = false;
+    private AuditLog? _selectedLog;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Set default date range to last 30 days
+        _toDate = DateTime.Today;
+        _fromDate = DateTime.Today.AddDays(-30);
+        
+        await LoadDistinctValuesAsync();
+        await LoadAuditLogsAsync();
+    }
+
+    private async Task LoadDistinctValuesAsync()
+    {
+        try
+        {
+            _distinctTables = await AuditLogService.GetDistinctTableNamesAsync();
+            _distinctActions = await AuditLogService.GetDistinctActionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading filter options: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadAuditLogsAsync(int page = 1)
+    {
+        _loading = true;
+        StateHasChanged();
+
+        try
+        {
+            _filter.FromDate = _fromDate;
+            _filter.ToDate = _toDate;
+            _result = await AuditLogService.GetAuditLogsAsync(_filter, page);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading audit logs: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        await LoadAuditLogsAsync(1);
+    }
+
+    private async Task SearchChanged()
+    {
+        await LoadAuditLogsAsync(1);
+    }
+
+    private async Task PageChanged(int page)
+    {
+        await LoadAuditLogsAsync(page);
+    }
+
+    private async Task ExportToCsv()
+    {
+        _exporting = true;
+        StateHasChanged();
+
+        try
+        {
+            _filter.FromDate = _fromDate;
+            _filter.ToDate = _toDate;
+            var csvData = await AuditLogService.ExportToCsvAsync(_filter);
+            var fileName = $"audit_logs_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            
+            // Download via JS interop
+            await JS.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(csvData));
+            
+            Snackbar.Add("Audit logs exported successfully", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error exporting: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _exporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowDetails(AuditLog log)
+    {
+        _selectedLog = log;
+        _showDetailsDialog = true;
+    }
+
+    private async Task FilterByCorrelation(string correlationId)
+    {
+        _showDetailsDialog = false;
+        _filter = new AuditLogFilter { CorrelationId = correlationId };
+        _fromDate = null;
+        _toDate = null;
+        await LoadAuditLogsAsync(1);
+        Snackbar.Add($"Filtered by correlation ID: {correlationId[..8]}...", Severity.Info);
+    }
+
+    private static Color GetActionColor(string? action) => action switch
+    {
+        "Created" => Color.Success,
+        "Modified" => Color.Warning,
+        "Deleted" => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string TruncateValue(string? value, int maxLength = 100)
+    {
+        if (string.IsNullOrEmpty(value))
+            return "-";
+
+        if (value.Length <= maxLength)
+            return value;
+
+        return value[..maxLength] + "...";
+    }
+
+    private static string TruncateId(string id)
+    {
+        if (id.Length <= 12)
+            return id;
+
+        // For GUIDs, show first 8 chars
+        return id[..8] + "...";
+    }
+}

@@ -2316,9 +2316,9 @@
         var study = await context.ReserveStudies.Include(s => s.StudyRequest).FirstOrDefaultAsync(s => s.Id == reserveStudy.Id);
         if (study != null) {
             study.SiteVisitDate = siteVisitDate;
+            study.SiteVisitType = visitType;
+            study.VideoConferenceLink = videoConferenceLink;
             study.DateModified = DateTime.UtcNow;
-            // Store visit type and video link if we have those fields on the model
-            // TODO: Add SiteVisitType and VideoConferenceLink fields to ReserveStudy model
             await context.SaveChangesAsync();
 
             var eventTitle = visitType == "Virtual"

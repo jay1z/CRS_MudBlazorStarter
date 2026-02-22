@@ -87,12 +87,33 @@ namespace CRS.Services.Workflow {
 
             await using var db = await _dbFactory.CreateDbContextAsync();
             var user = await db.Users.FindAsync(Guid.Parse(userId));
-            if (user == null) return;
+            if (user == null || string.IsNullOrEmpty(user.Email)) return;
 
-            // TODO: Integrate with your mail/SMS service here
-            _logger.LogInformation(
-                "[Notify][User:{UserId}][Email:{Email}] {Subject} :: {Message} (req:{RequestId})",
-                userId, user.Email, subject, message, requestId);
+            try {
+                // Send actual email notification
+                await _mailer.SendAsync(
+                    Mailable.AsInline()
+                        .To(user.Email)
+                        .Subject(subject)
+                        .Html($@"
+                            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                                <h2 style='color: #333;'>{subject}</h2>
+                                <p style='color: #666; line-height: 1.6;'>{message}</p>
+                                {(requestId.HasValue ? $"<p style='color: #999; font-size: 12px;'>Reference: {requestId}</p>" : "")}
+                                <hr style='border: none; border-top: 1px solid #eee; margin: 20px 0;' />
+                                <p style='color: #999; font-size: 12px;'>This is an automated notification from ALX Reserve Cloud.</p>
+                            </div>
+                        ")
+                );
+
+                _logger.LogInformation(
+                    "[Notify][User:{UserId}][Email:{Email}] Sent: {Subject} (req:{RequestId})",
+                    userId, user.Email, subject, requestId);
+            } catch (Exception ex) {
+                _logger.LogWarning(ex,
+                    "[Notify][User:{UserId}][Email:{Email}] Failed to send: {Subject}",
+                    userId, user.Email, subject);
+            }
         }
 
         public Task SendAsync(string subject, string message, int tenantId, Guid? requestId = null) {

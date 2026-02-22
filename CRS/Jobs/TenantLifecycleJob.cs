@@ -275,16 +275,38 @@ namespace CRS.Jobs {
                 db.Users.RemoveRange(users);
 
                 // 3. Soft delete the tenant (keep for audit trail)
+                var ownerEmail = tenant.PendingOwnerEmail; // Save before modification
+                var tenantName = tenant.Name; // Save original name
+
                 tenant.DateDeleted = DateTime.UtcNow;
                 tenant.IsActive = false;
                 tenant.SubscriptionStatus = SubscriptionStatus.Canceled;
                 tenant.Name = $"[DELETED] {tenant.Name}"; // Mark in name for clarity
                 tenant.Subdomain = $"deleted-{tenant.Id}-{Guid.NewGuid().ToString("N").Substring(0, 8)}"; // Free up subdomain
-                
+
                 _logger.LogInformation("Tenant {TenantId} data deleted successfully", tenant.Id);
 
-                // TODO: Send final deletion confirmation email to archived email address
-                // await _emailService.SendDeletionConfirmationEmailAsync(tenant.PendingOwnerEmail);
+                // Send final deletion confirmation email to archived email address
+                if (!string.IsNullOrEmpty(ownerEmail))
+                {
+                    try
+                    {
+                        var email = new BillingNotificationEmail
+                        {
+                            NotificationType = BillingNotificationType.AccountSuspended, // Closest match
+                            TenantName = tenantName,
+                            OwnerEmail = ownerEmail,
+                            SuspendedAt = DateTime.UtcNow
+                        };
+                        var mailable = new BillingNotificationMailable(email);
+                        await _mailer.SendAsync(mailable);
+                        _logger.LogInformation("Sent deletion confirmation email to {Email} for tenant {TenantId}", ownerEmail, tenant.Id);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogWarning(emailEx, "Failed to send deletion confirmation email for tenant {TenantId}", tenant.Id);
+                    }
+                }
             } catch (Exception ex) {
                 _logger.LogError(ex, "Error deleting tenant {TenantId} data", tenant.Id);
                 // Don't throw - log and continue with other tenants

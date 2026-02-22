@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 using CRS.Data;
 
+using Microsoft.EntityFrameworkCore;
+
 namespace CRS.Models {
     public class ReserveStudy : BaseModel, CRS.Services.Tenant.ITenantScoped {
         [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
@@ -103,6 +105,18 @@ namespace CRS.Models {
         [DataType(DataType.Date)]
         public DateTime? SiteVisitDate { get; set; }
 
+        /// <summary>
+        /// Type of site visit: InPerson, Virtual, or Hybrid
+        /// </summary>
+        [MaxLength(20)]
+        public string? SiteVisitType { get; set; }
+
+        /// <summary>
+        /// Video conference link for virtual or hybrid site visits.
+        /// </summary>
+        [MaxLength(500)]
+        public string? VideoConferenceLink { get; set; }
+
         public enum PointOfContactTypeEnum {
             Contact = 0,
             PropertyManager = 1
@@ -129,5 +143,75 @@ namespace CRS.Models {
         public string? StudyType { get; set; }
         public string? PreparedBy { get; set; }
         public string? Notes { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════
+        // FUNDING STATUS METRICS (Calculated from Reserve Calculator)
+        // These fields persist the key outputs from reserve study calculations
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Percent funded = (Current Balance / Fully Funded Balance) × 100
+        /// Industry standard metric for reserve health assessment.
+        /// </summary>
+        [Precision(5, 2)]
+        public decimal? PercentFunded { get; set; }
+
+        /// <summary>
+        /// The funding status level based on percent funded thresholds.
+        /// Strong (70%+), Fair (50-69%), Weak (30-49%), Critical (&lt;30%)
+        /// </summary>
+        public FundingStatusLevel? FundingStatus { get; set; }
+
+        /// <summary>
+        /// Calculated recommended monthly contribution per unit.
+        /// Based on the selected funding strategy (full funding, baseline, threshold).
+        /// </summary>
+        [Precision(18, 2)]
+        public decimal? RecommendedMonthlyContribution { get; set; }
+
+        /// <summary>
+        /// Calculated recommended annual contribution (total for all units).
+        /// </summary>
+        [Precision(18, 2)]
+        public decimal? RecommendedAnnualContribution { get; set; }
+
+        /// <summary>
+        /// The fully funded balance (ideal reserve amount based on component depreciation).
+        /// </summary>
+        [Precision(18, 2)]
+        public decimal? FullyFundedBalance { get; set; }
+
+        /// <summary>
+        /// Risk indicator when underfunding may require special assessment.
+        /// True if projected balance goes negative within projection period.
+        /// </summary>
+        public bool? SpecialAssessmentRisk { get; set; }
+
+        /// <summary>
+        /// Estimated special assessment amount if reserves are insufficient.
+        /// Only populated when SpecialAssessmentRisk is true.
+        /// </summary>
+        [Precision(18, 2)]
+        public decimal? EstimatedSpecialAssessment { get; set; }
+
+        /// <summary>
+        /// Date when next reserve study update is recommended (typically 3-5 years).
+        /// </summary>
+        public DateTime? NextScheduledUpdate { get; set; }
+
+        /// <summary>
+        /// Number of years for the projection period (typically 30 years).
+        /// </summary>
+        public int? ProjectionYears { get; set; }
+
+        /// <summary>
+        /// Date when the calculator results were last updated.
+        /// </summary>
+        public DateTime? CalculationLastUpdated { get; set; }
+
+        /// <summary>
+        /// The scenario ID that was used for the last calculation.
+        /// </summary>
+        public int? LastCalculatedScenarioId { get; set; }
     }
 }

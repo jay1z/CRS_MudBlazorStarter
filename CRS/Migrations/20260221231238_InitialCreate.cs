@@ -614,7 +614,11 @@ namespace CRS.Migrations
                     RequireNarrativeReview = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     RequireFinalReview = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     AutoArchiveAfterDays = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                    AllowAmendmentsAfterCompletion = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                    AllowAmendmentsAfterCompletion = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    TrialStartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TrialExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    HasUsedTrial = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    TrialDays = table.Column<int>(type: "int", nullable: false, defaultValue: 14)
                 },
                 constraints: table =>
                 {
@@ -1919,6 +1923,17 @@ namespace CRS.Migrations
                     StudyType = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PreparedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PercentFunded = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: true),
+                    FundingStatus = table.Column<int>(type: "int", nullable: true),
+                    RecommendedMonthlyContribution = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    RecommendedAnnualContribution = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    FullyFundedBalance = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    SpecialAssessmentRisk = table.Column<bool>(type: "bit", nullable: true),
+                    EstimatedSpecialAssessment = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    NextScheduledUpdate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ProjectionYears = table.Column<int>(type: "int", nullable: true),
+                    CalculationLastUpdated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastCalculatedScenarioId = table.Column<int>(type: "int", nullable: true),
                     DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true)

@@ -76,6 +76,12 @@ app.Services.UseScheduler(scheduler =>
         .Schedule<CRS.Jobs.NewsletterSchedulerJob>()
         .EveryFiveMinutes()
         .PreventOverlapping(nameof(CRS.Jobs.NewsletterSchedulerJob));
+
+    // Run trial expiration check daily at 9 AM
+    scheduler
+        .Schedule<CRS.Jobs.TrialExpirationInvocable>()
+        .DailyAtHour(9)
+        .PreventOverlapping(nameof(CRS.Jobs.TrialExpirationInvocable));
 });
 
 var provider = app.Services;
@@ -226,6 +232,12 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // System-wide settings
     builder.Services.AddScoped<CRS.Services.Interfaces.ISystemSettingsService, CRS.Services.SystemSettingsService>();
 
+    // Analytics Service (tenant business metrics)
+    builder.Services.AddScoped<CRS.Services.Interfaces.IAnalyticsService, CRS.Services.AnalyticsService>();
+
+    // Audit Log Service (for viewing/exporting audit history)
+    builder.Services.AddScoped<CRS.Services.Interfaces.IAuditLogService, CRS.Services.AuditLogService>();
+
     // Newsletter/Marketing Services
     builder.Services.AddScoped<CRS.Services.Interfaces.INewsletterService, CRS.Services.NewsletterService>();
 
@@ -280,6 +292,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
 
     // Register newsletter scheduler job
     builder.Services.AddScoped<CRS.Jobs.NewsletterSchedulerJob>();
+
+    // Register trial expiration job
+    builder.Services.AddScoped<CRS.Jobs.TrialExpirationInvocable>();
 
     // Phase 1: Register audit log archiving background service
     builder.Services.AddHostedService<AuditLogArchiveService>();

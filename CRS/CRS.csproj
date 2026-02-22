@@ -59,6 +59,7 @@
   <ItemGroup>
     <Folder Include="Components\Editors\Dialogs\" />
     <Folder Include="Components\Editors\Models\" />
+    <Folder Include="Components\Pages\Billing\" />
     <Folder Include="Migrations\" />
     <Folder Include="MultiTenancy\Database\" />
     <Folder Include="Services\Guid\" />

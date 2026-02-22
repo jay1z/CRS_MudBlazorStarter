@@ -397,6 +397,18 @@ namespace CRS.Data {
                 entity.Property(rs => rs.MonthlyReserveContribution).HasPrecision(18, 2);
                 entity.Property(rs => rs.AnnualInflationRate).HasPrecision(18, 2);
                 entity.Property(rs => rs.AnnualInterestRate).HasPrecision(18, 2);
+                // Funding status metrics (calculated from reserve calculator)
+                entity.Property(rs => rs.PercentFunded).HasPrecision(5, 2);
+                entity.Property(rs => rs.RecommendedMonthlyContribution).HasPrecision(18, 2);
+                entity.Property(rs => rs.RecommendedAnnualContribution).HasPrecision(18, 2);
+                entity.Property(rs => rs.FullyFundedBalance).HasPrecision(18, 2);
+                entity.Property(rs => rs.EstimatedSpecialAssessment).HasPrecision(18, 2);
+            });
+
+            // Configure Tenant trial fields
+            builder.Entity<Tenant>(entity => {
+                entity.Property(t => t.TrialDays).HasDefaultValue(14);
+                entity.Property(t => t.HasUsedTrial).HasDefaultValue(false);
             });
 
             // Configure decimal precision for ReserveStudyCommonElement

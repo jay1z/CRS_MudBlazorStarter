@@ -1,0 +1,840 @@
+﻿@page "/Settings/DataExport"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@using System.Text
+@using System.Text.Json
+@using System.IO.Compression
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>Data Export</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6 mb-8">
+    <!-- Header -->
+    <MudPaper Elevation="0" Class="pa-6 mb-6" Style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 16px;">
+        <MudStack Spacing="1">
+            <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                <MudIcon Icon="@Icons.Material.Filled.CloudDownload" Class="mr-2" Style="vertical-align: middle;" />
+                Data Export
+            </MudText>
+            <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                Export your organization's data for backup, compliance, or migration purposes
+            </MudText>
+        </MudStack>
+    </MudPaper>
+
+    <!-- GDPR Notice -->
+    <MudAlert Severity="Severity.Info" Class="mb-6" Icon="@Icons.Material.Filled.Security">
+        <strong>Data Portability:</strong> Under GDPR and similar regulations, you have the right to export your data. 
+        This tool allows you to download all your organization's data in standard formats.
+    </MudAlert>
+
+    <!-- Data Categories -->
+    <MudPaper Elevation="2" Class="pa-6 mb-6" Style="border-radius: 12px;">
+        <MudText Typo="Typo.h6" Class="mb-4">Select Data to Export</MudText>
+        
+        <MudGrid Spacing="3">
+            <!-- Reserve Studies -->
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-4" Style="border-radius: 8px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox @bind-Value="_exportStudies" Color="Color.Primary" />
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Reserve Studies</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    All studies, elements, scenarios, and calculations
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@_studyCount items</MudChip>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Communities -->
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-4" Style="border-radius: 8px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox @bind-Value="_exportCommunities" Color="Color.Primary" />
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Communities</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    All communities and addresses
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@_communityCount items</MudChip>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Contacts -->
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-4" Style="border-radius: 8px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox @bind-Value="_exportContacts" Color="Color.Primary" />
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Contacts</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    All contacts and property managers
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@_contactCount items</MudChip>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Customer Accounts -->
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-4" Style="border-radius: 8px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox @bind-Value="_exportCustomers" Color="Color.Primary" />
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Customer Accounts</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    All customer accounts and users
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@_customerCount items</MudChip>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Proposals -->
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-4" Style="border-radius: 8px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox @bind-Value="_exportProposals" Color="Color.Primary" />
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Proposals</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    All proposals and acceptance records
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@_proposalCount items</MudChip>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Invoices -->
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-4" Style="border-radius: 8px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox @bind-Value="_exportInvoices" Color="Color.Primary" />
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Invoices & Payments</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    All invoices, payments, and credit memos
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@_invoiceCount items</MudChip>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Narratives -->
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-4" Style="border-radius: 8px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox @bind-Value="_exportNarratives" Color="Color.Primary" />
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Narratives & Reports</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    All narratives and generated reports
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@_narrativeCount items</MudChip>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Documents -->
+            <MudItem xs="12" md="6">
+                <MudPaper Outlined="true" Class="pa-4" Style="border-radius: 8px;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudCheckBox @bind-Value="_exportDocuments" Color="Color.Primary" />
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Documents</MudText>
+                                <MudText Typo="Typo.caption" Style="color: #666;">
+                                    Document metadata (files require separate download)
+                                </MudText>
+                            </MudStack>
+                        </MudStack>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">@_documentCount items</MudChip>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Export Options -->
+    <MudPaper Elevation="2" Class="pa-6 mb-6" Style="border-radius: 12px;">
+        <MudText Typo="Typo.h6" Class="mb-4">Export Options</MudText>
+        
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="6">
+                <MudSelect T="ExportFormat" @bind-Value="_exportFormat" Label="Export Format" 
+                           Variant="Variant.Outlined" FullWidth="true">
+                    <MudSelectItem Value="ExportFormat.Json">JSON (Recommended for data portability)</MudSelectItem>
+                    <MudSelectItem Value="ExportFormat.Csv">CSV (Spreadsheet compatible)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudCheckBox @bind-Value="_includeDeleted" Label="Include soft-deleted records" Color="Color.Warning" />
+                <MudText Typo="Typo.caption" Style="color: #666; margin-left: 32px;">
+                    Check to include records that have been deleted but not permanently removed
+                </MudText>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Export Button -->
+    <MudPaper Elevation="2" Class="pa-6" Style="border-radius: 12px;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.body1" Style="font-weight: 500;">
+                    Ready to export @GetSelectedCount() data categories
+                </MudText>
+                <MudText Typo="Typo.caption" Style="color: #666;">
+                    Estimated @GetEstimatedRecords() total records
+                </MudText>
+            </MudStack>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       OnClick="ExportData" Disabled="@(_exporting || GetSelectedCount() == 0)">
+                @if (_exporting)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Exporting...</span>
+                }
+                else
+                {
+                    <span>Export Selected Data</span>
+                }
+            </MudButton>
+        </MudStack>
+
+        @if (_exportProgress > 0 && _exporting)
+        {
+            <MudProgressLinear Value="@_exportProgress" Max="100" Color="Color.Primary" Class="mt-4" />
+            <MudText Typo="Typo.caption" Class="mt-2" Style="color: #666;">@_exportStatus</MudText>
+        }
+    </MudPaper>
+
+    <!-- Export History -->
+    @if (_exportHistory.Count > 0)
+    {
+        <MudPaper Elevation="2" Class="pa-6 mt-6" Style="border-radius: 12px;">
+            <MudText Typo="Typo.h6" Class="mb-4">Recent Exports</MudText>
+            <MudSimpleTable Dense="true" Hover="true" Style="border-radius: 8px; overflow: hidden;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Categories</th>
+                        <th>Records</th>
+                        <th>Format</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var export in _exportHistory.Take(5))
+                    {
+                        <tr>
+                            <td>@export.ExportedAt.ToString("g")</td>
+                            <td>@export.Categories</td>
+                            <td>@export.RecordCount.ToString("N0")</td>
+                            <td><MudChip T="string" Size="Size.Small">@export.Format</MudChip></td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    // Selection state
+    private bool _exportStudies = true;
+    private bool _exportCommunities = true;
+    private bool _exportContacts = true;
+    private bool _exportCustomers = true;
+    private bool _exportProposals = true;
+    private bool _exportInvoices = true;
+    private bool _exportNarratives = true;
+    private bool _exportDocuments = true;
+    private bool _includeDeleted = false;
+    private ExportFormat _exportFormat = ExportFormat.Json;
+
+    // Counts
+    private int _studyCount;
+    private int _communityCount;
+    private int _contactCount;
+    private int _customerCount;
+    private int _proposalCount;
+    private int _invoiceCount;
+    private int _narrativeCount;
+    private int _documentCount;
+
+    // Export state
+    private bool _exporting = false;
+    private int _exportProgress = 0;
+    private string _exportStatus = "";
+    private List<ExportHistoryItem> _exportHistory = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCounts();
+    }
+
+    private async Task LoadCounts()
+    {
+        if (TenantContext.TenantId == null) return;
+
+        await using var context = await DbFactory.CreateDbContextAsync();
+        var tenantId = TenantContext.TenantId.Value;
+
+        _studyCount = await context.ReserveStudies.IgnoreQueryFilters()
+            .CountAsync(s => s.TenantId == tenantId && (_includeDeleted || s.DateDeleted == null));
+        _communityCount = await context.Communities.IgnoreQueryFilters()
+            .CountAsync(c => c.TenantId == tenantId && (_includeDeleted || c.DateDeleted == null));
+        _contactCount = await context.Contacts.IgnoreQueryFilters()
+            .CountAsync(c => c.TenantId == tenantId && (_includeDeleted || c.DateDeleted == null));
+        _customerCount = await context.CustomerAccounts.IgnoreQueryFilters()
+            .CountAsync(c => c.TenantId == tenantId && (_includeDeleted || c.DateDeleted == null));
+        _proposalCount = await context.Proposals.IgnoreQueryFilters()
+            .CountAsync(p => p.TenantId == tenantId && (_includeDeleted || p.DateDeleted == null));
+        _invoiceCount = await context.Invoices.IgnoreQueryFilters()
+            .CountAsync(i => i.TenantId == tenantId && (_includeDeleted || i.DateDeleted == null));
+        _narrativeCount = await context.Narratives.IgnoreQueryFilters()
+            .CountAsync(n => n.TenantId == tenantId && (_includeDeleted || n.DateDeleted == null));
+        _documentCount = await context.Documents.IgnoreQueryFilters()
+            .CountAsync(d => d.TenantId == tenantId && (_includeDeleted || d.DateDeleted == null));
+    }
+
+    private int GetSelectedCount()
+    {
+        int count = 0;
+        if (_exportStudies) count++;
+        if (_exportCommunities) count++;
+        if (_exportContacts) count++;
+        if (_exportCustomers) count++;
+        if (_exportProposals) count++;
+        if (_exportInvoices) count++;
+        if (_exportNarratives) count++;
+        if (_exportDocuments) count++;
+        return count;
+    }
+
+    private int GetEstimatedRecords()
+    {
+        int total = 0;
+        if (_exportStudies) total += _studyCount;
+        if (_exportCommunities) total += _communityCount;
+        if (_exportContacts) total += _contactCount;
+        if (_exportCustomers) total += _customerCount;
+        if (_exportProposals) total += _proposalCount;
+        if (_exportInvoices) total += _invoiceCount;
+        if (_exportNarratives) total += _narrativeCount;
+        if (_exportDocuments) total += _documentCount;
+        return total;
+    }
+
+    private async Task ExportData()
+    {
+        if (TenantContext.TenantId == null) return;
+
+        _exporting = true;
+        _exportProgress = 0;
+        _exportStatus = "Preparing export...";
+        StateHasChanged();
+
+        try
+        {
+            await using var context = await DbFactory.CreateDbContextAsync();
+            var tenantId = TenantContext.TenantId.Value;
+            var exportData = new Dictionary<string, object>();
+            var totalSteps = GetSelectedCount();
+            var currentStep = 0;
+
+            // Export metadata
+            exportData["_metadata"] = new
+            {
+                ExportedAt = DateTime.UtcNow,
+                TenantId = tenantId,
+                Format = _exportFormat.ToString(),
+                IncludesDeletedRecords = _includeDeleted
+            };
+
+            // Export each selected category
+            if (_exportCommunities)
+            {
+                _exportStatus = "Exporting communities...";
+                _exportProgress = (int)((++currentStep / (float)totalSteps) * 90);
+                StateHasChanged();
+
+                var communities = await context.Communities.IgnoreQueryFilters()
+                    .Where(c => c.TenantId == tenantId && (_includeDeleted || c.DateDeleted == null))
+                    .Include(c => c.PhysicalAddress)
+                    .Include(c => c.MailingAddress)
+                    .ToListAsync();
+                exportData["communities"] = communities.Select(c => new
+                {
+                    c.Id, c.Name, c.PhoneNumber, c.Email, c.NumberOfUnits, c.YearBuilt,
+                    c.Description, c.IsActive, c.DateCreated, c.DateDeleted,
+                    PhysicalAddress = c.PhysicalAddress != null ? new { c.PhysicalAddress.Street, c.PhysicalAddress.City, c.PhysicalAddress.State, c.PhysicalAddress.Zip } : null,
+                    MailingAddress = c.MailingAddress != null ? new { c.MailingAddress.Street, c.MailingAddress.City, c.MailingAddress.State, c.MailingAddress.Zip } : null
+                }).ToList();
+            }
+
+            if (_exportContacts)
+            {
+                _exportStatus = "Exporting contacts...";
+                _exportProgress = (int)((++currentStep / (float)totalSteps) * 90);
+                StateHasChanged();
+
+                var contacts = await context.Contacts.IgnoreQueryFilters()
+                    .Where(c => c.TenantId == tenantId && (_includeDeleted || c.DateDeleted == null))
+                    .ToListAsync();
+                exportData["contacts"] = contacts.Select(c => new
+                {
+                    c.Id, c.FirstName, c.LastName, c.Email, c.Phone, c.CompanyName,
+                    c.DateCreated, c.DateDeleted
+                }).ToList();
+
+                var propertyManagers = await context.PropertyManagers.IgnoreQueryFilters()
+                    .Where(p => p.TenantId == tenantId && (_includeDeleted || p.DateDeleted == null))
+                    .ToListAsync();
+                exportData["propertyManagers"] = propertyManagers.Select(p => new
+                {
+                    p.Id, p.FirstName, p.LastName, p.Email, p.Phone, p.CompanyName,
+                    p.DateCreated, p.DateDeleted
+                }).ToList();
+            }
+
+            if (_exportStudies)
+            {
+                _exportStatus = "Exporting reserve studies...";
+                _exportProgress = (int)((++currentStep / (float)totalSteps) * 90);
+                StateHasChanged();
+
+                var studies = await context.ReserveStudies.IgnoreQueryFilters()
+                    .Where(s => s.TenantId == tenantId && (_includeDeleted || s.DateDeleted == null))
+                    .Include(s => s.FinancialInfo)
+                    .ToListAsync();
+                exportData["reserveStudies"] = studies.Select(s => new
+                {
+                    s.Id, s.Name, s.CommunityId, s.ContactId, s.PropertyManagerId,
+                    s.StudyDate, s.FiscalYearEnd, s.CurrentReserveFunds, s.MonthlyReserveContribution,
+                    s.PercentFunded, s.FullyFundedBalance, s.RecommendedMonthlyContribution,
+                    s.IsComplete, s.IsActive, s.IsApproved, s.DateCreated, s.DateApproved, s.DateDeleted,
+                    FinancialInfo = s.FinancialInfo != null ? new
+                    {
+                        s.FinancialInfo.JanuaryFirstReserveBalance,
+                        s.FinancialInfo.DecemberThirtyFirstReserveBalance,
+                        s.FinancialInfo.BudgetedContributionCurrentYear,
+                        s.FinancialInfo.TotalNumberOfUnits
+                    } : null
+                }).ToList();
+
+                // Also export study elements - project to DTOs to avoid circular references
+                var buildingElements = await context.ReserveStudyBuildingElements.IgnoreQueryFilters()
+                    .Where(e => e.ReserveStudy != null && e.ReserveStudy.TenantId == tenantId)
+                    .Select(e => new
+                    {
+                        e.ReserveStudyId, e.BuildingElementId,
+                        BuildingElementName = e.BuildingElement != null ? e.BuildingElement.Name : null,
+                        e.Count, e.ReplacementCost, e.RemainingLifeYears,
+                        e.DateCreated
+                    })
+                    .ToListAsync();
+                exportData["studyBuildingElements"] = buildingElements;
+
+                var commonElements = await context.ReserveStudyCommonElements.IgnoreQueryFilters()
+                    .Where(e => e.ReserveStudy != null && e.ReserveStudy.TenantId == tenantId)
+                    .Select(e => new
+                    {
+                        e.ReserveStudyId, e.CommonElementId,
+                        CommonElementName = e.CommonElement != null ? e.CommonElement.Name : null,
+                        e.Quantity, e.ReplacementCost, e.RemainingLifeYears,
+                        e.DateCreated
+                    })
+                    .ToListAsync();
+                exportData["studyCommonElements"] = commonElements;
+            }
+
+            if (_exportCustomers)
+            {
+                _exportStatus = "Exporting customer accounts...";
+                _exportProgress = (int)((++currentStep / (float)totalSteps) * 90);
+                StateHasChanged();
+
+                var customers = await context.CustomerAccounts.IgnoreQueryFilters()
+                    .Where(c => c.TenantId == tenantId && (_includeDeleted || c.DateDeleted == null))
+                    .ToListAsync();
+                exportData["customerAccounts"] = customers.Select(c => new
+                {
+                    c.Id, c.Name, c.Type, c.ContactName, c.Email, c.Phone,
+                    c.AddressLine1, c.AddressLine2, c.City, c.State, c.PostalCode,
+                    c.IsActive, c.CreatedAt
+                }).ToList();
+            }
+
+            if (_exportProposals)
+            {
+                _exportStatus = "Exporting proposals...";
+                _exportProgress = (int)((++currentStep / (float)totalSteps) * 90);
+                StateHasChanged();
+
+                var proposals = await context.Proposals.IgnoreQueryFilters()
+                    .Where(p => p.TenantId == tenantId && (_includeDeleted || p.DateDeleted == null))
+                    .ToListAsync();
+                exportData["proposals"] = proposals.Select(p => new
+                {
+                    p.Id, p.ReserveStudyId, p.ProposalScope, p.EstimatedCost,
+                    p.ProposalDate, p.DateSent, p.DateApproved, p.IsApproved,
+                    p.PaymentSchedule, p.PaymentDueDays, p.DateDeleted
+                }).ToList();
+            }
+
+            if (_exportInvoices)
+            {
+                _exportStatus = "Exporting invoices...";
+                _exportProgress = (int)((++currentStep / (float)totalSteps) * 90);
+                StateHasChanged();
+
+                var invoices = await context.Invoices.IgnoreQueryFilters()
+                    .Where(i => i.TenantId == tenantId && (_includeDeleted || i.DateDeleted == null))
+                    .ToListAsync();
+                exportData["invoices"] = invoices.Select(i => new
+                {
+                    i.Id, i.ReserveStudyId, i.InvoiceNumber, i.Status,
+                    i.InvoiceDate, i.DueDate, i.SentAt, i.PaidAt,
+                    i.Subtotal, i.TaxAmount, i.TotalAmount, i.AmountPaid,
+                    i.BillToName, i.BillToEmail
+                }).ToList();
+
+                var payments = await context.PaymentRecords.IgnoreQueryFilters()
+                    .Where(p => p.Invoice != null && p.Invoice.TenantId == tenantId)
+                    .Select(p => new
+                    {
+                        p.Id, p.InvoiceId, p.Amount, p.PaymentDate, p.PaymentMethod,
+                        p.ReferenceNumber, p.Notes, p.DateCreated
+                    })
+                    .ToListAsync();
+                exportData["payments"] = payments;
+
+                var creditMemos = await context.CreditMemos.IgnoreQueryFilters()
+                    .Where(c => c.TenantId == tenantId && (_includeDeleted || c.DateDeleted == null))
+                    .Select(c => new
+                    {
+                        c.Id, c.InvoiceId, c.CreditMemoNumber, c.Amount, c.Reason,
+                        c.IssueDate, c.Status, c.AppliedAt, c.DateCreated
+                    })
+                    .ToListAsync();
+                exportData["creditMemos"] = creditMemos;
+            }
+
+            if (_exportNarratives)
+            {
+                _exportStatus = "Exporting narratives...";
+                _exportProgress = (int)((++currentStep / (float)totalSteps) * 90);
+                StateHasChanged();
+
+                // Load narratives with related study and community data for placeholder resolution
+                var narratives = await context.Narratives.IgnoreQueryFilters()
+                    .Where(n => n.TenantId == tenantId && (_includeDeleted || n.DateDeleted == null))
+                    .Include(n => n.ReserveStudy)
+                        .ThenInclude(s => s!.Community)
+                            .ThenInclude(c => c!.PhysicalAddress)
+                    .Include(n => n.ReserveStudy)
+                        .ThenInclude(s => s!.FinancialInfo)
+                    .ToListAsync();
+
+                // Get tenant branding for company info
+                var tenant = await context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId);
+
+                exportData["narratives"] = narratives.Select(n => new
+                {
+                    n.Id, n.ReserveStudyId, n.Status,
+                    // Resolve placeholders in narrative sections
+                    ExecutiveSummary = ResolveNarrativePlaceholders(n.ExecutiveSummary, n.ReserveStudy, tenant),
+                    Introduction = ResolveNarrativePlaceholders(n.Introduction, n.ReserveStudy, tenant),
+                    PropertyDescription = ResolveNarrativePlaceholders(n.PropertyDescription, n.ReserveStudy, tenant),
+                    Methodology = ResolveNarrativePlaceholders(n.Methodology, n.ReserveStudy, tenant),
+                    Findings = ResolveNarrativePlaceholders(n.Findings, n.ReserveStudy, tenant),
+                    FundingAnalysis = ResolveNarrativePlaceholders(n.FundingAnalysis, n.ReserveStudy, tenant),
+                    Recommendations = ResolveNarrativePlaceholders(n.Recommendations, n.ReserveStudy, tenant),
+                    Conclusion = ResolveNarrativePlaceholders(n.Conclusion, n.ReserveStudy, tenant),
+                    n.DateCreated, n.CompletedAt
+                }).ToList();
+
+                var reports = await context.GeneratedReports.IgnoreQueryFilters()
+                    .Where(r => r.TenantId == tenantId)
+                    .ToListAsync();
+                exportData["generatedReports"] = reports.Select(r => new
+                {
+                    r.Id, r.ReserveStudyId, r.Type, r.Status,
+                    r.GeneratedAt, r.Title, r.Version, r.FileSizeBytes,
+                    r.IsPublishedToClient, r.PublishedAt
+                }).ToList();
+            }
+
+            if (_exportDocuments)
+            {
+                _exportStatus = "Exporting document metadata...";
+                _exportProgress = (int)((++currentStep / (float)totalSteps) * 90);
+                StateHasChanged();
+
+                var documents = await context.Documents.IgnoreQueryFilters()
+                    .Where(d => d.TenantId == tenantId && (_includeDeleted || d.DateDeleted == null))
+                    .ToListAsync();
+                exportData["documents"] = documents.Select(d => new
+                {
+                    d.Id, d.ReserveStudyId, d.CommunityId, d.Type,
+                    d.FileName, d.Description, d.FileSizeBytes, d.ContentType,
+                    d.IsPublic, d.DateCreated, d.StorageUrl
+                }).ToList();
+            }
+
+            // Generate file based on selected format
+            _exportStatus = "Generating download file...";
+            _exportProgress = 95;
+            StateHasChanged();
+
+            string fileContent;
+            string fileName;
+            string contentType;
+
+            if (_exportFormat == ExportFormat.Csv)
+            {
+                // Generate CSV - create a ZIP with multiple CSV files (one per category)
+                using var memoryStream = new MemoryStream();
+                using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+                {
+                    foreach (var kvp in exportData)
+                    {
+                        if (kvp.Key == "_metadata") continue; // Skip metadata for CSV
+
+                        var csvContent = ConvertToCsv(kvp.Value);
+                        if (!string.IsNullOrEmpty(csvContent))
+                        {
+                            var entry = archive.CreateEntry($"{kvp.Key}.csv");
+                            using var entryStream = entry.Open();
+                            using var writer = new StreamWriter(entryStream);
+                            await writer.WriteAsync(csvContent);
+                        }
+                    }
+                }
+
+                var zipBytes = memoryStream.ToArray();
+                var base64Zip = Convert.ToBase64String(zipBytes);
+                fileName = $"data-export-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.zip";
+                await JS.InvokeVoidAsync("downloadFileFromBase64", fileName, base64Zip, "application/zip");
+            }
+            else
+            {
+                // Generate JSON
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles,
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                };
+
+                fileContent = JsonSerializer.Serialize(exportData, jsonOptions);
+                fileName = $"data-export-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.json";
+                contentType = "application/json";
+
+                var bytes = System.Text.Encoding.UTF8.GetBytes(fileContent);
+                var base64 = Convert.ToBase64String(bytes);
+                await JS.InvokeVoidAsync("downloadFileFromBase64", fileName, base64, contentType);
+            }
+
+            // Record export history
+            _exportHistory.Insert(0, new ExportHistoryItem
+            {
+                ExportedAt = DateTime.UtcNow,
+                Categories = GetSelectedCount(),
+                RecordCount = GetEstimatedRecords(),
+                Format = _exportFormat.ToString()
+            });
+
+            _exportProgress = 100;
+            _exportStatus = "Export complete!";
+            Snackbar.Add("Data exported successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
+            _exportStatus = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _exporting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Converts a list of objects to CSV format.
+    /// </summary>
+    private string ConvertToCsv(object data)
+    {
+        if (data is not System.Collections.IEnumerable enumerable)
+            return string.Empty;
+
+        var items = enumerable.Cast<object>().ToList();
+        if (items.Count == 0)
+            return string.Empty;
+
+        var sb = new StringBuilder();
+        var firstItem = items[0];
+        var properties = firstItem.GetType().GetProperties();
+
+        // Header row
+        sb.AppendLine(string.Join(",", properties.Select(p => EscapeCsvField(p.Name))));
+
+        // Data rows
+        foreach (var item in items)
+        {
+            var values = properties.Select(p =>
+            {
+                var value = p.GetValue(item);
+                return EscapeCsvField(value?.ToString() ?? "");
+            });
+            sb.AppendLine(string.Join(",", values));
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Escapes a CSV field value (handles commas, quotes, newlines).
+    /// </summary>
+    private static string EscapeCsvField(string field)
+    {
+        if (string.IsNullOrEmpty(field))
+            return "";
+
+        // If the field contains comma, quote, or newline, wrap in quotes and escape internal quotes
+        if (field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r'))
+        {
+            return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+
+        return field;
+    }
+
+    /// <summary>
+    /// Resolves common placeholders in narrative text with actual values from the study.
+    /// </summary>
+    private static string? ResolveNarrativePlaceholders(string? content, ReserveStudy? study, Tenant? tenant)
+    {
+        if (string.IsNullOrEmpty(content))
+            return content;
+
+        var result = content;
+
+        // Study/Community placeholders
+        if (study != null)
+        {
+            var community = study.Community;
+            var financial = study.FinancialInfo;
+            var address = community?.PhysicalAddress;
+
+            // Association/Community info
+            result = result.Replace("{AssociationName}", community?.Name ?? "[Community Name]");
+            result = result.Replace("{AssociationAddress}", address?.Street ?? "");
+            result = result.Replace("{AssociationCity}", address?.City ?? "");
+            result = result.Replace("{AssociationState}", address?.State ?? "");
+            result = result.Replace("{AssociationZip}", address?.Zip ?? "");
+            result = result.Replace("{CityState}", address != null ? $"{address.City}, {address.State}" : "");
+            result = result.Replace("{FullAddress}", address?.FullAddress ?? "");
+            result = result.Replace("{UnitCount}", community?.NumberOfUnits?.ToString() ?? "");
+            result = result.Replace("{EstablishedYear}", community?.YearBuilt?.ToString() ?? "");
+            result = result.Replace("{AssociationPhone}", community?.PhoneNumber ?? "");
+            result = result.Replace("{AssociationEmail}", community?.Email ?? "");
+            result = result.Replace("{CommunityType}", "Community"); // Generic fallback
+
+            // Study info
+            result = result.Replace("{StudyType}", study.StudyType ?? "Reserve Study");
+            result = result.Replace("{ReportTitle}", study.Name ?? "Reserve Study");
+            result = result.Replace("{InspectionDate}", study.SiteVisitDate?.ToString("MMMM d, yyyy") ?? "");
+            result = result.Replace("{InspectionMonthYear}", study.SiteVisitDate?.ToString("MMMM yyyy") ?? "");
+            result = result.Replace("{EffectiveDate}", study.StudyDate?.ToString("MMMM d, yyyy") ?? "");
+            result = result.Replace("{FiscalYearEnd}", study.FiscalYearEnd?.ToString("MMMM d, yyyy") ?? "");
+            result = result.Replace("{PreparedBy}", study.PreparedBy ?? "");
+            result = result.Replace("{ReportDate}", DateTime.Now.ToString("MMMM d, yyyy"));
+            result = result.Replace("{ProjectionYears}", study.ProjectionYears?.ToString() ?? "30");
+
+            // Financial assumptions
+            result = result.Replace("{InflationRate}", (study.AnnualInflationRate ?? 3m).ToString("0.0") + "%");
+            result = result.Replace("{InterestRate}", (study.AnnualInterestRate ?? 1m).ToString("0.0") + "%");
+
+            // Calculated outputs (from persisted values)
+            var percentFunded = study.PercentFunded ?? 0;
+            var fundingStatus = study.FundingStatus?.GetDisplayName() ?? "Not Calculated";
+
+            result = result.Replace("{PercentFunded}", percentFunded.ToString("0") + "%");
+            result = result.Replace("{FundStatusLabel}", fundingStatus);
+            result = result.Replace("{FundingMethod}", "Component Method");
+            result = result.Replace("{IdealBalance}", (study.FullyFundedBalance ?? 0).ToString("C0"));
+            result = result.Replace("{FullyFundedBalance}", (study.FullyFundedBalance ?? 0).ToString("C0"));
+
+            // First year values
+            var startingBalance = study.CurrentReserveFunds ?? financial?.JanuaryFirstReserveBalance ?? 0;
+            var monthlyContrib = study.RecommendedMonthlyContribution ?? study.MonthlyReserveContribution ?? 0;
+            var annualContrib = study.RecommendedAnnualContribution ?? (monthlyContrib * 12);
+
+            result = result.Replace("{StartingBalance}", startingBalance.ToString("C0"));
+            result = result.Replace("{StartingReserveBalance}", startingBalance.ToString("C0"));
+            result = result.Replace("{FirstYearContribution}", annualContrib.ToString("C0"));
+            result = result.Replace("{MonthlyContribution}", monthlyContrib.ToString("C0"));
+            result = result.Replace("{PerUnitMonthlyIncrease}", monthlyContrib.ToString("C0"));
+        }
+
+        // Company/Branding info
+        if (tenant != null)
+        {
+            result = result.Replace("{CompanyName}", tenant.Name ?? "");
+            result = result.Replace("{CompanyPhone}", "");
+            result = result.Replace("{CompanyEmail}", tenant.DefaultNotificationEmail ?? "");
+            result = result.Replace("{CompanyWebsite}", "");
+            result = result.Replace("{CompanyAddress}", "");
+        }
+
+        return result;
+    }
+
+    private enum ExportFormat
+    {
+        Json,
+        Csv
+    }
+
+    private class ExportHistoryItem
+    {
+        public DateTime ExportedAt { get; set; }
+        public int Categories { get; set; }
+        public int RecordCount { get; set; }
+        public string Format { get; set; } = "";
+    }
+}

@@ -410,15 +410,15 @@
 [Parameter]
 [SupplyParameterFromQuery(Name = "from")]
 public string? Source { get; set; }
-    
+
 [Parameter]
 [SupplyParameterFromQuery(Name = "plan")]
 public string? PlanFromQuery { get; set; }
-    
+
 [Parameter]
 [SupplyParameterFromQuery(Name = "interval")]
 public string? IntervalFromQuery { get; set; }
-    
+
 private SignUpModel model = new() { Interval = "Monthly", Tier = "Pro" };
 private bool _submitting = false;
 private string? _error;
@@ -464,7 +464,7 @@ protected override void OnParametersSet()
     {
         model.Tier = "Pro"; // Ensure default plan is set
     }
-        
+
     // Set interval from query parameter if provided, otherwise ensure default is set
     if (!string.IsNullOrEmpty(IntervalFromQuery))
     {
@@ -474,7 +474,7 @@ protected override void OnParametersSet()
     {
         model.Interval = "Monthly"; // Ensure default interval is set
     }
-        
+
     // Auto-select plan based on source
     if (Source == "demo")
     {
@@ -745,14 +745,14 @@ protected override void OnParametersSet()
 
         _submitting = true;
         StateHasChanged();
-        
+
         try {
             var client = ClientFactory.CreateClient();
             var apiUrl = $"{Nav.BaseUri}api/signup/start";
-            
+
             // Log what we're sending to help debug
             Console.WriteLine($"[SIGNUP] Submitting: Tier={model.Tier}, Interval={model.Interval}");
-            
+
             var resp = await client.PostAsJsonAsync(apiUrl, new {
                 companyName = model.CompanyName.Trim(),
                 subdomain = sub,
@@ -760,7 +760,7 @@ protected override void OnParametersSet()
                 tier = model.Tier,
                 interval = model.Interval
             });
-            
+
             if (!resp.IsSuccessStatusCode) {
                 var errorContent = await resp.Content.ReadAsStringAsync();
                 _error = $"Signup failed: {errorContent}";
@@ -768,12 +768,13 @@ protected override void OnParametersSet()
                 StateHasChanged();
                 return;
             }
-            
+
             var payload = await resp.Content.ReadFromJsonAsync<StartResponse>();
-            
+
             if (payload?.CheckoutUrl is string url && !string.IsNullOrWhiteSpace(url)) {
-                // Track conversion
-                Snackbar.Add($"Redirecting to checkout for {model.Tier} ({model.Interval})...", Severity.Success);
+                // Stripe handles the trial - redirect to checkout
+                // If TrialPeriodDays is configured, Stripe will show "14-day free trial" on checkout
+                Snackbar.Add($"Redirecting to checkout for {model.Tier} ({model.Interval}) with 14-day free trial...", Severity.Success);
                 Nav.NavigateTo(url, forceLoad: true);
             } else {
                 _error = "Unexpected response from server. Please try again.";
@@ -790,9 +791,8 @@ protected override void OnParametersSet()
     private class StartResponse 
     { 
         public string? CheckoutUrl { get; set; } 
-        public string? SignupToken { get; set; }
     }
-    
+
     private class SubdomainValidationResult
     {
         public bool IsAvailable { get; set; }

@@ -212,7 +212,9 @@
                         <MudItem xs="12" md="6">
                             <MudTextField @bind-Value="formPhone"
                                           Label="Phone"
-                                          Variant="Variant.Outlined" />
+                                          Variant="Variant.Outlined"
+                                          Mask="@(new PatternMask("(000) 000-0000"))"
+                                          Placeholder="(555) 555-5555" />
                         </MudItem>
                     </MudGrid>
                     
@@ -227,26 +229,37 @@
                     <MudTextField @bind-Value="formAddressLine1"
                                   Label="Address Line 1"
                                   Variant="Variant.Outlined" />
-                    
+
                     <MudTextField @bind-Value="formAddressLine2"
                                   Label="Address Line 2"
                                   Variant="Variant.Outlined" />
-                    
+
                     <MudGrid>
                         <MudItem xs="12" md="5">
                             <MudTextField @bind-Value="formCity"
                                           Label="City"
-                                          Variant="Variant.Outlined" />
+                                          Variant="Variant.Outlined"
+                                          Pattern="^[a-zA-Z\s\-'.]+$"
+                                          Validation="@(new Func<string, string?>(ValidateCity))" />
                         </MudItem>
                         <MudItem xs="12" md="4">
-                            <MudTextField @bind-Value="formState"
-                                          Label="State"
-                                          Variant="Variant.Outlined" />
+                            <MudSelect @bind-Value="formState"
+                                       Label="State"
+                                       Variant="Variant.Outlined"
+                                       Clearable="true">
+                                @foreach (var state in UsStates)
+                                {
+                                    <MudSelectItem Value="@state.Abbreviation">@state.Name</MudSelectItem>
+                                }
+                            </MudSelect>
                         </MudItem>
                         <MudItem xs="12" md="3">
                             <MudTextField @bind-Value="formPostalCode"
                                           Label="ZIP Code"
-                                          Variant="Variant.Outlined" />
+                                          Variant="Variant.Outlined"
+                                          Mask="@(new PatternMask("00000-0000") { CleanDelimiters = false })"
+                                          Placeholder="12345"
+                                          HelperText="5 or 9 digits" />
                         </MudItem>
                     </MudGrid>
                 </MudStack>
@@ -494,4 +507,35 @@
         CustomerType.Other => "Other",
         _ => type.ToString()
     };
+
+    // Validation for City field - letters, spaces, hyphens, apostrophes, periods only
+    private string? ValidateCity(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null; // Allow empty
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(value, @"^[a-zA-Z\s\-'.]+$"))
+            return "City can only contain letters, spaces, hyphens, and apostrophes";
+
+        return null;
+    }
+
+    // US States list for dropdown
+    private static readonly List<(string Abbreviation, string Name)> UsStates =
+    [
+        ("AL", "Alabama"), ("AK", "Alaska"), ("AZ", "Arizona"), ("AR", "Arkansas"),
+        ("CA", "California"), ("CO", "Colorado"), ("CT", "Connecticut"), ("DE", "Delaware"),
+        ("FL", "Florida"), ("GA", "Georgia"), ("HI", "Hawaii"), ("ID", "Idaho"),
+        ("IL", "Illinois"), ("IN", "Indiana"), ("IA", "Iowa"), ("KS", "Kansas"),
+        ("KY", "Kentucky"), ("LA", "Louisiana"), ("ME", "Maine"), ("MD", "Maryland"),
+        ("MA", "Massachusetts"), ("MI", "Michigan"), ("MN", "Minnesota"), ("MS", "Mississippi"),
+        ("MO", "Missouri"), ("MT", "Montana"), ("NE", "Nebraska"), ("NV", "Nevada"),
+        ("NH", "New Hampshire"), ("NJ", "New Jersey"), ("NM", "New Mexico"), ("NY", "New York"),
+        ("NC", "North Carolina"), ("ND", "North Dakota"), ("OH", "Ohio"), ("OK", "Oklahoma"),
+        ("OR", "Oregon"), ("PA", "Pennsylvania"), ("RI", "Rhode Island"), ("SC", "South Carolina"),
+        ("SD", "South Dakota"), ("TN", "Tennessee"), ("TX", "Texas"), ("UT", "Utah"),
+        ("VT", "Vermont"), ("VA", "Virginia"), ("WA", "Washington"), ("WV", "West Virginia"),
+        ("WI", "Wisconsin"), ("WY", "Wyoming"), ("DC", "District of Columbia"),
+        ("PR", "Puerto Rico"), ("VI", "Virgin Islands"), ("GU", "Guam")
+    ];
 }

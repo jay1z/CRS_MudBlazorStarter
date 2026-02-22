@@ -239,16 +239,72 @@ namespace CRS.Models {
         /// When enabled, requires owner review before marking a study complete.
         /// </summary>
         public bool RequireFinalReview { get; set; } = false;
-        
+
         /// <summary>
         /// Number of days after completion before auto-archiving. Set to 0 to disable.
         /// </summary>
         public int AutoArchiveAfterDays { get; set; } = 0;
-        
+
         /// <summary>
         /// When enabled, amendments are allowed after a study is completed.
         /// </summary>
         public bool AllowAmendmentsAfterCompletion { get; set; } = true;
+
+        // ═══════════════════════════════════════════════════════════════
+        // FREE TRIAL MANAGEMENT
+        // Supports time-limited trial periods before requiring subscription
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// When the free trial started. Null if no trial was used.
+        /// </summary>
+        public DateTime? TrialStartedAt { get; set; }
+
+        /// <summary>
+        /// When the free trial expires/expired.
+        /// </summary>
+        public DateTime? TrialExpiresAt { get; set; }
+
+        /// <summary>
+        /// Whether this tenant has ever used a free trial.
+        /// Prevents multiple trial signups.
+        /// </summary>
+        public bool HasUsedTrial { get; set; } = false;
+
+        /// <summary>
+        /// Number of days for the trial period. Default is 14 days.
+        /// Can be customized per-tenant for promotional offers.
+        /// </summary>
+        public int TrialDays { get; set; } = 14;
+
+        /// <summary>
+        /// Checks if the tenant is currently in an active trial period.
+        /// </summary>
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public bool IsInActiveTrial => 
+            TrialStartedAt.HasValue && 
+            TrialExpiresAt.HasValue && 
+            DateTime.UtcNow < TrialExpiresAt.Value &&
+            SubscriptionStatus == SubscriptionStatus.Trialing;
+
+        /// <summary>
+        /// Gets the number of days remaining in the trial. Returns 0 if trial expired or not started.
+        /// </summary>
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public int TrialDaysRemaining => 
+            TrialExpiresAt.HasValue && DateTime.UtcNow < TrialExpiresAt.Value
+                ? (int)Math.Ceiling((TrialExpiresAt.Value - DateTime.UtcNow).TotalDays)
+                : 0;
+
+        /// <summary>
+        /// Whether the trial has expired (was started but is now past expiration).
+        /// </summary>
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public bool IsTrialExpired =>
+            TrialStartedAt.HasValue &&
+            TrialExpiresAt.HasValue &&
+            DateTime.UtcNow >= TrialExpiresAt.Value &&
+            SubscriptionStatus == SubscriptionStatus.Trialing;
     }
 
     public enum TenantProvisioningStatus {

@@ -4,6 +4,7 @@ using CRS.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221231238_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3390,10 +3393,6 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("SiteVisitDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("SiteVisitType")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<bool?>("SpecialAssessmentRisk")
                         .HasColumnType("bit");
 
@@ -3408,10 +3407,6 @@ namespace CRS.Migrations
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
-
-                    b.Property<string>("VideoConferenceLink")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
 

@@ -1,0 +1,442 @@
+﻿@page "/Admin/Analytics"
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using CRS.Services.Interfaces
+@using CRS.Services.Tenant
+@using MudBlazor
+@inject IAnalyticsService AnalyticsService
+@inject ITenantContext TenantContext
+@inject ISnackbar Snackbar
+
+<PageTitle>Business Analytics</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6 mb-8">
+    <!-- Header -->
+    <MudPaper Elevation="0" Class="pa-6 mb-6" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600;">
+                    <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-2" Style="vertical-align: middle;" />
+                    Business Analytics
+                </MudText>
+                <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">
+                    Track your business performance, revenue, and operational efficiency
+                </MudText>
+            </MudStack>
+            <MudStack Row="true" Spacing="2">
+                <MudSelect T="DateRangeOption" @bind-Value="_selectedRange" Label="Time Period" 
+                           Variant="Variant.Outlined" Dense="true" Style="background: white; border-radius: 8px; min-width: 180px;">
+                    <MudSelectItem Value="DateRangeOption.Last30Days">Last 30 Days</MudSelectItem>
+                    <MudSelectItem Value="DateRangeOption.Last90Days">Last 90 Days</MudSelectItem>
+                    <MudSelectItem Value="DateRangeOption.ThisYear">This Year</MudSelectItem>
+                    <MudSelectItem Value="DateRangeOption.LastYear">Last Year</MudSelectItem>
+                    <MudSelectItem Value="DateRangeOption.AllTime">All Time</MudSelectItem>
+                </MudSelect>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="LoadAnalytics" Disabled="_loading" Style="height: 40px;">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Refresh
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (_loading)
+    {
+        <MudGrid Spacing="3">
+            @for (int i = 0; i < 8; i++)
+            {
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" Style="border-radius: 12px;" />
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else if (_analytics != null)
+    {
+        <!-- Key Metrics Cards -->
+        <MudGrid Spacing="3" Class="mb-6">
+            <!-- Studies Created -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.body2" Style="color: #666;">Studies Created</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Primary" />
+                        </MudStack>
+                        <MudText Typo="Typo.h4" Style="font-weight: 600;">@_analytics.Studies.StudiesCreated</MudText>
+                        <GrowthIndicator Value="@_analytics.Studies.CreatedGrowthPercent" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Studies Completed -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.body2" Style="color: #666;">Studies Completed</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                        </MudStack>
+                        <MudText Typo="Typo.h4" Style="font-weight: 600;">@_analytics.Studies.StudiesCompleted</MudText>
+                        <GrowthIndicator Value="@_analytics.Studies.CompletedGrowthPercent" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Revenue Collected -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.body2" Style="color: #666;">Revenue Collected</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.Payments" Color="Color.Success" />
+                        </MudStack>
+                        <MudText Typo="Typo.h4" Style="font-weight: 600;">@_analytics.Revenue.TotalCollected.ToString("C0")</MudText>
+                        <GrowthIndicator Value="@_analytics.Revenue.CollectionGrowthPercent" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Outstanding Balance -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.body2" Style="color: #666;">Outstanding</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Warning" />
+                        </MudStack>
+                        <MudText Typo="Typo.h4" Style="font-weight: 600;">@_analytics.Revenue.TotalOutstanding.ToString("C0")</MudText>
+                        @if (_analytics.Revenue.TotalOverdue > 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Error">
+                                @_analytics.Revenue.TotalOverdue.ToString("C0") overdue
+                            </MudText>
+                        }
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- New Communities -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.body2" Style="color: #666;">New Communities</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.LocationCity" Color="Color.Info" />
+                        </MudStack>
+                        <MudText Typo="Typo.h4" Style="font-weight: 600;">@_analytics.Clients.NewCommunitiesThisPeriod</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">of @_analytics.Clients.TotalCommunities total</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Repeat Clients -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.body2" Style="color: #666;">Repeat Clients</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.Loyalty" Color="Color.Secondary" />
+                        </MudStack>
+                        <MudText Typo="Typo.h4" Style="font-weight: 600;">@_analytics.Clients.RepeatClients</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">@_analytics.Clients.RetentionRate.ToString("F1")% retention</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Proposal Success Rate -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.body2" Style="color: #666;">Proposal Success</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.ThumbUp" Color="Color.Success" />
+                        </MudStack>
+                        <MudText Typo="Typo.h4" Style="font-weight: 600;">@_analytics.Operations.ProposalAcceptanceRate.ToString("F0")%</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">
+                            @_analytics.Operations.ProposalsAccepted of @_analytics.Operations.ProposalsSent accepted
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Avg Completion Time -->
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                    <MudStack Spacing="1">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                            <MudText Typo="Typo.body2" Style="color: #666;">Avg Completion</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" Color="Color.Primary" />
+                        </MudStack>
+                        <MudText Typo="Typo.h4" Style="font-weight: 600;">@_analytics.Studies.AverageCompletionDays.ToString("F0") days</MudText>
+                        <MudText Typo="Typo.caption" Style="color: #666;">
+                            Median: @_analytics.Studies.MedianCompletionDays.ToString("F0") days
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Charts Row -->
+        <MudGrid Spacing="3" Class="mb-6">
+            <!-- Monthly Trends Chart -->
+            <MudItem xs="12" md="8">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+                    <MudText Typo="Typo.h6" Class="mb-4">Monthly Trends</MudText>
+                    @if (_monthlyTrends.Count > 0)
+                    {
+                        <MudChart ChartType="ChartType.Line" 
+                                  ChartSeries="@_chartSeries" 
+                                  XAxisLabels="@_chartLabels" 
+                                  Width="100%" 
+                                  Height="300px"
+                                  ChartOptions="@_chartOptions" />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center pa-8">
+                            No trend data available for this period
+                        </MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- Studies by Status -->
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+                    <MudText Typo="Typo.h6" Class="mb-4">Studies by Status</MudText>
+                    @if (_analytics.Studies.StudiesByStatus.Count > 0)
+                    {
+                        <MudChart ChartType="ChartType.Donut"
+                                  InputData="@_statusChartData"
+                                  InputLabels="@_statusChartLabels"
+                                  Width="100%"
+                                  Height="250px" />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center pa-8">
+                            No status data available
+                        </MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Specialist Performance -->
+        @if (_specialistMetrics.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-6" Style="border-radius: 12px;">
+                <MudText Typo="Typo.h6" Class="mb-4">Specialist Performance</MudText>
+                <MudTable Items="@_specialistMetrics" Dense="true" Hover="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>Specialist</MudTh>
+                        <MudTh Style="text-align: center;">Assigned</MudTh>
+                        <MudTh Style="text-align: center;">Completed</MudTh>
+                        <MudTh Style="text-align: center;">Site Visits</MudTh>
+                        <MudTh Style="text-align: center;">Avg Days</MudTh>
+                        <MudTh Style="text-align: right;">Revenue</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudAvatar Size="Size.Small" Color="Color.Primary">@context.Name[0]</MudAvatar>
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body2">@context.Name</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #888;">@context.Email</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd Style="text-align: center;">@context.StudiesAssigned</MudTd>
+                        <MudTd Style="text-align: center;">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success">@context.StudiesCompleted</MudChip>
+                        </MudTd>
+                        <MudTd Style="text-align: center;">@context.SiteVisitsCompleted</MudTd>
+                        <MudTd Style="text-align: center;">@context.AverageCompletionDays.ToString("F0")</MudTd>
+                        <MudTd Style="text-align: right; font-weight: 600;">@context.RevenueGenerated.ToString("C0")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+
+        <!-- Element Popularity -->
+        @if (_elementPopularity.Count > 0)
+        {
+            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
+                <MudText Typo="Typo.h6" Class="mb-4">Most Used Elements</MudText>
+                <MudTable Items="@_elementPopularity.Take(10)" Dense="true" Hover="true">
+                    <HeaderContent>
+                        <MudTh>Element</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh Style="text-align: center;">Usage</MudTh>
+                        <MudTh Style="text-align: right;">Avg Cost</MudTh>
+                        <MudTh Style="text-align: right;">Total Value</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.ElementName</MudTd>
+                        <MudTd>
+                            <MudChip T="string" Size="Size.Small" 
+                                     Color="@(context.ElementType == "Building" ? Color.Primary : Color.Secondary)">
+                                @context.ElementType
+                            </MudChip>
+                        </MudTd>
+                        <MudTd Style="text-align: center;">@context.UsageCount</MudTd>
+                        <MudTd Style="text-align: right;">@context.AverageReplacementCost.ToString("C0")</MudTd>
+                        <MudTd Style="text-align: right; font-weight: 600;">@context.TotalReplacementCost.ToString("C0")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+    }
+    else if (_error != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+    }
+</MudContainer>
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private TenantAnalytics? _analytics;
+    private List<SpecialistMetric> _specialistMetrics = new();
+    private List<MonthlyTrend> _monthlyTrends = new();
+    private List<ElementPopularity> _elementPopularity = new();
+    private DateRangeOption _selectedRange = DateRangeOption.Last30Days;
+
+    // Chart data
+    private List<ChartSeries> _chartSeries = new();
+    private string[] _chartLabels = Array.Empty<string>();
+    private ChartOptions _chartOptions = new() { YAxisTicks = 5 };
+    private double[] _statusChartData = Array.Empty<double>();
+    private string[] _statusChartLabels = Array.Empty<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAnalytics();
+    }
+
+    private async Task LoadAnalytics()
+    {
+        if (TenantContext.TenantId == null)
+        {
+            _error = "No tenant context available";
+            return;
+        }
+
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var (startDate, endDate) = GetDateRange();
+            var tenantId = TenantContext.TenantId.Value;
+
+            // Load all data in parallel
+            var analyticsTask = AnalyticsService.GetTenantAnalyticsAsync(tenantId, startDate, endDate);
+            var specialistsTask = AnalyticsService.GetSpecialistMetricsAsync(tenantId, startDate, endDate);
+            var trendsTask = AnalyticsService.GetMonthlyTrendsAsync(tenantId, 12);
+            var elementsTask = AnalyticsService.GetElementPopularityAsync(tenantId, 20);
+
+            await Task.WhenAll(analyticsTask, specialistsTask, trendsTask, elementsTask);
+
+            _analytics = await analyticsTask;
+            _specialistMetrics = await specialistsTask;
+            _monthlyTrends = await trendsTask;
+            _elementPopularity = await elementsTask;
+
+            PrepareChartData();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load analytics: {ex.Message}";
+            Snackbar.Add(_error, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void PrepareChartData()
+    {
+        if (_monthlyTrends.Count > 0)
+        {
+            _chartLabels = _monthlyTrends.Select(t => t.Label).ToArray();
+            _chartSeries = new List<ChartSeries>
+            {
+                new() { Name = "Studies Created", Data = _monthlyTrends.Select(t => (double)t.StudiesCreated).ToArray() },
+                new() { Name = "Studies Completed", Data = _monthlyTrends.Select(t => (double)t.StudiesCompleted).ToArray() },
+                new() { Name = "New Communities", Data = _monthlyTrends.Select(t => (double)t.NewCommunities).ToArray() }
+            };
+        }
+
+        if (_analytics?.Studies.StudiesByStatus.Count > 0)
+        {
+            var topStatuses = _analytics.Studies.StudiesByStatus
+                .OrderByDescending(kv => kv.Value)
+                .Take(6)
+                .ToList();
+
+            _statusChartData = topStatuses.Select(kv => (double)kv.Value).ToArray();
+            _statusChartLabels = topStatuses.Select(kv => FormatStatusName(kv.Key)).ToArray();
+        }
+    }
+
+    private string FormatStatusName(string status)
+    {
+        // Add spaces before capital letters for readability
+        return string.Concat(status.Select((c, i) => i > 0 && char.IsUpper(c) ? " " + c : c.ToString()));
+    }
+
+    private (DateTime startDate, DateTime endDate) GetDateRange()
+    {
+        var endDate = DateTime.UtcNow.Date.AddDays(1); // End of today
+        var startDate = _selectedRange switch
+        {
+            DateRangeOption.Last30Days => endDate.AddDays(-30),
+            DateRangeOption.Last90Days => endDate.AddDays(-90),
+            DateRangeOption.ThisYear => new DateTime(endDate.Year, 1, 1),
+            DateRangeOption.LastYear => new DateTime(endDate.Year - 1, 1, 1),
+            DateRangeOption.AllTime => DateTime.MinValue,
+            _ => endDate.AddDays(-30)
+        };
+
+        if (_selectedRange == DateRangeOption.LastYear)
+        {
+            endDate = new DateTime(endDate.Year, 1, 1);
+        }
+
+        return (startDate, endDate);
+    }
+
+    private enum DateRangeOption
+    {
+        Last30Days,
+        Last90Days,
+        ThisYear,
+        LastYear,
+        AllTime
+    }
+}
+
+@* Growth Indicator Component *@
+@code {
+    private RenderFragment<decimal> GrowthIndicator => value => __builder =>
+    {
+        var isPositive = value >= 0;
+        var color = isPositive ? "success" : "error";
+        var icon = isPositive ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown;
+
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+            <MudIcon Icon="@icon" Color="@(isPositive ? Color.Success : Color.Error)" Size="Size.Small" />
+            <MudText Typo="Typo.caption" Color="@(isPositive ? Color.Success : Color.Error)">
+                @(isPositive ? "+" : "")@value.ToString("F1")% vs previous
+            </MudText>
+        </MudStack>;
+    };
+}

@@ -202,8 +202,13 @@ namespace CRS.Controllers {
 
                         // Determine initial subscription status - check if subscription is in trial
                         var initialStatus = CRS.Models.SubscriptionStatus.Incomplete;
+                        DateTime? trialStart = null;
+                        DateTime? trialEnd = null;
+
                         if (sub != null && sub.Status == "trialing") {
                             initialStatus = CRS.Models.SubscriptionStatus.Trialing;
+                            trialStart = sub.TrialStart;
+                            trialEnd = sub.TrialEnd;
                         } else if (sub != null && sub.Status == "active") {
                             initialStatus = CRS.Models.SubscriptionStatus.Active;
                         }
@@ -219,7 +224,11 @@ namespace CRS.Controllers {
                             StripeCustomerId = session.CustomerId,
                             StripeSubscriptionId = session.SubscriptionId, // Save the subscription ID
                             LastStripeCheckoutSessionId = session.Id,
-                            Tier = tier
+                            Tier = tier,
+                            // Set trial dates from Stripe subscription
+                            TrialStartedAt = trialStart,
+                            TrialExpiresAt = trialEnd,
+                            HasUsedTrial = trialStart.HasValue
                         };
 
                         // Set tier limits based on subscription tier
@@ -232,8 +241,8 @@ namespace CRS.Controllers {
                         try {
                             _db.Tenants.Add(tenant);
                             await _db.SaveChangesAsync(ct);
-                            _logger.LogInformation("Successfully created tenant {TenantId} for subdomain {Subdomain} with status {Status}", 
-                                tenant.Id, subdomain, initialStatus);
+                            _logger.LogInformation("Successfully created tenant {TenantId} for subdomain {Subdomain} with status {Status}, TrialEnd={TrialEnd}",
+                                tenant.Id, subdomain, initialStatus, trialEnd);
 
                             // Provision owner account
                             _logger.LogInformation("Provisioning owner account for {Email}", adminEmail);
@@ -851,12 +860,14 @@ namespace CRS.Controllers {
                 tenant.Id, tenant.StripeConnectOnboardingComplete, wasOnboardingComplete,
                 tenant.StripeConnectPayoutsEnabled, tenant.StripeConnectCardPaymentsEnabled);
 
-            // If onboarding just completed, we could send a notification
+            // If onboarding just completed, send a notification
             if (tenant.StripeConnectOnboardingComplete && !wasOnboardingComplete) {
                 _logger.LogInformation(
                     "Stripe Connect onboarding completed for tenant {TenantId} ({TenantName})",
                     tenant.Id, tenant.Name);
-                // TODO: Send email notification that they can now accept payments
+
+                // Send notification that they can now accept payments (reuse AccountReactivated template)
+                await SendBillingNotificationAsync(tenant, BillingNotificationType.AccountReactivated);
             }
         }
 

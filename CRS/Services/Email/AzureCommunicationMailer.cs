@@ -143,11 +143,28 @@ public class AzureCommunicationMailer : IMailer
 
         try
         {
-            // Send with polling for completion
-            var operation = await _emailClient.SendAsync(WaitUntil.Completed, emailMessage);
+            // Send with WaitUntil.Started for faster response - email will be delivered asynchronously
+            // This returns as soon as Azure accepts the email, rather than waiting for full delivery
+            var operation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);
 
-            _logger.LogInformation("Email sent successfully via ACS. MessageId: {MessageId}, Status: {Status}",
+            _logger.LogInformation("Email queued successfully via ACS. OperationId: {OperationId}, Status: {Status}",
                 operation.Id, operation.Value.Status);
+
+            // Optionally poll for completion in background (fire-and-forget for non-critical emails)
+            // For critical emails where you need delivery confirmation, you could await this
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var result = await operation.WaitForCompletionAsync();
+                    _logger.LogDebug("Email delivery completed. OperationId: {OperationId}, FinalStatus: {Status}",
+                        operation.Id, result.Value.Status);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Email delivery status check failed for OperationId: {OperationId}", operation.Id);
+                }
+            });
         }
         catch (RequestFailedException ex)
         {
@@ -205,10 +222,26 @@ public class AzureCommunicationMailer : IMailer
 
         try
         {
-            var operation = await _emailClient.SendAsync(WaitUntil.Completed, emailMessage);
+            // Send with WaitUntil.Started for faster response
+            var operation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage);
 
-            _logger.LogInformation("Direct email sent successfully via ACS. MessageId: {MessageId}, Status: {Status}",
+            _logger.LogInformation("Direct email queued successfully via ACS. OperationId: {OperationId}, Status: {Status}",
                 operation.Id, operation.Value.Status);
+
+            // Poll for completion in background
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var result = await operation.WaitForCompletionAsync();
+                    _logger.LogDebug("Direct email delivery completed. OperationId: {OperationId}, FinalStatus: {Status}",
+                        operation.Id, result.Value.Status);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Direct email delivery status check failed for OperationId: {OperationId}", operation.Id);
+                }
+            });
         }
         catch (RequestFailedException ex)
         {
@@ -266,20 +299,12 @@ public class AzureCommunicationMailer : IMailer
         // Search through the entire type hierarchy for the fields
         var bindingFlags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
 
-        // Coravel uses arrays (MailRecipient[]) not List<MailRecipient> for recipients
-        // Try array first, then list as fallback
-        var toArray = GetFieldValueFromHierarchy<MailRecipient[]>(mailable, "_to", bindingFlags);
-        var to = toArray?.ToList() 
-            ?? GetFieldValueFromHierarchy<List<MailRecipient>>(mailable, "_to", bindingFlags) 
-            ?? [];
-
-        var ccArray = GetFieldValueFromHierarchy<MailRecipient[]>(mailable, "_cc", bindingFlags);
-        var cc = ccArray?.ToList() 
-            ?? GetFieldValueFromHierarchy<List<MailRecipient>>(mailable, "_cc", bindingFlags);
-
-        var bccArray = GetFieldValueFromHierarchy<MailRecipient[]>(mailable, "_bcc", bindingFlags);
-        var bcc = bccArray?.ToList() 
-            ?? GetFieldValueFromHierarchy<List<MailRecipient>>(mailable, "_bcc", bindingFlags);
+        // Extract recipients - Coravel uses different types depending on how mailable is created:
+        // - Array (MailRecipient[]) when using custom Mailable class
+        // - IEnumerable<MailRecipient> when using Mailable.AsInline<T>()
+        var to = ExtractRecipients(mailable, "_to", bindingFlags);
+        var cc = ExtractRecipients(mailable, "_cc", bindingFlags);
+        var bcc = ExtractRecipients(mailable, "_bcc", bindingFlags);
 
         var from = GetFieldValueFromHierarchy<MailRecipient>(mailable, "_from", bindingFlags);
         var replyTo = GetFieldValueFromHierarchy<MailRecipient>(mailable, "_replyTo", bindingFlags);
@@ -305,14 +330,75 @@ public class AzureCommunicationMailer : IMailer
                 foreach (var field in fields)
                 {
                     var value = field.GetValue(mailable);
-                    _logger.LogWarning("  Field: {TypeName}.{FieldName} = {Value}",
-                        type.Name, field.Name, value?.ToString() ?? "(null)");
+                    var valueType = value?.GetType().Name ?? "null";
+                    _logger.LogWarning("  Field: {TypeName}.{FieldName} ({FieldType}) = {Value}",
+                        type.Name, field.Name, valueType, value?.ToString() ?? "(null)");
                 }
                 type = type.BaseType;
             }
         }
 
         return (to, cc, bcc, from, replyTo, subject, attachments, messageBody);
+    }
+
+    /// <summary>
+    /// Extracts recipients from a mailable field, handling various types Coravel uses.
+    /// </summary>
+    private List<MailRecipient> ExtractRecipients<T>(Mailable<T> mailable, string fieldName, System.Reflection.BindingFlags flags)
+    {
+        var type = mailable.GetType();
+        var results = new List<MailRecipient>();
+
+        // Walk up the type hierarchy checking ALL fields at each level
+        // This is important because InlineMailable might shadow base class fields
+        while (type != null)
+        {
+            var field = type.GetField(fieldName, flags);
+            if (field != null)
+            {
+                var value = field.GetValue(mailable);
+                if (value != null)
+                {
+                    // Try different types Coravel might use
+                    if (value is MailRecipient[] array && array.Length > 0)
+                    {
+                        results.AddRange(array);
+                    }
+                    else if (value is List<MailRecipient> list && list.Count > 0)
+                    {
+                        results.AddRange(list);
+                    }
+                    else if (value is IEnumerable<MailRecipient> enumerable)
+                    {
+                        var items = enumerable.ToList();
+                        if (items.Count > 0) results.AddRange(items);
+                    }
+                    else if (value is System.Collections.IEnumerable nonGenericEnumerable)
+                    {
+                        // Try to enumerate if it implements IEnumerable (non-generic)
+                        foreach (var item in nonGenericEnumerable)
+                        {
+                            if (item is MailRecipient recipient)
+                            {
+                                results.Add(recipient);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Log unexpected type for debugging
+                        _logger.LogWarning("Field {FieldName} at type {TypeName} has unexpected type {ValueType} with value {Value}", 
+                            fieldName, type.Name, value.GetType().FullName, value);
+                    }
+
+                    // If we found recipients, we can stop searching
+                    if (results.Count > 0) break;
+                }
+            }
+            type = type.BaseType;
+        }
+
+        return results;
     }
 
     private static TField? GetFieldValueFromHierarchy<TField>(object obj, string fieldName, System.Reflection.BindingFlags flags)

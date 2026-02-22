@@ -90,11 +90,18 @@
                     <MudDivider />
                     <MudMenuItem Href="/Account/Logout" Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error">Logout</MudMenuItem>
                 </ChildContent>
-            </MudMenu>
-        </AuthorizeView>
-    </MudAppBar>
+                </MudMenu>
+                </AuthorizeView>
+            </MudAppBar>
 
-    @if (!_hideNav) {
+            <!-- Trial Banner (shows countdown for trialing tenants) -->
+            <AuthorizeView>
+                <Authorized>
+                    <CRS.Components.Shared.TrialBanner />
+                </Authorized>
+            </AuthorizeView>
+
+            @if (!_hideNav) {
         <MudDrawer id="nav-drawer" Class="left-drawer-dark" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="25">
             @if (!_authResolved) {
                 <MudStack Class="pa-4" Spacing="2">

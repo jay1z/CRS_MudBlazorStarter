@@ -68,12 +68,15 @@
         <Authorized>
             <MudDivider Class="my-2" />
             <MudNavGroup Title="Administration" Expanded="false" Icon="@Icons.Material.Filled.AdminPanelSettings">
+                <MudNavLink Href="/Admin/Analytics" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Analytics">Analytics</MudNavLink>
                 <MudNavLink Href="/Admin/Users" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PeopleAlt">Team Members</MudNavLink>
                 <MudNavLink Href="/Admin/HOAUsers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Group">HOA Users</MudNavLink>
                 <MudNavLink Href="/Customers" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.PersonSearch">Customers</MudNavLink>
                 <MudNavLink Href="/Admin/Settings" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Settings">Tenant Settings</MudNavLink>
                 <MudNavLink Href="/Settings/ReserveStudy" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Tune">Calculator Defaults</MudNavLink>
                 <MudNavLink Href="/Settings/Invoices" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.ReceiptLong">Invoice Settings</MudNavLink>
+                <MudNavLink Href="/Settings/DataExport" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CloudDownload">Data Export</MudNavLink>
+                <MudNavLink Href="/admin/auditlogs" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.History">Audit Logs</MudNavLink>
                 <MudNavLink Href="/Admin/Elements" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Category">Elements</MudNavLink>
                 <MudNavLink Href="/Reports/Publish" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Publish">Publish Reports</MudNavLink>
                 <MudNavLink Href="/account/billing" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.CreditCard">Billing</MudNavLink>
@@ -143,7 +146,7 @@
             </MudNavGroup>
 
             <MudNavGroup Title="Platform Tools" Expanded="false" Icon="@Icons.Material.Filled.Construction">
-                <MudNavLink Href="/Admin/Audit" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.History">Audit Logs</MudNavLink>
+                <MudNavLink Href="/admin/auditlogs" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.History">Audit Logs</MudNavLink>
                 <MudNavLink Href="/admin/tickets" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Support">Support Tickets</MudNavLink>
             </MudNavGroup>
 

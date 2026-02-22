@@ -1,0 +1,151 @@
+﻿@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Tenant
+@using Microsoft.EntityFrameworkCore
+@inject ITenantContext TenantContext
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NavigationManager Navigation
+
+@if (_showBanner && _tenant != null)
+{
+    <MudPaper Elevation="0" 
+              Class="trial-banner"
+              Style="@GetBannerStyle()">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="py-2">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                    <MudIcon Icon="@GetIcon()" Style="color: white;" />
+                    <MudText Typo="Typo.body2" Style="color: white; font-weight: 500;">
+                        @GetMessage()
+                    </MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Surface"
+                               Size="Size.Small"
+                               OnClick="GoToUpgrade"
+                               Style="text-transform: none; font-weight: 600;">
+                        @GetButtonText()
+                    </MudButton>
+                    @if (_daysRemaining > 3)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                                       Size="Size.Small" 
+                                       Style="color: rgba(255,255,255,0.7);"
+                                       OnClick="DismissBanner"
+                                       Title="Dismiss for now" />
+                    }
+                </MudStack>
+            </MudStack>
+        </MudContainer>
+    </MudPaper>
+}
+
+@code {
+    private Tenant? _tenant;
+    private bool _showBanner = false;
+    private int _daysRemaining = 0;
+    private bool _dismissed = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (TenantContext.TenantId == null)
+            return;
+
+        await using var context = await DbFactory.CreateDbContextAsync();
+        _tenant = await context.Tenants
+            .FirstOrDefaultAsync(t => t.Id == TenantContext.TenantId.Value);
+
+        if (_tenant == null)
+            return;
+
+        // Check if in trial
+        if (_tenant.SubscriptionStatus == SubscriptionStatus.Trialing && 
+            _tenant.TrialExpiresAt.HasValue)
+        {
+            _daysRemaining = _tenant.TrialDaysRemaining;
+            _showBanner = _daysRemaining > 0 && _daysRemaining <= 14;
+        }
+        // Check if trial just expired (now suspended)
+        else if (_tenant.SubscriptionStatus == SubscriptionStatus.Suspended &&
+                 _tenant.TrialExpiresAt.HasValue &&
+                 _tenant.TrialExpiresAt.Value > DateTime.UtcNow.AddDays(-7))
+        {
+            _daysRemaining = 0;
+            _showBanner = true;
+        }
+    }
+
+    private string GetBannerStyle()
+    {
+        // Urgent (1-3 days): Red/Orange gradient
+        if (_daysRemaining <= 3 && _daysRemaining > 0)
+            return "background: linear-gradient(90deg, #ef4444 0%, #f97316 100%); border-radius: 0;";
+        
+        // Warning (4-7 days): Orange/Yellow gradient
+        if (_daysRemaining <= 7)
+            return "background: linear-gradient(90deg, #f59e0b 0%, #eab308 100%); border-radius: 0;";
+        
+        // Info (8-14 days): Purple/Blue gradient
+        if (_daysRemaining > 7)
+            return "background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%); border-radius: 0;";
+        
+        // Expired: Red
+        return "background: linear-gradient(90deg, #dc2626 0%, #b91c1c 100%); border-radius: 0;";
+    }
+
+    private string GetIcon()
+    {
+        if (_daysRemaining <= 0)
+            return Icons.Material.Filled.Error;
+        if (_daysRemaining <= 3)
+            return Icons.Material.Filled.Warning;
+        return Icons.Material.Filled.Timer;
+    }
+
+    private string GetMessage()
+    {
+        if (_daysRemaining <= 0)
+            return "Your free trial has expired. Subscribe now to continue using ALX Reserve Cloud.";
+        
+        if (_daysRemaining == 1)
+            return "⚠️ Your free trial ends tomorrow! Subscribe now to keep your data and access.";
+        
+        if (_daysRemaining <= 3)
+            return $"⚠️ Your free trial ends in {_daysRemaining} days. Subscribe now to avoid losing access.";
+        
+        if (_daysRemaining <= 7)
+            return $"Your free trial ends in {_daysRemaining} days. Ready to subscribe?";
+        
+        return $"🎉 You have {_daysRemaining} days left in your free trial. Enjoying ALX Reserve Cloud?";
+    }
+
+    private string GetButtonText()
+    {
+        if (_daysRemaining <= 0)
+            return "Subscribe Now";
+        if (_daysRemaining <= 3)
+            return "Subscribe Now";
+        return "View Plans";
+    }
+
+    private void GoToUpgrade()
+    {
+        Navigation.NavigateTo("/account/billing");
+    }
+
+    private void DismissBanner()
+    {
+        _dismissed = true;
+        _showBanner = false;
+        StateHasChanged();
+    }
+}
+
+<style>
+    .trial-banner {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+</style>
