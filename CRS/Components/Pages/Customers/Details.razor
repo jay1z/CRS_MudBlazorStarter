@@ -1,4 +1,4 @@
-﻿@page "/Customers/Details/{CustomerId:guid}"
+@page "/Customers/Details/{CustomerId:guid}"
 @using CRS.Models
 @using CRS.Services.Customers
 @using CRS.Data
@@ -477,7 +477,7 @@
             _ => CustomerAccountRole.Member
         };
 
-        bool? confirm = await DialogService.ShowMessageBox(
+        bool? confirm = await DialogService.ShowMessageBoxAsync(
             "Change Role",
             $"Change {member.User?.FirstName}'s role from {currentRole} to {nextRole}?",
             yesText: "Change", cancelText: "Cancel");
@@ -499,7 +499,7 @@
 
     private async Task RemoveMemberAsync(CustomerAccountUser member)
     {
-        bool? confirm = await DialogService.ShowMessageBox(
+        bool? confirm = await DialogService.ShowMessageBoxAsync(
             "Remove Team Member",
             $"Remove {member.User?.FirstName} {member.User?.LastName} from this organization? They will lose access to all associated reserve studies.",
             yesText: "Remove", cancelText: "Cancel",
@@ -550,7 +550,7 @@
 
     private async Task RevokeInvitationAsync(CustomerAccountInvitation invitation)
     {
-        bool? confirm = await DialogService.ShowMessageBox(
+        bool? confirm = await DialogService.ShowMessageBoxAsync(
             "Revoke Invitation",
             $"Revoke the invitation for {invitation.Email}?",
             yesText: "Revoke", cancelText: "Cancel");

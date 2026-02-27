@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260222015846_AddSiteVisitTypeAndVideoLink")]
-    partial class AddSiteVisitTypeAndVideoLink
+    [Migration("20260222163326_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1420,6 +1420,65 @@ namespace CRS.Migrations
                         .HasDatabaseName("IX_Document_Tenant_Type_Public");
 
                     b.ToTable("Documents", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.ElementDependency", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("DependentElementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DependentElementType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsHardDependency")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("RequiredElementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RequiredElementType")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependentElementType", "DependentElementId", "IsActive")
+                        .HasDatabaseName("IX_ElementDependency_Dependent_Active");
+
+                    b.HasIndex("RequiredElementType", "RequiredElementId", "IsActive")
+                        .HasDatabaseName("IX_ElementDependency_Required_Active");
+
+                    b.HasIndex("DependentElementType", "DependentElementId", "RequiredElementType", "RequiredElementId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ElementDependency_Unique_Relationship")
+                        .HasFilter("[DateDeleted] IS NULL");
+
+                    b.ToTable("ElementDependencies", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.ElementOption", b =>

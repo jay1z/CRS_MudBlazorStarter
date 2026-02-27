@@ -1,9 +1,13 @@
 ﻿@page "/billing/success"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@using CRS.Data
+@using CRS.Models
+@using Microsoft.EntityFrameworkCore
 @inject NavigationManager Nav
-@inject IHttpClientFactory ClientFactory
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject CRS.Services.Tenant.ITenantContext TenantContext
 @inject IConfiguration Config
-@using System.Text.Json
+@inject ILogger<SubscriptionSuccess> Logger
 
 @code {
     [SupplyParameterFromQuery] public int? TenantId { get; set; }
@@ -11,116 +15,102 @@
     [SupplyParameterFromQuery] public bool RequestContainsDeferred { get; set; }
     [SupplyParameterFromQuery(Name="session_id")] public string? SessionId { get; set; }
     bool _checking = true;
-    bool _active = false;
-    bool _ownerExists = false; // placeholder until API provides this
-    string? _pendingOwnerEmail = null;
+    bool _active;
+    bool _ownerExists;
+    string? _pendingOwnerEmail;
     int? _resolvedTenantId;
     string? _resolvedSubdomain;
+    Guid? _resolvedSignupToken;
+    string? _error;
 
     protected override async Task OnInitializedAsync() {
-        var tenantId = TenantId ?? TenantContext.TenantId;
-        if (RequestContainsDeferred && string.IsNullOrWhiteSpace(SessionId)) { _checking = false; return; }
-        if (RequestContainsDeferred && SessionId != null) {
-            // Poll resolve endpoint for up to 10 seconds
-            for (int i = 0; i < 10; i++) {
-                var client = CreateClientWithBaseAddress();
-                var resolveResp = await client.GetAsync($"api/signup/resolve?sessionId={SessionId}");
-                if (resolveResp.IsSuccessStatusCode) {
-                    var json = await resolveResp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-                    _resolvedTenantId = json.TryGetProperty("tenantId", out var tidEl) ? tidEl.GetInt32() : (int?)null;
-                    _active = json.TryGetProperty("active", out var actEl) && actEl.GetBoolean();
-                    _pendingOwnerEmail = json.TryGetProperty("ownerEmail", out var oeEl) ? oeEl.GetString() : null;
-                    _resolvedSubdomain = json.TryGetProperty("subdomain", out var sdEl) ? sdEl.GetString() : null;
-                    if (_active) {
-                        // Navigate to tenant subdomain root when active
-                        NavigateToSubdomain(_resolvedSubdomain, _resolvedTenantId);
-                        break;
-                    }
-                }
-                await Task.Delay(1000);
+        try {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            CRS.Models.Tenant? tenant = null;
+
+            if (RequestContainsDeferred && !string.IsNullOrWhiteSpace(SessionId)) {
+                // Deferred signup: look up tenant by Stripe session ID
+                tenant = await db.Tenants.AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.LastStripeCheckoutSessionId == SessionId);
             }
-            _checking = false;
-            return;
+
+            // Also try by TenantId (passed in URL) or by TenantContext (resolved from subdomain)
+            if (tenant == null) {
+                var tid = TenantId ?? TenantContext.TenantId;
+                if (tid is int id)
+                    tenant = await db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
+            }
+
+            if (tenant != null) {
+                _resolvedTenantId = tenant.Id;
+                _resolvedSubdomain = tenant.Subdomain;
+                _resolvedSignupToken = tenant.SignupToken;
+                _active = tenant.IsActive;
+                _pendingOwnerEmail = tenant.PendingOwnerEmail;
+
+                // Check if owner account already exists
+                var ownerRoleId = await db.Roles2.AsNoTracking()
+                    .Where(r => r.Name == "TenantOwner")
+                    .Select(r => r.Id)
+                    .FirstOrDefaultAsync();
+                if (ownerRoleId != default) {
+                    _ownerExists = await db.UserRoleAssignments.AsNoTracking()
+                        .AnyAsync(a => a.TenantId == tenant.Id && a.RoleId == ownerRoleId);
+                }
+            }
+        } catch (Exception ex) {
+            Logger.LogError(ex, "Error checking subscription status on billing success page");
+            _error = "Unable to verify subscription status. Please try refreshing the page.";
         }
-        if (tenantId is not int id) { _checking = false; return; }
-        var client2 = CreateClientWithBaseAddress();
-        var resp = await client2.GetAsync($"api/billing/status/{id}");
-        if (resp.IsSuccessStatusCode) {
-            var json = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-            _active = json.TryGetProperty("active", out var act) && act.GetBoolean();
-            _ownerExists = json.TryGetProperty("ownerExists", out var oex) && oex.GetBoolean();
-            _pendingOwnerEmail = json.TryGetProperty("pendingOwnerEmail", out var poe) ? poe.GetString() : null;
-            // Try to read subdomain if API returns it
-            _resolvedSubdomain = json.TryGetProperty("subdomain", out var sdel) ? sdel.GetString() : TenantContext.Subdomain;
-            if (_active) NavigateToSubdomain(_resolvedSubdomain, tenantId);
-        }
+
         _checking = false;
-    }
-
-    private HttpClient CreateClientWithBaseAddress() {
-        var client = ClientFactory.CreateClient();
-        client.BaseAddress = new Uri(Nav.BaseUri);
-        return client;
-    }
-
-    private void NavigateToSubdomain(string? subdomain, int? tenantIdParam)
-    {
-        var sub = subdomain ?? TenantContext.Subdomain;
-        if (!string.IsNullOrWhiteSpace(sub)) {
-            // Determine root host to compose tenant subdomain URL
-            try {
-                var baseUri = Nav.BaseUri.TrimEnd('/');
-                var uri = new Uri(baseUri);
-                var host = uri.Host; // e.g., www.alxreservecloud.com or localhost
-                var configuredRoot = Config["App:RootDomain"]?.Trim().Trim('.');
-
-                if (!string.IsNullOrWhiteSpace(configuredRoot)) {
-                    host = configuredRoot;
-                } else {
-                    if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase)) host = host.Substring(4);
-                    var parts = host.Split('.');
-                    if (parts.Length > 2) host = string.Join('.', parts.Skip(parts.Length - 2));
-                }
-
-                // Preserve scheme and port
-                var scheme = uri.Scheme;
-                var portSegment = uri.IsDefaultPort ? string.Empty : $":{uri.Port}";
-
-                var target = $"{scheme}://{sub}.{host}{portSegment}/";
-                Nav.NavigateTo(target, forceLoad: true);
-                return;
-            } catch {
-                // fallback to root navigation
-            }
-        }
-
-        // fallback: navigate to platform root
-        Nav.NavigateTo("/", forceLoad: true);
     }
 }
 
-<MudPaper Class="pa-4" Elevation="6">
-    <MudText Typo="Typo.h5" Class="mb-2">Subscription Success</MudText>
-    @if (_checking) {
-        <MudProgressCircular Indeterminate="true" />
-    } else if (_active) {
-        <MudAlert Severity="Severity.Success">Your subscription is active.</MudAlert>
-    } else {
-        <MudAlert Severity="Severity.Info">
-            Processing subscription. You can also go to your tenant homepage.
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-2" OnClick="() => NavigateToSubdomain(_resolvedSubdomain, _resolvedTenantId)">Go to tenant home</MudButton>
-        </MudAlert>
-    }
+<PageTitle>Subscription Success</PageTitle>
 
-    @if (!_checking && !_ownerExists && TenantId.HasValue && Token.HasValue) {
-        <MudAlert Severity="Severity.Info" Class="mt-4">Finish creating your owner account.
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-2" Href="@($"/signup/owner?tenantId={TenantId.Value}&token={Token.Value}")">Finish Owner Setup</MudButton>
-        </MudAlert>
-    }
-
-    @if (!_checking && RequestContainsDeferred && !_ownerExists) {
-        <MudAlert Severity="Severity.Info" Class="mt-4">Payment complete. Your tenant is being provisioned. You can try visiting your tenant homepage below while provisioning continues.
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-2" OnClick="() => NavigateToSubdomain(_resolvedSubdomain, _resolvedTenantId)">Go to tenant home</MudButton>
-        </MudAlert>
-    }
-</MudPaper>
+<MudContainer MaxWidth="MaxWidth.Small" Class="py-8">
+    <MudPaper Elevation="3" Class="pa-8" Style="border-radius: 16px; text-align: center;">
+        @if (_checking) {
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Class="mt-4">Verifying your subscription...</MudText>
+        } else if (!string.IsNullOrEmpty(_error)) {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #10b981; font-size: 80px;" />
+            <MudText Typo="Typo.h4" Class="mt-4" Style="font-weight: 700; color: #10b981;">Payment Received</MudText>
+            <MudText Typo="Typo.body1" Class="mt-2" Style="color: #666;">Your payment has been received. Your subscription is being activated.</MudText>
+            <MudAlert Severity="Severity.Warning" Class="mt-4">@_error</MudAlert>
+            <MudDivider Class="my-6" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/Account/Login">Go to Login</MudButton>
+        } else if (_active && _ownerExists) {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #10b981; font-size: 80px;" />
+            <MudText Typo="Typo.h4" Class="mt-4" Style="font-weight: 700; color: #10b981;">Subscription Active!</MudText>
+            <MudText Typo="Typo.body1" Class="mt-2" Style="color: #666;">Your subscription is active and ready to use.</MudText>
+            <MudDivider Class="my-6" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/dashboard">Go to Dashboard</MudButton>
+        } else if (_active && !_ownerExists) {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #10b981; font-size: 80px;" />
+            <MudText Typo="Typo.h4" Class="mt-4" Style="font-weight: 700; color: #10b981;">Payment Successful!</MudText>
+            <MudText Typo="Typo.body1" Class="mt-2" Style="color: #666;">Your subscription is active. Create your administrator account to get started.</MudText>
+            <MudDivider Class="my-6" />
+            @if (_resolvedTenantId.HasValue && _resolvedSignupToken.HasValue) {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                           Href="@($"/signup/owner?tenantId={_resolvedTenantId.Value}&token={_resolvedSignupToken.Value}")">
+                    Create Your Account
+                </MudButton>
+            } else {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/Account/Login">Go to Login</MudButton>
+            }
+        } else {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color: #10b981; font-size: 80px;" />
+            <MudText Typo="Typo.h4" Class="mt-4" Style="font-weight: 700; color: #10b981;">Payment Received</MudText>
+            <MudText Typo="Typo.body1" Class="mt-2" Style="color: #666;">Your payment has been received. Your subscription is being activated.</MudText>
+            <MudText Typo="Typo.body2" Class="mt-1" Style="color: #999;">This may take a few moments. You can refresh this page or proceed to login.</MudText>
+            <MudDivider Class="my-6" />
+            <MudStack Row="true" Justify="Justify.Center" Spacing="3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/Account/Login">Go to Login</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" Href="@($"/billing/success?RequestContainsDeferred={RequestContainsDeferred}&session_id={SessionId}")">Refresh</MudButton>
+            </MudStack>
+        }
+    </MudPaper>
+</MudContainer>

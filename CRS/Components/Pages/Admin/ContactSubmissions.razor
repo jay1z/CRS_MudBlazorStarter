@@ -1,0 +1,238 @@
+﻿@page "/admin/contact-submissions"
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
+
+@using CRS.Data
+@using CRS.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+@inject ILogger<CRS.Components.Pages.Admin.ContactSubmissions> Logger
+
+<PageTitle>Contact Submissions - Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudPaper Elevation="4" Class="pa-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <div>
+                <MudText Typo="Typo.h5">Contact Submissions</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">
+                    @if (_submissions != null)
+                    {
+                        var unread = _submissions.Count(s => !s.IsRead);
+                        @($"{_submissions.Count} total, {unread} unread")
+                    }
+                </MudText>
+            </div>
+            <MudStack Row="true" Spacing="2">
+                <MudToggleGroup T="string" @bind-Value="_filter" Color="Color.Primary" Size="Size.Small" SelectionMode="SelectionMode.SingleSelection">
+                    <MudToggleItem Value="@("all")" Text="All" />
+                    <MudToggleItem Value="@("unread")" Text="Unread" />
+                    <MudToggleItem Value="@("read")" Text="Read" />
+                </MudToggleGroup>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync" />
+            </MudStack>
+        </MudStack>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (_submissions == null || !FilteredSubmissions.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No submissions found.</MudAlert>
+        }
+        else
+        {
+            <MudTable T="ContactSubmission" Items="FilteredSubmissions" Hover="true" Dense="true" Bordered="true" Breakpoint="Breakpoint.Sm"
+                      RowStyle="cursor: pointer;" OnRowClick="@(args => ToggleDetail(args.Item))"
+                      RowStyleFunc="@((item, _) => !item.IsRead ? "font-weight: 600; background: #FFF8E1;" : "")">
+                <HeaderContent>
+                    <MudTh Style="width: 40px;"></MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Email</MudTh>
+                    <MudTh>Subject</MudTh>
+                    <MudTh Style="width: 80px;">Email Sent</MudTh>
+                    <MudTh Style="width: 100px;">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="sub">
+                    <MudTd>
+                        @if (!sub.IsRead)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.FiberNew" Color="Color.Warning" Size="Size.Small" />
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Date">@sub.DateCreated?.ToString("MMM dd, yyyy h:mm tt")</MudTd>
+                    <MudTd DataLabel="Name">@sub.Name</MudTd>
+                    <MudTd DataLabel="Email">
+                        <MudLink Href="@($"mailto:{sub.Email}")" Typo="Typo.body2">@sub.Email</MudLink>
+                    </MudTd>
+                    <MudTd DataLabel="Subject">@sub.Subject</MudTd>
+                    <MudTd DataLabel="Email Sent">
+                        <MudIcon Icon="@(sub.EmailSent ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                 Color="@(sub.EmailSent ? Color.Success : Color.Error)" Size="Size.Small" />
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@(sub.IsRead ? Icons.Material.Filled.MarkEmailRead : Icons.Material.Filled.MarkEmailUnread)"
+                                       Size="Size.Small"
+                                       Color="@(sub.IsRead ? Color.Default : Color.Primary)"
+                                       OnClick="@(() => ToggleReadAsync(sub))"
+                                       OnClickPreventDefault
+                                       OnClickStopPropagation
+                                       Title="@(sub.IsRead ? "Mark as unread" : "Mark as read")" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Size="Size.Small"
+                                       Color="Color.Error"
+                                       OnClick="@(() => DeleteAsync(sub))"
+                                       OnClickPreventDefault
+                                       OnClickStopPropagation
+                                       Title="Delete" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+
+    <!-- Detail Panel -->
+    @if (_selected != null)
+    {
+        <MudPaper Elevation="4" Class="pa-6 mt-4" Style="border-radius: 12px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+                <MudText Typo="Typo.h6">@_selected.Subject</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="@(() => _selected = null)" />
+            </MudStack>
+            <MudDivider Class="mb-4" />
+
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="4">
+                    <MudText Typo="Typo.caption" Style="color: #999;">From</MudText>
+                    <MudText Typo="Typo.body1" Class="fw-bold">@_selected.Name</MudText>
+                    <MudLink Href="@($"mailto:{_selected.Email}")" Typo="Typo.body2">@_selected.Email</MudLink>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudText Typo="Typo.caption" Style="color: #999;">Received</MudText>
+                    <MudText Typo="Typo.body2">@_selected.DateCreated?.ToString("MMMM dd, yyyy h:mm tt")</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudText Typo="Typo.caption" Style="color: #999;">Email Notification</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="@(_selected.EmailSent ? Color.Success : Color.Error)">
+                        @(_selected.EmailSent ? "Sent" : "Failed")
+                    </MudChip>
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.caption" Style="color: #999;" Class="mb-2">Message</MudText>
+            <MudPaper Elevation="0" Class="pa-4" Style="background: #f9f9f9; border-radius: 8px; white-space: pre-wrap;">
+                <MudText Typo="Typo.body1">@_selected.Message</MudText>
+            </MudPaper>
+
+            @if (!string.IsNullOrWhiteSpace(_selected.AdminNotes))
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.caption" Style="color: #999;" Class="mb-2">Admin Notes</MudText>
+                <MudText Typo="Typo.body2">@_selected.AdminNotes</MudText>
+            }
+
+            <MudDivider Class="my-4" />
+            <MudTextField @bind-Value="_adminNotes" Label="Admin Notes" Variant="Variant.Outlined" Lines="3" Placeholder="Add internal notes..." />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-2" OnClick="SaveNotesAsync" Size="Size.Small">
+                Save Notes
+            </MudButton>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private List<ContactSubmission>? _submissions;
+    private ContactSubmission? _selected;
+    private string _filter = "all";
+    private string _adminNotes = string.Empty;
+    private bool _loading = true;
+
+    private IEnumerable<ContactSubmission> FilteredSubmissions => _filter switch
+    {
+        "unread" => _submissions?.Where(s => !s.IsRead) ?? Enumerable.Empty<ContactSubmission>(),
+        "read" => _submissions?.Where(s => s.IsRead) ?? Enumerable.Empty<ContactSubmission>(),
+        _ => _submissions ?? Enumerable.Empty<ContactSubmission>()
+    };
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _submissions = await db.ContactSubmissions
+            .AsNoTracking()
+            .OrderByDescending(s => s.DateCreated)
+            .ToListAsync();
+
+        _loading = false;
+    }
+
+    private async Task ToggleDetail(ContactSubmission sub)
+    {
+        _selected = sub;
+        _adminNotes = sub.AdminNotes ?? string.Empty;
+
+        if (!sub.IsRead)
+        {
+            await MarkAsReadAsync(sub, true);
+        }
+    }
+
+    private async Task ToggleReadAsync(ContactSubmission sub)
+    {
+        await MarkAsReadAsync(sub, !sub.IsRead);
+    }
+
+    private async Task MarkAsReadAsync(ContactSubmission sub, bool isRead)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var entity = await db.ContactSubmissions.FindAsync(sub.Id);
+        if (entity == null) return;
+
+        entity.IsRead = isRead;
+        entity.DateModified = DateTime.Now;
+        await db.SaveChangesAsync();
+
+        sub.IsRead = isRead;
+        StateHasChanged();
+    }
+
+    private async Task SaveNotesAsync()
+    {
+        if (_selected == null) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var entity = await db.ContactSubmissions.FindAsync(_selected.Id);
+        if (entity == null) return;
+
+        entity.AdminNotes = _adminNotes;
+        entity.DateModified = DateTime.Now;
+        await db.SaveChangesAsync();
+
+        _selected.AdminNotes = _adminNotes;
+        Snackbar.Add("Notes saved.", Severity.Success);
+    }
+
+    private async Task DeleteAsync(ContactSubmission sub)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var entity = await db.ContactSubmissions.FindAsync(sub.Id);
+        if (entity == null) return;
+
+        db.ContactSubmissions.Remove(entity);
+        await db.SaveChangesAsync();
+
+        _submissions?.Remove(sub);
+        if (_selected?.Id == sub.Id) _selected = null;
+
+        Snackbar.Add("Submission deleted.", Severity.Info);
+        StateHasChanged();
+    }
+}

@@ -1,4 +1,4 @@
-﻿@page "/Documents"
+@page "/Documents"
 @attribute [Authorize]
 
 @using CRS.Models
@@ -468,7 +468,7 @@ private async Task LoadDocuments()
 
     private async Task DeleteDocument(Document doc)
     {
-        var confirmed = await DialogService.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
             "Delete Document",
             $"Are you sure you want to delete '{doc.FileName}'? This action cannot be undone.",
             yesText: "Delete",

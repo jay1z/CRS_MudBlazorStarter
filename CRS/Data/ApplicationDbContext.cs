@@ -498,6 +498,23 @@ namespace CRS.Data {
                 entity.Property(e => e.CustomName).HasMaxLength(200);
             });
 
+            // ElementDependency configuration for element relationship management
+            builder.Entity<ElementDependency>(entity => {
+                entity.ToTable("ElementDependencies");
+                // Composite index for looking up dependencies by dependent element
+                entity.HasIndex(e => new { e.DependentElementType, e.DependentElementId, e.IsActive })
+                    .HasDatabaseName("IX_ElementDependency_Dependent_Active");
+                // Composite index for looking up dependencies by required element
+                entity.HasIndex(e => new { e.RequiredElementType, e.RequiredElementId, e.IsActive })
+                    .HasDatabaseName("IX_ElementDependency_Required_Active");
+                // Unique constraint to prevent duplicate dependencies
+                entity.HasIndex(e => new { e.DependentElementType, e.DependentElementId, e.RequiredElementType, e.RequiredElementId })
+                    .IsUnique()
+                    .HasFilter("[DateDeleted] IS NULL")
+                    .HasDatabaseName("IX_ElementDependency_Unique_Relationship");
+                entity.Property(e => e.Description).HasMaxLength(500);
+            });
+
             // Document entity configuration
             builder.Entity<Document>(entity => {
                 entity.ToTable("Documents");
@@ -1058,7 +1075,10 @@ namespace CRS.Data {
         
         // Tenant-specific element ordering
         public DbSet<TenantElementOrder> TenantElementOrders { get; set; }
-        
+
+        // Element dependency relationships
+        public DbSet<ElementDependency> ElementDependencies { get; set; }
+
         // High Priority Schema Enhancements
         public DbSet<Document> Documents { get; set; }
         public DbSet<EmailLog> EmailLogs { get; set; }
@@ -1099,6 +1119,12 @@ namespace CRS.Data {
         // Marketing
         public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
         public DbSet<NewsletterCampaign> NewsletterCampaigns { get; set; }
+
+        // Contact Form
+        public DbSet<ContactSubmission> ContactSubmissions { get; set; }
+
+        // Platform Webmail
+        public DbSet<PlatformMailAccount> PlatformMailAccounts { get; set; }
         #endregion
 
         #region Seed Data

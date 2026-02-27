@@ -170,6 +170,28 @@ namespace CRS.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ElementDependencies",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DependentElementType = table.Column<int>(type: "int", nullable: false),
+                    DependentElementId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RequiredElementType = table.Column<int>(type: "int", nullable: false),
+                    RequiredElementId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsHardDependency = table.Column<bool>(type: "bit", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateModified = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DateDeleted = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ElementDependencies", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ElementOptions",
                 columns: table => new
                 {
@@ -1910,6 +1932,8 @@ namespace CRS.Migrations
                     IsComplete = table.Column<bool>(type: "bit", nullable: false),
                     DateApproved = table.Column<DateTime>(type: "datetime2", nullable: true),
                     SiteVisitDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    SiteVisitType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    VideoConferenceLink = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     TenantId = table.Column<int>(type: "int", nullable: false),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
                     IsDemo = table.Column<bool>(type: "bit", nullable: false),
@@ -2839,6 +2863,23 @@ namespace CRS.Migrations
                 name: "IX_Documents_UploadedByUserId",
                 table: "Documents",
                 column: "UploadedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ElementDependency_Dependent_Active",
+                table: "ElementDependencies",
+                columns: new[] { "DependentElementType", "DependentElementId", "IsActive" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ElementDependency_Required_Active",
+                table: "ElementDependencies",
+                columns: new[] { "RequiredElementType", "RequiredElementId", "IsActive" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ElementDependency_Unique_Relationship",
+                table: "ElementDependencies",
+                columns: new[] { "DependentElementType", "DependentElementId", "RequiredElementType", "RequiredElementId" },
+                unique: true,
+                filter: "[DateDeleted] IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ElementOption_Type_Active_Order",
@@ -3860,6 +3901,9 @@ namespace CRS.Migrations
 
             migrationBuilder.DropTable(
                 name: "Documents");
+
+            migrationBuilder.DropTable(
+                name: "ElementDependencies");
 
             migrationBuilder.DropTable(
                 name: "EmailLogs");

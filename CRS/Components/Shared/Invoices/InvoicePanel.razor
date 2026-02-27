@@ -1,4 +1,4 @@
-﻿@using CRS.Models
+@using CRS.Models
 @using CRS.Models.Email
 @using CRS.Models.Emails
 @using CRS.Services
@@ -294,7 +294,7 @@
             return;
         }
 
-        var confirm = await DialogService.ShowMessageBox(
+        var confirm = await DialogService.ShowMessageBoxAsync(
             "Send Invoice",
             $"Send invoice #{invoice.InvoiceNumber} to {invoice.BillToEmail}?",
             yesText: "Send",
@@ -362,7 +362,7 @@
                     ? $"Send payment reminder for invoice #{invoice.InvoiceNumber} to {invoice.BillToEmail}?\n\nThis invoice is {daysOverdue} days overdue."
                     : $"Send payment reminder for invoice #{invoice.InvoiceNumber} to {invoice.BillToEmail}?";
 
-                var confirm = await DialogService.ShowMessageBox(
+                var confirm = await DialogService.ShowMessageBoxAsync(
                     "Send Payment Reminder",
                     message,
                     yesText: "Send Reminder",
@@ -434,7 +434,7 @@
 
     private async Task DeleteInvoiceAsync(Invoice invoice)
     {
-        var confirm = await DialogService.ShowMessageBox(
+        var confirm = await DialogService.ShowMessageBoxAsync(
             "Delete Invoice",
             $"Are you sure you want to delete invoice #{invoice.InvoiceNumber}? This action cannot be undone.",
             yesText: "Delete",
@@ -457,7 +457,7 @@
 
     private async Task VoidInvoiceAsync(Invoice invoice)
     {
-        var reason = await DialogService.ShowMessageBox(
+        var reason = await DialogService.ShowMessageBoxAsync(
             "Void Invoice",
             $"Are you sure you want to void invoice #{invoice.InvoiceNumber}? The invoice will remain in records but will be marked as cancelled.",
             yesText: "Void Invoice",

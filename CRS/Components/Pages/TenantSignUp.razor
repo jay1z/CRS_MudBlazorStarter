@@ -6,7 +6,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 
-<PageTitle>Start Your Free Trial - ALX Reserve Cloud</PageTitle>
+<PageTitle>@(model.SkipTrial ? "Sign Up" : "Start Your Free Trial") - ALX Reserve Cloud</PageTitle>
 
 <!-- Progress Steps Indicator -->
 <div style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); padding: 16px 0;">
@@ -37,15 +37,18 @@
             <MudPaper Class="pa-8" Elevation="3" Style="border-radius: 20px;">
                 <!-- Header -->
                 <div class="mb-6">
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="margin-bottom: 12px;">
-                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
-                        14-Day Free Trial
-                    </MudChip>
+                    @if (!model.SkipTrial)
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Style="margin-bottom: 12px;">
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Small" Class="mr-1" />
+                            14-Day Free Trial
+                        </MudChip>
+                    }
                     <MudText Typo="Typo.h4" Class="fw-bold mb-2">
-                        Start Your Free Trial
+                        @(model.SkipTrial ? "Create Your Account" : "Start Your Free Trial")
                     </MudText>
                     <MudText Typo="Typo.body1" Style="color: #666;">
-                        No credit card required. Get instant access to all features.
+                        @(model.SkipTrial ? "Set up your account and get started right away." : "No credit card required. Get instant access to all features.")
                     </MudText>
                 </div>
                 
@@ -172,6 +175,19 @@
                                 Yearly <MudChip T="string" Size="Size.Small" Color="Color.Success" Style="margin-left: 8px;">Save 20%</MudChip>
                             </MudText>
                         </div>
+
+                        <!-- Trial Toggle -->
+                        <MudPaper Elevation="0" Class="pa-4" Style="background: #f9f9f9; border-radius: 12px;">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <div>
+                                    <MudText Typo="Typo.body2" Class="fw-bold">Start with 14-day free trial</MudText>
+                                    <MudText Typo="Typo.caption" Style="color: #666;">
+                                        @(model.SkipTrial ? "You'll be charged immediately after checkout." : "No payment required until your trial ends.")
+                                    </MudText>
+                                </div>
+                                <MudSwitch T="bool" Value="@(!model.SkipTrial)" ValueChanged="@(v => { model.SkipTrial = !v; StateHasChanged(); })" Color="Color.Success" />
+                            </MudStack>
+                        </MudPaper>
                         
                         <!-- Order Summary -->
                         <MudPaper Elevation="0" Class="pa-4" Style="background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%); border-radius: 12px;">
@@ -251,17 +267,24 @@
                         
                         <!-- Trust Signals -->
                         <div class="d-flex justify-center align-center gap-4 flex-wrap" style="opacity: 0.8;">
-                            <div class="d-flex align-center gap-1">
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
-                                <MudText Typo="Typo.caption">No credit card</MudText>
-                            </div>
-                            <div class="d-flex align-center gap-1">
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
-                                <MudText Typo="Typo.caption">14-day trial</MudText>
-                            </div>
+                            @if (!model.SkipTrial)
+                            {
+                                <div class="d-flex align-center gap-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                    <MudText Typo="Typo.caption">No credit card</MudText>
+                                </div>
+                                <div class="d-flex align-center gap-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                    <MudText Typo="Typo.caption">14-day trial</MudText>
+                                </div>
+                            }
                             <div class="d-flex align-center gap-1">
                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
                                 <MudText Typo="Typo.caption">Cancel anytime</MudText>
+                            </div>
+                            <div class="d-flex align-center gap-1">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Style="color: #28a745;" />
+                                <MudText Typo="Typo.caption">30-day money-back guarantee</MudText>
                             </div>
                         </div>
                     </MudStack>
@@ -289,11 +312,11 @@
             <MudPaper Class="pa-6 mb-4" Elevation="2" Style="border-radius: 16px; background: linear-gradient(135deg, #F3E8FF 0%, #FFF5E6 100%);">
                 <MudText Typo="Typo.h6" Class="fw-bold mb-4">
                     <MudIcon Icon="@Icons.Material.Filled.Star" Style="color: #FF8C00;" Class="mr-2" />
-                    What's Included in Your Trial
+                    @(model.SkipTrial ? "What's Included" : "What's Included in Your Trial")
                 </MudText>
                 <MudList T="string" Dense="false">
                     <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
-                        <MudText Typo="Typo.body2"><strong>Full feature access</strong> - Try everything for 14 days</MudText>
+                        <MudText Typo="Typo.body2"><strong>Full feature access</strong> - @(model.SkipTrial ? "All features from day one" : "Try everything for 14 days")</MudText>
                     </MudListItem>
                     <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
                         <MudText Typo="Typo.body2"><strong>Automated calculations</strong> - Save 75% of your time</MudText>
@@ -308,7 +331,7 @@
                         <MudText Typo="Typo.body2"><strong>Priority support</strong> - Email & chat assistance</MudText>
                     </MudListItem>
                     <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
-                        <MudText Typo="Typo.body2"><strong>No credit card</strong> - Start risk-free today</MudText>
+                        <MudText Typo="Typo.body2"><strong>@(model.SkipTrial ? "Instant access" : "No credit card")</strong> - @(model.SkipTrial ? "Get started immediately" : "Start risk-free today")</MudText>
                     </MudListItem>
                 </MudList>
             </MudPaper>
@@ -375,8 +398,7 @@
             <!-- Need Help? -->
             <div class="mt-4 text-center">
                 <MudText Typo="Typo.body2" Style="color: #666;">
-                    Questions? <MudLink Href="/contact" Style="color: #FF8C00; font-weight: 600;">Chat with our team</MudLink> or 
-                    <MudLink Href="tel:+18005551234" Style="color: #FF8C00; font-weight: 600;">call (800) 555-1234</MudLink>
+                    Questions? <MudLink Href="/contact" Style="color: #FF8C00; font-weight: 600;">Chat with our team</MudLink>
                 </MudText>
             </div>
         </MudItem>
@@ -392,7 +414,7 @@
         <MudGrid Spacing="4">
             <MudItem xs="12" sm="6" md="4">
                 <MudText Typo="Typo.body1" Class="fw-bold mb-2">Do I need a credit card?</MudText>
-                <MudText Typo="Typo.body2" Style="color: #666;">No! Start your 14-day trial without entering any payment information.</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">@(model.SkipTrial ? "A credit card is required at checkout, but you can cancel anytime." : "No! Start your 14-day trial without entering any payment information.")</MudText>
             </MudItem>
             <MudItem xs="12" sm="6" md="4">
                 <MudText Typo="Typo.body1" Class="fw-bold mb-2">Can I cancel anytime?</MudText>
@@ -418,6 +440,10 @@ public string? PlanFromQuery { get; set; }
 [Parameter]
 [SupplyParameterFromQuery(Name = "interval")]
 public string? IntervalFromQuery { get; set; }
+
+[Parameter]
+[SupplyParameterFromQuery(Name = "skipTrial")]
+public string? SkipTrialFromQuery { get; set; }
 
 private SignUpModel model = new() { Interval = "Monthly", Tier = "Pro" };
 private bool _submitting = false;
@@ -451,6 +477,7 @@ public class SignUpModel {
     public string AdminEmail { get; set; } = string.Empty;
     public string Tier { get; set; } = string.Empty;
     public string Interval { get; set; } = string.Empty; // Monthly or Yearly
+    public bool SkipTrial { get; set; } = false;
 }
     
 protected override void OnParametersSet()
@@ -473,6 +500,12 @@ protected override void OnParametersSet()
     else if (string.IsNullOrEmpty(model.Interval))
     {
         model.Interval = "Monthly"; // Ensure default interval is set
+    }
+
+    // Set skipTrial from query parameter if provided
+    if (!string.IsNullOrEmpty(SkipTrialFromQuery) && bool.TryParse(SkipTrialFromQuery, out var skip))
+    {
+        model.SkipTrial = skip;
     }
 
     // Auto-select plan based on source
@@ -758,7 +791,8 @@ protected override void OnParametersSet()
                 subdomain = sub,
                 adminEmail = model.AdminEmail.Trim(),
                 tier = model.Tier,
-                interval = model.Interval
+                interval = model.Interval,
+                skipTrial = model.SkipTrial
             });
 
             if (!resp.IsSuccessStatusCode) {
@@ -774,7 +808,8 @@ protected override void OnParametersSet()
             if (payload?.CheckoutUrl is string url && !string.IsNullOrWhiteSpace(url)) {
                 // Stripe handles the trial - redirect to checkout
                 // If TrialPeriodDays is configured, Stripe will show "14-day free trial" on checkout
-                Snackbar.Add($"Redirecting to checkout for {model.Tier} ({model.Interval}) with 14-day free trial...", Severity.Success);
+                var trialMsg = model.SkipTrial ? "" : " with 14-day free trial";
+                Snackbar.Add($"Redirecting to checkout for {model.Tier} ({model.Interval}){trialMsg}...", Severity.Success);
                 Nav.NavigateTo(url, forceLoad: true);
             } else {
                 _error = "Unexpected response from server. Please try again.";

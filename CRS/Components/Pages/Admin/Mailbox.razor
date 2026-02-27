@@ -1,0 +1,491 @@
+﻿@page "/admin/mail"
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
+
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Mail
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IMailboxService MailboxService
+@inject ISnackbar Snackbar
+@inject ILogger<CRS.Components.Pages.Admin.Mailbox> Logger
+
+<PageTitle>Mailbox - Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudGrid Spacing="3">
+        <!-- Sidebar: Account list + folders -->
+        <MudItem xs="12" sm="3">
+            <MudPaper Elevation="4" Class="pa-4">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
+                    <MudText Typo="Typo.subtitle1" Class="fw-bold">Accounts</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Href="/admin/mail-settings" />
+                </MudStack>
+
+                @if (_accounts == null)
+                {
+                    <MudSkeleton Width="100%" Height="32px" />
+                }
+                else if (_accounts.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Text">
+                        No accounts. <MudLink Href="/admin/mail-settings">Add one</MudLink>
+                    </MudAlert>
+                }
+                else
+                {
+                    @foreach (var acct in _accounts)
+                    {
+                        <MudButton FullWidth="true"
+                                   Variant="@(acct.Id == _selectedAccountId ? Variant.Filled : Variant.Text)"
+                                   Color="@(acct.Id == _selectedAccountId ? Color.Primary : Color.Default)"
+                                   OnClick="@(() => SelectAccount(acct.Id))"
+                                   Class="mb-1 justify-start"
+                                   Style="text-transform: none;">
+                            <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" Class="mr-2" />
+                            @acct.DisplayName
+                        </MudButton>
+                    }
+                }
+
+                @if (_folders.Count > 0)
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.caption" Class="mb-2" Style="color: #999;">Folders</MudText>
+                    @foreach (var folder in _folders)
+                    {
+                        <MudButton FullWidth="true"
+                                   Variant="@(folder == _selectedFolder ? Variant.Filled : Variant.Text)"
+                                   Color="@(folder == _selectedFolder ? Color.Secondary : Color.Default)"
+                                   OnClick="@(() => SelectFolder(folder))"
+                                   Size="Size.Small"
+                                   Class="mb-1 justify-start"
+                                   Style="text-transform: none;">
+                            <MudIcon Icon="@GetFolderIcon(folder)" Size="Size.Small" Class="mr-2" />
+                            @folder
+                        </MudButton>
+                    }
+                }
+
+                <MudDivider Class="my-3" />
+                <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Warning" OnClick="OpenCompose"
+                           StartIcon="@Icons.Material.Filled.Edit" Style="text-transform: none;">
+                    Compose
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Main content area -->
+        <MudItem xs="12" sm="9">
+            @if (_composing)
+            {
+                <!-- Compose view -->
+                <MudPaper Elevation="4" Class="pa-6">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+                        <MudText Typo="Typo.h6">New Message</MudText>
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" OnClick="@(() => _composing = false)" />
+                    </MudStack>
+
+                    <MudStack Spacing="3">
+                        <MudSelect @bind-Value="_composeFromAccountId" Label="From" Variant="Variant.Outlined" T="int">
+                            @if (_accounts != null)
+                            {
+                                @foreach (var acct in _accounts)
+                                {
+                                    <MudSelectItem Value="@acct.Id">@acct.EmailAddress (@acct.DisplayName)</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+
+                        <MudTextField @bind-Value="_composeTo" Label="To" Variant="Variant.Outlined" Placeholder="recipient@example.com" />
+                        <MudTextField @bind-Value="_composeCc" Label="Cc" Variant="Variant.Outlined" Placeholder="cc@example.com (optional)" />
+                        <MudTextField @bind-Value="_composeSubject" Label="Subject" Variant="Variant.Outlined" />
+                        <MudTextField @bind-Value="_composeBody" Label="Message" Variant="Variant.Outlined" Lines="10" />
+
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SendAsync"
+                                       Disabled="_sending" StartIcon="@Icons.Material.Filled.Send" Style="text-transform: none;">
+                                @if (_sending) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> <span>Sending...</span> }
+                                else { <span>Send</span> }
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" OnClick="@(() => _composing = false)">Discard</MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            }
+            else if (_viewingMessage != null)
+            {
+                <!-- Message detail view -->
+                <MudPaper Elevation="4" Class="pa-6">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
+                        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="BackToList"
+                                   Style="text-transform: none;">Back</MudButton>
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Reply" Size="Size.Small" OnClick="ReplyToMessage" Title="Reply" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                           OnClick="DeleteViewedMessage" Title="Delete" />
+                        </MudStack>
+                    </MudStack>
+
+                    <MudText Typo="Typo.h6" Class="mb-2">@_viewingMessage.Subject</MudText>
+                    <MudGrid Spacing="2" Class="mb-4">
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Style="color: #999;">From</MudText>
+                            <MudText Typo="Typo.body2" Class="fw-bold">@_viewingMessage.From</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Style="color: #999;">Date</MudText>
+                            <MudText Typo="Typo.body2">@_viewingMessage.Date.ToString("MMMM dd, yyyy h:mm tt")</MudText>
+                        </MudItem>
+                        @if (_viewingMessage.To.Length > 0)
+                        {
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Style="color: #999;">To</MudText>
+                                <MudText Typo="Typo.body2">@string.Join(", ", _viewingMessage.To)</MudText>
+                            </MudItem>
+                        }
+                        @if (_viewingMessage.Cc.Length > 0)
+                        {
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Style="color: #999;">Cc</MudText>
+                                <MudText Typo="Typo.body2">@string.Join(", ", _viewingMessage.Cc)</MudText>
+                            </MudItem>
+                        }
+                    </MudGrid>
+
+                    @if (_viewingMessage.Attachments.Count > 0)
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.caption" Style="color: #999;" Class="mb-2">Attachments</MudText>
+                        <MudStack Row="true" Spacing="2" Class="mb-3">
+                            @foreach (var att in _viewingMessage.Attachments)
+                            {
+                                <MudChip T="string" Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small">@att.FileName</MudChip>
+                            }
+                        </MudStack>
+                    }
+
+                    <MudDivider Class="my-3" />
+
+                    @if (!string.IsNullOrEmpty(_viewingMessage.HtmlBody))
+                    {
+                        <div style="max-height: 600px; overflow: auto; padding: 8px;">
+                            @((MarkupString)_viewingMessage.HtmlBody)
+                        </div>
+                    }
+                    else
+                    {
+                        <MudPaper Elevation="0" Class="pa-4" Style="background: #f9f9f9; border-radius: 8px; white-space: pre-wrap;">
+                            <MudText Typo="Typo.body1">@(_viewingMessage.TextBody ?? "(empty message)")</MudText>
+                        </MudPaper>
+                    }
+                </MudPaper>
+            }
+            else
+            {
+                <!-- Message list -->
+                <MudPaper Elevation="4" Class="pa-4">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
+                        <MudText Typo="Typo.h6">
+                            @if (_selectedAccount != null) { @_selectedAccount.DisplayName<span> — </span>@_selectedFolder }
+                            else { <span>Select an account</span> }
+                        </MudText>
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="RefreshAsync" Disabled="_loadingMessages" />
+                            @if (_page > 0)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" OnClick="PrevPage" />
+                            }
+                            <MudText Typo="Typo.caption" Class="d-flex align-center" Style="color: #999;">Page @(_page + 1)</MudText>
+                            @if (_messages.Count >= _pageSize)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" OnClick="NextPage" />
+                            }
+                        </MudStack>
+                    </MudStack>
+
+                    @if (_loadingMessages)
+                    {
+                        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                    }
+                    else if (_messages.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No messages in this folder.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudList T="MailMessageSummary" Dense="true">
+                            @foreach (var msg in _messages)
+                            {
+                                <MudListItem OnClick="@(() => ViewMessage(msg))"
+                                             Style="@(!msg.IsRead ? "font-weight: 600; background: #FFF8E1;" : "cursor: pointer;")">
+                                    <MudGrid Spacing="1">
+                                        <MudItem xs="4" sm="3">
+                                            <MudText Typo="Typo.body2" Style="@(!msg.IsRead ? "font-weight: 700;" : "")">
+                                                @TruncateFrom(msg.From)
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="5" sm="7">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                                @if (msg.HasAttachments)
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" Style="color: #999;" />
+                                                }
+                                                <MudText Typo="Typo.body2" Style="@(!msg.IsRead ? "font-weight: 700;" : "")">
+                                                    @Truncate(msg.Subject, 60)
+                                                </MudText>
+                                            </MudStack>
+                                        </MudItem>
+                                        <MudItem xs="3" sm="2" Style="text-align: right;">
+                                            <MudText Typo="Typo.caption" Style="color: #999;">
+                                                @FormatDate(msg.Date)
+                                            </MudText>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                </MudPaper>
+            }
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-3" Variant="Variant.Outlined">@_error</MudAlert>
+            }
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    // State
+    private List<PlatformMailAccount>? _accounts;
+    private PlatformMailAccount? _selectedAccount;
+    private int _selectedAccountId;
+    private string _selectedFolder = "INBOX";
+    private List<string> _folders = [];
+    private List<MailMessageSummary> _messages = [];
+    private MailMessageDetail? _viewingMessage;
+    private bool _loadingMessages;
+    private bool _composing;
+    private bool _sending;
+    private string? _error;
+    private int _page;
+    private const int _pageSize = 50;
+
+    // Compose fields
+    private int _composeFromAccountId;
+    private string _composeTo = "";
+    private string _composeCc = "";
+    private string _composeSubject = "";
+    private string _composeBody = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _accounts = await db.PlatformMailAccounts.Where(a => a.IsActive).OrderBy(a => a.DisplayName).ToListAsync();
+
+        if (_accounts.Count > 0)
+        {
+            await SelectAccount(_accounts[0].Id);
+        }
+    }
+
+    private async Task SelectAccount(int accountId)
+    {
+        _selectedAccountId = accountId;
+        _selectedAccount = _accounts?.FirstOrDefault(a => a.Id == accountId);
+        _selectedFolder = "INBOX";
+        _page = 0;
+        _viewingMessage = null;
+        _composing = false;
+        _error = null;
+
+        await LoadFoldersAsync();
+        await RefreshAsync();
+    }
+
+    private async Task SelectFolder(string folder)
+    {
+        _selectedFolder = folder;
+        _page = 0;
+        _viewingMessage = null;
+        await RefreshAsync();
+    }
+
+    private async Task LoadFoldersAsync()
+    {
+        try
+        {
+            _folders = await MailboxService.GetFoldersAsync(_selectedAccountId);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load folders: {ex.Message}";
+            _folders = ["INBOX"];
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        _loadingMessages = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            _messages = await MailboxService.GetMessagesAsync(_selectedAccountId, _selectedFolder, _page, _pageSize);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load messages: {ex.Message}";
+            Logger.LogError(ex, "Failed to load messages for account {AccountId}", _selectedAccountId);
+            _messages = [];
+        }
+        finally
+        {
+            _loadingMessages = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ViewMessage(MailMessageSummary summary)
+    {
+        _error = null;
+        _loadingMessages = true;
+        StateHasChanged();
+
+        try
+        {
+            _viewingMessage = await MailboxService.GetMessageAsync(_selectedAccountId, summary.UniqueId, _selectedFolder);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load message: {ex.Message}";
+        }
+        finally
+        {
+            _loadingMessages = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task BackToList()
+    {
+        _viewingMessage = null;
+        await RefreshAsync();
+    }
+
+    private async Task DeleteViewedMessage()
+    {
+        if (_viewingMessage == null) return;
+        try
+        {
+            await MailboxService.DeleteMessageAsync(_selectedAccountId, _viewingMessage.UniqueId, _selectedFolder);
+            Snackbar.Add("Message deleted.", Severity.Info);
+            _viewingMessage = null;
+            await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to delete: {ex.Message}";
+        }
+    }
+
+    private void ReplyToMessage()
+    {
+        if (_viewingMessage == null) return;
+        _composing = true;
+        _composeFromAccountId = _selectedAccountId;
+        _composeTo = _viewingMessage.From;
+        _composeCc = "";
+        _composeSubject = _viewingMessage.Subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase)
+            ? _viewingMessage.Subject
+            : $"Re: {_viewingMessage.Subject}";
+        _composeBody = $"\n\n--- Original Message ---\nFrom: {_viewingMessage.From}\nDate: {_viewingMessage.Date:f}\n\n{_viewingMessage.TextBody ?? "(no text)"}";
+        _viewingMessage = null;
+    }
+
+    private void OpenCompose()
+    {
+        _composing = true;
+        _composeFromAccountId = _selectedAccountId > 0 ? _selectedAccountId : (_accounts?.FirstOrDefault()?.Id ?? 0);
+        _composeTo = "";
+        _composeCc = "";
+        _composeSubject = "";
+        _composeBody = "";
+        _viewingMessage = null;
+    }
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_composeTo))
+        {
+            Snackbar.Add("Please enter a recipient.", Severity.Warning);
+            return;
+        }
+
+        _sending = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var to = _composeTo.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var cc = string.IsNullOrWhiteSpace(_composeCc) ? [] : _composeCc.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            var htmlBody = $"<div style=\"white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(_composeBody)}</div>";
+
+            await MailboxService.SendAsync(_composeFromAccountId, new ComposeMailRequest(
+                _accounts!.First(a => a.Id == _composeFromAccountId).EmailAddress,
+                to,
+                cc,
+                _composeSubject,
+                htmlBody));
+
+            Snackbar.Add("Message sent!", Severity.Success);
+            _composing = false;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to send: {ex.Message}";
+            Logger.LogError(ex, "Failed to send email from account {AccountId}", _composeFromAccountId);
+        }
+        finally
+        {
+            _sending = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task PrevPage() { _page = Math.Max(0, _page - 1); await RefreshAsync(); }
+    private async Task NextPage() { _page++; await RefreshAsync(); }
+
+    // Helpers
+    private static string TruncateFrom(string from)
+    {
+        if (from.Length <= 30) return from;
+        var idx = from.IndexOf('<');
+        return idx > 0 ? from[..idx].Trim() : from[..27] + "...";
+    }
+
+    private static string Truncate(string s, int max) => s.Length <= max ? s : s[..(max - 3)] + "...";
+
+    private static string FormatDate(DateTimeOffset d)
+    {
+        var now = DateTimeOffset.Now;
+        if (d.Date == now.Date) return d.ToString("h:mm tt");
+        if (d.Year == now.Year) return d.ToString("MMM dd");
+        return d.ToString("MM/dd/yy");
+    }
+
+    private static string GetFolderIcon(string folder) => folder.ToUpperInvariant() switch
+    {
+        "INBOX" => Icons.Material.Filled.Inbox,
+        "SENT" or "SENT ITEMS" or "SENT MESSAGES" => Icons.Material.Filled.Send,
+        "DRAFTS" => Icons.Material.Filled.Drafts,
+        "TRASH" or "DELETED ITEMS" => Icons.Material.Filled.Delete,
+        "JUNK" or "SPAM" => Icons.Material.Filled.Report,
+        _ => Icons.Material.Filled.Folder
+    };
+}

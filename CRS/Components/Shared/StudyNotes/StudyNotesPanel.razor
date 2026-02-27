@@ -1,4 +1,4 @@
-﻿@using CRS.Models
+@using CRS.Models
 @using CRS.Services.Interfaces
 @using CRS.Services
 @using CRS.Data
@@ -441,7 +441,7 @@ private async Task DetermineUserRole()
 
     private async Task DeleteNote(StudyNote note)
     {
-        var confirmed = await DialogService.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
             "Delete Note",
             "Are you sure you want to delete this note?",
             yesText: "Delete",

@@ -968,12 +968,12 @@ private string BannerGradient => $"background: linear-gradient(135deg, {primaryC
 
     // Trend chart data (placeholder - replace with real historical data)
     private string[] _trendChartLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun" };
-    private List<ChartSeries> _trendChartSeries = new()
+    private List<ChartSeries<double>> _trendChartSeries = new()
     {
-        new ChartSeries { Name = "Revenue ($K)", Data = new double[] { 12.5, 15.2, 18.4, 16.8, 22.1, 24.5 } },
-        new ChartSeries { Name = "Studies", Data = new double[] { 3, 5, 4, 7, 6, 8 } }
+        new ChartSeries<double> { Name = "Revenue ($K)", Data = new double[] { 12.5, 15.2, 18.4, 16.8, 22.1, 24.5 } },
+        new ChartSeries<double> { Name = "Studies", Data = new double[] { 3, 5, 4, 7, 6, 8 } }
     };
-    private ChartOptions _trendChartOptions = new()
+    private LineChartOptions _trendChartOptions = new()
     {
         YAxisTicks = 5,
         LineStrokeWidth = 2.5

@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CRS\CRS.csproj" />
+    <ProjectReference Include="..\CRS\Horizon.csproj" />
   </ItemGroup>
 
 </Project>

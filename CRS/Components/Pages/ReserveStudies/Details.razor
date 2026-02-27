@@ -1,4 +1,4 @@
-﻿@page "/ReserveStudies/Details/{Id:guid}"
+@page "/ReserveStudies/Details/{Id:guid}"
 @attribute [Authorize]
 
 @using CRS.Components.Custom
@@ -2226,7 +2226,7 @@
     private async Task RequestFinancialInfoAsync(Guid studyId) => await ExecuteActionAsync(async () => await WorkflowService.RequestFinancialInfoAsync(studyId), "Financial info requested", "Failed");
 
     private async Task RequestMoreFinancialInfoAsync() {
-        var confirmed = await DialogService.ShowMessageBox("Request More Financial Information",
+        var confirmed = await DialogService.ShowMessageBoxAsync("Request More Financial Information",
             "This will request additional financial information from the client.", yesText: "Yes, Request More Info", cancelText: "Cancel");
         if (confirmed != true) return;
         var success = await ExecuteActionAsync(async () => await WorkflowService.RequestFinancialInfoAsync(Id), "Financial info request sent.", "Failed");
@@ -2236,7 +2236,7 @@
     private async Task CompleteReserveStudyAsync(Guid studyId) { var success = await ExecuteActionAsync(async () => await WorkflowService.CompleteReserveStudyAsync(studyId), "Study completed", "Failed"); if (success) await ReloadAfterChange(); }
 
     private async Task CompleteFinalReviewAsync(Guid studyId) {
-        var confirmed = await DialogService.ShowMessageBox("Complete Final Review",
+        var confirmed = await DialogService.ShowMessageBoxAsync("Complete Final Review",
             "This will mark the final review as complete and finalize the study.", yesText: "Complete Review", cancelText: "Cancel");
         if (confirmed != true) return;
         var currentUser = UserState.CurrentUser?.UserName ?? "Unknown";

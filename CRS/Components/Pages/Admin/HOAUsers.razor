@@ -1,4 +1,4 @@
-﻿@page "/Admin/HOAUsers"
+@page "/Admin/HOAUsers"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @using CRS.Data
@@ -399,7 +399,7 @@
             _ => CustomerAccountRole.Member
         };
 
-        bool? confirm = await DialogService.ShowMessageBox(
+        bool? confirm = await DialogService.ShowMessageBoxAsync(
             "Confirm Role Change",
             $"Change {cau.User?.FullName}'s role from {GetRoleDisplayName(currentRole)} to {GetRoleDisplayName(nextRole)}?",
             yesText: "Change", cancelText: "Cancel");
@@ -430,7 +430,7 @@
     {
         if (cau.CustomerAccount == null) return;
 
-        bool? confirm = await DialogService.ShowMessageBox(
+        bool? confirm = await DialogService.ShowMessageBoxAsync(
             "Remove from Organization",
             $"Remove {cau.User?.FullName} from {cau.CustomerAccount.Name}? They will no longer have access to this organization's reserve studies.",
             yesText: "Remove", cancelText: "Cancel",

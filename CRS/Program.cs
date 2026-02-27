@@ -151,6 +151,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IContactService, ContactService>();
     builder.Services.AddScoped<IDashboardService, DashboardService>();
     builder.Services.AddScoped<IElementService, ElementService>();
+    builder.Services.AddScoped<IElementDependencyService, ElementDependencyService>();
     builder.Services.AddScoped<IReserveStudyService, ReserveStudyService>();
     builder.Services.AddScoped<IReserveStudyWorkflowService, ReserveStudyWorkflowService>();
     builder.Services.AddScoped<ISignalRService, SignalRService>();
@@ -240,6 +241,9 @@ void ConfigureServices(WebApplicationBuilder builder) {
 
     // Newsletter/Marketing Services
     builder.Services.AddScoped<CRS.Services.Interfaces.INewsletterService, CRS.Services.NewsletterService>();
+
+    // Platform Webmail (IMAP/SMTP)
+    builder.Services.AddScoped<CRS.Services.Mail.IMailboxService, CRS.Services.Mail.MailboxService>();
 
     // Report ZIP Service
     builder.Services.AddScoped<CRS.Services.Interfaces.IReportZipService, CRS.Services.ReportZipService>();

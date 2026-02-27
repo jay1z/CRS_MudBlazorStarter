@@ -13,7 +13,7 @@ namespace CRS.Services.Billing {
         Task<string> CreateCheckoutSessionAsync(int tenantId, SubscriptionTier tier, BillingInterval interval, CancellationToken ct = default);
         Task<string> CreateBillingPortalSessionAsync(int tenantId, CancellationToken ct = default);
         Task ApplySubscriptionUpdateAsync(string subscriptionId, string customerId, SubscriptionTier? tier, SubscriptionStatus status, CancellationToken ct = default);
-        Task<string> CreateDeferredTenantCheckoutSessionAsync(string companyName, string subdomain, string adminEmail, SubscriptionTier tier, BillingInterval interval, CancellationToken ct = default);
+        Task<string> CreateDeferredTenantCheckoutSessionAsync(string companyName, string subdomain, string adminEmail, SubscriptionTier tier, BillingInterval interval, bool skipTrial = false, CancellationToken ct = default);
         Task<IReadOnlyList<InvoiceDto>> GetRecentInvoicesAsync(int tenantId, int max = 10, CancellationToken ct = default);
         Task<bool> PauseSubscriptionAsync(int tenantId, CancellationToken ct = default);
         Task<bool> ResumeSubscriptionAsync(int tenantId, CancellationToken ct = default);
@@ -159,7 +159,7 @@ namespace CRS.Services.Billing {
             _logger.LogInformation("Applied subscription update {SubscriptionId} status {Status} to tenant {TenantId}", subscriptionId, status, tenant.Id);
         }
 
-        public async Task<string> CreateDeferredTenantCheckoutSessionAsync(string companyName, string subdomain, string adminEmail, SubscriptionTier tier, BillingInterval interval, CancellationToken ct = default) {
+        public async Task<string> CreateDeferredTenantCheckoutSessionAsync(string companyName, string subdomain, string adminEmail, SubscriptionTier tier, BillingInterval interval, bool skipTrial = false, CancellationToken ct = default) {
             var priceId = _stripeOptions.GetPriceId(tier, interval);
             if (string.IsNullOrWhiteSpace(priceId)) throw new InvalidOperationException($"No Stripe price id configured for {tier} {interval}");
             var client = _clientFactory.CreateClient();
@@ -202,7 +202,7 @@ namespace CRS.Services.Billing {
                 AllowPromotionCodes = _stripeOptions.AllowPromotionCodes,
                 // For trials: "if_required" allows checkout without payment method during trial
                 // "always" (default) requires payment method upfront
-                PaymentMethodCollection = _stripeOptions.TrialPeriodDays > 0 ? "if_required" : "always",
+                PaymentMethodCollection = (!skipTrial && _stripeOptions.TrialPeriodDays > 0) ? "if_required" : "always",
                 Metadata = new Dictionary<string, string> {
                     ["company_name"] = companyName,
                     ["subdomain"] = subdomain,
@@ -212,8 +212,8 @@ namespace CRS.Services.Billing {
                     ["deferred_tenant"] = "true"
                 },
                 SubscriptionData = new SessionSubscriptionDataOptions {
-                    // Add free trial period if configured
-                    TrialPeriodDays = _stripeOptions.TrialPeriodDays > 0 ? _stripeOptions.TrialPeriodDays : null,
+                    // Add free trial period if configured (skip if user opted out)
+                    TrialPeriodDays = (!skipTrial && _stripeOptions.TrialPeriodDays > 0) ? _stripeOptions.TrialPeriodDays : null,
                     Metadata = new Dictionary<string, string> {
                         ["company_name"] = companyName,
                         ["subdomain"] = subdomain,

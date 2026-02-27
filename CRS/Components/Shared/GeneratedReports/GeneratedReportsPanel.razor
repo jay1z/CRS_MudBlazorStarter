@@ -1,4 +1,4 @@
-﻿@using CRS.Models
+@using CRS.Models
 @using CRS.Models.Workflow
 @using CRS.Services.Interfaces
 @using CRS.Services
@@ -1237,7 +1237,7 @@
 
     private async Task DeleteReport(GeneratedReport report)
     {
-        var confirmed = await DialogService.ShowMessageBox(
+        var confirmed = await DialogService.ShowMessageBoxAsync(
             "Delete Report",
             $"Are you sure you want to delete this {GetReportTypeDisplayName(report.Type)} (v{report.Version})?",
             yesText: "Delete",

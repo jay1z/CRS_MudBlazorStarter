@@ -1,4 +1,4 @@
-﻿@page "/Customers"
+@page "/Customers"
 @using CRS.Models
 @using CRS.Services.Customers
 @attribute [Authorize(Policy = "RequireTenantStaff")]
@@ -469,7 +469,7 @@
 
     private async Task DeleteCustomer(CustomerAccount customer)
     {
-        var confirm = await DialogService.ShowMessageBox(
+        var confirm = await DialogService.ShowMessageBoxAsync(
             "Delete Customer",
             $"Are you sure you want to delete \"{customer.Name}\"? This will not delete associated communities.",
             yesText: "Delete",

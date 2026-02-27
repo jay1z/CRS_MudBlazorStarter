@@ -210,7 +210,7 @@
                     <MudText Typo="Typo.h6" Class="mb-4">Studies by Status</MudText>
                     @if (_analytics.Studies.StudiesByStatus.Count > 0)
                     {
-                        <MudChart ChartType="ChartType.Donut"
+                        <MudChart T="double" ChartType="ChartType.Donut"
                                   InputData="@_statusChartData"
                                   InputLabels="@_statusChartLabels"
                                   Width="100%"
@@ -307,9 +307,9 @@
     private DateRangeOption _selectedRange = DateRangeOption.Last30Days;
 
     // Chart data
-    private List<ChartSeries> _chartSeries = new();
+    private List<ChartSeries<double>> _chartSeries = new();
     private string[] _chartLabels = Array.Empty<string>();
-    private ChartOptions _chartOptions = new() { YAxisTicks = 5 };
+    private LineChartOptions _chartOptions = new() { YAxisTicks = 5 };
     private double[] _statusChartData = Array.Empty<double>();
     private string[] _statusChartLabels = Array.Empty<string>();
 
@@ -367,7 +367,7 @@
         if (_monthlyTrends.Count > 0)
         {
             _chartLabels = _monthlyTrends.Select(t => t.Label).ToArray();
-            _chartSeries = new List<ChartSeries>
+            _chartSeries = new List<ChartSeries<double>>
             {
                 new() { Name = "Studies Created", Data = _monthlyTrends.Select(t => (double)t.StudiesCreated).ToArray() },
                 new() { Name = "Studies Completed", Data = _monthlyTrends.Select(t => (double)t.StudiesCompleted).ToArray() },

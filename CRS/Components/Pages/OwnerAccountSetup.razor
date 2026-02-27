@@ -1,13 +1,13 @@
 ﻿@page "/signup/owner"
 @attribute [AllowAnonymous]
 @using CRS.Data
+@using CRS.Components.Account
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserManager<ApplicationUser> UserManager
-@inject SignInManager<ApplicationUser> SignInManager
-@inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject ILogger<OwnerAccountSetup> Logger
 
 <PageTitle>Set Up Owner Account</PageTitle>
 
@@ -46,34 +46,78 @@
         if (tenant == null) { _error = "Tenant not found."; return; }
         if (tenant.SignupToken != Token.Value) { _error = "Invalid signup token."; return; }
         if (tenant.IsActive == false) { _error = "Subscription not active yet."; return; }
-        if (!string.IsNullOrWhiteSpace(tenant.PendingOwnerEmail)) model.Email = tenant.PendingOwnerEmail; // prefill
+        if (!string.IsNullOrWhiteSpace(tenant.PendingOwnerEmail)) model.Email = tenant.PendingOwnerEmail;
     }
 
     private async Task OnSubmitAsync() {
         if (!TenantId.HasValue || !Token.HasValue) { _error = "Invalid request."; return; }
-        // ... existing password checks ...
-        if (model.Password.Length < 8) { _error = "Password must be at least 8 characters."; return; }
+        if (model.Password.Length < 12) { _error = "Password must be at least 12 characters."; return; }
         if (model.Password != model.Confirm) { _error = "Passwords do not match."; return; }
         _submitting = true;
+        _error = null;
         try {
             await using var db = await DbFactory.CreateDbContextAsync();
             var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == TenantId.Value);
             if (tenant == null) { _error = "Tenant not found."; _submitting = false; return; }
             if (tenant.SignupToken != Token.Value) { _error = "Invalid signup token."; _submitting = false; return; }
+
+            ApplicationUser? user;
             var existingUser = await UserManager.FindByEmailAsync(model.Email.Trim());
-            if (existingUser != null) { _error = "Account already exists. Please log in."; _submitting = false; return; }
-            var user = new ApplicationUser { Email = model.Email.Trim(), UserName = model.Email.Trim(), EmailConfirmed = true, TenantId = tenant.Id };
-            var create = await UserManager.CreateAsync(user, model.Password);
-            if (!create.Succeeded) { _error = string.Join(", ", create.Errors.Select(e => e.Description)); _submitting = false; return; }
+            if (existingUser != null) {
+                // Account was pre-created by the provisioning service during Stripe webhook.
+                if (existingUser.TenantId != tenant.Id) {
+                    _error = "This email is associated with a different account. Please use the email you registered with.";
+                    _submitting = false;
+                    return;
+                }
+
+                // Reset password to what the user entered
+                var resetToken = await UserManager.GeneratePasswordResetTokenAsync(existingUser);
+                var resetResult = await UserManager.ResetPasswordAsync(existingUser, resetToken, model.Password);
+                if (!resetResult.Succeeded) {
+                    _error = string.Join(", ", resetResult.Errors.Select(e => e.Description));
+                    _submitting = false;
+                    return;
+                }
+
+                // Ensure email is confirmed (required for login)
+                if (!existingUser.EmailConfirmed) {
+                    existingUser.EmailConfirmed = true;
+                    await UserManager.UpdateAsync(existingUser);
+                }
+
+                user = existingUser;
+            } else {
+                // No existing user — create a new account
+                user = new ApplicationUser { Email = model.Email.Trim(), UserName = model.Email.Trim(), EmailConfirmed = true, TenantId = tenant.Id };
+                var create = await UserManager.CreateAsync(user, model.Password);
+                if (!create.Succeeded) { _error = string.Join(", ", create.Errors.Select(e => e.Description)); _submitting = false; return; }
+            }
+
+            // Ensure TenantOwner role is assigned
             var ownerRole = await db.Roles2.FirstOrDefaultAsync(r => r.Name == "TenantOwner");
             if (ownerRole != null && !await db.UserRoleAssignments.AnyAsync(a => a.UserId == user.Id && a.RoleId == ownerRole.Id && a.TenantId == tenant.Id)) {
                 db.UserRoleAssignments.Add(new CRS.Models.Security.UserRoleAssignment { UserId = user.Id, RoleId = ownerRole.Id, TenantId = tenant.Id });
                 await db.SaveChangesAsync();
             }
-            await SignInManager.SignInAsync(user, false);
-            Snackbar.Add("Owner account created.", Severity.Success);
-            Nav.NavigateTo("/");
-        } catch (Exception ex) { _error = ex.Message; }
+
+            // Clear pending owner email
+            tenant.PendingOwnerEmail = null;
+            db.Tenants.Update(tenant);
+            await db.SaveChangesAsync();
+
+            Logger.LogInformation("Owner account finalized for tenant {TenantId}, user {UserId}", tenant.Id, user.Id);
+
+            // Redirect to LoginCallback endpoint to set auth cookie via HTTP
+            // (SignInManager.SignInAsync can't set cookies in InteractiveServer/WebSocket mode)
+            var loginToken = IdentityComponentsEndpointRouteBuilderExtensions.GenerateLoginToken(user.Id.ToString());
+            var returnUrl = Uri.EscapeDataString("/dashboard");
+            var loginUrl = $"/Account/LoginCallback?userId={user.Id}&token={Uri.EscapeDataString(loginToken)}&returnUrl={returnUrl}";
+            Nav.NavigateTo(loginUrl, forceLoad: true);
+        } catch (Exception ex) {
+            Logger.LogError(ex, "Error during owner account setup for tenant {TenantId}", TenantId);
+            _error = "An unexpected error occurred. Please try again.";
+        }
         _submitting = false;
     }
 }

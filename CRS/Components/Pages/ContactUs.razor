@@ -1,0 +1,230 @@
+﻿@page "/contact"
+@attribute [CRS.Components.Layout.HideNav]
+@using Coravel.Mailer.Mail.Interfaces
+@using CRS.Data
+@using CRS.Models
+@using CRS.Services.Email
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IMailer Mailer
+@inject ILogger<CRS.Components.Pages.ContactUs> Logger
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Contact Us - ALX Reserve Cloud</PageTitle>
+
+<!-- Hero Section -->
+<div style="background: linear-gradient(135deg, #6A3D9A 0%, #FF8C00 100%); padding: 80px 0 60px;">
+    <MudContainer MaxWidth="MaxWidth.Small">
+        <div style="text-align: center; color: white;">
+            <MudText Typo="Typo.h3" Class="fw-bold mb-3">Get in Touch</MudText>
+            <MudText Typo="Typo.h6" Style="opacity: 0.9;">
+                Have a question or need help? We'd love to hear from you.
+            </MudText>
+        </div>
+    </MudContainer>
+</div>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-n8 mb-16">
+    <MudPaper Class="pa-8" Elevation="3" Style="border-radius: 20px;">
+        @if (_submitted)
+        {
+            <div class="text-center pa-8">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="font-size: 64px; color: #28a745;" />
+                <MudText Typo="Typo.h5" Class="fw-bold mt-4 mb-2">Message Sent!</MudText>
+                <MudText Typo="Typo.body1" Style="color: #666;" Class="mb-6">
+                    Thank you for reaching out. We'll get back to you within 1 business day.
+                </MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => { _submitted = false; _model = new(); })">
+                    Send Another Message
+                </MudButton>
+            </div>
+        }
+        else
+        {
+            <MudText Typo="Typo.h5" Class="fw-bold mb-1">Send Us a Message</MudText>
+            <MudText Typo="Typo.body2" Style="color: #666;" Class="mb-6">
+                Fill out the form below and we'll respond as soon as possible.
+            </MudText>
+
+            <EditForm Model="_model" OnValidSubmit="HandleSubmit">
+                <MudStack Spacing="4">
+                    <MudTextField @bind-Value="_model.Name"
+                                  Label="Your Name"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  Placeholder="e.g., Jane Smith"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Person" />
+
+                    <MudTextField @bind-Value="_model.Email"
+                                  Label="Email Address"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  Placeholder="you@company.com"
+                                  InputType="InputType.Email"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Email" />
+
+                    <MudSelect @bind-Value="_model.Subject"
+                               Label="Subject"
+                               Variant="Variant.Outlined"
+                               Required="true"
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Filled.Topic">
+                        <MudSelectItem Value="@("General Inquiry")">General Inquiry</MudSelectItem>
+                        <MudSelectItem Value="@("Sales / Pricing")">Sales / Pricing</MudSelectItem>
+                        <MudSelectItem Value="@("Technical Support")">Technical Support</MudSelectItem>
+                        <MudSelectItem Value="@("Feature Request")">Feature Request</MudSelectItem>
+                        <MudSelectItem Value="@("Partnership")">Partnership</MudSelectItem>
+                    </MudSelect>
+
+                    <MudTextField @bind-Value="_model.Message"
+                                  Label="Message"
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  Lines="5"
+                                  Placeholder="How can we help you?" />
+
+                    <MudButton Color="Color.Warning"
+                               Variant="Variant.Filled"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               ButtonType="ButtonType.Submit"
+                               Disabled="_submitting"
+                               Style="text-transform: none; font-weight: 600; padding: 14px;">
+                        @if (_submitting)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Sending...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Send" Class="mr-2" />
+                            <span>Send Message</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </EditForm>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4" Variant="Variant.Outlined">
+                    @_error
+                </MudAlert>
+            }
+        }
+    </MudPaper>
+
+    <!-- Additional Contact Info -->
+    <MudGrid Spacing="4" Class="mt-6">
+        <MudItem xs="12" sm="6">
+            <MudPaper Class="pa-6 text-center" Elevation="2" Style="border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Email" Style="font-size: 40px; color: #6A3D9A;" Class="mb-3" />
+                <MudText Typo="Typo.h6" Class="fw-bold mb-1">Email Us</MudText>
+                <MudLink Href="mailto:support@alxreservecloud.com" Typo="Typo.body2" Style="color: #FF8C00; font-weight: 600;">
+                    support@alxreservecloud.com
+                </MudLink>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudPaper Class="pa-6 text-center" Elevation="2" Style="border-radius: 16px; height: 100%;">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" Style="font-size: 40px; color: #6A3D9A;" Class="mb-3" />
+                <MudText Typo="Typo.h6" Class="fw-bold mb-1">Response Time</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">
+                    Within 1 business day
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private ContactModel _model = new();
+    private bool _submitting = false;
+    private bool _submitted = false;
+    private string? _error;
+
+    private class ContactModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+    }
+
+    private async Task HandleSubmit(EditContext _)
+    {
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(_model.Name) || string.IsNullOrWhiteSpace(_model.Email)
+            || string.IsNullOrWhiteSpace(_model.Subject) || string.IsNullOrWhiteSpace(_model.Message))
+        {
+            _error = "Please fill in all fields.";
+            return;
+        }
+
+        _submitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var submission = new ContactSubmission
+            {
+                Name = _model.Name.Trim(),
+                Email = _model.Email.Trim(),
+                Subject = _model.Subject,
+                Message = _model.Message.Trim()
+            };
+
+            // Save to database first so we never lose a submission
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.ContactSubmissions.Add(submission);
+            await db.SaveChangesAsync();
+
+            // Then attempt email notification
+            try
+            {
+                var html = $"""
+                    <h2>Contact Form Submission</h2>
+                    <table style="border-collapse: collapse; width: 100%;">
+                        <tr><td style="padding: 8px; font-weight: bold;">Name:</td><td style="padding: 8px;">{System.Net.WebUtility.HtmlEncode(_model.Name)}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td style="padding: 8px;"><a href="mailto:{System.Net.WebUtility.HtmlEncode(_model.Email)}">{System.Net.WebUtility.HtmlEncode(_model.Email)}</a></td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Subject:</td><td style="padding: 8px;">{System.Net.WebUtility.HtmlEncode(_model.Subject)}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Message:</td><td style="padding: 8px;">{System.Net.WebUtility.HtmlEncode(_model.Message)}</td></tr>
+                    </table>
+                    """;
+
+                var mail = new BasicMailable
+                {
+                    SubjectText = $"[Contact Form] {_model.Subject}",
+                    HtmlBody = html,
+                    TextBody = $"Name: {_model.Name}\nEmail: {_model.Email}\nSubject: {_model.Subject}\nMessage: {_model.Message}",
+                    ToAddresses = new[] { "support@alxreservecloud.com" }
+                };
+
+                await Mailer.SendAsync(mail);
+                submission.EmailSent = true;
+                await db.SaveChangesAsync();
+            }
+            catch (Exception emailEx)
+            {
+                Logger.LogWarning(emailEx, "Contact form email notification failed for submission {Id}", submission.Id);
+            }
+
+            Logger.LogInformation("Contact form submitted by {Email}, subject: {Subject}", _model.Email, _model.Subject);
+
+            _submitted = true;
+            Snackbar.Add("Your message has been sent. We'll be in touch soon!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Something went wrong: {ex.Message}. Please try again.";
+        }
+        finally
+        {
+            _submitting = false;
+            StateHasChanged();
+        }
+    }
+}

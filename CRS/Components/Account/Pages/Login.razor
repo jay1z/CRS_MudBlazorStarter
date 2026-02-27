@@ -204,6 +204,7 @@
         if (!result.Succeeded) {
             if (result.RequiresTwoFactor) { RedirectManager.RedirectTo("Account/LoginWith2fa", new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe }); return; }
             if (result.IsLockedOut) { RedirectManager.RedirectTo("Account/Lockout"); return; }
+            if (result.IsNotAllowed) { errorMessage = "Error: Your email address has not been confirmed. Please check your inbox for a confirmation email."; return; }
             errorMessage = "Error: Invalid login attempt."; return;
         }
 

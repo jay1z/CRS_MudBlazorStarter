@@ -1,4 +1,4 @@
-﻿@page "/Invoices/Details/{Id:guid}"
+@page "/Invoices/Details/{Id:guid}"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @using CRS.Models
@@ -614,7 +614,7 @@
     {
         if (_invoice == null || string.IsNullOrWhiteSpace(_invoice.BillToEmail)) return;
 
-        var confirm = await DialogService.ShowMessageBox(
+        var confirm = await DialogService.ShowMessageBoxAsync(
             "Send Payment Reminder",
             $"Send payment reminder to {_invoice.BillToEmail}?",
                     yesText: "Send Reminder",
@@ -736,7 +736,7 @@
     {
         if (_invoice == null) return;
 
-        var confirm = await DialogService.ShowMessageBox(
+        var confirm = await DialogService.ShowMessageBoxAsync(
             "Void Invoice",
             $"Are you sure you want to void invoice #{_invoice.InvoiceNumber}?",
             yesText: "Void Invoice",

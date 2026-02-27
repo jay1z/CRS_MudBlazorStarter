@@ -1,4 +1,4 @@
-﻿@page "/Admin/Users"
+@page "/Admin/Users"
 @attribute [Authorize(Policy = "RequireTenantOwner")]
 @using CRS.Data
 @using Microsoft.AspNetCore.Identity
@@ -428,7 +428,7 @@
 
         var role = user.Roles.First();
         
-        bool? confirm = await DialogService.ShowMessageBox(
+        bool? confirm = await DialogService.ShowMessageBoxAsync(
             "Confirm Role Removal",
             $"Are you sure you want to remove the '{role}' role from {user.FullName}?",
             yesText: "Remove", cancelText: "Cancel");
@@ -450,7 +450,7 @@
 
     private async Task ConfirmDeleteUser(ApplicationUser user)
     {
-        bool? confirm = await DialogService.ShowMessageBox(
+        bool? confirm = await DialogService.ShowMessageBoxAsync(
             "Confirm Deactivation",
             $"Are you sure you want to deactivate {user.FullName}? They will no longer be able to access the system.",
             yesText: "Deactivate", cancelText: "Cancel",

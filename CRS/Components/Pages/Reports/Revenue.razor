@@ -126,7 +126,7 @@
             <MudItem xs="12" md="6">
                 <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 12px;">
                     <MudText Typo="Typo.h6" Class="mb-4" Style="font-weight: 600;">Revenue by Status</MudText>
-                    <MudChart ChartType="ChartType.Donut" 
+                    <MudChart T="double" ChartType="ChartType.Donut" 
                               InputData="@_statusChartData" 
                               InputLabels="@_statusChartLabels"
                               Width="100%" Height="300px"
@@ -241,7 +241,7 @@
     // Chart data
     private double[] _statusChartData = [];
     private string[] _statusChartLabels = [];
-    private List<ChartSeries> _trendSeries = [];
+    private List<ChartSeries<double>> _trendSeries = [];
     private string[] _trendLabels = [];
 
     private ChartOptions _chartOptions = new();
@@ -343,7 +343,7 @@
                 .Sum(i => i.AmountPaid))
             .ToArray();
 
-        _trendSeries = new List<ChartSeries>
+        _trendSeries = new List<ChartSeries<double>>
         {
             new() { Name = "Invoiced", Data = invoicedData },
             new() { Name = "Collected", Data = collectedData }

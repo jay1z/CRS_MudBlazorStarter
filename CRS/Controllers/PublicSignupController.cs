@@ -26,7 +26,7 @@ namespace CRS.Controllers {
             _userManager = userManager;
         }
 
-        public record StartSignupRequest(string CompanyName, string Subdomain, string AdminEmail, string Tier, string Interval);
+        public record StartSignupRequest(string CompanyName, string Subdomain, string AdminEmail, string Tier, string Interval, bool SkipTrial = false);
         public record StartSignupResponse(string CheckoutUrl, int TenantId, Guid SignupToken);
 
         [HttpPost("start")] // now only creates Stripe checkout session; tenant deferred until payment
@@ -97,6 +97,7 @@ namespace CRS.Controllers {
                     normalizedEmail, 
                     tier, 
                     interval, 
+                    request.SkipTrial,
                     ct);
 
                 _logger.LogInformation("Stripe checkout session created successfully for {Subdomain}", sub);

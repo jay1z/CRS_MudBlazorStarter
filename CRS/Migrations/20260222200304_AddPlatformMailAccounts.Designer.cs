@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260221231238_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260222200304_AddPlatformMailAccounts")]
+    partial class AddPlatformMailAccounts
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -937,6 +937,60 @@ namespace CRS.Migrations
                     b.ToTable("ContactGroups");
                 });
 
+            modelBuilder.Entity("CRS.Models.ContactSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AdminNotes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("EmailSent")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ContactSubmissions");
+                });
+
             modelBuilder.Entity("CRS.Models.ContactXContactGroup", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1420,6 +1474,65 @@ namespace CRS.Migrations
                         .HasDatabaseName("IX_Document_Tenant_Type_Public");
 
                     b.ToTable("Documents", (string)null);
+                });
+
+            modelBuilder.Entity("CRS.Models.ElementDependency", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateDeleted")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DateModified")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("DependentElementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DependentElementType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsHardDependency")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("RequiredElementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RequiredElementType")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependentElementType", "DependentElementId", "IsActive")
+                        .HasDatabaseName("IX_ElementDependency_Dependent_Active");
+
+                    b.HasIndex("RequiredElementType", "RequiredElementId", "IsActive")
+                        .HasDatabaseName("IX_ElementDependency_Required_Active");
+
+                    b.HasIndex("DependentElementType", "DependentElementId", "RequiredElementType", "RequiredElementId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ElementDependency_Unique_Relationship")
+                        .HasFilter("[DateDeleted] IS NULL");
+
+                    b.ToTable("ElementDependencies", (string)null);
                 });
 
             modelBuilder.Entity("CRS.Models.ElementOption", b =>
@@ -2896,6 +3009,70 @@ namespace CRS.Migrations
                     b.ToTable("PaymentRecords");
                 });
 
+            modelBuilder.Entity("CRS.Models.PlatformMailAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EmailAddress")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ImapHost")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("ImapPort")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("ImapUseSsl")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("SmtpHost")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("SmtpPort")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SmtpUseSsl")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlatformMailAccounts");
+                });
+
             modelBuilder.Entity("CRS.Models.Profile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3393,6 +3570,10 @@ namespace CRS.Migrations
                     b.Property<DateTime?>("SiteVisitDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("SiteVisitType")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<bool?>("SpecialAssessmentRisk")
                         .HasColumnType("bit");
 
@@ -3407,6 +3588,10 @@ namespace CRS.Migrations
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
+
+                    b.Property<string>("VideoConferenceLink")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
 

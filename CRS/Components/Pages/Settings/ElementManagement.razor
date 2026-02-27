@@ -1,4 +1,4 @@
-﻿@page "/Admin/Elements"
+@page "/Admin/Elements"
 @page "/Settings/Elements"
 @attribute [Authorize(Policy = "RequireTenantOwner")]
 @using CRS.Data
@@ -27,6 +27,13 @@
                     Manage building and common elements for your organization
                 </MudText>
             </MudStack>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Dark" 
+                       StartIcon="@Icons.Material.Filled.Link"
+                       OnClick="OpenDependencyDialog"
+                       Style="background-color: rgba(255,255,255,0.2);">
+                Manage Dependencies
+            </MudButton>
         </MudStack>
     </MudPaper>
 
@@ -467,6 +474,18 @@
         }
     }
 
+    private async Task OpenDependencyDialog()
+    {
+        var options = new DialogOptions { 
+            MaxWidth = MaxWidth.Large, 
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<ElementDependencyDialog>("Manage Element Dependencies", options);
+        await dialog.Result;
+    }
+
     private async Task OpenAddBuildingElementDialog()
     {
         var parameters = new DialogParameters<AddElementDialog>
@@ -549,7 +568,7 @@
 
     private async Task DeleteBuildingElement(BuildingElement element)
     {
-        var confirm = await DialogService.ShowMessageBox(
+        var confirm = await DialogService.ShowMessageBoxAsync(
             "Delete Element",
             $"Are you sure you want to delete '{element.Name}'? This cannot be undone.",
             yesText: "Delete",
@@ -579,7 +598,7 @@
 
     private async Task DeleteCommonElement(CommonElement element)
     {
-        var confirm = await DialogService.ShowMessageBox(
+        var confirm = await DialogService.ShowMessageBoxAsync(
             "Delete Element",
             $"Are you sure you want to delete '{element.Name}'? This cannot be undone.",
             yesText: "Delete",

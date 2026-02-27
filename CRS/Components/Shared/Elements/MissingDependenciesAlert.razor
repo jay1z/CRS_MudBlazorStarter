@@ -1,0 +1,74 @@
+﻿@using CRS.Models
+@using CRS.Services.Interfaces
+
+@if (ValidationResults.Any())
+{
+    <MudAlert Severity="@GetSeverity()" Dense="true" Variant="Variant.Outlined" Class="mb-2">
+        <MudStack Spacing="1">
+            <MudText Typo="Typo.subtitle2" Class="fw-bold">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />
+                Missing Element Dependencies
+            </MudText>
+            @foreach (var result in ValidationResults)
+            {
+                <MudStack Spacing="0" Class="ml-4">
+                    <MudText Typo="Typo.body2">
+                        <strong>@result.ElementName</strong> requires:
+                    </MudText>
+                    @foreach (var missing in result.MissingDependencies)
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="ml-4">
+                            <MudIcon Icon="@(missing.IsHardDependency ? Icons.Material.Filled.Block : Icons.Material.Filled.Warning)" 
+                                     Size="Size.Small" 
+                                     Color="@(missing.IsHardDependency ? Color.Error : Color.Warning)" />
+                            <MudText Typo="Typo.caption">
+                                @missing.RequiredElementName 
+                                @if (missing.IsHardDependency)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled" Class="ml-2">Required</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Class="ml-2">Recommended</MudChip>
+                                }
+                            </MudText>
+                        </MudStack>
+                        @if (!string.IsNullOrEmpty(missing.Description))
+                        {
+                            <MudText Typo="Typo.caption" Style="color: #666;" Class="ml-8">
+                                @missing.Description
+                            </MudText>
+                        }
+                    }
+                </MudStack>
+            }
+        </MudStack>
+    </MudAlert>
+}
+
+@code {
+    /// <summary>
+    /// The validation results to display. Only results with missing dependencies will be shown.
+    /// </summary>
+    [Parameter]
+    public List<ElementDependencyValidationResult> ValidationResults { get; set; } = new();
+
+    /// <summary>
+    /// Returns true if there are any hard (blocking) dependencies missing.
+    /// </summary>
+    public bool HasBlockingIssues => ValidationResults.Any(r => r.HasMissingHardDependencies);
+
+    /// <summary>
+    /// Returns true if there are any warnings (soft dependencies missing).
+    /// </summary>
+    public bool HasWarnings => ValidationResults.Any(r => r.HasWarnings);
+
+    private Severity GetSeverity()
+    {
+        if (HasBlockingIssues)
+            return Severity.Error;
+        if (HasWarnings)
+            return Severity.Warning;
+        return Severity.Info;
+    }
+}

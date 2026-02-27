@@ -232,7 +232,7 @@
             // Clear the input field
             replyText = string.Empty;
             if (messageInput != null) {
-                await messageInput.Clear();
+                await messageInput.ClearAsync();
             }
             
             await InvokeAsync(StateHasChanged);

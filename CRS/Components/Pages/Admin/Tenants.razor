@@ -1,4 +1,4 @@
-﻿@page "/Admin/Tenants"
+@page "/Admin/Tenants"
 @attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
 @using CRS.Models
@@ -114,7 +114,7 @@
             Snackbar.Add("Default tenant cannot be deleted.", Severity.Warning);
             return;
         }
-        var confirmed = (await DialogService.ShowMessageBox("Confirm Delete", (MarkupString)$"Are you sure you want to delete tenant '<b>{tenant.Name}</b>'?", yesText: "Delete", cancelText: "Cancel")) == true;
+        var confirmed = (await DialogService.ShowMessageBoxAsync("Confirm Delete", (MarkupString)$"Are you sure you want to delete tenant '<b>{tenant.Name}</b>'?", yesText: "Delete", cancelText: "Cancel")) == true;
         if (!confirmed) return;
         try {
             await using var db = await DbFactory.CreateDbContextAsync();

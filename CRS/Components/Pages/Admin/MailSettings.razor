@@ -1,0 +1,225 @@
+﻿@page "/admin/mail-settings"
+@attribute [Authorize(Policy = "RequirePlatformAdmin")]
+
+@using CRS.Data
+@using CRS.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject ISnackbar Snackbar
+
+<PageTitle>Mail Accounts - Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-6">
+    <MudPaper Elevation="4" Class="pa-6">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+            <div>
+                <MudText Typo="Typo.h5">Platform Mail Accounts</MudText>
+                <MudText Typo="Typo.body2" Style="color: #666;">Manage IMAP/SMTP accounts for the platform webmail.</MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddNew">
+                Add Account
+            </MudButton>
+        </MudStack>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (_accounts.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No mail accounts configured yet.</MudAlert>
+        }
+        else
+        {
+            <MudTable T="PlatformMailAccount" Items="_accounts" Hover="true" Dense="true" Bordered="true">
+                <HeaderContent>
+                    <MudTh>Display Name</MudTh>
+                    <MudTh>Email</MudTh>
+                    <MudTh>IMAP</MudTh>
+                    <MudTh>SMTP</MudTh>
+                    <MudTh>Active</MudTh>
+                    <MudTh Style="width: 120px;">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="acct">
+                    <MudTd DataLabel="Display Name">@acct.DisplayName</MudTd>
+                    <MudTd DataLabel="Email">@acct.EmailAddress</MudTd>
+                    <MudTd DataLabel="IMAP">@acct.ImapHost:@acct.ImapPort @(acct.ImapUseSsl ? "(SSL)" : "")</MudTd>
+                    <MudTd DataLabel="SMTP">@acct.SmtpHost:@acct.SmtpPort @(acct.SmtpUseSsl ? "(SSL)" : "")</MudTd>
+                    <MudTd DataLabel="Active">
+                        <MudIcon Icon="@(acct.IsActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                 Color="@(acct.IsActive ? Color.Success : Color.Error)" Size="Size.Small" />
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => Edit(acct))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => Delete(acct))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+
+    <!-- Edit/Create Dialog -->
+    @if (_editing != null)
+    {
+        <MudPaper Elevation="4" Class="pa-6 mt-4" Style="border-radius: 12px;">
+            <MudText Typo="Typo.h6" Class="mb-4">@(_editing.Id == 0 ? "Add Mail Account" : "Edit Mail Account")</MudText>
+
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_editing.DisplayName" Label="Display Name" Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_editing.EmailAddress" Label="Email Address" Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_editing.Username" Label="Username" Variant="Variant.Outlined" Required="true"
+                                  HelperText="Usually the full email address" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_editing.Password" Label="Password" Variant="Variant.Outlined" Required="true"
+                                  InputType="InputType.Password" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">Incoming (IMAP)</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_editing.ImapHost" Label="IMAP Host" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_editing.ImapPort" Label="IMAP Port" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_editing.ImapUseSsl" Label="Use SSL" Color="Color.Primary" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">Outgoing (SMTP)</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_editing.SmtpHost" Label="SMTP Host" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_editing.SmtpPort" Label="SMTP Port" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSwitch @bind-Value="_editing.SmtpUseSsl" Label="Use SSL" Color="Color.Primary" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSwitch @bind-Value="_editing.IsActive" Label="Active" Color="Color.Success" />
+                </MudItem>
+            </MudGrid>
+
+            <MudStack Row="true" Spacing="2" Class="mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync">Save</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="@(() => _editing = null)">Cancel</MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private List<PlatformMailAccount> _accounts = [];
+    private PlatformMailAccount? _editing;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _accounts = await db.PlatformMailAccounts.OrderBy(a => a.DisplayName).ToListAsync();
+        _loading = false;
+    }
+
+    private void AddNew()
+    {
+        _editing = new PlatformMailAccount
+        {
+            ImapHost = "mail.alxreservecloud.com",
+            ImapPort = 993,
+            ImapUseSsl = true,
+            SmtpHost = "mail.alxreservecloud.com",
+            SmtpPort = 465,
+            SmtpUseSsl = true,
+            IsActive = true
+        };
+    }
+
+    private void Edit(PlatformMailAccount acct)
+    {
+        _editing = new PlatformMailAccount
+        {
+            Id = acct.Id,
+            DisplayName = acct.DisplayName,
+            EmailAddress = acct.EmailAddress,
+            Username = acct.Username,
+            Password = acct.Password,
+            ImapHost = acct.ImapHost,
+            ImapPort = acct.ImapPort,
+            ImapUseSsl = acct.ImapUseSsl,
+            SmtpHost = acct.SmtpHost,
+            SmtpPort = acct.SmtpPort,
+            SmtpUseSsl = acct.SmtpUseSsl,
+            IsActive = acct.IsActive,
+            CreatedAt = acct.CreatedAt
+        };
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_editing == null) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        if (_editing.Id == 0)
+        {
+            db.PlatformMailAccounts.Add(_editing);
+            Snackbar.Add($"Account '{_editing.DisplayName}' added.", Severity.Success);
+        }
+        else
+        {
+            var existing = await db.PlatformMailAccounts.FindAsync(_editing.Id);
+            if (existing != null)
+            {
+                existing.DisplayName = _editing.DisplayName;
+                existing.EmailAddress = _editing.EmailAddress;
+                existing.Username = _editing.Username;
+                existing.Password = _editing.Password;
+                existing.ImapHost = _editing.ImapHost;
+                existing.ImapPort = _editing.ImapPort;
+                existing.ImapUseSsl = _editing.ImapUseSsl;
+                existing.SmtpHost = _editing.SmtpHost;
+                existing.SmtpPort = _editing.SmtpPort;
+                existing.SmtpUseSsl = _editing.SmtpUseSsl;
+                existing.IsActive = _editing.IsActive;
+                existing.UpdatedAt = DateTime.UtcNow;
+                Snackbar.Add($"Account '{_editing.DisplayName}' updated.", Severity.Success);
+            }
+        }
+
+        await db.SaveChangesAsync();
+        _editing = null;
+        await LoadAsync();
+    }
+
+    private async Task Delete(PlatformMailAccount acct)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var entity = await db.PlatformMailAccounts.FindAsync(acct.Id);
+        if (entity != null)
+        {
+            db.PlatformMailAccounts.Remove(entity);
+            await db.SaveChangesAsync();
+            Snackbar.Add($"Account '{acct.DisplayName}' deleted.", Severity.Info);
+            await LoadAsync();
+        }
+    }
+}
