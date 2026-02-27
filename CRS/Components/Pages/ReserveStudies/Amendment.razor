@@ -1,9 +1,9 @@
-﻿@page "/ReserveStudies/Amendment/{ReserveStudyId:guid}"
+@page "/ReserveStudies/Amendment/{ReserveStudyId:guid}"
 @attribute [Authorize]
 @rendermode InteractiveServer
-@using CRS.Models.Workflow
-@using CRS.Services.Interfaces
-@using CRS.Services.Tenant
+@using Horizon.Models.Workflow
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Tenant
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using Markdig
@@ -439,10 +439,10 @@
     [Parameter]
     public Guid ReserveStudyId { get; set; }
 
-    private CRS.Models.ReserveStudy? reserveStudy;
+    private Horizon.Models.ReserveStudy? reserveStudy;
     private ScopeComparison? scopeComparison;
-    private CRS.Models.Proposal? originalProposal;
-    private CRS.Models.Proposal? amendmentProposal;
+    private Horizon.Models.Proposal? originalProposal;
+    private Horizon.Models.Proposal? amendmentProposal;
     private AcceptanceTermsTemplate? termsTemplate;
     private List<string>? pdfTermsAndConditions;
 
@@ -716,6 +716,6 @@
             var html = Markdown.ToHtml(markdown, pipeline);
 
             // Sanitize the HTML to prevent XSS
-            return CRS.Services.HtmlSanitizerHelper.Sanitize(html);
+            return Horizon.Services.HtmlSanitizerHelper.Sanitize(html);
         }
     }

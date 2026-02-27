@@ -1,8 +1,8 @@
-﻿@page "/Admin/Impersonate"
+@page "/Admin/Impersonate"
 @attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
-@using CRS.Data
-@using CRS.Services.Tenant
+@using Horizon.Data
+@using Horizon.Services.Tenant
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
@@ -10,7 +10,7 @@
 @inject ITenantContext TenantContext
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
-@inject ILogger<CRS.Components.Pages.Admin.Impersonate> Logger
+@inject ILogger<Horizon.Components.Pages.Admin.Impersonate> Logger
 
 <PageTitle>Impersonate Tenant</PageTitle>
 

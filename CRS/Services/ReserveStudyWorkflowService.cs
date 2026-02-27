@@ -1,20 +1,20 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using CRS.Data;
-using CRS.EventsAndListeners;
-using CRS.Models;
-using CRS.Models.Workflow;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
-using CRS.Services.Workflow;
+using Horizon.Data;
+using Horizon.EventsAndListeners;
+using Horizon.Models;
+using Horizon.Models.Workflow;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
+using Horizon.Services.Workflow;
 using Coravel.Events.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Services {
+namespace Horizon.Services {
     /// <summary>
     /// Orchestrates legacy ReserveStudy workflow operations while enforcing centralized transitions
     /// via the StudyWorkflowService (state machine) backed by the StudyRequest record.

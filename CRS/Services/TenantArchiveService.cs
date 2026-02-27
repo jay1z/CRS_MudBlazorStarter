@@ -1,13 +1,13 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using System.Text.Json;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using CRS.Data;
-using CRS.Models;
-using CRS.Services.Interfaces;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Service for archiving tenant data to Azure Blob Storage cold tier.

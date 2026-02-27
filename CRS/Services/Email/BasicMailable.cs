@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Coravel.Mailer.Mail;
 
-namespace CRS.Services.Email
+namespace Horizon.Services.Email
 {
     // Simple generic mailable to send a subject + HTML/text body without a Razor view
     public class BasicMailable : Mailable<object>

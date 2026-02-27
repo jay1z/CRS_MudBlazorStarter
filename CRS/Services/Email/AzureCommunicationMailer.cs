@@ -1,10 +1,10 @@
-﻿using Azure;
+using Azure;
 using Azure.Communication.Email;
 using Coravel.Mailer.Mail;
 using Coravel.Mailer.Mail.Interfaces;
 using Microsoft.Extensions.Options;
 
-namespace CRS.Services.Email;
+namespace Horizon.Services.Email;
 
 /// <summary>
 /// IMailer implementation that sends emails via Azure Communication Services.

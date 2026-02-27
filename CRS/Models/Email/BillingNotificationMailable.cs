@@ -1,7 +1,7 @@
-﻿using Coravel.Mailer.Mail;
-using CRS.Models.Emails;
+using Coravel.Mailer.Mail;
+using Horizon.Models.Emails;
 
-namespace CRS.Models.Email;
+namespace Horizon.Models.Email;
 
 /// <summary>
 /// Mailable for billing-related notifications (payment failed, suspension, reactivation).

@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using CRS.Core.ReserveCalculator.Enums;
-using CRS.Services.Tenant;
+using Horizon.Core.ReserveCalculator.Enums;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models.ReserveStudyCalculator;
+namespace Horizon.Models.ReserveStudyCalculator;
 
 /// <summary>
 /// A reserve component within a calculation scenario.

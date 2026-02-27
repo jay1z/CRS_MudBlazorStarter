@@ -1,11 +1,11 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.RegularExpressions;
 
-using CRS.Models.NarrativeTemplates;
+using Horizon.Models.NarrativeTemplates;
 
-using static CRS.Services.NarrativeReport.TokenRenderHelpers;
+using static Horizon.Services.NarrativeReport.TokenRenderHelpers;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Default implementation of <see cref="ITokenRenderer"/>.

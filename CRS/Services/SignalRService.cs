@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using CRS.Hubs;
-using CRS.Services.Interfaces;
-using CRS.Models;
+using Microsoft.AspNetCore.SignalR;
+using Horizon.Hubs;
+using Horizon.Services.Interfaces;
+using Horizon.Models;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace CRS.Services {
+namespace Horizon.Services {
     public class SignalRService : ISignalRService {
         private readonly IHubContext<KanbanHub> _hubContext;
         private readonly ILogger<SignalRService> _logger;

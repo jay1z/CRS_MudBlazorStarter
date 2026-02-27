@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Represents a service contact (vendor, contractor, etc.) associated with building/common elements.

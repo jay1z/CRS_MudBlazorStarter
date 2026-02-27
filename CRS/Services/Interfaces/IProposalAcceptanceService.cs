@@ -1,6 +1,6 @@
-﻿using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Interfaces;
+namespace Horizon.Services.Interfaces;
 
 /// <summary>
 /// Service for managing click-wrap proposal acceptances.

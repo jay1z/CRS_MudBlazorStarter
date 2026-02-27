@@ -1,10 +1,10 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using CRS.Data;
+using Horizon.Data;
 
-namespace CRS.Services {
+namespace Horizon.Services {
     public interface IUserStateService {
         ApplicationUser? CurrentUser { get; }
         ClaimsPrincipal? ClaimsPrincipal { get; }

@@ -1,7 +1,7 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -9,7 +9,7 @@ using QuestPDF.Infrastructure;
 using System.Text.Json;
 using PdfDocument = QuestPDF.Fluent.Document;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 public class ProposalPdfService : IProposalPdfService
 {

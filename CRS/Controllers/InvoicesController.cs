@@ -1,8 +1,9 @@
-﻿using CRS.Services.Interfaces;
+using Horizon.Services.Interfaces;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CRS.Controllers;
+namespace Horizon.Controllers;
 
 /// <summary>
 /// API controller for invoice operations including PDF generation.

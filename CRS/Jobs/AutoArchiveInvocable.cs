@@ -1,12 +1,12 @@
-﻿using Coravel.Invocable;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Workflow;
-using CRS.Services.Interfaces;
-using CRS.Services.Workflow;
+using Coravel.Invocable;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Workflow;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Workflow;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Jobs;
+namespace Horizon.Jobs;
 
 /// <summary>
 /// Scheduled job to auto-archive completed studies based on tenant settings.

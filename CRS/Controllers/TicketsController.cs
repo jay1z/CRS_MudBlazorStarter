@@ -1,11 +1,11 @@
-﻿using CRS.Models;
-using CRS.Services.Tickets;
-using CRS.Services.Tenant;
+using Horizon.Models;
+using Horizon.Services.Tickets;
+using Horizon.Services.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
-namespace CRS.Controllers;
+namespace Horizon.Controllers;
 
 [ApiController]
 [Route("api/tickets")]

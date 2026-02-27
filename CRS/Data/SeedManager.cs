@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Collections.Generic;
-using CRS.Models;
-using CRS.Models.Security;
+using Horizon.Models;
+using Horizon.Models.Security;
 
-namespace CRS.Data {
+namespace Horizon.Data {
     public class SeedManager {
         // Core scoped roles seeding (custom SaaS roles, not Identity roles)
         public static async Task SeedScopedRolesAsync(IServiceProvider serviceProvider) {

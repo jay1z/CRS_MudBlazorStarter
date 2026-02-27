@@ -1,4 +1,4 @@
-﻿namespace CRS.Models.Emails;
+namespace Horizon.Models.Emails;
 
 /// <summary>
 /// Model for billing-related notification emails (payment failed, suspension, reactivation).

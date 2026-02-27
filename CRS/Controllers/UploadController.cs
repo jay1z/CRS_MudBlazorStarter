@@ -5,10 +5,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 using Microsoft.AspNetCore.Authorization;
 
-namespace CRS.Controllers {
+namespace Horizon.Controllers {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize(Roles = "Admin")]

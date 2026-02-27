@@ -1,11 +1,11 @@
-﻿@page "/billing/success"
+@page "/billing/success"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
-@using CRS.Data
-@using CRS.Models
+@using Horizon.Data
+@using Horizon.Models
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager Nav
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
-@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject Horizon.Services.Tenant.ITenantContext TenantContext
 @inject IConfiguration Config
 @inject ILogger<SubscriptionSuccess> Logger
 
@@ -27,7 +27,7 @@
         try {
             await using var db = await DbFactory.CreateDbContextAsync();
 
-            CRS.Models.Tenant? tenant = null;
+            Horizon.Models.Tenant? tenant = null;
 
             if (RequestContainsDeferred && !string.IsNullOrWhiteSpace(SessionId)) {
                 // Deferred signup: look up tenant by Stripe session ID

@@ -1,12 +1,15 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Services.Billing;
+using Horizon.Data;
+using Horizon.Models;
+
+using Horizon.Services.Billing;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
 using Stripe;
 
-namespace CRS.Controllers {
+namespace Horizon.Controllers {
     [ApiController]
     [Route("api/billing")]
     [Authorize(Policy = "RequireTenantOwner")] // Only tenant owners initiate billing actions

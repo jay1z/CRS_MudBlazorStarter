@@ -1,10 +1,10 @@
-﻿using CRS.Data;
+using Horizon.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
-namespace CRS.Controllers {
+namespace Horizon.Controllers {
     /// <summary>
     /// Public API for validating signup form fields (subdomain, email) availability
     /// Used by signup page for real-time validation before Stripe checkout

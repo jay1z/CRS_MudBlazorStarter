@@ -1,5 +1,5 @@
-﻿@page "/Roles"
-@using CRS.Data
+@page "/Roles"
+@using Horizon.Data
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject UserManager<ApplicationUser> UserManager
@@ -197,7 +197,7 @@
             // Find or create custom role in Roles2
             var customRole = await db.Roles2.FirstOrDefaultAsync(r => r.Name == roleName);
             if (customRole == null && add) {
-                customRole = new CRS.Models.Security.Role { Name = roleName, Scope = CRS.Models.Security.RoleScope.Platform };
+                customRole = new Horizon.Models.Security.Role { Name = roleName, Scope = Horizon.Models.Security.RoleScope.Platform };
                 db.Roles2.Add(customRole);
                 await db.SaveChangesAsync();
             }
@@ -212,7 +212,7 @@
             if (add) {
                 bool exists = await db.UserRoleAssignments.AnyAsync(a => a.UserId == user.Id && a.RoleId == customRole.Id && a.TenantId == (user.TenantId == 0 ? null : user.TenantId));
                 if (!exists) {
-                    db.UserRoleAssignments.Add(new CRS.Models.Security.UserRoleAssignment { UserId = user.Id, RoleId = customRole.Id, TenantId = user.TenantId == 0 ? null : user.TenantId });
+                    db.UserRoleAssignments.Add(new Horizon.Models.Security.UserRoleAssignment { UserId = user.Id, RoleId = customRole.Id, TenantId = user.TenantId == 0 ? null : user.TenantId });
                     await db.SaveChangesAsync();
                 }
             } else {

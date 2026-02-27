@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models.Workflow {
+namespace Horizon.Models.Workflow {
     /// <summary>
     /// Represents a single study request tracked by the workflow engine.
     /// Shared primary key (Id) maps1:1 to ReserveStudy.Id.
@@ -109,6 +109,6 @@ namespace CRS.Models.Workflow {
         public byte[]? RowVersion { get; set; }
 
         /// <summary>1:1 navigation to the associated ReserveStudy (shared PK on Id).</summary>
-        public CRS.Models.ReserveStudy? ReserveStudy { get; set; }
+        public Horizon.Models.ReserveStudy? ReserveStudy { get; set; }
     }
 }

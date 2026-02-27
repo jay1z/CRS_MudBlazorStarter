@@ -1,7 +1,7 @@
-﻿@page "/signup/owner"
+@page "/signup/owner"
 @attribute [AllowAnonymous]
-@using CRS.Data
-@using CRS.Components.Account
+@using Horizon.Data
+@using Horizon.Components.Account
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
@@ -97,7 +97,7 @@
             // Ensure TenantOwner role is assigned
             var ownerRole = await db.Roles2.FirstOrDefaultAsync(r => r.Name == "TenantOwner");
             if (ownerRole != null && !await db.UserRoleAssignments.AnyAsync(a => a.UserId == user.Id && a.RoleId == ownerRole.Id && a.TenantId == tenant.Id)) {
-                db.UserRoleAssignments.Add(new CRS.Models.Security.UserRoleAssignment { UserId = user.Id, RoleId = ownerRole.Id, TenantId = tenant.Id });
+                db.UserRoleAssignments.Add(new Horizon.Models.Security.UserRoleAssignment { UserId = user.Id, RoleId = ownerRole.Id, TenantId = tenant.Id });
                 await db.SaveChangesAsync();
             }
 

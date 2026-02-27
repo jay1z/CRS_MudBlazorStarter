@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator.Models;
+namespace Horizon.Core.ReserveCalculator.Models;
 
 /// <summary>
 /// Result for a single year in the funding plan projection.

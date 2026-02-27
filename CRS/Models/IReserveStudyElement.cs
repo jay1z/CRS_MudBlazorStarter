@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace CRS.Models {
+namespace Horizon.Models {
 public interface IReserveStudyElement {
     public int Count { get; set; }
     public ElementTypeEnum ElementType { get; set; }

@@ -1,5 +1,5 @@
-using CRS.Services;
-using CRS.Services.Tenant;
+using Horizon.Services;
+using Horizon.Services.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -8,7 +8,7 @@ using System.Text;
 using Ganss.Xss;
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Controllers {
+namespace Horizon.Controllers {
     [ApiController]
     [Route("api/studio/projects")]
     [Authorize(Roles = "Admin,Editor")]
@@ -106,7 +106,7 @@ namespace CRS.Controllers {
             }
 
             // Build TenantHomepage model for saving
-            var homepage = new CRS.Models.TenantHomepage {
+            var homepage = new Horizon.Models.TenantHomepage {
                 DraftJson = projectJson ?? req.Html,
                 DraftHtml = req.Html,
                 MetaTitle = req.MetaTitle,

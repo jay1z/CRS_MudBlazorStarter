@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.Interfaces;
+namespace Horizon.Services.Interfaces;
 
 /// <summary>
 /// Service for archiving tenant data to cold storage before permanent deletion.

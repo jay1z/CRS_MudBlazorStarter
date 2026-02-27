@@ -1,17 +1,17 @@
-﻿@page "/ReserveStudies/Request"
+@page "/ReserveStudies/Request"
 @attribute [Authorize]
 
 @using System.Security.Claims
-@using CRS.Components.Layout
-@using CRS.Components.Pages.ReserveStudyPages.Steps.Create
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services
-@using CRS.Services.Interfaces
-@using CRS.Services.Tenant
+@using Horizon.Components.Layout
+@using Horizon.Components.Pages.ReserveStudyPages.Steps.Create
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Tenant
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
-@using CRS.Services.Customers
+@using Horizon.Services.Customers
 @implements IAsyncDisposable
 @inject ILogger<CreatePublic> Logger
 @inject UserStateService UserState

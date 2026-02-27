@@ -1,7 +1,7 @@
-﻿using CRS.Data;
-using CRS.Models;
+using Horizon.Data;
+using Horizon.Models;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
     public interface ICommunityService {
         Task<bool> DeleteCommunityAsync(Guid id);
         Task<List<Community>> GetAllCommunitiesAsync();

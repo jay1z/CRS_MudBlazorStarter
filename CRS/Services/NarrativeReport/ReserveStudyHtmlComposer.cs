@@ -1,11 +1,11 @@
-﻿using System.Text;
+using System.Text;
 
-using CRS.Data;
-using CRS.Models.NarrativeTemplates;
+using Horizon.Data;
+using Horizon.Models.NarrativeTemplates;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Composes complete HTML documents from narrative templates.

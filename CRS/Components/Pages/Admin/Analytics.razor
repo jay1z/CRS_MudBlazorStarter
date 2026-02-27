@@ -1,7 +1,7 @@
-﻿@page "/Admin/Analytics"
+@page "/Admin/Analytics"
 @attribute [Authorize(Policy = "RequireTenantOwner")]
-@using CRS.Services.Interfaces
-@using CRS.Services.Tenant
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Tenant
 @using MudBlazor
 @inject IAnalyticsService AnalyticsService
 @inject ITenantContext TenantContext

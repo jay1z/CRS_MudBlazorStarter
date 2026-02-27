@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CRS.Data;
-using CRS.Services.Tenant;
+using System.ComponentModel.DataAnnotations;
+using Horizon.Data;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Tenant-specific settings for invoice generation and management.

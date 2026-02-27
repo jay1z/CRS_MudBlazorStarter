@@ -1,7 +1,7 @@
-﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
-namespace CRS.Services.Storage;
+namespace Horizon.Services.Storage;
 
 /// <summary>
 /// Implementation of document storage service using Azure Blob Storage.

@@ -1,9 +1,11 @@
-﻿using CRS.Services.Billing;
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
+
+using Horizon.Services.Billing;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CRS.Controllers;
+namespace Horizon.Controllers;
 
 /// <summary>
 /// API controller for Stripe Connect operations.

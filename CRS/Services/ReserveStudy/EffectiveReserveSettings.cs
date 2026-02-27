@@ -1,6 +1,6 @@
-﻿using CRS.Core.ReserveCalculator.Enums;
+using Horizon.Core.ReserveCalculator.Enums;
 
-namespace CRS.Services.ReserveCalculator;
+namespace Horizon.Services.ReserveCalculator;
 
 /// <summary>
 /// Resolved effective settings for a reserve study scenario.

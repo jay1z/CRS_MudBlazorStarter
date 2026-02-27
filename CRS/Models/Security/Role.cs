@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CRS.Data;
+using System.ComponentModel.DataAnnotations;
+using Horizon.Data;
 
-namespace CRS.Models.Security
+namespace Horizon.Models.Security
 {
     // Custom role entity supporting scope (platform/tenant/external)
     public class Role

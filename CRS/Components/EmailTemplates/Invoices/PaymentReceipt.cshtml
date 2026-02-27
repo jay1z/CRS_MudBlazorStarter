@@ -1,4 +1,4 @@
-﻿@model CRS.Models.Emails.PaymentReceiptEmail
+@model Horizon.Models.Emails.PaymentReceiptEmail
 @{
     Layout = "~/Components/EmailTemplates/_EmailLayout.cshtml";
     ViewData["PreheaderText"] = $"Payment received - {Model.AmountPaid:C} for Invoice #{Model.InvoiceNumber}";

@@ -1,13 +1,13 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 
-using CRS.Data;
-using CRS.Models.Security;
+using Horizon.Data;
+using Horizon.Models.Security;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace CRS.Services.Tenant {
+namespace Horizon.Services.Tenant {
     // SaaS Refactor: Adds tenant & role claims to authenticated principals
     public class TenantClaimsPrincipalFactory : UserClaimsPrincipalFactory<ApplicationUser, IdentityRole<System.Guid>> {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;

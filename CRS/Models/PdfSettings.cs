@@ -1,4 +1,4 @@
-﻿namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Settings for customizing PDF document generation (proposals, reports, etc.)

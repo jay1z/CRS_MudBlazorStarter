@@ -1,9 +1,9 @@
-﻿using CRS.Components.AppHome.ViewModels;
-using CRS.Data;
-using CRS.Services.Tenant;
+using Horizon.Components.AppHome.ViewModels;
+using Horizon.Data;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services.Tenant {
+namespace Horizon.Services.Tenant {
     public interface ITenantHomepageDataService {
         Task<TenantKpisVm?> GetKpisAsync(CancellationToken ct=default);
         Task<IReadOnlyList<PipelineStageVm>> GetPipelineAsync(bool specialistFiltered, Guid? userId, CancellationToken ct=default);

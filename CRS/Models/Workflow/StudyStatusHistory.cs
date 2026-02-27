@@ -3,9 +3,9 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models.Workflow {
+namespace Horizon.Models.Workflow {
     /// <summary>
     /// Immutable history entry recording a single workflow transition for a StudyRequest.
     /// </summary>

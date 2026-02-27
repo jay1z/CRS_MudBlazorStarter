@@ -1,12 +1,12 @@
-﻿using Coravel.Mailer.Mail.Interfaces;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Email;
-using CRS.Services.Interfaces;
+using Coravel.Mailer.Mail.Interfaces;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Email;
+using Horizon.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Service for managing newsletter subscriptions with double opt-in support.

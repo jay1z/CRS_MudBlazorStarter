@@ -1,13 +1,13 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Demo;
-using CRS.Models.Security;
-using TenantModel = CRS.Models.Tenant;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Demo;
+using Horizon.Models.Security;
+using TenantModel = Horizon.Models.Tenant;
 
-namespace CRS.Services.Demo
+namespace Horizon.Services.Demo
 {
     public interface IDemoAccountService
     {

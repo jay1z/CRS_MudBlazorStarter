@@ -1,9 +1,9 @@
-﻿@page "/Help"
+@page "/Help"
 @page "/Help/{GuideType}"
 @page "/Help/{GuideType}/{Section}"
 @attribute [Authorize]
 @using Markdig
-@using CRS.Services.Tenant
+@using Horizon.Services.Tenant
 @using Microsoft.AspNetCore.Hosting
 @inject ITenantUserRoleService RoleService
 @inject IWebHostEnvironment Environment

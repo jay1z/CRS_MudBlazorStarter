@@ -1,5 +1,5 @@
-﻿@using CRS.Core.ReserveCalculator.Models
-@using CRS.Services.ReserveCalculator
+@using Horizon.Core.ReserveCalculator.Models
+@using Horizon.Services.ReserveCalculator
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
 
@@ -87,7 +87,7 @@
             
             <!-- Chart Tab -->
             <MudTabPanel Text="Chart" Icon="@Icons.Material.Filled.ShowChart">
-                <CRS.Components.ReserveStudy.CashFlowChart Result="@Result" ChartId="results-chart" Height="400" />
+                <Horizon.Components.ReserveStudy.CashFlowChart Result="@Result" ChartId="results-chart" Height="400" />
             </MudTabPanel>
             
             <!-- Cash Flow Table Tab -->

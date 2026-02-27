@@ -1,12 +1,14 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Services.Billing;
+using Horizon.Data;
+using Horizon.Models;
+
+using Horizon.Services.Billing;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Controllers {
+namespace Horizon.Controllers {
     [ApiController]
     [Route("api/signup")] // public unauthenticated signup entry
     public class PublicSignupController : ControllerBase {
@@ -44,8 +46,8 @@ namespace CRS.Controllers {
             }
 
             // Validate interval
-            if (!Enum.TryParse<Services.Billing.BillingInterval>(request.Interval, true, out var interval)) {
-                interval = Services.Billing.BillingInterval.Monthly;
+            if (!Enum.TryParse<BillingInterval>(request.Interval, true, out var interval)) {
+                interval = BillingInterval.Monthly;
             }
 
             // Normalize subdomain

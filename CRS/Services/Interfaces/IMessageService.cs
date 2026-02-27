@@ -1,6 +1,6 @@
-using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
     public interface IMessageService {
         Task<List<Message>> GetInboxAsync(Guid userId);
         Task<List<Message>> GetConversationAsync(Guid userId, Guid otherUserId);

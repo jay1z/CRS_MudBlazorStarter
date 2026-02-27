@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public class KanbanTask : BaseModel {
         public required string Title { get; set; }
         public string? Description { get; set; }

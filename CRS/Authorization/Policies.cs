@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace CRS.Authorization
-{
+namespace Horizon.Authorization {
     // Checks that a user has any of the specified roles within the current tenant
     public static class Policies
     {

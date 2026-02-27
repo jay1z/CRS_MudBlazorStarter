@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.Email;
+namespace Horizon.Services.Email;
 
 /// <summary>
 /// Provides modern HTML email template wrappers matching the site's design.

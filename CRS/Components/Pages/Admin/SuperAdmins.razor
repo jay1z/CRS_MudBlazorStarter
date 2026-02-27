@@ -1,10 +1,10 @@
-﻿@page "/Admin/SuperAdmins"
+@page "/Admin/SuperAdmins"
 @attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
-@using CRS.Data
-@using CRS.Models
+@using Horizon.Data
+@using Horizon.Models
 @inject UserManager<ApplicationUser> UserManager
 @inject RoleManager<IdentityRole<Guid>> RoleManager
 @inject ISnackbar Snackbar

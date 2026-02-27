@@ -1,16 +1,16 @@
-﻿using Coravel.Mailer.Mail.Interfaces;
+using Coravel.Mailer.Mail.Interfaces;
 
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Email;
-using CRS.Models.Emails;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Email;
+using Horizon.Models.Emails;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Service for managing invoices for reserve studies.

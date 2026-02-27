@@ -1,15 +1,15 @@
-﻿using CRS.Core.ReserveCalculator.Models;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Workflow;
-using CRS.Services.Interfaces;
-using CRS.Services.NarrativeReport;
-using CRS.Services.ReserveCalculator;
-using CRS.Services.Storage;
-using CRS.Services.Tenant;
+using Horizon.Core.ReserveCalculator.Models;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Workflow;
+using Horizon.Services.Interfaces;
+using Horizon.Services.NarrativeReport;
+using Horizon.Services.ReserveCalculator;
+using Horizon.Services.Storage;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Implementation of report generation service.

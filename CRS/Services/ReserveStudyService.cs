@@ -1,20 +1,21 @@
-﻿using Coravel.Events.Interfaces;
+using Coravel.Events.Interfaces;
 using Coravel.Mailer.Mail.Interfaces;
 
-using CRS.Data;
-using CRS.EventsAndListeners;
-using CRS.Models;
-using CRS.Models.Emails;
-using CRS.Models.Workflow;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
-using CRS.Services.Billing; // feature guard
-using CRS.Services.Storage;
+using Horizon.Data;
+using Horizon.EventsAndListeners;
+using Horizon.Models;
+using Horizon.Models.Emails;
+using Horizon.Models.Workflow;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
+using Horizon.Services.Storage;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Services {
+using Horizon.Services.Billing;
+
+namespace Horizon.Services {
     public class ReserveStudyService : IReserveStudyService {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
         private readonly IDispatcher _dispatcher;
@@ -324,7 +325,7 @@ namespace CRS.Services {
                 if (reserveStudy.Proposals?.Any() == true) {
                     // Delete ProposalAcceptances before deleting Proposals (FK constraint)
                     var proposalIds = reserveStudy.Proposals.Select(p => p.Id).ToList();
-                    var proposalAcceptances = await context.Set<CRS.Models.ProposalAcceptance>()
+                    var proposalAcceptances = await context.Set<Horizon.Models.ProposalAcceptance>()
                         .Where(pa => pa.ProposalId.HasValue && proposalIds.Contains(pa.ProposalId.Value))
                         .ToListAsync();
                     if (proposalAcceptances.Any()) {
@@ -343,7 +344,7 @@ namespace CRS.Services {
 
                 // Delete StudyStatusHistory records before deleting StudyRequest (FK constraint)
                 if (reserveStudy.StudyRequest != null) {
-                    var statusHistory = await context.Set<CRS.Models.Workflow.StudyStatusHistory>()
+                    var statusHistory = await context.Set<Horizon.Models.Workflow.StudyStatusHistory>()
                         .Where(h => h.RequestId == reserveStudy.StudyRequest.Id)
                         .ToListAsync();
                     if (statusHistory.Any()) {

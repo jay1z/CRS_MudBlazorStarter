@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.Web.HtmlRendering;
 using Microsoft.Extensions.Caching.Memory;
@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using System.Text;
 
-namespace CRS.Services.Email {
+namespace Horizon.Services.Email {
     public interface IRazorComponentRenderer {
         Task<string> RenderComponentAsync<TComponent>(Dictionary<string, object> parameters)
             where TComponent : IComponent;
@@ -85,7 +85,7 @@ namespace CRS.Services.Email {
                     }) }
                 };
 
-                var output = await _htmlRenderer.RenderComponentAsync<CRS.Components.Shared.ProviderWrapper>(ParameterView.FromDictionary(wrapperParams));
+                var output = await _htmlRenderer.RenderComponentAsync<Horizon.Components.Shared.ProviderWrapper>(ParameterView.FromDictionary(wrapperParams));
                 return output.ToHtmlString();
             });
         }

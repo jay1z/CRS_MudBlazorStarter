@@ -1,6 +1,6 @@
 @page "/Admin/Users"
 @attribute [Authorize(Policy = "RequireTenantOwner")]
-@using CRS.Data
+@using Horizon.Data
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject UserManager<ApplicationUser> UserManager
@@ -8,7 +8,7 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
-@using CRS.Services.Tenant
+@using Horizon.Services.Tenant
 @inject ITenantUserService TenantUserService
 @inject ITenantContext TenantContext
 
@@ -487,9 +487,9 @@
 
     private async Task OpenAddRoleToUserDialog(ApplicationUser user)
     {
-        var parameters = new DialogParameters<CRS.Components.Pages.Users.AddUserToRoleDialog> { { x => x.User, user } };
+        var parameters = new DialogParameters<Horizon.Components.Pages.Users.AddUserToRoleDialog> { { x => x.User, user } };
         var options = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true, MaxWidth = MaxWidth.Medium };
-        var dialog = await DialogService.ShowAsync<CRS.Components.Pages.Users.AddUserToRoleDialog>("Manage Roles", parameters, options);
+        var dialog = await DialogService.ShowAsync<Horizon.Components.Pages.Users.AddUserToRoleDialog>("Manage Roles", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)

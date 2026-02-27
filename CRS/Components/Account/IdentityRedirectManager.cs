@@ -1,7 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 
-namespace CRS.Components.Account
+namespace Horizon.Components.Account
 {
     internal sealed class IdentityRedirectManager(NavigationManager navigationManager)
     {

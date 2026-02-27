@@ -1,9 +1,9 @@
-﻿using CRS.Core.ReserveCalculator.Models;
+using Horizon.Core.ReserveCalculator.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-namespace CRS.Services.ReserveCalculator;
+namespace Horizon.Services.ReserveCalculator;
 
 /// <summary>
 /// Service for generating PDF reports from reserve study calculations.

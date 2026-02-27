@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
 using System.Security.Claims;
 
-namespace CRS.Services.Tenant {
+namespace Horizon.Services.Tenant {
     public static class TenantAuthorizationExtensions {
         public const string TenantMatchPolicy = "TenantMatch";
 

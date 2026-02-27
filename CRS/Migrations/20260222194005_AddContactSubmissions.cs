@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace CRS.Migrations
+namespace Horizon.Migrations
 {
     /// <inheritdoc />
     public partial class AddContactSubmissions : Migration

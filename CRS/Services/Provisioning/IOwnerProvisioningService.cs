@@ -1,16 +1,16 @@
-﻿using CRS.Data;
-using CRS.Models;
+using Horizon.Data;
+using Horizon.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Coravel.Mailer.Mail.Interfaces;
-using CRS.Models.Emails; // added for OwnerWelcomeEmail
+using Horizon.Models.Emails; // added for OwnerWelcomeEmail
 using Coravel.Mailer.Mail;
 using System.Net;
-using CRS.Models.Security;
+using Horizon.Models.Security;
 
-namespace CRS.Services.Provisioning {
+namespace Horizon.Services.Provisioning {
     public interface IOwnerProvisioningService {
-        Task<OwnerProvisionResult> ProvisionAsync(CRS.Models.Tenant tenant, string? email, CancellationToken ct = default);
+        Task<OwnerProvisionResult> ProvisionAsync(Horizon.Models.Tenant tenant, string? email, CancellationToken ct = default);
     }
 
     public enum OwnerProvisionResult { SkippedNoEmail, AlreadyExists, Created, Failed, RoleAdded }
@@ -32,7 +32,7 @@ namespace CRS.Services.Provisioning {
             _config = config;
         }
 
-        public async Task<OwnerProvisionResult> ProvisionAsync(CRS.Models.Tenant tenant, string? email, CancellationToken ct = default) {
+        public async Task<OwnerProvisionResult> ProvisionAsync(Horizon.Models.Tenant tenant, string? email, CancellationToken ct = default) {
             if (string.IsNullOrWhiteSpace(email)) return OwnerProvisionResult.SkippedNoEmail;
             email = email.Trim();
             var existing = await _userManager.FindByEmailAsync(email);

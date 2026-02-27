@@ -1,8 +1,8 @@
-﻿@page "/admin/mail-settings"
+@page "/admin/mail-settings"
 @attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
-@using CRS.Data
-@using CRS.Models
+@using Horizon.Data
+@using Horizon.Models
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar

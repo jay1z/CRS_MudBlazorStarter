@@ -1,7 +1,7 @@
-﻿using CRS.Data;
-using CRS.Models;
+using Horizon.Data;
+using Horizon.Models;
 
-namespace CRS.Services.Tickets;
+namespace Horizon.Services.Tickets;
 
 public interface ITicketService
 {

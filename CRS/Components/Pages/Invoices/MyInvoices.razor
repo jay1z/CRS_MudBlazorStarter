@@ -1,10 +1,10 @@
-﻿@page "/MyInvoices"
+@page "/MyInvoices"
 @attribute [Authorize(Policy = "RequireHOAUser")]
 
-@using CRS.Models
-@using CRS.Services.Interfaces
-@using CRS.Services.Tenant
-@using CRS.Data
+@using Horizon.Models
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Tenant
+@using Horizon.Data
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
 

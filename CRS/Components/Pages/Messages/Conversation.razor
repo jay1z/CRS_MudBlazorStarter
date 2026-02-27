@@ -1,10 +1,10 @@
-﻿@page "/messages/conversation/{OtherUserId:guid}"
+@page "/messages/conversation/{OtherUserId:guid}"
 @attribute [Authorize]
-@using CRS.Models
-@using CRS.Services
-@using CRS.Services.Interfaces
+@using Horizon.Models
+@using Horizon.Services
+@using Horizon.Services.Interfaces
 @using MudBlazor
-@using CRS.Data
+@using Horizon.Data
 @using Microsoft.EntityFrameworkCore
 @inject IMessageService MessageService
 @inject UserStateService UserState

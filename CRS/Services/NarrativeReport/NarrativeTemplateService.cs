@@ -1,10 +1,10 @@
-﻿using CRS.Data;
-using CRS.Models.NarrativeTemplates;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models.NarrativeTemplates;
+using Horizon.Services.Tenant;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Service for managing narrative templates (sections, blocks, and inserts).

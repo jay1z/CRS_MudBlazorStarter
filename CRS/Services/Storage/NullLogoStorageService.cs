@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Forms;
 
-namespace CRS.Services.Storage {
+namespace Horizon.Services.Storage {
     // Null implementation for development/testing without Azure Storage
     public class NullLogoStorageService : ILogoStorageService {
         private readonly ILogger<NullLogoStorageService> _logger;

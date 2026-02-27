@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models.NarrativeTemplates;
+namespace Horizon.Models.NarrativeTemplates;
 
 /// <summary>
 /// Represents a section in the narrative report template.

@@ -1,6 +1,6 @@
-﻿using CRS.Models.NarrativeTemplates;
+using Horizon.Models.NarrativeTemplates;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Composes a complete HTML document from narrative templates for a reserve study report.

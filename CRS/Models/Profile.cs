@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-using CRS.Data;
+using Horizon.Data;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public class Profile : BaseModel {
         public required ApplicationUser User { get; set; }
         [ForeignKey(nameof(ApplicationUser))] public Guid ApplicationUserId { get; set; }

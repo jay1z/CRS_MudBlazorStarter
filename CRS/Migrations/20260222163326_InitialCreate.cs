@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace CRS.Migrations
+namespace Horizon.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

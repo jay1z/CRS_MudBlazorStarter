@@ -1,11 +1,11 @@
-﻿using System.Threading.Tasks;
-using CRS.Data;
-using CRS.Models;
-using CRS.Services.Tenant;
+using System.Threading.Tasks;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Tenant;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Middleware
+namespace Horizon.Middleware
 {
     /// <summary>
     /// Middleware that enforces subscription-based access control.

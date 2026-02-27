@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.Email;
+namespace Horizon.Services.Email;
 
 /// <summary>
 /// Configuration options for Azure Communication Services Email.

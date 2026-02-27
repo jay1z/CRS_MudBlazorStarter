@@ -1,4 +1,4 @@
-﻿@using CRS.Models.Emails
+@using Horizon.Models.Emails
 @model ReserveStudyEmail
 
 @{
@@ -195,18 +195,18 @@
 </html>
 
 @functions {
-    string GetReasonDisplayText(CRS.Models.ProposalDeclineReason? reason)
+    string GetReasonDisplayText(Horizon.Models.ProposalDeclineReason? reason)
     {
         return reason switch
         {
-            CRS.Models.ProposalDeclineReason.PriceTooHigh => "Price is above budget",
-            CRS.Models.ProposalDeclineReason.ScopeInadequate => "Scope doesn't meet requirements",
-            CRS.Models.ProposalDeclineReason.TimelineUnacceptable => "Timeline doesn't work",
-            CRS.Models.ProposalDeclineReason.PaymentTermsUnacceptable => "Payment terms not acceptable",
-            CRS.Models.ProposalDeclineReason.ChoseCompetitor => "Chose a different company",
-            CRS.Models.ProposalDeclineReason.ProjectCancelled => "Project cancelled or no longer needed",
-            CRS.Models.ProposalDeclineReason.BudgetConstraints => "Budget constraints / funding issues",
-            CRS.Models.ProposalDeclineReason.Other => "Other reason (see comments)",
+            Horizon.Models.ProposalDeclineReason.PriceTooHigh => "Price is above budget",
+            Horizon.Models.ProposalDeclineReason.ScopeInadequate => "Scope doesn't meet requirements",
+            Horizon.Models.ProposalDeclineReason.TimelineUnacceptable => "Timeline doesn't work",
+            Horizon.Models.ProposalDeclineReason.PaymentTermsUnacceptable => "Payment terms not acceptable",
+            Horizon.Models.ProposalDeclineReason.ChoseCompetitor => "Chose a different company",
+            Horizon.Models.ProposalDeclineReason.ProjectCancelled => "Project cancelled or no longer needed",
+            Horizon.Models.ProposalDeclineReason.BudgetConstraints => "Budget constraints / funding issues",
+            Horizon.Models.ProposalDeclineReason.Other => "Other reason (see comments)",
             _ => "Not specified"
         };
     }

@@ -1,6 +1,6 @@
-﻿using System.Globalization;
+using System.Globalization;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Configuration options for token rendering in narrative reports.

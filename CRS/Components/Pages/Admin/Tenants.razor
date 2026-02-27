@@ -1,10 +1,10 @@
 @page "/Admin/Tenants"
 @attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
-@using CRS.Models
-@using CRS.Data
-@using CRS.Services.Tenant
-@using CRS.Services
+@using Horizon.Models
+@using Horizon.Data
+@using Horizon.Services.Tenant
+@using Horizon.Services
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
 @using Microsoft.AspNetCore.Components
@@ -14,7 +14,7 @@
 @inject IDialogService DialogService
 @inject ThemeService ThemeService
 @inject ITenantContext TenantContext
-@inject ILogger<CRS.Components.Pages.Admin.Tenants> Logger
+@inject ILogger<Horizon.Components.Pages.Admin.Tenants> Logger
 @inject IJSRuntime JS
 @inject IUserSettingsService UserSettingsService
 

@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator.Models;
+namespace Horizon.Core.ReserveCalculator.Models;
 
 /// <summary>
 /// Data series for graphing the funding plan results.

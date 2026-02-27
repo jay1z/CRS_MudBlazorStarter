@@ -1,12 +1,12 @@
-﻿@page "/ReserveStudies/Update/{Id:guid}"
+@page "/ReserveStudies/Update/{Id:guid}"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
-@using CRS.Components.Layout
-@using CRS.Components.Pages.ReserveStudies.Dialogs
-@using CRS.Data
-@using CRS.Services
+@using Horizon.Components.Layout
+@using Horizon.Components.Pages.ReserveStudies.Dialogs
+@using Horizon.Data
+@using Horizon.Services
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
-@using static CRS.Models.IReserveStudyElement
+@using static Horizon.Models.IReserveStudyElement
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IDbContextFactory<ApplicationDbContext> DbFactory

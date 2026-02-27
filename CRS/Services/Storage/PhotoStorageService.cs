@@ -1,4 +1,4 @@
-﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
 using Microsoft.AspNetCore.Components.Forms;
@@ -7,7 +7,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Jpeg;
 
-namespace CRS.Services.Storage;
+namespace Horizon.Services.Storage;
 
 /// <summary>
 /// Implementation of photo storage service using Azure Blob Storage.

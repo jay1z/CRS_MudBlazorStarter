@@ -1,6 +1,6 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
-namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Represents the branding configuration for invoice PDF generation.

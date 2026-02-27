@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Represents a newsletter subscriber for marketing emails.

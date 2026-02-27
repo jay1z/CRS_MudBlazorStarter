@@ -1,6 +1,6 @@
-﻿using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Mail;
+namespace Horizon.Services.Mail;
 
 /// <summary>
 /// DTOs for the platform webmail feature.

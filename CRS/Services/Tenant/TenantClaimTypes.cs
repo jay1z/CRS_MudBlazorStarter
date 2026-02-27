@@ -1,4 +1,4 @@
-namespace CRS.Services.Tenant {
+namespace Horizon.Services.Tenant {
     public static class TenantClaimTypes {
         public const string TenantId = "tenant_id";
         public const string TenantName = "tenant_name";

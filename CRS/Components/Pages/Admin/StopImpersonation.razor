@@ -1,11 +1,11 @@
-﻿@page "/Admin/StopImpersonation"
+@page "/Admin/StopImpersonation"
 @attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
-@using CRS.Services.Tenant
+@using Horizon.Services.Tenant
 @inject ITenantContext TenantContext
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
-@inject ILogger<CRS.Components.Pages.Admin.StopImpersonation> Logger
+@inject ILogger<Horizon.Components.Pages.Admin.StopImpersonation> Logger
 
 <PageTitle>Stop Impersonation</PageTitle>
 

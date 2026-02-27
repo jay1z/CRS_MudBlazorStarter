@@ -1,4 +1,4 @@
-﻿using Azure.Storage.Blobs;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
@@ -6,7 +6,7 @@ using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using Microsoft.AspNetCore.Components.Forms;
 
-namespace CRS.Services.Storage {
+namespace Horizon.Services.Storage {
     public class LogoUploadConfig {
         public const long MaxFileSizeBytes = 2 * 1024 * 1024; // 2MB
         public const long OptimalSizeBytes = 500 * 1024;      // 500KB (warn user)

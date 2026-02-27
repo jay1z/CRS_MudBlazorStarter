@@ -1,7 +1,7 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.Json;
 using MudBlazor;
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 using MudBlazor.Utilities;
 
 public class ThemeService {
@@ -125,10 +125,10 @@ public class ThemeService {
     private static List<(string Name, MudTheme Theme)> LoadPresets() {
         var list = new List<(string, MudTheme)>();
         try {
-            var asm = typeof(CRS.Themes.IMudTheme).Assembly;
-            var types = asm.GetTypes().Where(t => !t.IsAbstract && typeof(CRS.Themes.IMudTheme).IsAssignableFrom(t));
+            var asm = typeof(Horizon.Themes.IMudTheme).Assembly;
+            var types = asm.GetTypes().Where(t => !t.IsAbstract && typeof(Horizon.Themes.IMudTheme).IsAssignableFrom(t));
             foreach (var t in types) {
-                var instance = Activator.CreateInstance(t) as CRS.Themes.IMudTheme;
+                var instance = Activator.CreateInstance(t) as Horizon.Themes.IMudTheme;
                 if (instance?.Theme != null) list.Add((instance.Name ?? t.Name, instance.Theme));
             }
         } catch {
@@ -161,6 +161,6 @@ public class ThemeService {
     string? CompanyAddress = null,
     string? CompanyLogoUrl = null,
     // PDF-specific settings
-    CRS.Models.PdfSettings? PdfSettings = null
+    Horizon.Models.PdfSettings? PdfSettings = null
     );
 }

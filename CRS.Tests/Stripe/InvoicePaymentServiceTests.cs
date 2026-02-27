@@ -1,9 +1,9 @@
-﻿using CRS.Models;
-using CRS.Services.Interfaces;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
 
 using Xunit;
 
-namespace CRS.Tests.Stripe;
+namespace Horizon.Tests.Stripe;
 
 /// <summary>
 /// Unit tests for invoice payment processing logic,

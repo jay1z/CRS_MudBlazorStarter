@@ -1,4 +1,4 @@
-﻿namespace CRS.Models.Emails {
+namespace Horizon.Models.Emails {
     /// <summary>
     /// Model for customer welcome email sent after self-registration
     /// </summary>

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace CRS.Controllers.Requests {
+namespace Horizon.Controllers.Requests {
     public record CreateReserveStudyRequest {
         public Guid? ApplicationUserId { get; init; }
         public Guid? SpecialistUserId { get; init; }

@@ -1,5 +1,5 @@
-﻿using CRS.Models.NarrativeTemplates;
-using CRS.Services.NarrativeReport;
+using Horizon.Models.NarrativeTemplates;
+using Horizon.Services.NarrativeReport;
 
 using Microsoft.Extensions.Logging;
 
@@ -7,7 +7,7 @@ using Moq;
 
 using Xunit;
 
-namespace CRS.Tests;
+namespace Horizon.Tests;
 
 /// <summary>
 /// Unit tests for <see cref="DefaultTokenRenderer"/>.

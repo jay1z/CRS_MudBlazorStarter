@@ -1,8 +1,8 @@
-﻿using Coravel.Mailer.Mail;
+using Coravel.Mailer.Mail;
 
-using CRS.Models.Emails;
+using Horizon.Models.Emails;
 
-namespace CRS.Models.Email;
+namespace Horizon.Models.Email;
 
 /// <summary>
 /// Mailable for sending generated reports to clients.

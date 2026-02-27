@@ -1,8 +1,8 @@
-﻿using CRS.Core.ReserveCalculator.Models;
-using CRS.Models;
-using CRS.Models.Workflow;
+using Horizon.Core.ReserveCalculator.Models;
+using Horizon.Models;
+using Horizon.Models.Workflow;
 
-namespace CRS.Services.Interfaces;
+namespace Horizon.Services.Interfaces;
 
 /// <summary>
 /// Result of validating study data completeness for report generation.

@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Sanitizes HTML content to prevent XSS and other security issues.

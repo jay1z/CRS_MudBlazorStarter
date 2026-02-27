@@ -1,6 +1,6 @@
-﻿using Ganss.Xss;
+using Ganss.Xss;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// HTML sanitizer implementation for narrative templates using Ganss.Xss.

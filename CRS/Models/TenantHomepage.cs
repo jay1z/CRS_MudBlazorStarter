@@ -1,10 +1,10 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models {
-    // Block-model homepage per tenant — MVP scaffolding
+namespace Horizon.Models {
+    // Block-model homepage per tenant ï¿½ MVP scaffolding
     public class TenantHomepage : ITenantScoped {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();

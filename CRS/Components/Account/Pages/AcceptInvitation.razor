@@ -1,4 +1,4 @@
-﻿@attribute [AllowAnonymous]
+@attribute [AllowAnonymous]
 @layout EmptyLayout
 @page "/Account/AcceptInvitation"
 @page "/invite/accept"
@@ -6,10 +6,10 @@
 
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services.Tenant
-@using CRS.Services.Storage
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services.Tenant
+@using Horizon.Services.Storage
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager

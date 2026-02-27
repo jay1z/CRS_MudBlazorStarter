@@ -1,12 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-using CRS.Data;
+using Horizon.Data;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Models {
-    public class ReserveStudy : BaseModel, CRS.Services.Tenant.ITenantScoped {
+namespace Horizon.Models {
+    public class ReserveStudy : BaseModel, Horizon.Services.Tenant.ITenantScoped {
         [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
         public ApplicationUser? User { get; set; }
 
@@ -50,7 +50,7 @@ namespace CRS.Models {
         public FinancialInfo? FinancialInfo { get; set; }
 
         // Shared PK1:1 to workflow StudyRequest (Id)
-        public CRS.Models.Workflow.StudyRequest? StudyRequest { get; set; }
+        public Horizon.Models.Workflow.StudyRequest? StudyRequest { get; set; }
 
         public List<ReserveStudyBuildingElement>? ReserveStudyBuildingElements { get; set; }
         public List<ReserveStudyCommonElement>? ReserveStudyCommonElements { get; set; }
@@ -93,8 +93,8 @@ namespace CRS.Models {
         /// This is the single source of truth for workflow status.
         /// </summary>
         [NotMapped]
-        public CRS.Models.Workflow.StudyStatus CurrentStatus => 
-            StudyRequest?.CurrentStatus ?? CRS.Models.Workflow.StudyStatus.RequestCreated;
+        public Horizon.Models.Workflow.StudyStatus CurrentStatus => 
+            StudyRequest?.CurrentStatus ?? Horizon.Models.Workflow.StudyStatus.RequestCreated;
 
         [DataType(DataType.DateTime)]
         public DateTime? DateApproved { get; set; }

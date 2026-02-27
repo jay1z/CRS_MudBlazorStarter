@@ -1,7 +1,7 @@
 using FluentValidation;
-using CRS.Controllers.Requests;
+using Horizon.Controllers.Requests;
 
-namespace CRS.Controllers.Requests.Validators {
+namespace Horizon.Controllers.Requests.Validators {
     public class SendProposalRequestValidator : AbstractValidator<SendProposalRequest> {
         public SendProposalRequestValidator() {
             RuleFor(x => x.ProposalScope).NotEmpty().WithMessage("Proposal scope is required.");

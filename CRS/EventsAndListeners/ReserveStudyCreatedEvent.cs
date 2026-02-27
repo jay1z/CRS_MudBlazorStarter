@@ -1,8 +1,8 @@
-﻿using Coravel.Events.Interfaces;
+using Coravel.Events.Interfaces;
 
-using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.EventsAndListeners {
+namespace Horizon.EventsAndListeners {
     public class ReserveStudyCreatedEvent : IEvent {
         public ReserveStudy ReserveStudy { get; set; }
 

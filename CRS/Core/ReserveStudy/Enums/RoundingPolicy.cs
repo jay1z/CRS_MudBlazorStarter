@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator.Enums;
+namespace Horizon.Core.ReserveCalculator.Enums;
 
 /// <summary>
 /// Defines when and how monetary values are rounded during calculations.

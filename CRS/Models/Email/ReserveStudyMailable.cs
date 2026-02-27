@@ -1,8 +1,8 @@
-﻿using Coravel.Mailer.Mail;
+using Coravel.Mailer.Mail;
 
-using CRS.Models.Emails;
+using Horizon.Models.Emails;
 
-namespace CRS.Models.Email {
+namespace Horizon.Models.Email {
     public class ReserveStudyMailable : Mailable<ReserveStudyEmail> {
         public required ReserveStudyEmail ReserveStudyEmail { get; set; }
 

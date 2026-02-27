@@ -1,10 +1,10 @@
-﻿@page "/MyDocuments"
+@page "/MyDocuments"
 @attribute [Authorize(Policy = "RequireHOAUser")]
 
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services.Customers
-@using CRS.Services.Tenant
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services.Customers
+@using Horizon.Services.Tenant
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
 

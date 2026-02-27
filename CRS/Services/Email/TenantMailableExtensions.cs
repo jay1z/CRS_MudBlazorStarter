@@ -1,7 +1,7 @@
-﻿using Coravel.Mailer.Mail;
-using CRS.Models.Emails;
+using Coravel.Mailer.Mail;
+using Horizon.Models.Emails;
 
-namespace CRS.Services.Email;
+namespace Horizon.Services.Email;
 
 /// <summary>
 /// Extension methods for Coravel Mailable to support tenant-specific sender configuration

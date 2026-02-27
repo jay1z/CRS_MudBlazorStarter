@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.Interfaces;
+namespace Horizon.Services.Interfaces;
 
 public interface IProposalPdfService
 {

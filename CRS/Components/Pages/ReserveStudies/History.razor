@@ -1,8 +1,8 @@
-﻿@page "/ReserveStudies/History/{Id:guid}"
+@page "/ReserveStudies/History/{Id:guid}"
 @attribute [Authorize]
 
-@using CRS.Data
-@using CRS.Models.Workflow
+@using Horizon.Data
+@using Horizon.Models.Workflow
 @using Microsoft.EntityFrameworkCore
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory

@@ -1,6 +1,6 @@
-﻿using Coravel.Mailer.Mail;
+using Coravel.Mailer.Mail;
 
-namespace CRS.Models.Email;
+namespace Horizon.Models.Email;
 
 /// <summary>
 /// Mailable for newsletter confirmation emails.

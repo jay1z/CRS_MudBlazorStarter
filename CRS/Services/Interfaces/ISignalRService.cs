@@ -1,6 +1,6 @@
-﻿using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
     public interface ISignalRService {
         Task NotifyTaskUpdated(Guid reserveStudyId);
         Task NotifyTaskModified(Guid reserveStudyId, KanbanTask task);

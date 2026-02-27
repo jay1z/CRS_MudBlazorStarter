@@ -1,14 +1,14 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Models.NarrativeTemplates;
-using CRS.Services.Interfaces;
-using CRS.Services.ReserveCalculator;
-using CRS.Services.Storage;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.NarrativeTemplates;
+using Horizon.Services.Interfaces;
+using Horizon.Services.ReserveCalculator;
+using Horizon.Services.Storage;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Implementation of <see cref="IReportContextBuilder"/>.

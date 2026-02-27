@@ -1,7 +1,8 @@
-﻿using CRS.Services.Interfaces;
+using Horizon.Services.Interfaces;
+
 using Microsoft.AspNetCore.Mvc;
 
-namespace CRS.Controllers;
+namespace Horizon.Controllers;
 
 /// <summary>
 /// Controller for newsletter subscription management endpoints.

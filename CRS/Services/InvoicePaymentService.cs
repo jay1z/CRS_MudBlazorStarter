@@ -1,18 +1,22 @@
-﻿using Coravel.Mailer.Mail.Interfaces;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Email;
-using CRS.Models.Emails;
-using CRS.Services.Billing;
-using CRS.Services.Email;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
+using Coravel.Mailer.Mail.Interfaces;
+
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Email;
+using Horizon.Models.Emails;
+using Horizon.Services.Email;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
+
+using Horizon.Services.Billing;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+
 using Stripe.Checkout;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Service for handling Stripe payment processing for invoices.

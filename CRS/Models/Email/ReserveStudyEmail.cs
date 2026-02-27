@@ -1,4 +1,4 @@
-﻿namespace CRS.Models.Emails {
+namespace Horizon.Models.Emails {
     public class ReserveStudyEmail {
         public required ReserveStudy ReserveStudy { get; set; }
         public string? AdditionalMessage { get; set; }

@@ -1,6 +1,6 @@
-﻿using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Customers {
+namespace Horizon.Services.Customers {
     public interface ICustomerService {
         /// <summary>
         /// Gets the count of active customers for the current tenant

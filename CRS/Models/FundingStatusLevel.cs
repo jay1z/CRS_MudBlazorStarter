@@ -1,4 +1,4 @@
-﻿namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Represents the funding status level based on percent funded thresholds.

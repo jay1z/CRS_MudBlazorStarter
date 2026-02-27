@@ -1,14 +1,14 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using QuestDocument = QuestPDF.Fluent.Document;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Service for generating invoice PDFs using QuestPDF.

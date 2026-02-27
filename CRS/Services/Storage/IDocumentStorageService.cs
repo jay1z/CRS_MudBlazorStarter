@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.Storage;
+namespace Horizon.Services.Storage;
 
 /// <summary>
 /// Configuration for document uploads.

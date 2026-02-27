@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.Tenant {
+namespace Horizon.Services.Tenant {
     // SaaS Refactor: Provides access to the current request's tenant
     public interface ITenantContext {
         int? TenantId { get; set; }

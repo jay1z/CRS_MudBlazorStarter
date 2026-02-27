@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using CRS.Data;
+using System.ComponentModel.DataAnnotations.Schema;
+using Horizon.Data;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     /// <summary>
     /// Archive table for historical audit logs older than retention period.
     /// Prevents AuditLog table from growing indefinitely.

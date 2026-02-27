@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using CRS.Data;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Records a click-wrap agreement acceptance for a proposal.

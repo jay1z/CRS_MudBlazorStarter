@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CRS.Services.Tenant;
 
-namespace CRS.Controllers
-{
+using Horizon.Services.Tenant;
+
+namespace Horizon.Controllers {
  [ApiController]
  [Route("api/tenant/{tenantId:int}/media")]
  public class MediaController : ControllerBase

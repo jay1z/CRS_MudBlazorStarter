@@ -1,9 +1,10 @@
-﻿using CRS.Models;
-using CRS.Services.Billing;
+using Horizon.Models;
+
+using Horizon.Services.Billing;
 
 using Xunit;
 
-namespace CRS.Tests.Stripe;
+namespace Horizon.Tests.Stripe;
 
 /// <summary>
 /// Unit tests for <see cref="StripeOptions"/> price ID resolution

@@ -1,8 +1,8 @@
-﻿using CRS.Models;
+using Horizon.Models;
 
 using Xunit;
 
-namespace CRS.Tests.Stripe;
+namespace Horizon.Tests.Stripe;
 
 /// <summary>
 /// Unit tests for Stripe webhook event handling logic.

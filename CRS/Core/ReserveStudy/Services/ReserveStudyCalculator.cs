@@ -1,6 +1,6 @@
-﻿using CRS.Core.ReserveCalculator.Models;
+using Horizon.Core.ReserveCalculator.Models;
 
-namespace CRS.Core.ReserveCalculator.Services;
+namespace Horizon.Core.ReserveCalculator.Services;
 
 /// <summary>
 /// Main orchestrator for reserve study calculations.

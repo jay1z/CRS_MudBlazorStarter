@@ -1,6 +1,6 @@
-﻿using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
     public interface ICalendarService {
         Task<CalendarEvent?> GetEventAsync(Guid id);
         Task<List<CalendarEvent>> GetEventsAsync(DateTime? startDate = null, DateTime? endDate = null);

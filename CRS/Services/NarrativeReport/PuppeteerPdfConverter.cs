@@ -1,7 +1,7 @@
-﻿using PuppeteerSharp;
+using PuppeteerSharp;
 using PuppeteerSharp.Media;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// PDF converter implementation using PuppeteerSharp (headless Chrome).

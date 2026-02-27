@@ -1,13 +1,13 @@
-﻿@page "/signup/customer"
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services.Customers
-@using CRS.Services.Tenant
+@page "/signup/customer"
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services.Customers
+@using Horizon.Services.Tenant
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Routing
 @using Microsoft.EntityFrameworkCore
 @using System.ComponentModel.DataAnnotations
-@layout CRS.Components.Layout.PublicLayout
+@layout Horizon.Components.Layout.PublicLayout
 
 @inject UserManager<ApplicationUser> UserManager
 @inject ICustomerService CustomerService

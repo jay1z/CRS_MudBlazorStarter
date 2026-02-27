@@ -1,12 +1,12 @@
-﻿@page "/"
+@page "/"
 @attribute [AllowAnonymous]
-@attribute [CRS.Components.Layout.HideNav]
-@layout CRS.Components.Layout.HomeLayout
+@attribute [Horizon.Components.Layout.HideNav]
+@layout Horizon.Components.Layout.HomeLayout
 @using MudBlazor
 @inject ILogger<Index> Logger
 @inject AuthenticationStateProvider AuthProvider
 @inject NavigationManager Nav
-@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject Horizon.Services.Tenant.ITenantContext TenantContext
 
 <PageTitle>ALX Reserve Cloud - Reserve Study SaaS Platform</PageTitle>
 

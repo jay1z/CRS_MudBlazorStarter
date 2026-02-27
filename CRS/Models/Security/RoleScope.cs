@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace CRS.Models.Security
+namespace Horizon.Models.Security
 {
     // Defines the scope for a role
     public enum RoleScope

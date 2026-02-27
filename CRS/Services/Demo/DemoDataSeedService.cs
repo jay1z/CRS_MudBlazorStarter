@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using CRS.Data;
-using CRS.Models;
+using Microsoft.EntityFrameworkCore;
+using Horizon.Data;
+using Horizon.Models;
 
-namespace CRS.Services.Demo
+namespace Horizon.Services.Demo
 {
     public interface IDemoDataSeedService
     {
@@ -98,7 +98,7 @@ namespace CRS.Services.Demo
             };
         }
         
-        private CRS.Models.ReserveStudy CreateSampleReserveStudy(Community property)
+        private Horizon.Models.ReserveStudy CreateSampleReserveStudy(Community property)
         {
             var startingBalance = property.NumberOfUnits switch
             {
@@ -114,7 +114,7 @@ namespace CRS.Services.Demo
                 _ => 2500m
             };
             
-            return new CRS.Models.ReserveStudy
+            return new Horizon.Models.ReserveStudy
             {
                 CommunityId = property.Id,
                 Name = $"{property.Name} - Reserve Study {DateTime.Now.Year}",

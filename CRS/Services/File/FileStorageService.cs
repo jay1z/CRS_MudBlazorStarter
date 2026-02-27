@@ -1,8 +1,8 @@
 using System.Text;
 
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Services.File {
+namespace Horizon.Services.File {
     // SaaS Refactor: stores files in per-tenant folder structure
     public interface IFileStorageService {
         string GetTenantRootPath(int tenantId);

@@ -1,8 +1,8 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Models.Emails;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Emails;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
     public interface IReserveStudyService {
         Task<ReserveStudy> CreateReserveStudyAsync(ReserveStudy reserveStudy);
         Task<ReserveStudy> UpdateReserveStudyAsync(ReserveStudy reserveStudy);

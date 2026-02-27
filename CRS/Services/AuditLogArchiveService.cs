@@ -1,8 +1,8 @@
-﻿using CRS.Data;
-using CRS.Models;
+using Horizon.Data;
+using Horizon.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services {
+namespace Horizon.Services {
     /// <summary>
     /// Background service that archives old audit logs to prevent unbounded table growth.
     /// Runs monthly to move logs older than retention period to archive table.

@@ -1,6 +1,6 @@
 @page "/Customers"
-@using CRS.Models
-@using CRS.Services.Customers
+@using Horizon.Models
+@using Horizon.Services.Customers
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
 @inject ICustomerService CustomerService

@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator.Enums;
+namespace Horizon.Core.ReserveCalculator.Enums;
 
 /// <summary>
 /// Defines when expenditures are applied during the year.

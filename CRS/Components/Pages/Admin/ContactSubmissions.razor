@@ -1,12 +1,12 @@
-﻿@page "/admin/contact-submissions"
+@page "/admin/contact-submissions"
 @attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
-@using CRS.Data
-@using CRS.Models
+@using Horizon.Data
+@using Horizon.Models
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
-@inject ILogger<CRS.Components.Pages.Admin.ContactSubmissions> Logger
+@inject ILogger<Horizon.Components.Pages.Admin.ContactSubmissions> Logger
 
 <PageTitle>Contact Submissions - Admin</PageTitle>
 

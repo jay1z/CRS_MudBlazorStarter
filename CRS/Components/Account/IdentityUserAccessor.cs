@@ -1,7 +1,7 @@
-using CRS.Data;
+using Horizon.Data;
 using Microsoft.AspNetCore.Identity;
 
-namespace CRS.Components.Account
+namespace Horizon.Components.Account
 {
     internal sealed class IdentityUserAccessor(UserManager<ApplicationUser> userManager, IdentityRedirectManager redirectManager)
     {

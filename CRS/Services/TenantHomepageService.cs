@@ -1,10 +1,10 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 using Ganss.Xss;
 
-namespace CRS.Services {
+namespace Horizon.Services {
     // SaaS Refactor: Service for tenant-specific homepage management
     public class TenantHomepageService {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;

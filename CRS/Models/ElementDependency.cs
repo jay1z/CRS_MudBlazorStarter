@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     /// <summary>
     /// Defines a dependency relationship between elements.
     /// For example: A Basin (dependent) requires a Road (required).

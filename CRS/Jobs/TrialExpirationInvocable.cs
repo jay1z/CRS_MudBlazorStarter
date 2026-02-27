@@ -1,12 +1,12 @@
-﻿using Coravel.Invocable;
+using Coravel.Invocable;
 using Coravel.Mailer.Mail.Interfaces;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Emails;
-using CRS.Services.Email.Mailables;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Emails;
+using Horizon.Services.Email.Mailables;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Jobs;
+namespace Horizon.Jobs;
 
 /// <summary>
 /// Scheduled job to handle trial expiration notifications and status updates.

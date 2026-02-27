@@ -1,7 +1,7 @@
-﻿using CRS.Core.ReserveCalculator.Enums;
-using CRS.Core.ReserveCalculator.Models;
+using Horizon.Core.ReserveCalculator.Enums;
+using Horizon.Core.ReserveCalculator.Models;
 
-namespace CRS.Core.ReserveCalculator.Services;
+namespace Horizon.Core.ReserveCalculator.Services;
 
 /// <summary>
 /// Calculates the fully funded balance (ideal reserve) for reserve components.

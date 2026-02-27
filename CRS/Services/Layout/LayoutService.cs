@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 
-namespace CRS.Services.Layout
+namespace Horizon.Services.Layout
 {
     public class LayoutService : ILayoutService
     {

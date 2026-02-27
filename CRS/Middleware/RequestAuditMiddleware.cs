@@ -5,12 +5,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Serilog.Context;
 using Serilog;
-using CRS.Data;
-using CRS.Models;
+using Horizon.Data;
+using Horizon.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
-namespace CRS.Middleware {
+namespace Horizon.Middleware {
  public class RequestAuditMiddleware {
  private readonly RequestDelegate _next;
 

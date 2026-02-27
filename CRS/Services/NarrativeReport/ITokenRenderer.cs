@@ -1,6 +1,6 @@
-﻿using CRS.Models.NarrativeTemplates;
+using Horizon.Models.NarrativeTemplates;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Renders special tokens in narrative HTML templates to generated HTML content.

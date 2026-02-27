@@ -1,4 +1,4 @@
-﻿namespace CRS.Models {
+namespace Horizon.Models {
     /// <summary>
     /// Represents a community (HOA, condo association, etc.)
     /// 
@@ -10,7 +10,7 @@
     /// Both addresses are stored in the Addresses table and referenced via FK pointers.
     /// If MailingAddressId is null, the physical address is used for mailing.
     /// </summary>
-    public class Community : BaseModel, CRS.Services.Tenant.ITenantScoped {
+    public class Community : BaseModel, Horizon.Services.Tenant.ITenantScoped {
         public string? Name { get; set; }
 
         public DateTime? AnnualMeetingDate { get; set; }

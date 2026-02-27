@@ -1,7 +1,7 @@
-﻿using Coravel.Mailer.Mail;
-using CRS.Models.Emails;
+using Coravel.Mailer.Mail;
+using Horizon.Models.Emails;
 
-namespace CRS.Services.Email.Mailables;
+namespace Horizon.Services.Email.Mailables;
 
 /// <summary>
 /// Mailable for trial ending warning emails.

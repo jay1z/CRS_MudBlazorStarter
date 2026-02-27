@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Forms;
 
-namespace CRS.Services.Storage;
+namespace Horizon.Services.Storage;
 
 /// <summary>
 /// Configuration for site visit photo uploads.

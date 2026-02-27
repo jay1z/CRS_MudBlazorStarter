@@ -1,12 +1,12 @@
-﻿using System.Security.Claims;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Workflow;
-using CRS.Services.Interfaces;
+using System.Security.Claims;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Workflow;
+using Horizon.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services.Workflow;
+namespace Horizon.Services.Workflow;
 
 /// <summary>
 /// Service for performing workflow actions on reserve studies with role-based access,

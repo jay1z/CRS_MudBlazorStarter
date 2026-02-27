@@ -1,9 +1,9 @@
 @page "/Admin/Settings"
 @page "/Settings"
 @attribute [Authorize(Policy = "RequireTenantOwner")]
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services.Tenant
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services.Tenant
 @using Microsoft.EntityFrameworkCore
 @using System.Text.Json
 @using Microsoft.AspNetCore.Components.Forms
@@ -15,8 +15,8 @@
 @inject IWebHostEnvironment Env
 @inject NavigationManager Nav
 @inject IJSRuntime JS
-@inject CRS.Services.Storage.ILogoStorageService LogoStorage
-@inject CRS.Services.Interfaces.IProposalAcceptanceService AcceptanceService
+@inject Horizon.Services.Storage.ILogoStorageService LogoStorage
+@inject Horizon.Services.Interfaces.IProposalAcceptanceService AcceptanceService
 
 <PageTitle>Organization Settings</PageTitle>
 
@@ -943,7 +943,7 @@
                                     else if (activeTab == 5)
                                     {
                                         <!-- Scope Change Settings -->
-                                        <CRS.Components.Shared.Settings.TenantScopeChangeSettingsPanel @ref="scopeChangeSettingsPanel" OnSettingsChanged="MarkAsChanged" />
+                                        <Horizon.Components.Shared.Settings.TenantScopeChangeSettingsPanel @ref="scopeChangeSettingsPanel" OnSettingsChanged="MarkAsChanged" />
                                     }
                                     else if (activeTab == 6)
                                     {
@@ -1500,7 +1500,7 @@ private bool isLoadingTerms = false;
 private bool isSavingTerms = false;
 
 // Scope Change Settings Panel reference
-private CRS.Components.Shared.Settings.TenantScopeChangeSettingsPanel? scopeChangeSettingsPanel;
+private Horizon.Components.Shared.Settings.TenantScopeChangeSettingsPanel? scopeChangeSettingsPanel;
 
 protected override async Task OnInitializedAsync() {
     presetNames = ThemeService.GetPresetNames();
@@ -1811,7 +1811,7 @@ protected override async Task OnInitializedAsync() {
             return;
         }
 
-        if (file.Size > CRS.Services.Storage.LogoUploadConfig.OptimalSizeBytes) {
+        if (file.Size > Horizon.Services.Storage.LogoUploadConfig.OptimalSizeBytes) {
             Snackbar.Add($"Large file ({file.Size / 1024}KB). Optimizing...", MudBlazor.Severity.Info);
         }
 

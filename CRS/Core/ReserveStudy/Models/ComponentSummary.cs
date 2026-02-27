@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator.Models;
+namespace Horizon.Core.ReserveCalculator.Models;
 
 /// <summary>
 /// Summary information for a single component, used in reports and narratives.

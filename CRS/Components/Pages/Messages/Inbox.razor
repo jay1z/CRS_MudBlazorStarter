@@ -1,12 +1,12 @@
-﻿@page "/messages/inbox"
+@page "/messages/inbox"
 @page "/messages"
 @attribute [Authorize]
-@using CRS.Services
-@using CRS.Models
+@using Horizon.Services
+@using Horizon.Models
 @using MudBlazor
 @using Microsoft.EntityFrameworkCore
-@using CRS.Data
-@inject CRS.Services.Interfaces.IMessageService MessageService
+@using Horizon.Data
+@inject Horizon.Services.Interfaces.IMessageService MessageService
 @inject UserStateService UserState
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar

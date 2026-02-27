@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CRS.Data;
-using CRS.Services.Tenant;
+using System.ComponentModel.DataAnnotations;
+using Horizon.Data;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Template for the legal terms and conditions shown during click-wrap acceptance.

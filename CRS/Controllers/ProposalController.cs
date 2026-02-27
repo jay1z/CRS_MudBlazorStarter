@@ -1,8 +1,8 @@
-﻿using CRS.Services.Interfaces;
+using Horizon.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CRS.Controllers;
+namespace Horizon.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

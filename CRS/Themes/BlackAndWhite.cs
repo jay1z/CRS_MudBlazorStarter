@@ -1,6 +1,6 @@
-﻿using MudBlazor;
+using MudBlazor;
 
-namespace CRS.Themes {
+namespace Horizon.Themes {
     public class BlackAndWhite : IMudTheme {
         public string? Name { get; } = "Black And White";
         public MudTheme Theme {

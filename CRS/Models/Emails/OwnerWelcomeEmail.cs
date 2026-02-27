@@ -1,4 +1,4 @@
-﻿namespace CRS.Models.Emails {
+namespace Horizon.Models.Emails {
     public class OwnerWelcomeEmail {
         public required string TenantName { get; set; }
         public required string PasswordResetLink { get; set; }

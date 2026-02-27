@@ -1,12 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CRS.Data;
+using System.ComponentModel.DataAnnotations;
+using Horizon.Data;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     /// <summary>
     /// Represents a customer/client account (HOA board, management company, etc.)
     /// A customer can have multiple communities/properties.
     /// </summary>
-    public class CustomerAccount : BaseModel, CRS.Services.Tenant.ITenantScoped {
+    public class CustomerAccount : BaseModel, Horizon.Services.Tenant.ITenantScoped {
         public Guid Id { get; set; } = Guid.CreateVersion7();
 
         /// <summary>

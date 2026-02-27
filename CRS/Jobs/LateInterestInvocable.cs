@@ -1,7 +1,7 @@
-﻿using Coravel.Invocable;
-using CRS.Services.Interfaces;
+using Coravel.Invocable;
+using Horizon.Services.Interfaces;
 
-namespace CRS.Jobs;
+namespace Horizon.Jobs;
 
 /// <summary>
 /// Scheduled job to calculate and apply late payment interest to overdue invoices.

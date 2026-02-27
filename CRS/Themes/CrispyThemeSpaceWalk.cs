@@ -1,6 +1,6 @@
-﻿using MudBlazor;
+using MudBlazor;
 
-namespace CRS.Themes {
+namespace Horizon.Themes {
     public class CrispyThemeSpaceWalk : IMudTheme {
         public string? Name { get; } = "SpaceWalk";
         public MudTheme Theme {

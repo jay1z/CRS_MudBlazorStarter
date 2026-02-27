@@ -1,7 +1,7 @@
-﻿@inject CRS.Services.Tenant.ITenantHomepageDataService DataService
-@inject CRS.Services.Tenant.ITenantUserRoleService RoleService
-@inject CRS.Services.UserStateService UserState
-@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject Horizon.Services.Tenant.ITenantHomepageDataService DataService
+@inject Horizon.Services.Tenant.ITenantUserRoleService RoleService
+@inject Horizon.Services.UserStateService UserState
+@inject Horizon.Services.Tenant.ITenantContext TenantContext
 @inject ILogger<W5TenantPipelineBoard> Logger
 
 <MudPaper Class="pa-4 mb-4" Elevation="1">
@@ -38,7 +38,7 @@
 </MudPaper>
 
 @code {
-    private List<CRS.Components.AppHome.ViewModels.PipelineStageVm> _stages = new();
+    private List<Horizon.Components.AppHome.ViewModels.PipelineStageVm> _stages = new();
     private bool _loading = true;
     private string _filterNote = string.Empty;
 

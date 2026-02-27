@@ -1,6 +1,6 @@
-﻿using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
     public interface IKanbanService {
         Task<List<KanbanTask>> GetTasksForReserveStudyAsync(Guid reserveStudyId);
         Task<KanbanTask> CreateTaskAsync(KanbanTask task);

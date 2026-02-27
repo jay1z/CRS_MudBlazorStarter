@@ -1,6 +1,6 @@
-﻿using CRS.Models.NarrativeTemplates;
+using Horizon.Models.NarrativeTemplates;
 
-namespace CRS.Data;
+namespace Horizon.Data;
 
 /// <summary>
 /// Seed data for global narrative template sections, blocks, and inserts.

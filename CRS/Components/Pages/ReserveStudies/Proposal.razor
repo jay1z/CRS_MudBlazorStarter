@@ -1,10 +1,10 @@
-﻿@page "/ReserveStudies/Proposal/{studyId:guid}"
+@page "/ReserveStudies/Proposal/{studyId:guid}"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services
-@using CRS.Services.Interfaces
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services
+@using Horizon.Services.Interfaces
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Forms

@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 
-namespace CRS.Services.Tenant {
+namespace Horizon.Services.Tenant {
     // SaaS Refactor: Scoped context holding current tenant information
     public class TenantContext : ITenantContext {
         private int? _tenantId;

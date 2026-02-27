@@ -1,11 +1,11 @@
-﻿@page "/ReserveStudies/Specialist"
+@page "/ReserveStudies/Specialist"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
-@using CRS.Models
-@using CRS.Models.Workflow
-@using CRS.Services
-@using CRS.Services.Interfaces
-@using CRS.Services.Workflow
+@using Horizon.Models
+@using Horizon.Models.Workflow
+@using Horizon.Services
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Workflow
 @inject IReserveStudyService ReserveStudyService
 @inject UserStateService UserState
 @inject NavigationManager NavigationManager

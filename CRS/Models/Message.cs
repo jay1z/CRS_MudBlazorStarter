@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public class Message : ITenantScoped {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();

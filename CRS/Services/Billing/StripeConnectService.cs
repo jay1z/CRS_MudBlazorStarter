@@ -1,10 +1,12 @@
-﻿using CRS.Data;
-using CRS.Models;
+using Horizon.Data;
+using Horizon.Models;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+
 using Stripe;
 
-namespace CRS.Services.Billing;
+namespace Horizon.Services.Billing;
 
 /// <summary>
 /// Service for managing Stripe Connect accounts for tenants.

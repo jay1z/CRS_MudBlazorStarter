@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator.Enums;
+namespace Horizon.Core.ReserveCalculator.Enums;
 
 /// <summary>
 /// Defines how frequently contributions are made to the reserve fund.

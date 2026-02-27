@@ -1,6 +1,6 @@
-﻿using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
     /// <summary>
     /// Service interface for retrieving building and common elements with tenant-specific ordering and visibility.
     /// </summary>

@@ -1,10 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using CRS.Data;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Represents a payment record for an invoice, providing audit trail for all payments.

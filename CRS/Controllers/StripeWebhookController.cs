@@ -1,6 +1,5 @@
-﻿using CRS.Data;
-using CRS.Models.Billing;
-using CRS.Services.Billing;
+using Horizon.Data;
+using Horizon.Models.Billing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -8,14 +7,15 @@ using Microsoft.Extensions.Options;
 using Stripe;
 using Stripe.Checkout;
 using Coravel.Mailer.Mail.Interfaces;
-using CRS.Services.Email;
-using CRS.Services.Provisioning;
-using CRS.Models;
-using CRS.Models.Email;
-using CRS.Models.Emails;
-using CRS.Services.Interfaces;
+using Horizon.Services.Email;
+using Horizon.Services.Provisioning;
+using Horizon.Models;
+using Horizon.Models.Email;
+using Horizon.Models.Emails;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Billing;
 
-namespace CRS.Controllers {
+namespace Horizon.Controllers {
     [ApiController]
     [Route("api/stripe/webhook")]
     public class StripeWebhookController : ControllerBase {
@@ -193,32 +193,32 @@ namespace CRS.Controllers {
                     var existing = await _db.Tenants.FirstOrDefaultAsync(t => t.Subdomain == subdomain, ct);
                     if (existing == null) {
                         _logger.LogInformation("Creating new tenant for subdomain {Subdomain}", subdomain);
-                        CRS.Models.SubscriptionTier? tier = null;
-                        if (!string.IsNullOrWhiteSpace(tierStr) && Enum.TryParse<CRS.Models.SubscriptionTier>(tierStr, true, out var parsedTier)) {
+                        Horizon.Models.SubscriptionTier? tier = null;
+                        if (!string.IsNullOrWhiteSpace(tierStr) && Enum.TryParse<Horizon.Models.SubscriptionTier>(tierStr, true, out var parsedTier)) {
                             tier = parsedTier;
                         } else {
                             _logger.LogWarning("Could not parse tier '{Tier}', defaulting to null", tierStr);
                         }
 
                         // Determine initial subscription status - check if subscription is in trial
-                        var initialStatus = CRS.Models.SubscriptionStatus.Incomplete;
+                        var initialStatus = Horizon.Models.SubscriptionStatus.Incomplete;
                         DateTime? trialStart = null;
                         DateTime? trialEnd = null;
 
                         if (sub != null && sub.Status == "trialing") {
-                            initialStatus = CRS.Models.SubscriptionStatus.Trialing;
+                            initialStatus = Horizon.Models.SubscriptionStatus.Trialing;
                             trialStart = sub.TrialStart;
                             trialEnd = sub.TrialEnd;
                         } else if (sub != null && sub.Status == "active") {
-                            initialStatus = CRS.Models.SubscriptionStatus.Active;
+                            initialStatus = Horizon.Models.SubscriptionStatus.Active;
                         }
 
-                        var tenant = new CRS.Models.Tenant {
+                        var tenant = new Horizon.Models.Tenant {
                             Name = companyName,
                             Subdomain = subdomain,
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
-                            ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active,
+                            ProvisioningStatus = Horizon.Models.TenantProvisioningStatus.Active,
                             SubscriptionStatus = initialStatus,
                             PendingOwnerEmail = adminEmail,
                             StripeCustomerId = session.CustomerId,
@@ -233,7 +233,7 @@ namespace CRS.Controllers {
 
                         // Set tier limits based on subscription tier
                         if (tier.HasValue) {
-                            var limits = CRS.Models.SubscriptionTierDefaults.GetLimits(tier.Value);
+                            var limits = Horizon.Models.SubscriptionTierDefaults.GetLimits(tier.Value);
                             tenant.MaxCommunities = limits.communities;
                             tenant.MaxSpecialistUsers = limits.specialists;
                         }
@@ -283,9 +283,9 @@ namespace CRS.Controllers {
                         // Update subscription status based on actual Stripe status
                         if (sub != null) {
                             if (sub.Status == "trialing") {
-                                existing.SubscriptionStatus = CRS.Models.SubscriptionStatus.Trialing;
+                                existing.SubscriptionStatus = Horizon.Models.SubscriptionStatus.Trialing;
                             } else if (sub.Status == "active") {
-                                existing.SubscriptionStatus = CRS.Models.SubscriptionStatus.Active;
+                                existing.SubscriptionStatus = Horizon.Models.SubscriptionStatus.Active;
                             }
                         }
 
@@ -322,8 +322,8 @@ namespace CRS.Controllers {
                     if (!string.IsNullOrWhiteSpace(adminEmailMeta) && string.IsNullOrWhiteSpace(tenant.PendingOwnerEmail)) {
                         tenant.PendingOwnerEmail = adminEmailMeta.Trim();
                     }
-                    tenant.ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active;
-                    tenant.SubscriptionStatus = CRS.Models.SubscriptionStatus.Incomplete;
+                    tenant.ProvisioningStatus = Horizon.Models.TenantProvisioningStatus.Active;
+                    tenant.SubscriptionStatus = Horizon.Models.SubscriptionStatus.Incomplete;
                     tenant.IsActive = true;
                     tenant.UpdatedAt = DateTime.UtcNow;
                     await _db.SaveChangesAsync(ct);
@@ -353,14 +353,14 @@ namespace CRS.Controllers {
                 subscription.Id, subscription.CustomerId, subscription.Status);
             
             var status = MapStatus(subscription.Status);
-            CRS.Models.SubscriptionTier? tier = null;
+            Horizon.Models.SubscriptionTier? tier = null;
             var priceId = subscription.Items.Data.FirstOrDefault()?.Price?.Id;
             _logger.LogInformation("Subscription price ID: {PriceId}", priceId);
             
             if (priceId != null) {
-                if (priceId == _stripeOptions.StarterMonthlyPriceId || priceId == _stripeOptions.StarterYearlyPriceId || priceId == _stripeOptions.StartupPriceId) tier = CRS.Models.SubscriptionTier.Startup;
-                else if (priceId == _stripeOptions.ProMonthlyPriceId || priceId == _stripeOptions.ProYearlyPriceId || priceId == _stripeOptions.ProPriceId) tier = CRS.Models.SubscriptionTier.Pro;
-                else if (priceId == _stripeOptions.EnterpriseMonthlyPriceId || priceId == _stripeOptions.EnterpriseYearlyPriceId || priceId == _stripeOptions.EnterprisePriceId) tier = CRS.Models.SubscriptionTier.Enterprise;
+                if (priceId == _stripeOptions.StarterMonthlyPriceId || priceId == _stripeOptions.StarterYearlyPriceId || priceId == _stripeOptions.StartupPriceId) tier = Horizon.Models.SubscriptionTier.Startup;
+                else if (priceId == _stripeOptions.ProMonthlyPriceId || priceId == _stripeOptions.ProYearlyPriceId || priceId == _stripeOptions.ProPriceId) tier = Horizon.Models.SubscriptionTier.Pro;
+                else if (priceId == _stripeOptions.EnterpriseMonthlyPriceId || priceId == _stripeOptions.EnterpriseYearlyPriceId || priceId == _stripeOptions.EnterprisePriceId) tier = Horizon.Models.SubscriptionTier.Enterprise;
                 _logger.LogInformation("Mapped price to tier: {Tier}", tier);
             }
 
@@ -394,12 +394,12 @@ namespace CRS.Controllers {
                         var existing = await _db.Tenants.FirstOrDefaultAsync(t => t.Subdomain == subdomain, ct);
                         if (existing == null) {
                             _logger.LogInformation("Creating new tenant from subscription event for subdomain {Subdomain}", subdomain);
-                            var newTenant = new CRS.Models.Tenant {
+                            var newTenant = new Horizon.Models.Tenant {
                                 Name = companyName,
                                 Subdomain = subdomain,
                                 IsActive = true,
                                 CreatedAt = DateTime.UtcNow,
-                                ProvisioningStatus = CRS.Models.TenantProvisioningStatus.Active,
+                                ProvisioningStatus = Horizon.Models.TenantProvisioningStatus.Active,
                                 SubscriptionStatus = status,
                                 PendingOwnerEmail = adminEmail,
                                 StripeCustomerId = subscription.CustomerId,
@@ -409,7 +409,7 @@ namespace CRS.Controllers {
 
                             // Set tier limits
                             if (tier.HasValue) {
-                                var limits = CRS.Models.SubscriptionTierDefaults.GetLimits(tier.Value);
+                                var limits = Horizon.Models.SubscriptionTierDefaults.GetLimits(tier.Value);
                                 newTenant.MaxCommunities = limits.communities;
                                 newTenant.MaxSpecialistUsers = limits.specialists;
                             }
@@ -595,7 +595,7 @@ namespace CRS.Controllers {
                                         var amountPaid = paymentIntent.Amount / 100m; // Convert from cents
 
                                         // Create payment record for audit trail
-                                        var paymentRecord = new CRS.Models.PaymentRecord
+                                        var paymentRecord = new Horizon.Models.PaymentRecord
                                         {
                                             TenantId = invoice.TenantId,
                                             InvoiceId = invoiceId,
@@ -617,9 +617,9 @@ namespace CRS.Controllers {
 
                                         // Update status based on payment
                                         if (invoice.AmountPaid >= invoice.TotalAmount) {
-                                            invoice.Status = CRS.Models.InvoiceStatus.Paid;
+                                            invoice.Status = Horizon.Models.InvoiceStatus.Paid;
                                         } else if (invoice.AmountPaid > 0) {
-                                            invoice.Status = CRS.Models.InvoiceStatus.PartiallyPaid;
+                                            invoice.Status = Horizon.Models.InvoiceStatus.PartiallyPaid;
                                         }
 
                                         await _db.SaveChangesAsync(ct);
@@ -629,15 +629,15 @@ namespace CRS.Controllers {
                                             invoice.InvoiceNumber, amountPaid, paymentIntent.Id);
                                     }
 
-                                    private static CRS.Models.SubscriptionStatus MapStatus(string? stripeStatus) => stripeStatus switch {
-                                        "active" => CRS.Models.SubscriptionStatus.Active,
-                                        "trialing" => CRS.Models.SubscriptionStatus.Trialing,
-                                        "past_due" => CRS.Models.SubscriptionStatus.PastDue,
-                                        "canceled" => CRS.Models.SubscriptionStatus.Canceled,
-                                        "unpaid" => CRS.Models.SubscriptionStatus.Unpaid,
-                                        "incomplete" => CRS.Models.SubscriptionStatus.Incomplete,
-                                        "paused" => CRS.Models.SubscriptionStatus.Paused,
-                                        _ => CRS.Models.SubscriptionStatus.None
+                                    private static Horizon.Models.SubscriptionStatus MapStatus(string? stripeStatus) => stripeStatus switch {
+                                        "active" => Horizon.Models.SubscriptionStatus.Active,
+                                        "trialing" => Horizon.Models.SubscriptionStatus.Trialing,
+                                        "past_due" => Horizon.Models.SubscriptionStatus.PastDue,
+                                        "canceled" => Horizon.Models.SubscriptionStatus.Canceled,
+                                        "unpaid" => Horizon.Models.SubscriptionStatus.Unpaid,
+                                        "incomplete" => Horizon.Models.SubscriptionStatus.Incomplete,
+                                        "paused" => Horizon.Models.SubscriptionStatus.Paused,
+                                        _ => Horizon.Models.SubscriptionStatus.None
                                     };
 
         /// <summary>

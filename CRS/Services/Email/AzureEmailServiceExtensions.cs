@@ -1,4 +1,4 @@
-﻿using Coravel;
+using Coravel;
 using Coravel.Mailer.Mail.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Options;
 
-namespace CRS.Services.Email;
+namespace Horizon.Services.Email;
 
 /// <summary>
 /// Extension methods for registering Azure Communication Services email.

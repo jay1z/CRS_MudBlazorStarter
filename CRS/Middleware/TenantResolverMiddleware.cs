@@ -1,14 +1,14 @@
-﻿using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 using Microsoft.AspNetCore.Http;
 using System.Text.RegularExpressions;
-using CRS.Data;
-using CRS.Models;
+using Horizon.Data;
+using Horizon.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Middleware {
+namespace Horizon.Middleware {
     public class TenantResolverMiddleware {
         private readonly RequestDelegate _next;
         private readonly IConfiguration _configuration;
@@ -21,7 +21,7 @@ namespace CRS.Middleware {
             var subdomain = ExtractSubdomain(host, rootDomain);
             var path = context.Request.Path;
 
-            CRS.Models.Tenant? tenantFromHost = null;
+            Horizon.Models.Tenant? tenantFromHost = null;
             if (!string.IsNullOrEmpty(subdomain)) {
                 try {
                     await using var db = await dbFactory.CreateDbContextAsync();
@@ -56,7 +56,7 @@ namespace CRS.Middleware {
             int claimTenantId = 0;
             try {
                 if (auth) {
-                    var claimTenant = context.User.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
+                    var claimTenant = context.User.FindFirst(Horizon.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
                     int.TryParse(claimTenant, out claimTenantId);
                     if (claimTenantId == 0) {
                         var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;

@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace CRS.Models
+namespace Horizon.Models
 {
     /// <summary>
     /// System-wide settings that can be configured by platform administrators.

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
@@ -6,14 +6,14 @@ using Microsoft.EntityFrameworkCore;
 using Coravel.Mailer.Mail;
 using Coravel.Mailer.Mail.Interfaces;
 
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Emails;
-using CRS.Models.Workflow;
-using CRS.Services.Email;
-using CRS.Services.Interfaces;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Emails;
+using Horizon.Models.Workflow;
+using Horizon.Services.Email;
+using Horizon.Services.Interfaces;
 
-namespace CRS.Services.Workflow {
+namespace Horizon.Services.Workflow {
     /// <summary>
     /// Notification options for workflow automation intervals.
     /// </summary>

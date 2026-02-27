@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     // SaaS Refactor: Tenant entity for multi-tenant support + Billing
     public class Tenant {
         [Key]

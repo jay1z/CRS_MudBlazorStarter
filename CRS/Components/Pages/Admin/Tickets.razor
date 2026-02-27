@@ -1,8 +1,8 @@
-﻿@page "/admin/tickets"
+@page "/admin/tickets"
 @attribute [Authorize(Policy = "RequirePlatformAdmin")]
-@using CRS.Models
-@using CRS.Services.Tickets
-@using CRS.Services.Tenant
+@using Horizon.Models
+@using Horizon.Services.Tickets
+@using Horizon.Services.Tenant
 @inject ITicketService TicketService
 @inject ITenantUserRoleService RoleService
 @inject NavigationManager Nav

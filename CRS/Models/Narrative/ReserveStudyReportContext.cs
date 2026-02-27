@@ -1,4 +1,4 @@
-﻿namespace CRS.Models.NarrativeTemplates;
+namespace Horizon.Models.NarrativeTemplates;
 
 /// <summary>
 /// Complete context for rendering a reserve study narrative report.

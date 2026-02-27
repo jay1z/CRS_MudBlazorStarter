@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-using static CRS.Models.IReserveStudyElement;
+using static Horizon.Models.IReserveStudyElement;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public class ReserveStudyCommonElement : BaseModel, IReserveStudyElement {
         public required Guid ReserveStudyId { get; set; }
         public ReserveStudy? ReserveStudy { get; set; }

@@ -1,10 +1,10 @@
-﻿@page "/Settings/ReserveStudy"
+@page "/Settings/ReserveStudy"
 @attribute [Authorize(Policy = "RequireTenantOwner")]
-@using CRS.Core.ReserveCalculator.Enums
-@using CRS.Data
-@using CRS.Models.ReserveStudyCalculator
-@using CRS.Services.Tenant
-@using CRS.Services.ReserveCalculator
+@using Horizon.Core.ReserveCalculator.Enums
+@using Horizon.Data
+@using Horizon.Models.ReserveStudyCalculator
+@using Horizon.Services.Tenant
+@using Horizon.Services.ReserveCalculator
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IReserveStudyCalculatorService CalculatorService

@@ -1,13 +1,13 @@
-﻿@page "/Dashboard"
+@page "/Dashboard"
 @attribute [Authorize]
 @using MudBlazor
-@using CRS.Services.Interfaces
-@using CRS.Services.Tenant
-@using CRS.Services.Workflow
-@using CRS.Models
-@using CRS.Models.Workflow
-@using CRS.Components.AppHome.ViewModels
-@using CRS.Data
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Tenant
+@using Horizon.Services.Workflow
+@using Horizon.Models
+@using Horizon.Models.Workflow
+@using Horizon.Components.AppHome.ViewModels
+@using Horizon.Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
 @using System.Security.Claims
@@ -118,7 +118,7 @@ else
     <!-- PENDING AMENDMENTS INDICATOR (for HOA users) -->
     @if (RoleService.IsHOAUser || RoleService.IsHOAAuditor)
     {
-        <CRS.Components.Shared.AmendmentPendingIndicator />
+        <Horizon.Components.Shared.AmendmentPendingIndicator />
     }
 
     @* Conditional rendering based on role *@
@@ -1332,7 +1332,7 @@ private async Task LoadPipelineDataAsync(int tenantId)
             // Only show "Review Amendment" when the study is in AmendmentApproved status (admin has approved)
             var studyIds = hoaUserStudies.Select(s => s.Id).ToList();
             pendingAmendmentStudyIds = hoaUserStudies
-                .Where(s => s.StudyRequest?.CurrentStatus == CRS.Models.Workflow.StudyStatus.AmendmentApproved)
+                .Where(s => s.StudyRequest?.CurrentStatus == Horizon.Models.Workflow.StudyStatus.AmendmentApproved)
                 .Select(s => s.Id)
                 .ToHashSet();
         }

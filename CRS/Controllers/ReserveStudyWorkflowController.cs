@@ -2,11 +2,11 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CRS.Models;
-using CRS.Services.Interfaces;
-using CRS.Controllers.Requests;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
+using Horizon.Controllers.Requests;
 
-namespace CRS.Controllers {
+namespace Horizon.Controllers {
     [ApiController]
     [Route("api/[controller]")]
     public class ReserveStudyWorkflowController : ControllerBase {

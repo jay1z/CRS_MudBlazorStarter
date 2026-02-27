@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace CRS.Models.Billing {
+namespace Horizon.Models.Billing {
     // Durable log of Stripe webhook events (store subset; raw JSON optional)
     public class StripeEventLog {
         [Key]

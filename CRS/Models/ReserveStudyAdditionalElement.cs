@@ -1,10 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-using static CRS.Models.IReserveStudyElement;
+using static Horizon.Models.IReserveStudyElement;
 using static MudBlazor.CategoryTypes;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public class ReserveStudyAdditionalElement : BaseModel, IReserveStudyElement {
         public ReserveStudyAdditionalElement() {
             ServiceContact ??= new ServiceContact();

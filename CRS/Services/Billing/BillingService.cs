@@ -1,15 +1,18 @@
 ﻿using System.Linq;
-using CRS.Data;
-using CRS.Models;
+
+using Horizon.Data;
+using Horizon.Models;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using Stripe;
 using Stripe.Checkout;
 
-namespace CRS.Services.Billing {
+namespace Horizon.Services.Billing {
     public interface IBillingService {
-        Task<CRS.Models.Tenant> EnsureStripeCustomerAsync(int tenantId, CancellationToken ct = default);
+        Task<Models.Tenant> EnsureStripeCustomerAsync(int tenantId, CancellationToken ct = default);
         Task<string> CreateCheckoutSessionAsync(int tenantId, SubscriptionTier tier, BillingInterval interval, CancellationToken ct = default);
         Task<string> CreateBillingPortalSessionAsync(int tenantId, CancellationToken ct = default);
         Task ApplySubscriptionUpdateAsync(string subscriptionId, string customerId, SubscriptionTier? tier, SubscriptionStatus status, CancellationToken ct = default);
@@ -76,7 +79,7 @@ namespace CRS.Services.Billing {
             return results;
         }
 
-        public async Task<CRS.Models.Tenant> EnsureStripeCustomerAsync(int tenantId, CancellationToken ct = default) {
+        public async Task<Models.Tenant> EnsureStripeCustomerAsync(int tenantId, CancellationToken ct = default) {
             var tenant = await _db.Tenants.FirstAsync(t => t.Id == tenantId, ct);
             if (!string.IsNullOrWhiteSpace(tenant.StripeCustomerId)) return tenant;
 

@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator;
+namespace Horizon.Core.ReserveCalculator;
 
 /// <summary>
 /// Provides deterministic money calculations with consistent rounding.

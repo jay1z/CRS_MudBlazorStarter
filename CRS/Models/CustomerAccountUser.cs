@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CRS.Data;
+using System.ComponentModel.DataAnnotations;
+using Horizon.Data;
 
-namespace CRS.Models;
+namespace Horizon.Models;
 
 /// <summary>
 /// Join entity for many-to-many relationship between CustomerAccount and ApplicationUser.

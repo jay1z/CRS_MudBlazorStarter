@@ -1,6 +1,6 @@
-﻿using CRS.Models.Workflow;
+using Horizon.Models.Workflow;
 
-namespace CRS.Services.Interfaces;
+namespace Horizon.Services.Interfaces;
 
 /// <summary>
 /// Result of a scope comparison operation.

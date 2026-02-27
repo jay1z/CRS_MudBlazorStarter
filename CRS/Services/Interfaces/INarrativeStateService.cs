@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.Interfaces;
+namespace Horizon.Services.Interfaces;
 
 /// <summary>
 /// Scoped service for tracking narrative editor state across components.

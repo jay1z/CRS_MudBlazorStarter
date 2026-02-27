@@ -1,14 +1,14 @@
-﻿@page "/admin/mail"
+@page "/admin/mail"
 @attribute [Authorize(Policy = "RequirePlatformAdmin")]
 
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services.Mail
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services.Mail
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IMailboxService MailboxService
 @inject ISnackbar Snackbar
-@inject ILogger<CRS.Components.Pages.Admin.Mailbox> Logger
+@inject ILogger<Horizon.Components.Pages.Admin.Mailbox> Logger
 
 <PageTitle>Mailbox - Admin</PageTitle>
 

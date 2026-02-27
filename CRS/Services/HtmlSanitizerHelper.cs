@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 
-namespace CRS.Services {
+namespace Horizon.Services {
     public static class HtmlSanitizerHelper {
         private static readonly object? _sanitizerInstance;
         private static readonly MethodInfo? _sanitizeMethod;

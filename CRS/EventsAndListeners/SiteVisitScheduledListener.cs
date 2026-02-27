@@ -1,15 +1,15 @@
-﻿using Coravel.Events.Interfaces;
+using Coravel.Events.Interfaces;
 using Coravel.Mailer.Mail;
 using Coravel.Mailer.Mail.Interfaces;
 
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Emails;
-using CRS.Services.Email;
-using CRS.Services.Interfaces;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Emails;
+using Horizon.Services.Email;
+using Horizon.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.EventsAndListeners {
+namespace Horizon.EventsAndListeners {
     public class SiteVisitScheduledListener : IListener<SiteVisitScheduledEvent> {
         private readonly IMailer _mailer;
         private readonly IReserveStudyService _reserveStudyService;

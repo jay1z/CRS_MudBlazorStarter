@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CRS.Services.Tenant;
+using System.ComponentModel.DataAnnotations;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public class BuildingElement : BaseModel, ITenantScoped {
         public List<ReserveStudyBuildingElement>? ReserveStudyBuildingElements { get; set; }
 

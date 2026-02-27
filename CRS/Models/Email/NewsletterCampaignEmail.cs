@@ -1,4 +1,4 @@
-﻿namespace CRS.Models.Email;
+namespace Horizon.Models.Email;
 
 /// <summary>
 /// Model for newsletter campaign emails.

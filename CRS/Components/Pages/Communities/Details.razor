@@ -1,8 +1,8 @@
-﻿@page "/Communities/Details/{Id:guid}"
+@page "/Communities/Details/{Id:guid}"
 @attribute [Authorize(Policy = "RequireTenantViewer")]
 
-@using CRS.Data
-@using CRS.Services
+@using Horizon.Data
+@using Horizon.Services
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components

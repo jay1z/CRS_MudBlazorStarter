@@ -1,7 +1,7 @@
-@using CRS.Services.Interfaces
-@using CRS.Services.Tenant
-@using CRS.Data
-@using CRS.Models.Workflow
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Tenant
+@using Horizon.Data
+@using Horizon.Models.Workflow
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
@@ -64,7 +64,7 @@ else if (pendingAmendments.Count > 0)
 }
 
 @code {
-    private List<CRS.Models.Workflow.ScopeComparison> pendingAmendments = new();
+    private List<Horizon.Models.Workflow.ScopeComparison> pendingAmendments = new();
     private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()

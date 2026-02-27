@@ -1,6 +1,6 @@
-﻿using CRS.Models.Workflow;
+using Horizon.Models.Workflow;
 
-namespace CRS.Services.Workflow;
+namespace Horizon.Services.Workflow;
 
 /// <summary>
 /// Defines the available actions for a workflow stage.

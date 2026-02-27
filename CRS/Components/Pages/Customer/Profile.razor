@@ -1,10 +1,10 @@
-﻿@page "/Customer/Profile"
+@page "/Customer/Profile"
 @attribute [Authorize(Policy = "RequireHOAUser")]
 
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services.Customers
-@using CRS.Services.Tenant
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services.Customers
+@using Horizon.Services.Tenant
 @using Microsoft.AspNetCore.Identity
 @using System.Security.Claims
 @using System.ComponentModel.DataAnnotations

@@ -1,8 +1,8 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Services.Tenant {
+namespace Horizon.Services.Tenant {
     public interface ITenantUserRoleService {
         string? EffectivePrimaryRole { get; }
         Task InitializeAsync();

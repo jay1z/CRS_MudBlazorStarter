@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator.Enums;
+namespace Horizon.Core.ReserveCalculator.Enums;
 
 /// <summary>
 /// Defines when during a period (year or month) a transaction occurs.

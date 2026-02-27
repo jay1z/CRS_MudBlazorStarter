@@ -1,16 +1,16 @@
 @page "/ReserveStudies/Details/{Id:guid}"
 @attribute [Authorize]
 
-@using CRS.Components.Custom
-@using CRS.Components.Pages.ReserveStudies.Dialogs
-@using CRS.Data
-@using CRS.EventsAndListeners
-@using CRS.Models.Emails
-@using CRS.Services
-@using CRS.Services.Email
-@using CRS.Services.Interfaces
-@using CRS.Models.Workflow
-@using CRS.Services.Workflow
+@using Horizon.Components.Custom
+@using Horizon.Components.Pages.ReserveStudies.Dialogs
+@using Horizon.Data
+@using Horizon.EventsAndListeners
+@using Horizon.Models.Emails
+@using Horizon.Services
+@using Horizon.Services.Email
+@using Horizon.Services.Interfaces
+@using Horizon.Models.Workflow
+@using Horizon.Services.Workflow
 @using Coravel.Events.Interfaces
 @using Coravel.Mailer.Mail
 @using Coravel.Mailer.Mail.Interfaces
@@ -20,7 +20,7 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using System.Linq
-@using static CRS.Components.Custom.WorkflowStatusButtons
+@using static Horizon.Components.Custom.WorkflowStatusButtons
 
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserStateService UserState
@@ -356,7 +356,7 @@
                     </AuthorizeView>
 
                     <!-- Admin Workflow Panel -->
-                    <CRS.Components.Custom.AdminWorkflowPanel StudyId="@Id"
+                    <Horizon.Components.Custom.AdminWorkflowPanel StudyId="@Id"
                                                               CurrentStatus="@GetCurrentStatus()"
                                                               StatusHistory="@statusHistory"
                                                               OnActionCompleted="@ReloadAfterChange" />
@@ -1827,17 +1827,17 @@
                         </MudTabPanel>
                         <!-- Study Notes Tab -->
                         <MudTabPanel Text="Notes" Icon="@Icons.Material.Filled.Notes">
-                            <CRS.Components.Shared.StudyNotes.StudyNotesPanel ReserveStudyId="@Id" />
+                            <Horizon.Components.Shared.StudyNotes.StudyNotesPanel ReserveStudyId="@Id" />
                         </MudTabPanel>
                         <!-- Generated Reports Tab -->
                         <MudTabPanel Text="Reports" Icon="@Icons.Material.Filled.Description">
-                            <CRS.Components.Shared.GeneratedReports.GeneratedReportsPanel ReserveStudyId="@Id" />
+                            <Horizon.Components.Shared.GeneratedReports.GeneratedReportsPanel ReserveStudyId="@Id" />
                         </MudTabPanel>
                         <!-- Invoicing Tab -->
                         <MudTabPanel Text="Invoicing" Icon="@Icons.Material.Filled.Receipt">
                             <AuthorizeView Policy="RequireTenantStaff">
                                 <Authorized>
-                                    <CRS.Components.Shared.Invoices.InvoicePanel ReserveStudyId="@Id"
+                                    <Horizon.Components.Shared.Invoices.InvoicePanel ReserveStudyId="@Id"
                                                                                  CommunityName="@reserveStudy?.Community?.Name" />
                                 </Authorized>
                                 <NotAuthorized>
@@ -1853,7 +1853,7 @@
                         <MudTabPanel Text="Narrative" Icon="@Icons.Material.Filled.Article">
                             <AuthorizeView Policy="RequireTenantStaff">
                                 <Authorized>
-                                    <CRS.Components.Shared.Narrative.NarrativeEditorPanel ReserveStudyId="@Id" />
+                                    <Horizon.Components.Shared.Narrative.NarrativeEditorPanel ReserveStudyId="@Id" />
                                 </Authorized>
                                 <NotAuthorized>
                                     <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
@@ -1881,7 +1881,7 @@
                                     </MudAlert>
                                 }
 
-                                <CRS.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel @ref="acceptancePanel"
+                                <Horizon.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel @ref="acceptancePanel"
                                                                                                       ReserveStudyId="@Id" />
 
                                 @* Original proposal acceptance *@
@@ -1921,7 +1921,7 @@
                         </MudTabPanel>
                         <!-- Scope Comparison Tab -->
                         <MudTabPanel Text="Scope" Icon="@Icons.Material.Filled.CompareArrows">
-                            <CRS.Components.Shared.ScopeComparison.ScopeVariancePanel @ref="scopeVariancePanel" ReserveStudyId="@Id" TenantId="@(reserveStudy?.TenantId ?? 0)" />
+                            <Horizon.Components.Shared.ScopeComparison.ScopeVariancePanel @ref="scopeVariancePanel" ReserveStudyId="@Id" TenantId="@(reserveStudy?.TenantId ?? 0)" />
                         </MudTabPanel>
                     </MudTabs>
                 </MudItem>
@@ -1945,8 +1945,8 @@
     private List<IReserveStudyElement> elementsWithServiceContact = new();
     private int activeTabIndex = 0;
 
-    private CRS.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel? acceptancePanel;
-    private CRS.Components.Shared.ScopeComparison.ScopeVariancePanel? scopeVariancePanel;
+    private Horizon.Components.Shared.ProposalAcceptance.AcceptanceConfirmationPanel? acceptancePanel;
+    private Horizon.Components.Shared.ScopeComparison.ScopeVariancePanel? scopeVariancePanel;
     private bool hasValidAcceptance = false;
     private ScopeComparison? scopeComparison;
     private bool hasUnresolvedScopeVariance = false;
@@ -2008,7 +2008,7 @@
         if (reserveStudy == null) return;
         var parameters = new DialogParameters { ["ReserveStudy"] = reserveStudy, ["ProposalId"] = reserveStudy.CurrentProposal?.Id };
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<CRS.Components.Shared.ProposalAcceptance.ProposalAcceptanceDialog>("Accept Proposal", parameters, options);
+        var dialog = await DialogService.ShowAsync<Horizon.Components.Shared.ProposalAcceptance.ProposalAcceptanceDialog>("Accept Proposal", parameters, options);
         var result = await dialog.Result;
         if (!result.Canceled) {
             hasValidAcceptance = true;
@@ -2057,7 +2057,7 @@
             MaxWidth = MaxWidth.Small, 
             FullWidth = true 
         };
-        var dialog = await DialogService.ShowAsync<CRS.Components.Shared.ProposalAcceptance.ProposalDeclineDialog>(
+        var dialog = await DialogService.ShowAsync<Horizon.Components.Shared.ProposalAcceptance.ProposalDeclineDialog>(
             "Decline Proposal", parameters, options);
         var result = await dialog.Result;
         if (!result.Canceled) {
@@ -2276,7 +2276,7 @@
     private void OpenComposeMessage() {
         if (reserveStudy?.SpecialistUserId == null) return;
         var parameters = new DialogParameters { ["ToUserId"] = reserveStudy.SpecialistUserId.Value, ["ToUserName"] = reserveStudy.Specialist?.Email ?? "" };
-        DialogService.ShowAsync<CRS.Components.Pages.Messages.ComposeMessageDialog>("Send Message", parameters, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small });
+        DialogService.ShowAsync<Horizon.Components.Pages.Messages.ComposeMessageDialog>("Send Message", parameters, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small });
     }
 
     private async Task OpenAssignSpecialistDialog() {
@@ -2652,7 +2652,7 @@
                !string.IsNullOrWhiteSpace(contact.Email);
     }
 
-    private RenderFragment RenderProposalDetails(CRS.Models.Proposal proposal) => __builder => {
+    private RenderFragment RenderProposalDetails(Horizon.Models.Proposal proposal) => __builder => {
         <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: #fff; border-radius: 12px; border-left: 4px solid #10b981;">
             <MudStack Spacing="3">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">

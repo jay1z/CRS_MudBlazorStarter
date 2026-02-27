@@ -1,6 +1,6 @@
 using System;
 
-namespace CRS.Services {
+namespace Horizon.Services {
  public class TenantHomepageConcurrencyException : Exception {
  public TenantHomepageConcurrencyException() { }
  public TenantHomepageConcurrencyException(string message) : base(message) { }

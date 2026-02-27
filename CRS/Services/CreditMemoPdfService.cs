@@ -1,12 +1,12 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Services.Interfaces;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Service for generating credit memo PDFs.

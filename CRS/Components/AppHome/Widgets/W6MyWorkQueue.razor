@@ -1,7 +1,7 @@
-﻿@inject CRS.Services.Tenant.ITenantUserRoleService RoleService
-@inject CRS.Services.Tenant.ITenantHomepageDataService DataService
-@inject CRS.Services.UserStateService UserState
-@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject Horizon.Services.Tenant.ITenantUserRoleService RoleService
+@inject Horizon.Services.Tenant.ITenantHomepageDataService DataService
+@inject Horizon.Services.UserStateService UserState
+@inject Horizon.Services.Tenant.ITenantContext TenantContext
 @inject ILogger<W6MyWorkQueue> Logger
 
 <MudPaper Class="pa-4 mb-4" Elevation="1">
@@ -38,7 +38,7 @@
 </MudPaper>
 
 @code {
-    private List<CRS.Components.AppHome.ViewModels.WorkItemVm> _items = new();
+    private List<Horizon.Components.AppHome.ViewModels.WorkItemVm> _items = new();
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()

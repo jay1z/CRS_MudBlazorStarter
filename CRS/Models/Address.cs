@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     /// <summary>
     /// Represents a physical address. Addresses are stored in a normalized table
     /// and referenced via FK pointers from entities like Community.

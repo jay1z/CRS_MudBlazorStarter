@@ -4,8 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>CRS</RootNamespace>
-    <AssemblyName>CRS</AssemblyName>
+    <RootNamespace>Horizon</RootNamespace>
+    <AssemblyName>Horizon</AssemblyName>
     <UserSecretsId>aspnet-CRS-a1ce27b7-9e6d-45f2-8a8b-a84a52cf90db</UserSecretsId>
     <AddRazorSupportForMvc>True</AddRazorSupportForMvc>
   </PropertyGroup>

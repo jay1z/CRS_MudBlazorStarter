@@ -1,7 +1,7 @@
-﻿using Coravel.Events.Interfaces;
-using CRS.Models;
+using Coravel.Events.Interfaces;
+using Horizon.Models;
 
-namespace CRS.EventsAndListeners
+namespace Horizon.EventsAndListeners
 {
     public class ProposalDeclinedEvent : IEvent
     {

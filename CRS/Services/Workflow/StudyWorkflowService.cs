@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using CRS.Models.Workflow;
-using CRS.Services.Interfaces;
+using Horizon.Models.Workflow;
+using Horizon.Services.Interfaces;
 
-namespace CRS.Services.Workflow {
+namespace Horizon.Services.Workflow {
     /// <summary>
     /// Pure state-machine service to manage StudyRequest transitions.
     /// Implements the 32-stage workflow.

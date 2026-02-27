@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 
-namespace CRS.Models.Workflow {
+namespace Horizon.Models.Workflow {
     /// <summary>
     /// Represents the lifecycle states for a Reserve Study request from submission to archival.
     /// Matches the 32-stage workflow document.

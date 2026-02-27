@@ -1,9 +1,9 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services.Tickets;
+namespace Horizon.Services.Tickets;
 
 public class TicketService : ITicketService
 {

@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public class FinancialInfo : BaseModel, ITenantScoped {
         [ForeignKey("ReserveStudy")]
         public Guid ReserveStudyId { get; set; }

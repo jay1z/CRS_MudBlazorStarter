@@ -1,22 +1,22 @@
 ﻿using System.Reflection.Emit;
 using System.Security.Claims;
 
-using CRS.Models;
-using CRS.Models.NarrativeTemplates; // Narrative template entities
-using CRS.Models.Security; // add
-using CRS.Models.Workflow; // add
-using CRS.Models.ReserveStudyCalculator; // Reserve Study Calculator entities
-using CRS.Services.Tenant;
-using CRS.Models.Billing; // added for StripeEventLog
+using Horizon.Models;
+using Horizon.Models.NarrativeTemplates; // Narrative template entities
+using Horizon.Models.Security; // add
+using Horizon.Models.Workflow; // add
+using Horizon.Models.ReserveStudyCalculator; // Reserve Study Calculator entities
+using Horizon.Services.Tenant;
+using Horizon.Models.Billing; // added for StripeEventLog
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace CRS.Data {
+namespace Horizon.Data {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid> {
-        private const string DefaultSchema = "crs";
+        private const string DefaultSchema = "horizon";
         private readonly IHttpContextAccessor? _httpContextAccessor;
         // SaaS Refactor: Inject tenant context
         private readonly ITenantContext? _tenantContext;
@@ -430,7 +430,7 @@ namespace CRS.Data {
             });
 
             // CustomerAccount
-            builder.Entity<CRS.Models.CustomerAccount>(entity => {
+            builder.Entity<Horizon.Models.CustomerAccount>(entity => {
                 entity.ToTable("CustomerAccounts");
                 entity.HasIndex(e => e.TenantId);
                 entity.Property(e => e.Name).HasMaxLength(256);
@@ -438,7 +438,7 @@ namespace CRS.Data {
             });
 
             // CustomerAccountUser (join table for multi-user customer accounts)
-            builder.Entity<CRS.Models.CustomerAccountUser>(entity => {
+            builder.Entity<Horizon.Models.CustomerAccountUser>(entity => {
                 entity.ToTable("CustomerAccountUsers");
                 entity.HasKey(e => new { e.CustomerAccountId, e.UserId });
                 entity.HasIndex(e => e.UserId)
@@ -460,7 +460,7 @@ namespace CRS.Data {
             });
 
             // CustomerAccountInvitation
-            builder.Entity<CRS.Models.CustomerAccountInvitation>(entity => {
+            builder.Entity<Horizon.Models.CustomerAccountInvitation>(entity => {
                 entity.ToTable("CustomerAccountInvitations");
                 entity.HasIndex(e => new { e.CustomerAccountId, e.Email, e.Status })
                     .HasDatabaseName("IX_CustomerAccountInvitation_Account_Email_Status");
@@ -1053,7 +1053,7 @@ namespace CRS.Data {
         public DbSet<TenantHomepage> TenantHomepages { get; set; } // SaaS Refactor: Tenant homepage
         public DbSet<StudyRequest> StudyRequests { get; set; } // add
         public DbSet<StudyStatusHistory> StudyStatusHistories { get; set; } // add
-        public DbSet<CRS.Models.Message> Messages { get; set; }
+        public DbSet<Horizon.Models.Message> Messages { get; set; }
         // New security sets
         public DbSet<Role> Roles2 { get; set; }
         public DbSet<UserRoleAssignment> UserRoleAssignments { get; set; }
@@ -1061,17 +1061,17 @@ namespace CRS.Data {
         public DbSet<StripeEventLog> StripeEventLogs { get; set; }
 
         // New tenant-scoped entities
-        public DbSet<CRS.Models.CustomerAccount> CustomerAccounts { get; set; }
-        public DbSet<CRS.Models.CustomerAccountUser> CustomerAccountUsers { get; set; }
-        public DbSet<CRS.Models.CustomerAccountInvitation> CustomerAccountInvitations { get; set; }
-        public DbSet<CRS.Models.SupportTicket> SupportTickets { get; set; }
-        public DbSet<CRS.Models.TicketComment> TicketComments { get; set; }
+        public DbSet<Horizon.Models.CustomerAccount> CustomerAccounts { get; set; }
+        public DbSet<Horizon.Models.CustomerAccountUser> CustomerAccountUsers { get; set; }
+        public DbSet<Horizon.Models.CustomerAccountInvitation> CustomerAccountInvitations { get; set; }
+        public DbSet<Horizon.Models.SupportTicket> SupportTickets { get; set; }
+        public DbSet<Horizon.Models.TicketComment> TicketComments { get; set; }
         
         // System-wide settings
-        public DbSet<CRS.Models.SystemSettings> SystemSettings { get; set; }
+        public DbSet<Horizon.Models.SystemSettings> SystemSettings { get; set; }
         
         // Demo environment
-        public DbSet<CRS.Models.Demo.DemoSession> DemoSessions { get; set; }
+        public DbSet<Horizon.Models.Demo.DemoSession> DemoSessions { get; set; }
         
         // Tenant-specific element ordering
         public DbSet<TenantElementOrder> TenantElementOrders { get; set; }

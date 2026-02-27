@@ -1,10 +1,10 @@
 @page "/Invoices/Details/{Id:guid}"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
-@using CRS.Models
-@using CRS.Models.Email
-@using CRS.Models.Emails
-@using CRS.Services.Interfaces
+@using Horizon.Models
+@using Horizon.Models.Email
+@using Horizon.Models.Emails
+@using Horizon.Services.Interfaces
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Coravel.Mailer.Mail.Interfaces
@@ -652,13 +652,13 @@
             {
                 if (_invoice == null) return;
 
-                var parameters = new DialogParameters<CRS.Components.Shared.Invoices.CreditMemoDialog>
+                var parameters = new DialogParameters<Horizon.Components.Shared.Invoices.CreditMemoDialog>
                 {
                     { x => x.Invoice, _invoice },
                     { x => x.CurrentUserId, _currentUserId }
                 };
 
-                var dialog = await DialogService.ShowAsync<CRS.Components.Shared.Invoices.CreditMemoDialog>(
+                var dialog = await DialogService.ShowAsync<Horizon.Components.Shared.Invoices.CreditMemoDialog>(
                     "Issue Credit Memo", parameters, new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
                 var result = await dialog.Result;
 
@@ -701,12 +701,12 @@
             {
                 if (_invoice == null) return;
 
-                var parameters = new DialogParameters<CRS.Components.Shared.Invoices.InvoicePaymentDialog>
+                var parameters = new DialogParameters<Horizon.Components.Shared.Invoices.InvoicePaymentDialog>
                 {
                     { x => x.Invoice, _invoice }
                 };
 
-                var dialog = await DialogService.ShowAsync<CRS.Components.Shared.Invoices.InvoicePaymentDialog>(
+                var dialog = await DialogService.ShowAsync<Horizon.Components.Shared.Invoices.InvoicePaymentDialog>(
                     "Record Payment", parameters, new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
                 var result = await dialog.Result;
 

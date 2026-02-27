@@ -1,8 +1,8 @@
-﻿using CRS.Data;
+using Horizon.Data;
 using Microsoft.EntityFrameworkCore;
-using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Billing {
+namespace Horizon.Services.Billing {
     /// <summary>
     /// DTO for returning current usage and limits
     /// </summary>

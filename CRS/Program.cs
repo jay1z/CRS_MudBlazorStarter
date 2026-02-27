@@ -1,21 +1,20 @@
-﻿using Coravel;
+using Coravel;
 using Coravel.Events.Interfaces;
 
-using CRS.Components;
-using CRS.Components.Account;
-using CRS.Data;
-using CRS.EventsAndListeners;
-using CRS.Hubs;
-using CRS.Middleware;
-using CRS.Services;
-using CRS.Services.Email;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
-using CRS.Services.MultiTenancy;
-using CRS.Models.Workflow; // Added for workflow example
-using CRS.Services.License; // add
-using CRS.Services.Billing; // added billing services
-using CRS.Services.NarrativeReport; // narrative template services
+using Horizon.Components;
+using Horizon.Components.Account;
+using Horizon.Data;
+using Horizon.EventsAndListeners;
+using Horizon.Hubs;
+using Horizon.Middleware;
+using Horizon.Services;
+using Horizon.Services.Email;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
+using Horizon.Services.MultiTenancy;
+using Horizon.Models.Workflow; // Added for workflow example
+using Horizon.Services.License; // add
+using Horizon.Services.NarrativeReport; // narrative template services
 
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
@@ -32,9 +31,13 @@ using Serilog;
 using Serilog.Sinks.MSSqlServer;
 
 using Ganss.Xss;
+
 using System.Text.RegularExpressions;
+
 using FluentValidation;
 using FluentValidation.AspNetCore;
+
+using Horizon.Services.Billing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,39 +52,39 @@ app.Services.UseScheduler(scheduler =>
 {
     // Run tenant lifecycle job daily at 2 AM
     scheduler
-        .Schedule<CRS.Jobs.TenantLifecycleJob>()
+        .Schedule<Horizon.Jobs.TenantLifecycleJob>()
         .DailyAtHour(2)
-        .PreventOverlapping(nameof(CRS.Jobs.TenantLifecycleJob));
+        .PreventOverlapping(nameof(Horizon.Jobs.TenantLifecycleJob));
 
     // Run late interest calculation daily at 3 AM
     scheduler
-        .Schedule<CRS.Jobs.LateInterestInvocable>()
+        .Schedule<Horizon.Jobs.LateInterestInvocable>()
         .DailyAtHour(3)
-        .PreventOverlapping(nameof(CRS.Jobs.LateInterestInvocable));
+        .PreventOverlapping(nameof(Horizon.Jobs.LateInterestInvocable));
 
     // Run auto-archive job daily at 4 AM
     scheduler
-        .Schedule<CRS.Jobs.AutoArchiveInvocable>()
+        .Schedule<Horizon.Jobs.AutoArchiveInvocable>()
         .DailyAtHour(4)
-        .PreventOverlapping(nameof(CRS.Jobs.AutoArchiveInvocable));
+        .PreventOverlapping(nameof(Horizon.Jobs.AutoArchiveInvocable));
 
     // Run automated invoice reminders daily at 8 AM
     scheduler
-        .Schedule<CRS.Jobs.InvoiceReminderInvocable>()
+        .Schedule<Horizon.Jobs.InvoiceReminderInvocable>()
         .DailyAtHour(8)
-        .PreventOverlapping(nameof(CRS.Jobs.InvoiceReminderInvocable));
+        .PreventOverlapping(nameof(Horizon.Jobs.InvoiceReminderInvocable));
 
     // Run newsletter scheduler every 5 minutes to process scheduled campaigns
     scheduler
-        .Schedule<CRS.Jobs.NewsletterSchedulerJob>()
+        .Schedule<Horizon.Jobs.NewsletterSchedulerJob>()
         .EveryFiveMinutes()
-        .PreventOverlapping(nameof(CRS.Jobs.NewsletterSchedulerJob));
+        .PreventOverlapping(nameof(Horizon.Jobs.NewsletterSchedulerJob));
 
     // Run trial expiration check daily at 9 AM
     scheduler
-        .Schedule<CRS.Jobs.TrialExpirationInvocable>()
+        .Schedule<Horizon.Jobs.TrialExpirationInvocable>()
         .DailyAtHour(9)
-        .PreventOverlapping(nameof(CRS.Jobs.TrialExpirationInvocable));
+        .PreventOverlapping(nameof(Horizon.Jobs.TrialExpirationInvocable));
 });
 
 var provider = app.Services;
@@ -121,8 +124,8 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // Service for tenant owners to create/manage tenant employees
     builder.Services.AddScoped<ITenantUserService, TenantUserService>();
     builder.Services.AddScoped<ITenantHomepageDataService, TenantHomepageDataService>();
-    builder.Services.AddScoped<CRS.Services.Tickets.ITicketService, CRS.Services.Tickets.TicketService>();
-    builder.Services.AddScoped<CRS.Services.Customers.ICustomerService, CRS.Services.Customers.CustomerService>();
+    builder.Services.AddScoped<Horizon.Services.Tickets.ITicketService, Horizon.Services.Tickets.TicketService>();
+    builder.Services.AddScoped<Horizon.Services.Customers.ICustomerService, Horizon.Services.Customers.CustomerService>();
 
     // Health checks
     builder.Services.AddHealthChecks();
@@ -139,7 +142,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddCascadingAuthenticationState();
     builder.Services.AddScoped<IdentityUserAccessor>();
     builder.Services.AddScoped<IdentityRedirectManager>();
-    builder.Services.AddScoped<AuthenticationStateProvider, CRS.Components.Account.IdentityRevalidatingAuthenticationStateProvider>();
+    builder.Services.AddScoped<AuthenticationStateProvider, Horizon.Components.Account.IdentityRevalidatingAuthenticationStateProvider>();
 
     // Theming services
     // Use scoped ThemeService so it can see scoped ITenantContext
@@ -158,18 +161,18 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IKanbanService, KanbanService>(); // Must go after SignalRService
 
     // Register workflow engine + notifications (new)
-    builder.Services.AddScoped<CRS.Services.Workflow.INotificationService, CRS.Services.Workflow.NotificationService>();
-    builder.Services.AddScoped<IStudyWorkflowService, CRS.Services.Workflow.StudyWorkflowService>();
-    builder.Services.AddScoped<CRS.Services.Workflow.IWorkflowActionService, CRS.Services.Workflow.WorkflowActionService>();
-    builder.Services.Configure<CRS.Services.Workflow.WorkflowOptions>(builder.Configuration.GetSection("Workflow"));
+    builder.Services.AddScoped<Horizon.Services.Workflow.INotificationService, Horizon.Services.Workflow.NotificationService>();
+    builder.Services.AddScoped<IStudyWorkflowService, Horizon.Services.Workflow.StudyWorkflowService>();
+    builder.Services.AddScoped<Horizon.Services.Workflow.IWorkflowActionService, Horizon.Services.Workflow.WorkflowActionService>();
+    builder.Services.Configure<Horizon.Services.Workflow.WorkflowOptions>(builder.Configuration.GetSection("Workflow"));
 
     // SaaS Refactor: register tenant services
     builder.Services.AddScoped<ITenantContext, TenantContext>();
     builder.Services.AddScoped<TenantService>();
-    builder.Services.AddScoped<CircuitHandler, CRS.Services.Tenant.TenantCircuitHandler>();
+    builder.Services.AddScoped<CircuitHandler, Horizon.Services.Tenant.TenantCircuitHandler>();
 
     // Layout service for controlling layout state (hide nav, etc.)
-    builder.Services.AddScoped<CRS.Services.Layout.ILayoutService, CRS.Services.Layout.LayoutService>();
+    builder.Services.AddScoped<Horizon.Services.Layout.ILayoutService, Horizon.Services.Layout.LayoutService>();
 
     // Remove Multi-tenant provisioning services and multi-DB resolvers
     // builder.Services.AddSingleton<ITenantDatabaseResolver, DefaultTenantDatabaseResolver>();
@@ -177,79 +180,79 @@ void ConfigureServices(WebApplicationBuilder builder) {
     // builder.Services.AddScoped<ITenantMigrationService, TenantMigrationService>();
     // builder.Services.AddSingleton<ITenantProvisioningQueue, InMemoryTenantProvisioningQueue>
     // builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
-    // builder.Services.AddHostedService<CRS.Workers.TenantProvisioningWorker>();
+    // builder.Services.AddHostedService<Horizon.Workers.TenantProvisioningWorker>();
 
     // User management and notification services
     builder.Services.AddScoped<IUserSettingsService, UserSettingsService>();
     // Messaging
-    builder.Services.AddScoped<CRS.Services.Interfaces.IMessageService, CRS.Services.MessageService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.IAppNotificationService, CRS.Services.AppNotificationService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IMessageService, Horizon.Services.MessageService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IAppNotificationService, Horizon.Services.AppNotificationService>();
     
     // High Priority Schema Services
-    builder.Services.AddScoped<CRS.Services.Interfaces.IDocumentService, CRS.Services.DocumentService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.IEmailLogService, CRS.Services.EmailLogService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IDocumentService, Horizon.Services.DocumentService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IEmailLogService, Horizon.Services.EmailLogService>();
     
     // Proposal PDF Generation
-    builder.Services.AddScoped<CRS.Services.Interfaces.IProposalPdfService, CRS.Services.ProposalPdfService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IProposalPdfService, Horizon.Services.ProposalPdfService>();
     
     // Reserve Study Calculator Services
-    builder.Services.AddScoped<CRS.Services.ReserveCalculator.IReserveStudyCalculatorService, CRS.Services.ReserveCalculator.ReserveStudyCalculatorService>();
-    builder.Services.AddScoped<CRS.Services.ReserveCalculator.IReserveStudyPdfService, CRS.Services.ReserveCalculator.ReserveStudyPdfService>();
-    builder.Services.AddScoped<CRS.Services.ReserveCalculator.IReserveStudyExcelService, CRS.Services.ReserveCalculator.ReserveStudyExcelService>();
+    builder.Services.AddScoped<Horizon.Services.ReserveCalculator.IReserveStudyCalculatorService, Horizon.Services.ReserveCalculator.ReserveStudyCalculatorService>();
+    builder.Services.AddScoped<Horizon.Services.ReserveCalculator.IReserveStudyPdfService, Horizon.Services.ReserveCalculator.ReserveStudyPdfService>();
+    builder.Services.AddScoped<Horizon.Services.ReserveCalculator.IReserveStudyExcelService, Horizon.Services.ReserveCalculator.ReserveStudyExcelService>();
     
     // Medium Priority Schema Services
-    builder.Services.AddScoped<CRS.Services.Interfaces.ISiteVisitPhotoService, CRS.Services.SiteVisitPhotoService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.IStudyNoteService, CRS.Services.StudyNoteService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.IGeneratedReportService, CRS.Services.GeneratedReportService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.IReportGenerationService, CRS.Services.ReportGenerationService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.INarrativeService, CRS.Services.NarrativeService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.INarrativeStateService, CRS.Services.NarrativeStateService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.ISiteVisitPhotoService, Horizon.Services.SiteVisitPhotoService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IStudyNoteService, Horizon.Services.StudyNoteService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IGeneratedReportService, Horizon.Services.GeneratedReportService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IReportGenerationService, Horizon.Services.ReportGenerationService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.INarrativeService, Horizon.Services.NarrativeService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.INarrativeStateService, Horizon.Services.NarrativeStateService>();
 
     // Narrative HTML Template Services
     builder.Services.AddScoped<ITokenRenderer, DefaultTokenRenderer>();
     builder.Services.AddScoped<IPlaceholderResolver, PlaceholderResolver>();
-    builder.Services.AddScoped<CRS.Services.NarrativeReport.INarrativeHtmlSanitizer, CRS.Services.NarrativeReport.NarrativeHtmlSanitizer>();
+    builder.Services.AddScoped<Horizon.Services.NarrativeReport.INarrativeHtmlSanitizer, Horizon.Services.NarrativeReport.NarrativeHtmlSanitizer>();
     builder.Services.AddScoped<IReserveStudyHtmlComposer, ReserveStudyHtmlComposer>();
     builder.Services.AddScoped<INarrativeTemplateService, NarrativeTemplateService>();
     builder.Services.AddScoped<IReportContextBuilder, ReportContextBuilder>();
     builder.Services.AddSingleton<IPdfConverter, PuppeteerPdfConverter>(); // PuppeteerSharp HTML to PDF converter
 
     // Scope Comparison Service (for tracking scope variance after site visits)
-    builder.Services.AddScoped<CRS.Services.Interfaces.IScopeComparisonService, CRS.Services.Workflow.ScopeComparisonService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IScopeComparisonService, Horizon.Services.Workflow.ScopeComparisonService>();
 
     // Click-Wrap Agreement Services
-    builder.Services.AddScoped<CRS.Services.Interfaces.IProposalAcceptanceService, CRS.Services.ProposalAcceptanceService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IProposalAcceptanceService, Horizon.Services.ProposalAcceptanceService>();
 
     // Invoicing Services
-    builder.Services.AddScoped<CRS.Services.Interfaces.IInvoiceService, CRS.Services.InvoiceService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.IInvoicePdfService, CRS.Services.InvoicePdfService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.IInvoicePaymentService, CRS.Services.InvoicePaymentService>();
-    builder.Services.AddScoped<CRS.Services.Interfaces.ICreditMemoService, CRS.Services.CreditMemoService>();
-    builder.Services.AddScoped<CRS.Services.ICreditMemoPdfService, CRS.Services.CreditMemoPdfService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IInvoiceService, Horizon.Services.InvoiceService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IInvoicePdfService, Horizon.Services.InvoicePdfService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IInvoicePaymentService, Horizon.Services.InvoicePaymentService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.ICreditMemoService, Horizon.Services.CreditMemoService>();
+    builder.Services.AddScoped<Horizon.Services.ICreditMemoPdfService, Horizon.Services.CreditMemoPdfService>();
 
     // Stripe Connect Service (for tenant payment processing)
-    builder.Services.AddScoped<CRS.Services.Billing.IStripeConnectService, CRS.Services.Billing.StripeConnectService>();
+    builder.Services.AddScoped<IStripeConnectService, StripeConnectService>();
 
     // System-wide settings
-    builder.Services.AddScoped<CRS.Services.Interfaces.ISystemSettingsService, CRS.Services.SystemSettingsService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.ISystemSettingsService, Horizon.Services.SystemSettingsService>();
 
     // Analytics Service (tenant business metrics)
-    builder.Services.AddScoped<CRS.Services.Interfaces.IAnalyticsService, CRS.Services.AnalyticsService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IAnalyticsService, Horizon.Services.AnalyticsService>();
 
     // Audit Log Service (for viewing/exporting audit history)
-    builder.Services.AddScoped<CRS.Services.Interfaces.IAuditLogService, CRS.Services.AuditLogService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IAuditLogService, Horizon.Services.AuditLogService>();
 
     // Newsletter/Marketing Services
-    builder.Services.AddScoped<CRS.Services.Interfaces.INewsletterService, CRS.Services.NewsletterService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.INewsletterService, Horizon.Services.NewsletterService>();
 
     // Platform Webmail (IMAP/SMTP)
-    builder.Services.AddScoped<CRS.Services.Mail.IMailboxService, CRS.Services.Mail.MailboxService>();
+    builder.Services.AddScoped<Horizon.Services.Mail.IMailboxService, Horizon.Services.Mail.MailboxService>();
 
     // Report ZIP Service
-    builder.Services.AddScoped<CRS.Services.Interfaces.IReportZipService, CRS.Services.ReportZipService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.IReportZipService, Horizon.Services.ReportZipService>();
 
     // Tenant Archive Service (for cold storage before deletion)
-    builder.Services.AddScoped<CRS.Services.Interfaces.ITenantArchiveService, CRS.Services.TenantArchiveService>();
+    builder.Services.AddScoped<Horizon.Services.Interfaces.ITenantArchiveService, Horizon.Services.TenantArchiveService>();
 
     // License validation service (required by Login.razor)
     builder.Services.AddScoped<ILicenseValidationService, LicenseValidationService>();
@@ -265,7 +268,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
 
     // Antiforgery options: relax SameSite to ensure cookie is sent on top-level POSTs
     builder.Services.AddAntiforgery(options => {
-        options.Cookie.Name = ".CRS.AntiForgery";
+        options.Cookie.Name = ".Horizon.AntiForgery";
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     });
@@ -285,20 +288,20 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddEvents();
 
     // Register lifecycle job
-    builder.Services.AddScoped<CRS.Jobs.TenantLifecycleJob>();
+    builder.Services.AddScoped<Horizon.Jobs.TenantLifecycleJob>();
 
     // Register invoice jobs
-    builder.Services.AddScoped<CRS.Jobs.LateInterestInvocable>();
-    builder.Services.AddScoped<CRS.Jobs.InvoiceReminderInvocable>();
+    builder.Services.AddScoped<Horizon.Jobs.LateInterestInvocable>();
+    builder.Services.AddScoped<Horizon.Jobs.InvoiceReminderInvocable>();
 
     // Register auto-archive job
-    builder.Services.AddScoped<CRS.Jobs.AutoArchiveInvocable>();
+    builder.Services.AddScoped<Horizon.Jobs.AutoArchiveInvocable>();
 
     // Register newsletter scheduler job
-    builder.Services.AddScoped<CRS.Jobs.NewsletterSchedulerJob>();
+    builder.Services.AddScoped<Horizon.Jobs.NewsletterSchedulerJob>();
 
     // Register trial expiration job
-    builder.Services.AddScoped<CRS.Jobs.TrialExpirationInvocable>();
+    builder.Services.AddScoped<Horizon.Jobs.TrialExpirationInvocable>();
 
     // Phase 1: Register audit log archiving background service
     builder.Services.AddHostedService<AuditLogArchiveService>();
@@ -308,7 +311,7 @@ void ConfigureServices(WebApplicationBuilder builder) {
 
     // Register FluentValidation validators for request DTOs (automatic registration)
     builder.Services.AddFluentValidationAutoValidation();
-    builder.Services.AddValidatorsFromAssemblyContaining<CRS.Controllers.Requests.Validators.SendProposalRequestValidator>();
+    builder.Services.AddValidatorsFromAssemblyContaining<Horizon.Controllers.Requests.Validators.SendProposalRequestValidator>();
 
     // Add memory cache service
     builder.Services.AddMemoryCache();
@@ -365,20 +368,20 @@ void ConfigureServices(WebApplicationBuilder builder) {
     builder.Services.AddScoped<IBillingService, BillingService>();
     builder.Services.AddScoped<IFeatureGuardService, FeatureGuardService>();
     
-    builder.Services.AddScoped<CRS.Services.Provisioning.IOwnerProvisioningService, CRS.Services.Provisioning.OwnerProvisioningService>();
+    builder.Services.AddScoped<Horizon.Services.Provisioning.IOwnerProvisioningService, Horizon.Services.Provisioning.OwnerProvisioningService>();
 
     // Azure Blob Storage for logo uploads
         var azureStorageConnectionString = builder.Configuration.GetConnectionString("AzureStorage");
         if (!string.IsNullOrWhiteSpace(azureStorageConnectionString)) {
             builder.Services.AddSingleton(x => new Azure.Storage.Blobs.BlobServiceClient(azureStorageConnectionString));
-            builder.Services.AddScoped<CRS.Services.Storage.ILogoStorageService, CRS.Services.Storage.LogoStorageService>();
-            builder.Services.AddScoped<CRS.Services.Storage.IPhotoStorageService, CRS.Services.Storage.PhotoStorageService>();
-            builder.Services.AddScoped<CRS.Services.Storage.IDocumentStorageService, CRS.Services.Storage.DocumentStorageService>();
+            builder.Services.AddScoped<Horizon.Services.Storage.ILogoStorageService, Horizon.Services.Storage.LogoStorageService>();
+            builder.Services.AddScoped<Horizon.Services.Storage.IPhotoStorageService, Horizon.Services.Storage.PhotoStorageService>();
+            builder.Services.AddScoped<Horizon.Services.Storage.IDocumentStorageService, Horizon.Services.Storage.DocumentStorageService>();
         } else {
             // Fallback to null service if no connection string (development)
-            builder.Services.AddScoped<CRS.Services.Storage.ILogoStorageService, CRS.Services.Storage.NullLogoStorageService>();
-            builder.Services.AddScoped<CRS.Services.Storage.IPhotoStorageService, CRS.Services.Storage.NullPhotoStorageService>();
-            builder.Services.AddScoped<CRS.Services.Storage.IDocumentStorageService, CRS.Services.Storage.NullDocumentStorageService>();
+            builder.Services.AddScoped<Horizon.Services.Storage.ILogoStorageService, Horizon.Services.Storage.NullLogoStorageService>();
+            builder.Services.AddScoped<Horizon.Services.Storage.IPhotoStorageService, Horizon.Services.Storage.NullPhotoStorageService>();
+            builder.Services.AddScoped<Horizon.Services.Storage.IDocumentStorageService, Horizon.Services.Storage.NullDocumentStorageService>();
         }
     }
 
@@ -433,7 +436,7 @@ void ConfigureIdentity(WebApplicationBuilder builder) {
 
     // Configure Identity cookies for Blazor Server
     builder.Services.ConfigureApplicationCookie(options => {
-        options.Cookie.Name = ".CRS.Auth";
+        options.Cookie.Name = ".Horizon.Auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         options.Cookie.SameSite = SameSiteMode.Lax; // Changed from Strict to Lax for redirect flows
@@ -495,7 +498,7 @@ async Task ConfigurePipeline(WebApplication app) {
 
         // Dev helper: dump tenant context for troubleshooting
         app.MapGet("/dev/tenant", (ITenantContext tenantContext, System.Security.Claims.ClaimsPrincipal user) => {
-            var tenantClaim = user?.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
+            var tenantClaim = user?.FindFirst(Horizon.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
             return Results.Json(new {
                 TenantContextId = tenantContext.TenantId,
                 TenantContextName = tenantContext.TenantName,
@@ -578,9 +581,9 @@ async Task ConfigurePipeline(WebApplication app) {
                 // Get or create the role
                 var role = await db.Roles2.FirstOrDefaultAsync(r => r.Name == roleName);
                 if (role == null) {
-                    role = new CRS.Models.Security.Role {
+                    role = new Horizon.Models.Security.Role {
                         Name = roleName,
-                        Scope = tenantId.HasValue ? CRS.Models.Security.RoleScope.Tenant : CRS.Models.Security.RoleScope.Platform
+                        Scope = tenantId.HasValue ? Horizon.Models.Security.RoleScope.Tenant : Horizon.Models.Security.RoleScope.Platform
                     };
                     db.Roles2.Add(role);
                     await db.SaveChangesAsync();
@@ -597,7 +600,7 @@ async Task ConfigurePipeline(WebApplication app) {
                 }
                 
                 // Create assignment
-                db.UserRoleAssignments.Add(new CRS.Models.Security.UserRoleAssignment {
+                db.UserRoleAssignments.Add(new Horizon.Models.Security.UserRoleAssignment {
                     UserId = user.Id,
                     RoleId = role.Id,
                     TenantId = tenantId

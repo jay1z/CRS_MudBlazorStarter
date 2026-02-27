@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator.Models;
+namespace Horizon.Core.ReserveCalculator.Models;
 
 /// <summary>
 /// Allocation of expenditures by category across the projection period.

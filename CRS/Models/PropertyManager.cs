@@ -1,10 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-using CRS.Data;
+using Horizon.Data;
 
-namespace CRS.Models {
-    public class PropertyManager : BaseModel, IContact, CRS.Services.Tenant.ITenantScoped {
+namespace Horizon.Models {
+    public class PropertyManager : BaseModel, IContact, Horizon.Services.Tenant.ITenantScoped {
         [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
         public ApplicationUser? User { get; set; }
 

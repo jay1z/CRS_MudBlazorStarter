@@ -1,14 +1,14 @@
-﻿using Coravel.Invocable;
+using Coravel.Invocable;
 using Coravel.Mailer.Mail.Interfaces;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Email;
-using CRS.Models.Emails;
-using CRS.Services.Interfaces;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Email;
+using Horizon.Models.Emails;
+using Horizon.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
-namespace CRS.Jobs;
+namespace Horizon.Jobs;
 
 /// <summary>
 /// Scheduled job to send automated invoice reminders.

@@ -1,10 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using CRS.Data;
-using CRS.Models;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models.Security
+namespace Horizon.Models.Security
 {
     // Many-to-many user role assignments with optional tenant scope
     public class UserRoleAssignment

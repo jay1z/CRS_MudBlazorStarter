@@ -1,4 +1,4 @@
-﻿namespace CRS.Models.Emails;
+namespace Horizon.Models.Emails;
 
 /// <summary>
 /// Email model for sending invoice notifications and reminders.

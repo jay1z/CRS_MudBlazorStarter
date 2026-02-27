@@ -1,8 +1,8 @@
 @page "/Customers/Details/{CustomerId:guid}"
-@using CRS.Models
-@using CRS.Services.Customers
-@using CRS.Data
-@using CRS.Components.Pages.Admin
+@using Horizon.Models
+@using Horizon.Services.Customers
+@using Horizon.Data
+@using Horizon.Components.Pages.Admin
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
 @attribute [Authorize(Policy = "RequireTenantStaff")]

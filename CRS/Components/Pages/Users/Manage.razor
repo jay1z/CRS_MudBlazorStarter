@@ -1,6 +1,6 @@
-﻿@page "/Users/Manage"
+@page "/Users/Manage"
 @attribute [Authorize(Policy = "RequireTenantOwner")]
-@using CRS.Data
+@using Horizon.Data
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject UserManager<ApplicationUser> UserManager

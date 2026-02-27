@@ -1,17 +1,17 @@
 @page "/Admin/HOAUsers"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services.Customers
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services.Customers
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject UserManager<ApplicationUser> UserManager
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
-@inject CRS.Services.Tenant.ITenantUserService TenantUserService
-@inject CRS.Services.Tenant.ITenantContext TenantContext
+@inject Horizon.Services.Tenant.ITenantUserService TenantUserService
+@inject Horizon.Services.Tenant.ITenantContext TenantContext
 @inject ICustomerService CustomerService
 
 <PageTitle>HOA User Management</PageTitle>

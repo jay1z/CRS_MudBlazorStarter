@@ -1,10 +1,10 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Services.Interfaces;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services {
+namespace Horizon.Services {
     public class ContactService : IContactService {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
 

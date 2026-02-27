@@ -1,4 +1,4 @@
-﻿namespace CRS.Components.AppHome.ViewModels {
+﻿namespace Horizon.Components.AppHome.ViewModels {
     public sealed class TenantKpisVm {
         public int Properties { get; set; }
         public int StudiesActive { get; set; }

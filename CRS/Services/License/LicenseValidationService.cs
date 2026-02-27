@@ -1,9 +1,9 @@
-using CRS.Data;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Services.Tenant;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services.License {
+namespace Horizon.Services.License {
     // SaaS Refactor: periodically validate tenant status
     public interface ILicenseValidationService {
         Task<bool> IsTenantActiveAsync(int tenantId, CancellationToken ct = default);

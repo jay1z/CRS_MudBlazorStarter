@@ -1,7 +1,7 @@
-﻿using CRS.Data;
+using Horizon.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public interface IContact {
         [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }
         public ApplicationUser? User { get; set; }

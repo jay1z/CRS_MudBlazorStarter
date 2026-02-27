@@ -1,10 +1,10 @@
-﻿using CRS.Data;
-using CRS.Models.Workflow;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models.Workflow;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services.Workflow;
+namespace Horizon.Services.Workflow;
 
 /// <summary>
 /// Service for managing scope comparisons between original (HOA estimate) 

@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 
-using CRS.Models.Workflow;
+using Horizon.Models.Workflow;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
     /// <summary>
     /// Defines the operations to validate and perform workflow transitions for StudyRequest.
     /// Encapsulates the allowed state transitions and emits notifications on changes.

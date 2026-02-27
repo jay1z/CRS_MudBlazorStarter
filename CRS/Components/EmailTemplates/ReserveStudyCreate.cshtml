@@ -1,11 +1,11 @@
-﻿@using CRS.Models.Emails
+@using Horizon.Models.Emails
 @model ReserveStudyEmail
 
 @{
     var baseUrl = string.IsNullOrEmpty(Model.BaseUrl) ? "" : Model.BaseUrl;
     var detailsUrl = $"{baseUrl}/ReserveStudies/{Model.ReserveStudy?.Id}/Details";
     var communityName = Model.ReserveStudy?.Community?.Name ?? "Your Community";
-    var elementsWithServiceNeeded = Model.ReserveStudy?.ReserveStudyElements?.Where(e => e.NeedsService).ToList() ?? new List<CRS.Models.IReserveStudyElement>();
+    var elementsWithServiceNeeded = Model.ReserveStudy?.ReserveStudyElements?.Where(e => e.NeedsService).ToList() ?? new List<Horizon.Models.IReserveStudyElement>();
     
     // Tenant branding
     var tenant = Model.TenantInfo;

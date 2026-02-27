@@ -1,11 +1,11 @@
-﻿@page "/Calendar"
+@page "/Calendar"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
-@using CRS.Components.Pages.Calendar.Dialogs
-@using CRS.Models
+@using Horizon.Components.Pages.Calendar.Dialogs
+@using Horizon.Models
 @using MudBlazor
 @using Microsoft.EntityFrameworkCore
-@using CRS.Data
+@using Horizon.Data
 @using System.Globalization
 @using Microsoft.AspNetCore.Identity
 @inject IDialogService DialogService

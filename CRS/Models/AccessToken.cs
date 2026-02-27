@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public class AccessToken : BaseModel {
         [Required]
         public Guid Token { get; set; } = Guid.CreateVersion7();

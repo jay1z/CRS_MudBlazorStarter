@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Components.Server.Circuits;
-using CRS.Services.Tenant;
+using Microsoft.AspNetCore.Components.Server.Circuits;
+using Horizon.Services.Tenant;
 
-namespace CRS.Services.Tenant {
+namespace Horizon.Services.Tenant {
     // Ensures initial circuit gets tenant info resolved by HTTP middleware before prerender vs interactive mismatch.
     public class TenantCircuitHandler : CircuitHandler {
         private readonly ITenantContext _tenantContext;

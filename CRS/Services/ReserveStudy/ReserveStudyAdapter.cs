@@ -1,10 +1,10 @@
-﻿using CRS.Core.ReserveCalculator.Enums;
-using CRS.Core.ReserveCalculator.Models;
-using CRS.Models;
-using CRS.Models.ReserveStudyCalculator;
+using Horizon.Core.ReserveCalculator.Enums;
+using Horizon.Core.ReserveCalculator.Models;
+using Horizon.Models;
+using Horizon.Models.ReserveStudyCalculator;
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Services.ReserveCalculator;
+namespace Horizon.Services.ReserveCalculator;
 
 /// <summary>
 /// Adapts ReserveStudy entities and their elements/components to calculator inputs.

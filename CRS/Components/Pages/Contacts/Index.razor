@@ -1,8 +1,8 @@
-﻿@page "/Contacts"
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services
-@using CRS.Services.Interfaces
+@page "/Contacts"
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services
+@using Horizon.Services.Interfaces
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IContactService ContactService
@@ -263,14 +263,14 @@
     }
 
     private async Task ConfirmDelete(Contact contact) {
-        var parameters = new DialogParameters<CRS.Components.Dialogs.ConfirmationDialog> {
+        var parameters = new DialogParameters<Horizon.Components.Dialogs.ConfirmationDialog> {
             { x => x.ContentText, $"Are you sure you want to delete contact '{contact.FirstName} {contact.LastName}'? This action cannot be undone." },
             { x => x.ButtonText, "Delete" },
             { x => x.Color, Color.Error }
         };
 
         var options = new DialogOptions { CloseOnEscapeKey = true };
-        var dialog = await DialogService.ShowAsync<CRS.Components.Dialogs.ConfirmationDialog>("Confirm Delete", parameters, options);
+        var dialog = await DialogService.ShowAsync<Horizon.Components.Dialogs.ConfirmationDialog>("Confirm Delete", parameters, options);
         var result = await dialog.Result;
 
         if (result != null && !result.Canceled) {
@@ -310,7 +310,7 @@
             contactName = serviceContact.CompanyName ?? "Service Contact";
         }
 
-        var parameters = new DialogParameters<CRS.Components.Dialogs.ServiceContactElementsDialog> {
+        var parameters = new DialogParameters<Horizon.Components.Dialogs.ServiceContactElementsDialog> {
             { x => x.ServiceContactId, serviceContactId },
             { x => x.ServiceContactName, contactName }
         };
@@ -321,7 +321,7 @@
             CloseOnEscapeKey = true
         };
 
-        await DialogService.ShowAsync<CRS.Components.Dialogs.ServiceContactElementsDialog>(
+        await DialogService.ShowAsync<Horizon.Components.Dialogs.ServiceContactElementsDialog>(
             "Elements Using This Service Contact", 
             parameters, 
             options);

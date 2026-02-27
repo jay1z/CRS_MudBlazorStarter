@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models.Workflow;
+namespace Horizon.Models.Workflow;
 
 /// <summary>
 /// Tenant-specific settings for handling scope changes after site visits.

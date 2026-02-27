@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Engine-agnostic interface for converting HTML to PDF.

@@ -1,9 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using CRS.Models;
-using CRS.Services.Tenant;
+using Horizon.Models;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models.Workflow;
+namespace Horizon.Models.Workflow;
 
 /// <summary>
 /// Status of a scope comparison between original (HOA estimate) and actual (site visit) counts.

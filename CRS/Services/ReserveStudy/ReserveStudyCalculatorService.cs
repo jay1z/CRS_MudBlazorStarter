@@ -1,12 +1,12 @@
-﻿using CRS.Core.ReserveCalculator.Models;
-using CRS.Core.ReserveCalculator.Services;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.ReserveStudyCalculator;
+using Horizon.Core.ReserveCalculator.Models;
+using Horizon.Core.ReserveCalculator.Services;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.ReserveStudyCalculator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Services.ReserveCalculator;
+namespace Horizon.Services.ReserveCalculator;
 
 /// <summary>
 /// Application service for reserve study calculations.
@@ -249,13 +249,13 @@ public class ReserveStudyCalculatorService : IReserveStudyCalculatorService
     /// <summary>
     /// Maps the core calculator FundingStatus enum to the model FundingStatusLevel enum.
     /// </summary>
-    private static FundingStatusLevel MapFundingStatus(CRS.Core.ReserveCalculator.Enums.FundingStatus coreStatus)
+    private static FundingStatusLevel MapFundingStatus(Horizon.Core.ReserveCalculator.Enums.FundingStatus coreStatus)
     {
         return coreStatus switch
         {
-            CRS.Core.ReserveCalculator.Enums.FundingStatus.Strong => FundingStatusLevel.Strong,
-            CRS.Core.ReserveCalculator.Enums.FundingStatus.Fair => FundingStatusLevel.Fair,
-            CRS.Core.ReserveCalculator.Enums.FundingStatus.Weak => FundingStatusLevel.Weak,
+            Horizon.Core.ReserveCalculator.Enums.FundingStatus.Strong => FundingStatusLevel.Strong,
+            Horizon.Core.ReserveCalculator.Enums.FundingStatus.Fair => FundingStatusLevel.Fair,
+            Horizon.Core.ReserveCalculator.Enums.FundingStatus.Weak => FundingStatusLevel.Weak,
             _ => FundingStatusLevel.Critical
         };
     }

@@ -1,6 +1,6 @@
-﻿@page "/admin/auditlogs"
-@using CRS.Services.Interfaces
-@using CRS.Models
+@page "/admin/auditlogs"
+@using Horizon.Services.Interfaces
+@using Horizon.Models
 @using Microsoft.JSInterop
 @attribute [Authorize(Roles = "Admin,TenantOwner")]
 @inject IAuditLogService AuditLogService

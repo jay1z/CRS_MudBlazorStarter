@@ -1,7 +1,7 @@
-﻿using CRS.Services.Interfaces;
+using Horizon.Services.Interfaces;
 using Coravel.Invocable;
 
-namespace CRS.Jobs;
+namespace Horizon.Jobs;
 
 /// <summary>
 /// Background job that processes scheduled newsletter campaigns.

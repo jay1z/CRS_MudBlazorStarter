@@ -1,9 +1,9 @@
-﻿using Coravel.Mailer.Mail.Interfaces;
-using CRS.Data;
+using Coravel.Mailer.Mail.Interfaces;
+using Horizon.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 
-namespace CRS.Services.Email;
+namespace Horizon.Services.Email;
 
 public class IdentityEmailSender : IEmailSender<ApplicationUser>
 {

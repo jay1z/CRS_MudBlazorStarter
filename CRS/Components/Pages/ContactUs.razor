@@ -1,13 +1,13 @@
-﻿@page "/contact"
-@attribute [CRS.Components.Layout.HideNav]
+@page "/contact"
+@attribute [Horizon.Components.Layout.HideNav]
 @using Coravel.Mailer.Mail.Interfaces
-@using CRS.Data
-@using CRS.Models
-@using CRS.Services.Email
+@using Horizon.Data
+@using Horizon.Models
+@using Horizon.Services.Email
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject IMailer Mailer
-@inject ILogger<CRS.Components.Pages.ContactUs> Logger
+@inject ILogger<Horizon.Components.Pages.ContactUs> Logger
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 

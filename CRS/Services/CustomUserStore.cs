@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using CRS.Data;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Services.Tenant;
 using System.Threading.Tasks;
 using System.Threading;
 
-namespace CRS.Services
+namespace Horizon.Services
 {
     // Custom UserStore to handle duplicate emails across tenants
     public class CustomUserStore : UserStore<ApplicationUser, IdentityRole<Guid>, ApplicationDbContext, Guid>

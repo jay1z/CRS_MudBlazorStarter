@@ -1,12 +1,15 @@
-﻿using CRS.Data;
-using CRS.Models;
-using CRS.Services.Billing;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
+
+using Horizon.Services.Billing;
+
 using Microsoft.EntityFrameworkCore;
+
 using Stripe;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Service for managing credit memos (refunds and adjustments).

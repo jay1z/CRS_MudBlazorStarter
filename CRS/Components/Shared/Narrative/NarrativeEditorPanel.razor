@@ -1,10 +1,10 @@
-﻿@using CRS.Models
-@using CRS.Models.Workflow
-@using CRS.Services
-@using CRS.Services.Interfaces
-@using CRS.Services.Workflow
-@using CRS.Services.MultiTenancy
-@using CRS.Services.Tenant
+@using Horizon.Models
+@using Horizon.Models.Workflow
+@using Horizon.Services
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Workflow
+@using Horizon.Services.MultiTenancy
+@using Horizon.Services.Tenant
 @implements IDisposable
 
 @inject INarrativeService NarrativeService
@@ -628,7 +628,7 @@
             FullWidth = true 
         };
 
-        var dialog = await DialogService.ShowAsync<CRS.Components.Shared.GeneratedReports.RequestRevisionsDialog>(
+        var dialog = await DialogService.ShowAsync<Horizon.Components.Shared.GeneratedReports.RequestRevisionsDialog>(
             "Request Narrative Revisions", parameters, options);
         var result = await dialog.Result;
 

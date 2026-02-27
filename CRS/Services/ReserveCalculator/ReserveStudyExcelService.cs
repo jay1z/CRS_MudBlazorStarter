@@ -1,8 +1,8 @@
-﻿using ClosedXML.Excel;
-using CRS.Core.ReserveCalculator.Enums;
-using CRS.Core.ReserveCalculator.Models;
+using ClosedXML.Excel;
+using Horizon.Core.ReserveCalculator.Enums;
+using Horizon.Core.ReserveCalculator.Models;
 
-namespace CRS.Services.ReserveCalculator;
+namespace Horizon.Services.ReserveCalculator;
 
 /// <summary>
 /// Service for importing/exporting reserve study data from Excel files.

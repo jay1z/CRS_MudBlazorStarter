@@ -1,4 +1,4 @@
-﻿@attribute [AllowAnonymous]
+@attribute [AllowAnonymous]
 @layout EmptyLayout
 @page "/Account/Login"
 @page "/login"
@@ -8,10 +8,10 @@
 @using System.ComponentModel
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
-@using CRS.Data
-@using CRS.Services.Tenant
-@using CRS.Services.License
-@using CRS.Services.MultiTenancy
+@using Horizon.Data
+@using Horizon.Services.Tenant
+@using Horizon.Services.License
+@using Horizon.Services.MultiTenancy
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Login> Logger
@@ -20,10 +20,10 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ITenantContext TenantContext
 @inject ILicenseValidationService LicenseValidator
-@inject CRS.Services.MultiTenancy.TenantService TenantService
+@inject Horizon.Services.MultiTenancy.TenantService TenantService
 @inject IConfiguration Config
-@inject CRS.Services.Storage.ILogoStorageService LogoStorage
-@inject CRS.Services.Layout.ILayoutService LayoutService
+@inject Horizon.Services.Storage.ILogoStorageService LogoStorage
+@inject Horizon.Services.Layout.ILayoutService LayoutService
 
 <PageTitle>Log in</PageTitle>
 
@@ -195,7 +195,7 @@
         if (!IsTenantFixed && string.IsNullOrWhiteSpace(Input.TenantSlug)) { errorMessage = "Tenant is required."; return; }
         var tenantSlug = IsTenantFixed ? FixedTenantSlug : Input.TenantSlug?.Trim().ToLowerInvariant();
 
-        CRS.Models.Tenant? tenant = null;
+        Horizon.Models.Tenant? tenant = null;
         if (!string.IsNullOrWhiteSpace(tenantSlug)) {
             try { tenant = await TenantService.FindBySubdomainAsync(tenantSlug); } catch { }
         }

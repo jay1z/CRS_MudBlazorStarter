@@ -2,9 +2,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using CRS.Components.Account.Pages;
-using CRS.Components.Account.Pages.Manage;
-using CRS.Data;
+using Horizon.Components.Account.Pages;
+using Horizon.Components.Account.Pages.Manage;
+using Horizon.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Antiforgery;
@@ -194,7 +194,7 @@ namespace Microsoft.AspNetCore.Routing
         }
 
         // Simple token generation for login callback (valid for 5 minutes)
-        private static readonly byte[] TokenKey = Encoding.UTF8.GetBytes("CRS-Login-Callback-Secret-Key-2024");
+        private static readonly byte[] TokenKey = Encoding.UTF8.GetBytes("HORIZON-Login-Callback-Secret-Key-2024");
 
         public static string GenerateLoginToken(string userId)
         {

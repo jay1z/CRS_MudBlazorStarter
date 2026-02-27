@@ -1,8 +1,8 @@
-﻿@page "/Reports/Revenue"
+@page "/Reports/Revenue"
 @attribute [Authorize(Policy = "RequireTenantStaff")]
 
-@using CRS.Models
-@using CRS.Services.Interfaces
+@using Horizon.Models
+@using Horizon.Services.Interfaces
 @using Microsoft.AspNetCore.Authorization
 
 @inject IInvoiceService InvoiceService

@@ -1,9 +1,9 @@
-﻿@attribute [Authorize(Policy = "RequireTenantOwner")]
-@using CRS.Services.Tenant
-@using CRS.Data
+@attribute [Authorize(Policy = "RequireTenantOwner")]
+@using Horizon.Services.Tenant
+@using Horizon.Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Identity
-@using CRS.Models.Security
+@using Horizon.Models.Security
 @using MudBlazor
 @inject ITenantContext TenantContext
 @inject IDbContextFactory<ApplicationDbContext> DbFactory

@@ -1,6 +1,6 @@
-﻿using CRS.Models;
+using Horizon.Models;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
     public interface IContactService {
         // Contact Methods
         Task<List<Contact>> GetUserContactsAsync(string userId);

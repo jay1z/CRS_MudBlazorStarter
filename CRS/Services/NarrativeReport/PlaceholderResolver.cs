@@ -1,13 +1,13 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 
-using CRS.Models.NarrativeTemplates;
+using Horizon.Models.NarrativeTemplates;
 
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Resolves placeholders and tokens in narrative HTML templates.

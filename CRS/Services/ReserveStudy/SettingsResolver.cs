@@ -1,7 +1,7 @@
-﻿using CRS.Core.ReserveCalculator.Models;
-using CRS.Models.ReserveStudyCalculator;
+using Horizon.Core.ReserveCalculator.Models;
+using Horizon.Models.ReserveStudyCalculator;
 
-namespace CRS.Services.ReserveCalculator;
+namespace Horizon.Services.ReserveCalculator;
 
 /// <summary>
 /// Resolves effective settings by combining tenant defaults with scenario overrides.

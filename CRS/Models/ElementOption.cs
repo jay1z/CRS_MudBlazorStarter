@@ -1,6 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     /// <summary>
     /// Phase 2: Consolidated element option model replacing ElementMeasurementOptions, 
     /// ElementRemainingLifeOptions, and ElementUsefulLifeOptions.

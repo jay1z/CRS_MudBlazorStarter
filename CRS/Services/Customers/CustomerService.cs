@@ -1,12 +1,12 @@
-﻿using Coravel.Mailer.Mail.Interfaces;
-using CRS.Data;
-using CRS.Models;
-using CRS.Models.Email;
-using CRS.Models.Emails;
-using CRS.Services.Tenant;
+using Coravel.Mailer.Mail.Interfaces;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Models.Email;
+using Horizon.Models.Emails;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services.Customers {
+namespace Horizon.Services.Customers {
     public class CustomerService : ICustomerService {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
         private readonly ITenantContext _tenant;

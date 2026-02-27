@@ -1,11 +1,11 @@
-﻿using System.Text;
-using CRS.Data;
-using CRS.Models;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
+using System.Text;
+using Horizon.Data;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Service for querying and managing audit logs.

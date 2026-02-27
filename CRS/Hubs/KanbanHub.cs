@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
-namespace CRS.Hubs {
+namespace Horizon.Hubs {
     public class KanbanHub : Hub {
         public async Task NotifyTaskUpdated(string reserveStudyId) {
             await Clients.All.SendAsync("ReceiveTaskUpdate", reserveStudyId);

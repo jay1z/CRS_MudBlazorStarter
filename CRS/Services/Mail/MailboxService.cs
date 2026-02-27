@@ -1,5 +1,5 @@
-﻿using CRS.Data;
-using CRS.Models;
+using Horizon.Data;
+using Horizon.Models;
 using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Net.Smtp;
@@ -8,7 +8,7 @@ using MailKit.Security;
 using Microsoft.EntityFrameworkCore;
 using MimeKit;
 
-namespace CRS.Services.Mail;
+namespace Horizon.Services.Mail;
 
 public class MailboxService : IMailboxService
 {

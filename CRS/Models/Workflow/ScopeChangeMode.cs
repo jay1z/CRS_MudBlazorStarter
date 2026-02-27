@@ -1,4 +1,4 @@
-﻿namespace CRS.Models.Workflow;
+namespace Horizon.Models.Workflow;
 
 /// <summary>
 /// Defines how a tenant handles scope changes detected after a site visit.

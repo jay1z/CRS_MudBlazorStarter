@@ -1,6 +1,6 @@
-﻿using CRS.Models.NarrativeTemplates;
+using Horizon.Models.NarrativeTemplates;
 
-namespace CRS.Services.NarrativeReport;
+namespace Horizon.Services.NarrativeReport;
 
 /// <summary>
 /// Resolves placeholders in narrative templates to actual values from the report context.

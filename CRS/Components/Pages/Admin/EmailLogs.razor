@@ -1,9 +1,9 @@
-﻿@page "/Admin/EmailLogs"
+@page "/Admin/EmailLogs"
 @attribute [Authorize(Policy = "RequireTenantOwner")]
 
-@using CRS.Models
-@using CRS.Services.Interfaces
-@using CRS.Services.Tenant
+@using Horizon.Models
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Tenant
 
 @inject IEmailLogService EmailLogService
 @inject ITenantContext TenantContext

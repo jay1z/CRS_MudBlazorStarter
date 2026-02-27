@@ -1,10 +1,10 @@
-﻿using Coravel.Mailer.Mail;
+using Coravel.Mailer.Mail;
 using Coravel.Mailer.Mail.Interfaces;
-using CRS.Models;
-using CRS.Services.Interfaces;
-using CRS.Services.Tenant;
+using Horizon.Models;
+using Horizon.Services.Interfaces;
+using Horizon.Services.Tenant;
 
-namespace CRS.Services.Email;
+namespace Horizon.Services.Email;
 
 /// <summary>
 /// Decorator for IMailer that logs all sent emails to the EmailLog table.

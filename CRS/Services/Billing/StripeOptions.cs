@@ -1,7 +1,8 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
+
 using Stripe;
 
-namespace CRS.Services.Billing {
+namespace Horizon.Services.Billing {
     // Strongly typed options bound from configuration (Stripe: section)
     public class StripeOptions {
         public string? SecretKey { get; set; }
@@ -39,13 +40,13 @@ namespace CRS.Services.Billing {
         /// </summary>
         public bool EnableAutomaticTax { get; set; } = false;
 
-        public string? GetPriceId(CRS.Models.SubscriptionTier tier, BillingInterval interval) => (tier, interval) switch {
-            (CRS.Models.SubscriptionTier.Startup, BillingInterval.Monthly) => StarterMonthlyPriceId ?? StartupPriceId,
-            (CRS.Models.SubscriptionTier.Startup, BillingInterval.Yearly) => StarterYearlyPriceId,
-            (CRS.Models.SubscriptionTier.Pro, BillingInterval.Monthly) => ProMonthlyPriceId ?? ProPriceId,
-            (CRS.Models.SubscriptionTier.Pro, BillingInterval.Yearly) => ProYearlyPriceId,
-            (CRS.Models.SubscriptionTier.Enterprise, BillingInterval.Monthly) => EnterpriseMonthlyPriceId ?? EnterprisePriceId,
-            (CRS.Models.SubscriptionTier.Enterprise, BillingInterval.Yearly) => EnterpriseYearlyPriceId,
+        public string? GetPriceId(Horizon.Models.SubscriptionTier tier, BillingInterval interval) => (tier, interval) switch {
+            (Horizon.Models.SubscriptionTier.Startup, BillingInterval.Monthly) => StarterMonthlyPriceId ?? StartupPriceId,
+            (Horizon.Models.SubscriptionTier.Startup, BillingInterval.Yearly) => StarterYearlyPriceId,
+            (Horizon.Models.SubscriptionTier.Pro, BillingInterval.Monthly) => ProMonthlyPriceId ?? ProPriceId,
+            (Horizon.Models.SubscriptionTier.Pro, BillingInterval.Yearly) => ProYearlyPriceId,
+            (Horizon.Models.SubscriptionTier.Enterprise, BillingInterval.Monthly) => EnterpriseMonthlyPriceId ?? EnterprisePriceId,
+            (Horizon.Models.SubscriptionTier.Enterprise, BillingInterval.Yearly) => EnterpriseYearlyPriceId,
             _ => null
         };
     }

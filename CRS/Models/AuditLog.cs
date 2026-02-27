@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 
-using CRS.Data;
+using Horizon.Data;
 
-namespace CRS.Models {
+namespace Horizon.Models {
     public class AuditLog : BaseModel {
         public ApplicationUser? User { get; set; }
         [ForeignKey(nameof(ApplicationUser))] public Guid? ApplicationUserId { get; set; }

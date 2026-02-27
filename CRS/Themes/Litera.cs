@@ -1,6 +1,6 @@
-﻿using MudBlazor;
+using MudBlazor;
 
-namespace CRS.Themes {
+namespace Horizon.Themes {
     public class Litera : IMudTheme {
         public string? Name => throw new NotImplementedException();
 

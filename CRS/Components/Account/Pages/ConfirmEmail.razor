@@ -1,13 +1,13 @@
-﻿@attribute [AllowAnonymous]
+@attribute [AllowAnonymous]
 @layout EmptyLayout
 @page "/Account/ConfirmEmail"
 
 @using System.Text
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
-@using CRS.Data
-@using CRS.Services.Tenant
-@using CRS.Services.Storage
+@using Horizon.Data
+@using Horizon.Services.Tenant
+@using Horizon.Services.Storage
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager

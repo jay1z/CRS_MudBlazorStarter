@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
-namespace CRS.Middleware
+namespace Horizon.Middleware
 {
     /// <summary>
     /// Middleware to enforce "Coming Soon" mode where only a specific admin email can access the site.

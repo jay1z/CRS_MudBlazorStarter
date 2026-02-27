@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-using CRS.Services.Tenant;
+using Horizon.Services.Tenant;
 
-namespace CRS.Models.NarrativeTemplates;
+namespace Horizon.Models.NarrativeTemplates;
 
 /// <summary>
 /// Represents an optional insert paragraph that can be conditionally included in the narrative.

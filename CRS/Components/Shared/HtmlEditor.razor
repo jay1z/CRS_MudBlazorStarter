@@ -1,4 +1,4 @@
-@namespace CRS.Components.Shared
+@namespace Horizon.Components.Shared
 @using Microsoft.JSInterop
 @inject IJSRuntime JS
 
@@ -27,7 +27,7 @@
                 await JS.InvokeVoidAsync("quillInterop.ensureLoaded");
             }
             catch (JSDisconnectedException) {
-                // Circuit disconnected while attempting JS interop — ignore and allow graceful disposal
+                // Circuit disconnected while attempting JS interop ï¿½ ignore and allow graceful disposal
             }
             catch {
                 // fallback: continue, loader will attempt to load when init is called
@@ -51,7 +51,7 @@
                 catch { }
             }
             catch (JSDisconnectedException) {
-                // Circuit disconnected; nothing to do — component will be disposed.
+                // Circuit disconnected; nothing to do ï¿½ component will be disposed.
             }
             catch {
                 // ignore other JS errors during init

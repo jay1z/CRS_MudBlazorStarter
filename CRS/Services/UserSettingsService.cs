@@ -1,11 +1,11 @@
 using System;
 using System.Threading.Tasks;
 
-using CRS.Data;
+using Horizon.Data;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace CRS.Services {
+namespace Horizon.Services {
     public interface IUserSettingsService {
         Task<string?> GetSettingAsync(Guid userId, string key, CancellationToken ct = default);
         Task SetSettingAsync(Guid userId, string key, string? value, CancellationToken ct = default);

@@ -1,12 +1,14 @@
-﻿using CRS.Data;
-using CRS.Models.Security;
-using CRS.Services.Billing;
+using Horizon.Data;
+using Horizon.Models.Security;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Configuration;
 
-namespace CRS.Services.Tenant {
+using Horizon.Services.Billing;
+
+namespace Horizon.Services.Tenant {
     public class TenantUserService : ITenantUserService {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;

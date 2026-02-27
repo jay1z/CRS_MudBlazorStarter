@@ -1,4 +1,4 @@
-﻿namespace CRS.Core.ReserveCalculator.Models;
+namespace Horizon.Core.ReserveCalculator.Models;
 
 /// <summary>
 /// Schedule of expenditures generated from reserve components.

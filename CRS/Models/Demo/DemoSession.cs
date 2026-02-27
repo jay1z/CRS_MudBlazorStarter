@@ -1,7 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CRS.Models;
+using System.ComponentModel.DataAnnotations;
+using Horizon.Models;
 
-namespace CRS.Models.Demo
+namespace Horizon.Models.Demo
 {
     /// <summary>
     /// Represents a demo session for potential customers to try the system

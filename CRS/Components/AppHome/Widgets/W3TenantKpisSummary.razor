@@ -1,5 +1,5 @@
-﻿@inject CRS.Services.Tenant.ITenantContext TenantContext
-@inject CRS.Services.Tenant.ITenantHomepageDataService DataService
+@inject Horizon.Services.Tenant.ITenantContext TenantContext
+@inject Horizon.Services.Tenant.ITenantHomepageDataService DataService
 @inject ILogger<W3TenantKpisSummary> Logger
 
 <MudCard Class="mb-4" Elevation="2">
@@ -27,7 +27,7 @@
 </MudCard>
 
 @code {
-    private CRS.Components.AppHome.ViewModels.TenantKpisVm? _kpis;
+    private Horizon.Components.AppHome.ViewModels.TenantKpisVm? _kpis;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()

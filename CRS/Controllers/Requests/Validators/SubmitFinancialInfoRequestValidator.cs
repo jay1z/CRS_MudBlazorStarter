@@ -1,7 +1,7 @@
 using FluentValidation;
-using CRS.Controllers.Requests;
+using Horizon.Controllers.Requests;
 
-namespace CRS.Controllers.Requests.Validators {
+namespace Horizon.Controllers.Requests.Validators {
     public class SubmitFinancialInfoRequestValidator : AbstractValidator<SubmitFinancialInfoRequest> {
         public SubmitFinancialInfoRequestValidator() {
             RuleFor(x => x.CurrentReserveFundBalance).GreaterThanOrEqualTo(0);

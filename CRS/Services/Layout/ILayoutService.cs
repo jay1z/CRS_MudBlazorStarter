@@ -1,4 +1,4 @@
-﻿namespace CRS.Services.Layout
+namespace Horizon.Services.Layout
 {
     public interface ILayoutService
     {

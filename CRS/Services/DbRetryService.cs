@@ -1,12 +1,12 @@
 using System;
 using System.Threading.Tasks;
-using CRS.Data;
+using Horizon.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 
-namespace CRS.Services
+namespace Horizon.Services
 {
     /// <summary>
     /// Service for handling database retries with exponential backoff

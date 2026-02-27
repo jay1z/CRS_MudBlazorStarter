@@ -1,7 +1,7 @@
-﻿@using Microsoft.EntityFrameworkCore
-@inject IDbContextFactory<CRS.Data.ApplicationDbContext> DbFactory
-@inject CRS.Services.Customers.ICustomerService CustomerService
-@inject CRS.Services.Tenant.ITenantContext TenantContext
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<Horizon.Data.ApplicationDbContext> DbFactory
+@inject Horizon.Services.Customers.ICustomerService CustomerService
+@inject Horizon.Services.Tenant.ITenantContext TenantContext
 @inject ILogger<W8CustomerAccountsOverview> Logger
 
 <MudPaper Class="pa-4 mb-4" Elevation="1">

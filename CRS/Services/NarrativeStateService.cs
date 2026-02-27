@@ -1,7 +1,7 @@
-﻿using CRS.Services.Interfaces;
+using Horizon.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace CRS.Services;
+namespace Horizon.Services;
 
 /// <summary>
 /// Scoped service for tracking narrative editor state across components within a circuit.

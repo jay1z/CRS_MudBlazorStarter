@@ -1,8 +1,9 @@
-﻿using CRS.Models;
-using CRS.Services.Customers;
+using Horizon.Models;
+using Horizon.Services.Customers;
+
 using Microsoft.AspNetCore.Mvc;
 
-namespace CRS.Controllers {
+namespace Horizon.Controllers {
     [ApiController]
     [Route("api/customers")]
     public class CustomersController : ControllerBase {

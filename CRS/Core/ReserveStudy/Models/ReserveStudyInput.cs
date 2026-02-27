@@ -1,6 +1,6 @@
-﻿using CRS.Core.ReserveCalculator.Enums;
+using Horizon.Core.ReserveCalculator.Enums;
 
-namespace CRS.Core.ReserveCalculator.Models;
+namespace Horizon.Core.ReserveCalculator.Models;
 
 /// <summary>
 /// Complete input for a reserve study calculation.

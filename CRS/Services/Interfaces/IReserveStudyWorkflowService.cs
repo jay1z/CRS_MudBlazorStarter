@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 
-using CRS.Models;
-using CRS.Models.Workflow;
+using Horizon.Models;
+using Horizon.Models.Workflow;
 
-namespace CRS.Services.Interfaces {
+namespace Horizon.Services.Interfaces {
 public interface IReserveStudyWorkflowService {
     Task<ReserveStudy> CreateReserveStudyRequestAsync(ReserveStudy reserveStudy);
     Task<bool> SendProposalAsync(Guid reserveStudyId, Proposal proposal);

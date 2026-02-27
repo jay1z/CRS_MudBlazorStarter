@@ -1,15 +1,15 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @implements IDisposable
 
-@using CRS.Data
+@using Horizon.Data
 @using Microsoft.EntityFrameworkCore
-@using CRS.Themes
+@using Horizon.Themes
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Identity
-@using CRS.Services
-@using CRS.Services.Interfaces
-@using CRS.Services.Tenant
+@using Horizon.Services
+@using Horizon.Services.Interfaces
+@using Horizon.Services.Tenant
 @inject IHostEnvironment HostEnvironment
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserManager<ApplicationUser> UserManager
@@ -22,8 +22,8 @@
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject UserStateService UserState
 @inject IMessageService MessageService
-@inject CRS.Services.Layout.ILayoutService LayoutService
-@inject CRS.Services.Storage.ILogoStorageService LogoStorage
+@inject Horizon.Services.Layout.ILayoutService LayoutService
+@inject Horizon.Services.Storage.ILogoStorageService LogoStorage
 
 <!-- Layout uses MudBlazor defaults for styling; custom CSS removed per request. -->
 <!-- Unified MudBlazor providers -->
@@ -97,7 +97,7 @@
             <!-- Trial Banner (shows countdown for trialing tenants) -->
             <AuthorizeView>
                 <Authorized>
-                    <CRS.Components.Shared.TrialBanner />
+                    <Horizon.Components.Shared.TrialBanner />
                 </Authorized>
             </AuthorizeView>
 
@@ -175,7 +175,7 @@
             _isAuthenticated = authState.User?.Identity?.IsAuthenticated ?? false;
             var user = authState.User;
             if (_isAuthenticated) {
-                var claimTenant = user.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
+                var claimTenant = user.FindFirst(Horizon.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
                 _ = int.TryParse(claimTenant, out _claimTenantId);
                 _isPlatformAdmin = user.IsInRole("PlatformAdmin");
 
@@ -248,7 +248,7 @@
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
             if (user?.Identity?.IsAuthenticated == true) {
-                var claimTenant = user.FindFirst(CRS.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
+                var claimTenant = user.FindFirst(Horizon.Services.Tenant.TenantClaimTypes.TenantId)?.Value;
                 _ = int.TryParse(claimTenant, out _claimTenantId);
                 _isPlatformAdmin = user.IsInRole("PlatformAdmin");
                 if (_claimTenantId > 0 || TenantContext?.TenantId != null) {

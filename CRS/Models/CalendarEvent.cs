@@ -1,12 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-using CRS.Data;
-using CRS.Services.Tenant;
+using Horizon.Data;
+using Horizon.Services.Tenant;
 
 using Heron.MudCalendar;
 
-namespace CRS.Models;
+namespace Horizon.Models;
 
 public class CalendarEvent : BaseModel, ITenantScoped
 {
