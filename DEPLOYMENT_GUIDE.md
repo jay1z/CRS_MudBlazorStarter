@@ -1,4 +1,4 @@
-﻿# Deployment Guide - After DI Fix
+# Deployment Guide - After DI Fix
 
 ## Pre-Deployment Checklist
 
@@ -20,7 +20,7 @@ Before deploying to production, verify:
 2. **Run the published application:**
    ```bash
    cd publish
-   dotnet CRS.dll
+   dotnet Horizon.dll
    ```
 
 3. **Verify these scenarios:**
@@ -44,7 +44,7 @@ Before deploying to production, verify:
 
 1. **Publish to folder:**
    ```bash
-   dotnet publish -c Release -o C:\inetpub\wwwroot\CRS
+   dotnet publish -c Release -o C:\inetpub\wwwroot\Horizon
    ```
 
 2. **Configure IIS:**
@@ -54,21 +54,21 @@ Before deploying to production, verify:
 
 3. **Verify web.config** has ASP.NET Core Module:
    ```xml
-   <aspNetCore processPath="dotnet" arguments=".\CRS.dll" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" hostingModel="inprocess" />
+   <aspNetCore processPath="dotnet" arguments=".\Horizon.dll" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" hostingModel="inprocess" />
    ```
 
 ### Option 3: Docker
 
 1. **Build Docker image:**
    ```bash
-   docker build -t crs-app .
+   docker build -t horizon-app .
    ```
 
 2. **Run container:**
    ```bash
-   docker run -d -p 8080:8080 --name crs-app \
+   docker run -d -p 8080:8080 --name horizon-app \
      -e ConnectionStrings__DefaultConnection="your-connection-string" \
-     crs-app
+     horizon-app
    ```
 
 ## Post-Deployment Verification

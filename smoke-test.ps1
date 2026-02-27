@@ -1,9 +1,9 @@
-﻿# Smoke Test Script for CRS API Endpoints
+# Smoke Test Script for Horizon API Endpoints
 # Run this script to test basic API functionality
 
 $baseUrl = "https://www.alxreservecloud.com"  # Adjust if running on different port
 
-Write-Host "Running smoke tests for CRS API..."
+Write-Host "Running smoke tests for Horizon API..."
 
 # Test billing status
 Write-Host "Testing /api/billing/status/1..."
