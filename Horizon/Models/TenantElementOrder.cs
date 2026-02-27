@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Horizon.Services.Tenant;
 
@@ -45,13 +45,5 @@ namespace Horizon.Models {
         /// </summary>
         [ForeignKey(nameof(TenantId))]
         public Tenant? Tenant { get; set; }
-    }
-
-    /// <summary>
-    /// Enum to identify the type of element.
-    /// </summary>
-    public enum ElementType {
-        Building = 0,
-        Common = 1
     }
 }

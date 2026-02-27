@@ -1,4 +1,4 @@
-namespace Horizon.Models {
+﻿namespace Horizon.Models {
     /// <summary>
     /// Represents a community (HOA, condo association, etc.)
     /// 
@@ -31,9 +31,9 @@ namespace Horizon.Models {
         /// <summary>
         /// The customer account that owns/manages this community.
         /// Optional for backwards compatibility - new communities should always have a customer.
+        /// FK only — navigation property defined in Horizon partial class.
         /// </summary>
         public Guid? CustomerAccountId { get; set; }
-        public CustomerAccount? CustomerAccount { get; set; }
 
         // Additional community details
         public string? PhoneNumber { get; set; }
@@ -51,4 +51,3 @@ namespace Horizon.Models {
         public Address? EffectiveMailingAddress => MailingAddress ?? PhysicalAddress;
     }
 }
-

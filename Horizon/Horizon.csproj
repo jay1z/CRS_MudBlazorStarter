@@ -72,4 +72,9 @@
     <Folder Include="Workers\" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <ProjectReference Include="..\Foresight.Shared\Foresight.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

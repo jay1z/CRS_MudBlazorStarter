@@ -1,4 +1,4 @@
-using Horizon.Data;
+﻿using Horizon.Data;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Horizon.Models {

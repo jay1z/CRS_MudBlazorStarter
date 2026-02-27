@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 using Horizon.Data;
@@ -38,7 +38,7 @@ namespace Horizon.Models {
 
         //1:many relationship - a study can have multiple proposals (original + amendments)
         public List<Proposal>? Proposals { get; set; }
-        
+
         /// <summary>
         /// The currently active/latest proposal for this study.
         /// When amendments are created, this points to the new amendment.
@@ -127,7 +127,7 @@ namespace Horizon.Models {
 
         // Concurrency token
         [Timestamp]
-        public byte[]? RowVersion { get; set; }
+        public new byte[]? RowVersion { get; set; }
         
         // Demo Mode
         public bool IsDemo { get; set; } = false;

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Horizon.Services.Tenant;
 
 namespace Horizon.Models {

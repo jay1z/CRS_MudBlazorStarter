@@ -1,8 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 using static Horizon.Models.IReserveStudyElement;
-using static MudBlazor.CategoryTypes;
 
 namespace Horizon.Models {
     public class ReserveStudyAdditionalElement : BaseModel, IReserveStudyElement {
